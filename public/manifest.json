@@ -1,0 +1,17 @@
+{
+  "name": "Fluxo — Sistema Gastronómico",
+  "short_name": "Fluxo",
+  "description": "Sistema gastronómico inteligente y modular para comensales, mozos y cocina",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

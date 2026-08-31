@@ -1,0 +1,774 @@
+'use client'
+
+import React, { useState, useEffect, Suspense } from 'react'
+import Image from 'next/image'
+import { useParams, useSearchParams } from 'next/navigation'
+import { ShoppingBag, Box, Plus, Minus, ChevronDown, ChevronUp, Sparkles, Utensils, Search, Loader2, LayoutList, LayoutGrid, Check, Bell, Banknote, CreditCard, QrCode, RefreshCw, X, Flame } from 'lucide-react'
+import { TenantProvider } from '@/components/tenant/TenantProvider'
+import { TenantHeader } from '@/components/tenant/TenantHeader'
+import { CallWaiterButton } from '@/components/menu/CallWaiterButton'
+import { CartDrawer } from '@/components/menu/CartDrawer'
+import { Product3DModal } from '@/components/menu/Product3DModal'
+import { ProductModifierModal } from '@/components/comandero/ProductModifierModal'
+import { Product, Category, CartItem, Restaurant, Table } from '@/types/database.types'
+import { formatCurrency } from '@/lib/utils'
+import { createBrowserClient } from '@/lib/supabase/client'
+import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
+
+const STORAGE_CART_PREFIX = 'gastro_cart_'
+
+function DinerMenuContent() {
+  const params = useParams()
+  const searchParams = useSearchParams()
+  const slug = (params?.slug as string) || 'burger-gourmet'
+  const tableParam = searchParams.get('table') || '4'
+
+  const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
+  const [categories, setCategories] = useState<Category[]>(() => MOCK_CATEGORIES[slug] || [])
+  const [products, setProducts] = useState<Product[]>(() => MOCK_PRODUCTS[slug] || [])
+  const [tables, setTables] = useState<Table[]>(() => MOCK_TABLES[slug] || [])
+  
+  // Categoría activa
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => MOCK_CATEGORIES[slug]?.[0]?.id || 'cat-1')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [tableNumber, setTableNumber] = useState<string>(tableParam)
+
+  // Modo de vista: 'list' (Carta Elegante Desplegable) o 'grid' (Galería Abierta)
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  // IDs de platos expandidos
+  const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({})
+
+  // Modales y Carrito con Persistencia Anti-Cierre
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [selected3DProduct, setSelected3DProduct] = useState<Product | null>(null)
+  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null)
+  const [addedToast, setAddedToast] = useState<string | null>(null)
+
+  // Modal de Micro-Servicios a la Mesa
+  const [showServiceModal, setShowServiceModal] = useState(false)
+  const [serviceRequestedToast, setServiceRequestedToast] = useState<string | null>(null)
+
+  // Estado del Pedido de la Mesa en Cocina (En Marcha / En Preparación / Listo)
+  const [tableOrderStatus, setTableOrderStatus] = useState<'pending' | 'preparing' | 'ready' | null>(null)
+  const [tableOrderInfo, setTableOrderInfo] = useState<{ totalItems: number; latestDishName: string } | null>(null)
+
+  // 1. Carga inicial y recuperación de persistencia
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
+      if (savedCart) {
+        try {
+          const parsed = JSON.parse(savedCart)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCart(parsed)
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    async function loadData() {
+      const supabase = createBrowserClient()
+      if (supabase) {
+        try {
+          const { data: restData } = await supabase
+            .from('restaurants')
+            .select('*')
+            .eq('slug', slug)
+            .single()
+
+          if (restData) {
+            setRestaurant(restData)
+
+            const { data: catData } = await supabase
+              .from('categories')
+              .select('*')
+              .eq('restaurant_id', restData.id)
+              .order('order_index')
+
+            if (catData && catData.length > 0) {
+              setCategories(catData)
+              setSelectedCategory(catData[0].id)
+            }
+
+            const { data: prodData } = await supabase
+              .from('products')
+              .select('*')
+              .eq('restaurant_id', restData.id)
+              .eq('is_available', true)
+
+            if (prodData && prodData.length > 0) setProducts(prodData)
+
+            const { data: tableData } = await supabase
+              .from('tables')
+              .select('*')
+              .eq('restaurant_id', restData.id)
+              .order('table_number')
+
+            if (tableData) setTables(tableData)
+            return
+          }
+        } catch (e) {
+          console.log('Using local fallback data:', e)
+        }
+      }
+
+      if (MOCK_RESTAURANTS[slug]) {
+        setRestaurant(MOCK_RESTAURANTS[slug])
+        const cats = MOCK_CATEGORIES[slug] || []
+        setCategories(cats)
+        if (cats.length > 0) {
+          setSelectedCategory(cats[0].id)
+        }
+        setProducts(MOCK_PRODUCTS[slug] || [])
+        setTables(MOCK_TABLES[slug] || [])
+      }
+    }
+
+    loadData()
+  }, [slug, tableNumber])
+
+  // 2. Sincronización en vivo del estado del pedido en Cocina para el comensal
+  useEffect(() => {
+    let sseEventSource: EventSource | null = null
+    let pollInterval: any = null
+
+    const checkOrderStatus = async () => {
+      try {
+        const res = await fetch(`/api/orders?slug=${slug}`)
+        if (res.ok) {
+          const data = await res.json()
+          const orders: any[] = data.orders || []
+          
+          // Buscar órdenes activas de esta mesa
+          const activeOrders = orders.filter(
+            o => o.table_number?.toString() === tableNumber?.toString() && o.status !== 'delivered'
+          )
+
+          if (activeOrders.length === 0) {
+            setTableOrderStatus(null)
+            setTableOrderInfo(null)
+          } else {
+            const isReady = activeOrders.some(o => o.status === 'ready')
+            const isPreparing = activeOrders.some(o => o.status === 'preparing')
+            
+            const totalItems = activeOrders.reduce((sum, o) => sum + (o.order_items?.length || 1), 0)
+            const firstItemName = activeOrders[0]?.order_items?.[0]?.product?.name || 'Platos'
+
+            setTableOrderInfo({ totalItems, latestDishName: firstItemName })
+
+            if (isReady) {
+              setTableOrderStatus('ready')
+            } else if (isPreparing) {
+              setTableOrderStatus('preparing')
+            } else {
+              setTableOrderStatus('pending')
+            }
+          }
+        }
+      } catch (e) {
+        console.log('Error checking order status for diner:', e)
+      }
+    }
+
+    checkOrderStatus()
+
+    try {
+      sseEventSource = new EventSource('/api/events')
+      sseEventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.slug === slug || data.type?.startsWith('order_')) {
+            checkOrderStatus()
+          }
+        } catch {
+          // ignore
+        }
+      }
+    } catch {
+      // fallback
+    }
+
+    pollInterval = setInterval(checkOrderStatus, 2000)
+
+    return () => {
+      if (sseEventSource) sseEventSource.close()
+      if (pollInterval) clearInterval(pollInterval)
+    }
+  }, [slug, tableNumber])
+
+  // Guardar carrito automáticamente ante cualquier cambio
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (cart.length > 0) {
+        localStorage.setItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`, JSON.stringify(cart))
+      } else {
+        localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
+      }
+    }
+  }, [cart, slug, tableNumber])
+
+  // Toggle expandir/colapsar plato
+  const toggleExpand = (productId: string) => {
+    setExpandedProductIds(prev => ({
+      ...prev,
+      [productId]: !prev[productId]
+    }))
+  }
+
+  // Filtrado
+  const filteredProducts = products.filter(prod => {
+    const matchesCategory = prod.category_id === selectedCategory
+    const matchesSearch = searchQuery === '' || 
+      prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (prod.description && prod.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    return matchesCategory && matchesSearch
+  })
+
+  const currentCategoryObj = categories.find(c => c.id === selectedCategory) || categories[0]
+
+  // Agregar directo
+  const handleQuickAdd = (product: Product, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+
+    setCart(prev => {
+      const existingIdx = prev.findIndex(item => item.product.id === product.id && item.selectedPills.length === 0 && !item.notes)
+      if (existingIdx >= 0) {
+        const copy = [...prev]
+        copy[existingIdx].quantity += 1
+        return copy
+      }
+      return [...prev, { product, quantity: 1, selectedPills: [], notes: '' }]
+    })
+
+    setAddedToast(product.name)
+    setTimeout(() => {
+      setAddedToast(null)
+    }, 2500)
+  }
+
+  // Agregar configurado
+  const handleAddCustomized = (product: Product, quantity: number, selectedPills: string[], notes: string) => {
+    setCart(prev => {
+      const existingIdx = prev.findIndex(
+        item => item.product.id === product.id && 
+          (item.notes || '').trim() === (notes || '').trim() && 
+          JSON.stringify([...(item.selectedPills || [])].sort()) === JSON.stringify([...(selectedPills || [])].sort())
+      )
+
+      if (existingIdx >= 0) {
+        const copy = [...prev]
+        copy[existingIdx].quantity += quantity
+        return copy
+      }
+
+      return [...prev, { product, quantity, selectedPills, notes }]
+    })
+
+    setAddedToast(product.name)
+    setTimeout(() => {
+      setAddedToast(null)
+    }, 2500)
+  }
+
+  const handleUpdateQuantity = (index: number, newQty: number) => {
+    if (newQty <= 0) {
+      setCart(prev => prev.filter((_, idx) => idx !== index))
+    } else {
+      setCart(prev => {
+        const copy = [...prev]
+        copy[index].quantity = newQty
+        return copy
+      })
+    }
+  }
+
+  const handleRemoveItem = (index: number) => {
+    setCart(prev => prev.filter((_, idx) => idx !== index))
+  }
+
+  // Solicitar Micro-Servicio a la Mesa
+  const handleRequestMicroService = async (serviceName: string) => {
+    try {
+      fetch('/api/service-calls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: restaurant.slug,
+          table_number: tableNumber,
+          call_type: `service_${serviceName}`,
+        }),
+      }).catch(console.error)
+
+      const supabase = createBrowserClient()
+      if (supabase) {
+        await supabase.from('service_calls').insert({
+          restaurant_id: restaurant.id,
+          table_number: tableNumber,
+          call_type: `service_${serviceName}`,
+          status: 'pending',
+        })
+      }
+      setServiceRequestedToast(serviceName)
+      setTimeout(() => {
+        setServiceRequestedToast(null)
+        setShowServiceModal(false)
+      }, 3000)
+    } catch {
+      setServiceRequestedToast(serviceName)
+      setTimeout(() => {
+        setServiceRequestedToast(null)
+        setShowServiceModal(false)
+      }, 3000)
+    }
+  }
+
+  const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+  const totalCartAmount = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+
+  return (
+    <TenantProvider restaurant={restaurant} initialTable={tableNumber}>
+      <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col pb-32" style={{ touchAction: 'manipulation' }}>
+        
+        <TenantHeader viewType="menu" tableNumber={tableNumber} />
+
+        {/* Notificación Toast Flotante */}
+        {addedToast && (
+          <div className="fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-3.5 rounded-2xl bg-blue-900 text-white font-bold shadow-2xl flex items-center justify-between animate-in slide-in-from-top duration-300 border border-blue-800">
+            <div className="flex items-center gap-2.5">
+              <Check className="w-5 h-5 text-blue-300 stroke-[3]" />
+              <span className="text-xs">¡{addedToast} añadido a la Mesa #{tableNumber}!</span>
+            </div>
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="text-xs underline font-black ml-2 text-amber-300"
+            >
+              Ver Carrito
+            </button>
+          </div>
+        )}
+
+        {/* Portada Superior con el Nombre del Local, Botón de Mesa y Micro-servicios */}
+        <div className="bg-white border-b border-slate-200 py-3.5 px-4 shadow-sm">
+          <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                {restaurant.name}
+              </h2>
+              <p className="text-xs font-semibold text-slate-500">
+                Carta Digital &middot; Mesa #{tableNumber}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowServiceModal(true)}
+                className="px-3 py-2 rounded-2xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-1.5 shadow-sm transition-all"
+                title="Pedir servilletas, hielo, condimentos"
+              >
+                <Bell className="w-3.5 h-3.5 text-blue-900" />
+                <span>Pedir a Mesa</span>
+              </button>
+              <CallWaiterButton tableNumber={tableNumber} />
+            </div>
+          </div>
+        </div>
+
+        {/* TRACKER EN VIVO DE ESTADO EN COCINA PARA EL CLIENTE */}
+        {tableOrderStatus && (
+          <div className="max-w-4xl mx-auto px-4 pt-3 w-full">
+            {tableOrderStatus === 'preparing' && (
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-400/40 text-amber-950 shadow-sm flex items-center gap-3 animate-in fade-in">
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-sm">
+                  <Flame className="w-5 h-5 animate-pulse" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">
+                      Estado de tu Mesa #{tableNumber}
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                  </div>
+                  <h4 className="font-black text-xs sm:text-sm text-slate-900 leading-tight mt-0.5">
+                    👨‍🍳 ¡Tu pedido está en preparación en cocina!
+                  </h4>
+                  <p className="text-[11px] text-slate-600 mt-0.5 font-medium">
+                    La cocina está marchando tus platos en los fuegos. Estarán listos en breve.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {tableOrderStatus === 'ready' && (
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-400/40 text-emerald-950 shadow-sm flex items-center gap-3 animate-bounce">
+                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-sm">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                      Mesa #{tableNumber}
+                    </span>
+                  </div>
+                  <h4 className="font-black text-xs sm:text-sm text-emerald-950 leading-tight mt-0.5">
+                    ✨ ¡Tu pedido está listo para servir!
+                  </h4>
+                  <p className="text-[11px] text-emerald-800 mt-0.5 font-medium">
+                    El personal lo está retirando de cocina para llevarlo caliente a tu mesa.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {tableOrderStatus === 'pending' && (
+              <div className="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-blue-950 text-xs font-semibold flex items-center gap-2.5 shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <span>📋 Comanda recibida en cocina &middot; En cola de preparación</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Buscador & Selector de Categorías */}
+        <div className="sticky top-[61px] z-20 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 space-y-3 shadow-sm">
+          
+          <div className="max-w-4xl mx-auto flex items-center gap-2">
+            {/* Buscador */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Buscar en ${currentCategoryObj ? currentCategoryObj.name : 'la carta'}...`}
+                className="w-full pl-10 pr-4 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-700/20 focus:border-blue-800 transition-all shadow-inner"
+              />
+            </div>
+
+            {/* Switcher de Vistas */}
+            <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 flex-shrink-0">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-xl transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-white text-blue-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Vista Carta Elegante con fotos desplegables"
+              >
+                <LayoutList className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-xl transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-blue-900 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Vista Galería de Fotos"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Carrusel de Categorías Gastronómicas en Píldoras */}
+          <div className="max-w-4xl mx-auto flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {categories.map((category) => {
+              const isSelected = selectedCategory === category.id
+              return (
+                <button
+                  key={category.id}
+                  onClick={() => {
+                    setSelectedCategory(category.id)
+                    setSearchQuery('')
+                  }}
+                  className={`flex-shrink-0 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all select-none ${
+                    isSelected
+                      ? 'bg-blue-900 text-white shadow-md'
+                      : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm'
+                  }`}
+                >
+                  {category.name}
+                </button>
+              )
+            })}
+          </div>
+
+        </div>
+
+        {/* Listado de Platos */}
+        <main className="max-w-4xl mx-auto p-4 flex-1 w-full">
+          {filteredProducts.length === 0 ? (
+            <div className="text-center py-16 text-slate-400 space-y-2 bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+              <Utensils className="w-12 h-12 mx-auto stroke-[1.2] text-slate-300" />
+              <p className="text-sm font-semibold text-slate-600">
+                {searchQuery ? 'No encontramos platos con esa búsqueda' : 'No hay platos en esta categoría'}
+              </p>
+            </div>
+          ) : viewMode === 'list' ? (
+            /* MODO 1: CARTA ELEGANTE EN BLANCO CON ACORDEÓN DESPLEGABLE CON FOTO */
+            <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden divide-y divide-slate-100">
+              {filteredProducts.map((product) => {
+                const isExpanded = Boolean(expandedProductIds[product.id])
+
+                return (
+                  <div
+                    key={product.id}
+                    className="transition-colors hover:bg-slate-50/70"
+                  >
+                    {/* FILA PRINCIPAL */}
+                    <div
+                      onClick={() => toggleExpand(product.id)}
+                      className="p-4 sm:p-5 flex items-start justify-between gap-4 cursor-pointer select-none touch-press"
+                    >
+                      <div className="space-y-1 flex-1">
+                        <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-snug">
+                          {product.name}
+                        </h3>
+                        {product.description && (
+                          <p className="text-xs text-slate-500 font-normal leading-relaxed max-w-xl">
+                            {product.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Precio & Controles Rápidos */}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        <span className="font-black text-sm sm:text-base text-slate-900">
+                          {formatCurrency(product.price)}
+                        </span>
+
+                        <button
+                          onClick={(e) => handleQuickAdd(product, e)}
+                          className="w-8 h-8 rounded-xl bg-blue-900 hover:bg-blue-800 text-white flex items-center justify-center shadow-sm transition-transform active:scale-90"
+                          title="Añadir directo a la comanda"
+                        >
+                          <Plus className="w-4 h-4 stroke-[3]" />
+                        </button>
+
+                        <div className="text-slate-400 hover:text-slate-700">
+                          {isExpanded ? (
+                            <ChevronUp className="w-5 h-5 text-blue-900" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECCIÓN DESPLEGABLE CON FOTO HD (Sin 3D invasivo) */}
+                    {isExpanded && (
+                      <div className="px-4 pb-5 sm:px-5 space-y-4 animate-in slide-in-from-top-2 duration-200 bg-slate-50/80 border-t border-slate-100 pt-4">
+                        
+                        {product.image_url && (
+                          <div className="relative h-56 sm:h-72 w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 shadow-inner">
+                            <Image
+                              src={product.image_url}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, 700px"
+                            />
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between gap-3 pt-1">
+                          <button
+                            onClick={() => setCustomizingProduct(product)}
+                            className="px-4 py-2 rounded-2xl border border-slate-300 text-slate-700 hover:bg-white text-xs font-bold transition-all shadow-sm active:scale-95"
+                          >
+                            Personalizar (Papas, Sal, Aclaraciones)
+                          </button>
+
+                          <button
+                            onClick={() => handleQuickAdd(product)}
+                            className="px-4 py-2.5 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-black flex items-center gap-1.5 shadow-md transition-all active:scale-95"
+                          >
+                            <Plus className="w-4 h-4 stroke-[3]" />
+                            <span>Añadir a la Mesa</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            /* MODO 2: GRILLA VISUAL */
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+                >
+                  <div>
+                    {product.image_url && (
+                      <div className="relative h-48 w-full bg-slate-100">
+                        <Image
+                          src={product.image_url}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 768px) 100vw, 400px"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4 space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-bold text-slate-900 text-sm leading-snug">
+                          {product.name}
+                        </h3>
+                        <span className="font-black text-sm text-slate-900 flex-shrink-0">
+                          {formatCurrency(product.price)}
+                        </span>
+                      </div>
+                      {product.description && (
+                        <p className="text-xs text-slate-500 font-normal line-clamp-2 leading-relaxed">
+                          {product.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-4 pt-0 flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => setCustomizingProduct(product)}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                    >
+                      Personalizar
+                    </button>
+                    <button
+                      onClick={() => handleQuickAdd(product)}
+                      className="px-4 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white text-xs font-black flex items-center gap-1.5 shadow-sm transition-transform active:scale-95"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Añadir</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+
+        {/* Modal de Personalización (Píldoras + Notas libres) */}
+        <ProductModifierModal
+          product={customizingProduct}
+          onClose={() => setCustomizingProduct(null)}
+          onConfirm={handleAddCustomized}
+        />
+
+        {/* Visor 3D */}
+        <Product3DModal
+          product={selected3DProduct}
+          isOpen={Boolean(selected3DProduct)}
+          onClose={() => setSelected3DProduct(null)}
+        />
+
+        {/* Modal de Micro-Servicios a la Mesa */}
+        {showServiceModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
+            <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-blue-900" />
+                  <h3 className="font-extrabold text-sm text-slate-900">
+                    Micro-Servicios para Mesa #{tableNumber}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowServiceModal(false)}
+                  className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-500">
+                Toca lo que necesitas y el mozo lo acercará directamente a tu mesa:
+              </p>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { name: 'Hielo y Limón', icon: '🍋' },
+                  { name: 'Panera / Salsas', icon: '🥖' },
+                  { name: 'Cubiertos Extra', icon: '🍴' },
+                  { name: 'Sal / Condimentos', icon: '🧂' },
+                  { name: 'Servilletas', icon: '🧻' },
+                  { name: 'Repetir Bebidas', icon: '🍻' },
+                ].map((serv) => (
+                  <button
+                    key={serv.name}
+                    onClick={() => handleRequestMicroService(serv.name)}
+                    className="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-left transition-all flex flex-col justify-between gap-1 shadow-sm active:scale-95"
+                  >
+                    <span className="text-xl">{serv.icon}</span>
+                    <span className="font-bold text-xs text-slate-900">{serv.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Toast de Micro-Servicio Enviado */}
+        {serviceRequestedToast && (
+          <div className="fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-3.5 rounded-2xl bg-emerald-700 text-white font-bold shadow-2xl flex items-center justify-between animate-in slide-in-from-top duration-300 border border-emerald-600">
+            <div className="flex items-center gap-2.5">
+              <Check className="w-5 h-5 text-emerald-200 stroke-[3]" />
+              <span className="text-xs">¡Solicitado {serviceRequestedToast} para Mesa #{tableNumber}!</span>
+            </div>
+          </div>
+        )}
+
+        {/* Barra Flotante Inferior de Comanda / Carrito */}
+        {totalCartCount > 0 && (
+          <div className="fixed bottom-4 inset-x-4 z-40 max-w-md mx-auto">
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="w-full py-3.5 px-5 rounded-2xl bg-blue-900 hover:bg-blue-800 text-white font-black text-sm flex items-center justify-between shadow-2xl border border-blue-800 active:scale-98 transition-all"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-full bg-white text-blue-900 flex items-center justify-center text-xs font-black">
+                  {totalCartCount}
+                </div>
+                <span>Ver Comanda Mesa #{tableNumber}</span>
+              </div>
+              <span className="text-amber-300 font-extrabold text-base">
+                {formatCurrency(totalCartAmount)}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* Drawer del Carrito */}
+        <CartDrawer
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          cart={cart}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onClearCart={() => setCart([])}
+          tableNumber={tableNumber}
+        />
+
+      </div>
+    </TenantProvider>
+  )
+}
+
+export default function DinerMenuPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-900" />
+      </div>
+    }>
+      <DinerMenuContent />
+    </Suspense>
+  )
+}

@@ -1,0 +1,156 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-primary: #1e3a8a;
+  --brand-secondary: #0f172a;
+  --brand-accent: #2563eb;
+  --foreground-rgb: 15, 23, 42;
+  --background-rgb: 248, 250, 252;
+}
+
+html, body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  scroll-behavior: smooth;
+}
+
+img, picture, svg, canvas, video {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
+  pointer-events: auto;
+}
+
+/* Números tabulares para evitar oscilaciones en precios y contadores */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Safe area support for notch & home indicators on iOS/Android PWA */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 16px);
+}
+
+/* Ocultar barra de scroll para navegación táctil fluida */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Aceleración por hardware GPU pura para 60/120fps ProMotion nativo */
+.gpu-layer {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform, opacity;
+}
+
+/* Sombra ambiental multicapa de alta gama (Ambient Shadow) */
+.ambient-card {
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+}
+
+.ambient-card:hover {
+  box-shadow: 0 8px 25px -4px rgba(30, 58, 138, 0.08), 0 3px 8px -2px rgba(15, 23, 42, 0.04);
+}
+
+/* Efecto Glassmorphism controlado con saturación */
+.glass-surface {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+/* Transiciones fluidas de alta gama (Curvas físicas de Apple) */
+.smooth-spring {
+  transition: all 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.smooth-fade {
+  transition: opacity 0.22s ease-out, transform 0.22s ease-out;
+}
+
+.smooth-press {
+  transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.14s ease-out;
+}
+.smooth-press:active {
+  transform: scale(0.96);
+}
+
+/* Micro-pop en contadores numéricos */
+@keyframes pop-counter {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+.animate-pop {
+  animation: pop-counter 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Efecto Shimmer para carga elegante de imágenes sin saltos */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-loading {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Animaciones de pulso suave ambiental */
+@keyframes soft-glow-amber {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+  }
+}
+
+@keyframes soft-glow-emerald {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+}
+
+.pulse-amber-soft {
+  animation: soft-glow-amber 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.pulse-emerald-soft {
+  animation: soft-glow-emerald 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
