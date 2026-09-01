@@ -221,3 +221,93 @@ insert into tables (id, restaurant_id, table_number) values
 ('d0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001', 4),
 ('d0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001', 5)
 on conflict (restaurant_id, table_number) do nothing;
+
+-- SEED DATA 2: TABERNA CASCO ANTIGO (Tapas Gallegas)
+insert into restaurants (id, name, slug, logo_url, primary_color, secondary_color)
+values (
+  'a0000000-0000-0000-0000-000000000002',
+  'Taberna do Casco Antigo',
+  'taperia-casco-antigo',
+  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=200&h=200&q=80',
+  '#b45309',
+  '#1c1917'
+) on conflict (slug) do nothing;
+
+insert into categories (id, restaurant_id, name, order_index) values
+('c0000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000002', 'RACIONES TRADICIONALES', 1),
+('c0000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000002', 'VINOS & BEBIDAS', 2)
+on conflict (id) do nothing;
+
+insert into products (id, restaurant_id, category_id, name, description, price, image_url, is_available) values
+(
+  'b0000000-0000-0000-0000-000000000011',
+  'a0000000-0000-0000-0000-000000000002',
+  'c0000000-0000-0000-0000-000000000011',
+  'Pulpo a Feira con Cachelos',
+  'Pulpo de la ria con pimenton de la Vera, sal gorda y aceite de oliva virgen extra.',
+  16.50,
+  'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+  true
+),
+(
+  'b0000000-0000-0000-0000-000000000012',
+  'a0000000-0000-0000-0000-000000000002',
+  'c0000000-0000-0000-0000-000000000011',
+  'Pimientos de Padron',
+  'Unos pican y otros no. Fritos en aceite de oliva con escamas de sal marina.',
+  7.00,
+  'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+  true
+)
+on conflict (id) do nothing;
+
+insert into tables (id, restaurant_id, table_number) values
+('d0000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000002', 1),
+('d0000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000002', 2),
+('d0000000-0000-0000-0000-000000000013', 'a0000000-0000-0000-0000-000000000002', 3)
+on conflict (restaurant_id, table_number) do nothing;
+
+-- SEED DATA 3: TERRAZA DO MALECON & RIA
+insert into restaurants (id, name, slug, logo_url, primary_color, secondary_color)
+values (
+  'a0000000-0000-0000-0000-000000000003',
+  'Terraza do Malecon & Ria',
+  'terraza-malecon',
+  'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=200&h=200&q=80',
+  '#0284c7',
+  '#0f172a'
+) on conflict (slug) do nothing;
+
+insert into categories (id, restaurant_id, name, order_index) values
+('c0000000-0000-0000-0000-000000000021', 'a0000000-0000-0000-0000-000000000003', 'MARISCOS & ARROCES', 1),
+('c0000000-0000-0000-0000-000000000022', 'a0000000-0000-0000-0000-000000000003', 'COCTELERIA & COPAS', 2)
+on conflict (id) do nothing;
+
+insert into products (id, restaurant_id, category_id, name, description, price, image_url, is_available) values
+(
+  'b0000000-0000-0000-0000-000000000021',
+  'a0000000-0000-0000-0000-000000000003',
+  'c0000000-0000-0000-0000-000000000021',
+  'Zamburinas a la Plancha',
+  '6 unidades con sofrito gallego tradicional de cebolla dulce y perejil.',
+  14.00,
+  'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=800&q=80',
+  true
+),
+(
+  'b0000000-0000-0000-0000-000000000022',
+  'a0000000-0000-0000-0000-000000000003',
+  'c0000000-0000-0000-0000-000000000022',
+  'Mojito Clasico Cubano',
+  'Ron blanco anejo, hierbabuena fresca, zumo de lima natural y soda.',
+  6.50,
+  'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80',
+  true
+)
+on conflict (id) do nothing;
+
+insert into tables (id, restaurant_id, table_number) values
+('d0000000-0000-0000-0000-000000000021', 'a0000000-0000-0000-0000-000000000003', 1),
+('d0000000-0000-0000-0000-000000000022', 'a0000000-0000-0000-0000-000000000003', 2),
+('d0000000-0000-0000-0000-000000000023', 'a0000000-0000-0000-0000-000000000003', 3)
+on conflict (restaurant_id, table_number) do nothing;
