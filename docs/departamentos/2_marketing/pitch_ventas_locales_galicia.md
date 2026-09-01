@@ -36,7 +36,14 @@
 ---
 
 ## 📱 Demostración en Vivo en la Nube (30 Segundos)
-1. Abre tu móvil con la URL oficial de producción de Vercel.
-2. Muestra la rapidez instantánea de carga de la carta (/menu/burger-gourmet).
-3. Haz un pedido de prueba y muestra cómo le llega al instante al comandero del mozo (/staff/comandero/burger-gourmet).
-4. Muestra el botón de "Google Review Booster" (+1 toque de 5 estrellas) para aumentar las reseñas del local.
+1. Abre tu móvil con la URL oficial de producción de Vercel (`https://fluxo-gastro.vercel.app`).
+2. Muestra los 3 conceptos gastronómicos según el local visitado (Burger Gourmet, Tapería Casco Antigo o Terraza Malecón).
+3. Haz un pedido de prueba y muestra cómo le llega al instante al comandero del mozo (`/staff/comandero/[slug]`).
+4. Muestra el botón de "Google Review Booster" (+1 toque de 5 estrellas) para disparar la reputación del local.
+
+---
+
+## 🎁 El Cierre: Desafío Piloto de 14 Días a 0€
+> *"Te propongo algo muy simple: el **Desafío Piloto de 14 Días a 0€**.  
+> Nosotros cargamos tu carta completa, instalamos las peanas QR en tus mesas y te acompañamos presencialmente el primer fin de semana.  
+> Lo pruebas durante dos fines de semana enteros. Si al día 14 no has notado que tus camareros van más desahogados, que rotas más mesas y que tus clientes están encantados, nos llevamos las peanas y no has pagado ni un solo euro. Cero permanencia y cero riesgo."*

@@ -6,6 +6,20 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-09-01 13:40] — Unificación Institucional del Piloto de 14 Días a 0€ y Despliegue en Vivo
+* **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3), Ingeniería & Producto (Depto 4) y Learning & Intelligence (Depto 5).
+* **Consenso y Alineación Total:**
+  1. **Landing Page y Canales de Conversión (`src/app/page.tsx`):**
+     - Actualizados todos los textos y botones de llamada a la acción hacia la oferta comercial oficial: **"Piloto Gratuito de 14 Días a 0€ (Desafío Terraza)"**.
+     - Mensaje automático de WhatsApp unificado para solicitar el piloto en 1 toque.
+  2. **Registro de Decisiones (DEC-15):**
+     - Formalizada la decisión en `docs/departamentos/1_organizacion/registro_ideas_y_decisiones.md`.
+  3. **Disponibilidad Global en la Nube:**
+     - Repositorio sincronizado en GitHub (`main`) y desplegado en Vercel Edge (`https://fluxo-gastro.vercel.app`).
+     - Certificación E2E de los 3 perfiles gastronómicos de Noia activa al 100%.
+
+---
+
 ### [2026-09-01 13:10] — Certificación de 3 Perfiles Demo en Producción, Build 0 Errores y Sincronización Cloud
 * **Departamentos Sincronizados:** Ingeniería & Producto (Program Data), Organización General (COO), Marketing & Ventas, Diseño de Marca & UI y Learning & Intelligence.
 * **Entregables Técnicos Ejecutados:**
