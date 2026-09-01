@@ -532,14 +532,6 @@ export async function GET(req: NextRequest) {
         <button onclick="window.print()" class="action-btn btn-primary">
           <span>🖨️ Imprimir Ticket de Prueba</span>
         </button>
-
-        <a href="/api/printers/receipt?slug=${slug}&format=json" target="_blank" class="action-btn btn-secondary">
-          <span>🔌 Ver Respuesta API (JSON)</span>
-        </a>
-
-        <a href="/api/printers/receipt?slug=${slug}&format=escpos" download="ticket-${slug}.bin" class="action-btn btn-secondary">
-          <span>📦 Descargar Binario ESC/POS (.bin)</span>
-        </a>
       </div>
 
       <div class="info-box">
