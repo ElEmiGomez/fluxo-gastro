@@ -408,25 +408,26 @@ export function PilotRequestModal({
                 </div>
               </div>
 
-              {/* 5. Selector de Plan (Preseleccionado automáticamente) */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    Plan Seleccionado para la Prueba
-                  </label>
-                  <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+              {/* Plan Seleccionado Automáticamente (Sin pasos innecesarios) */}
+              <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-black">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      Plan Seleccionado para la Prueba
+                    </span>
+                    <span className="text-sm font-black text-white">
+                      {selectedPlan}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs font-black text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40">
                     14 días a 0€
                   </span>
                 </div>
-                <select
-                  value={selectedPlan}
-                  onChange={(e) => setSelectedPlan(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors cursor-pointer"
-                >
-                  <option value="Plan Carta (39€)">Plan Carta (39€/mes) — Carta QR Digital</option>
-                  <option value="Plan Sala (69€)">Plan Sala (69€/mes) — Comandero de Sala</option>
-                  <option value="Plan Full (Recomendado)">Plan Full (99€/mes) — Circuito Completo (Recomendado)</option>
-                </select>
               </div>
 
               {/* 6. Comentarios o enlace a carta */}

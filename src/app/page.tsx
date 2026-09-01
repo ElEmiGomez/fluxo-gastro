@@ -604,7 +604,10 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch pt-4">
               
               {/* Tarjeta 1: Plan Carta */}
-              <div className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative">
+              <div 
+                onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
+                className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative cursor-pointer"
+              >
                 
                 {/* Badge Flotante Promocional en Hover */}
                 <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 z-20">
@@ -676,7 +679,10 @@ export default function LandingPage() {
                 <div className="pt-8">
                   <button
                     type="button"
-                    onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleOpenPilotModal('Plan Carta (39€)')
+                    }}
                     className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-white bg-slate-700/80 group-hover:bg-emerald-500 group-hover:text-slate-950 group-hover:shadow-lg group-hover:shadow-emerald-500/30 border border-slate-600 group-hover:border-emerald-400 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
                     <span className="block group-hover:hidden">Elegir Plan Carta</span>
@@ -689,7 +695,10 @@ export default function LandingPage() {
               </div>
 
               {/* Tarjeta 2: Plan Sala */}
-              <div className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative">
+              <div 
+                onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
+                className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative cursor-pointer"
+              >
                 
                 {/* Badge Flotante Promocional en Hover */}
                 <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 z-20">
@@ -761,7 +770,10 @@ export default function LandingPage() {
                 <div className="pt-8">
                   <button
                     type="button"
-                    onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleOpenPilotModal('Plan Sala (69€)')
+                    }}
                     className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-white bg-slate-700/80 group-hover:bg-emerald-500 group-hover:text-slate-950 group-hover:shadow-lg group-hover:shadow-emerald-500/30 border border-slate-600 group-hover:border-emerald-400 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
                     <span className="block group-hover:hidden">Elegir Plan Sala</span>
@@ -774,7 +786,10 @@ export default function LandingPage() {
               </div>
 
               {/* Tarjeta 3: Plan Full (DESTACADA CON BORDE CIAN BRILLANTE & BADGE RECOMENDADO) */}
-              <div className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/25 transition-all duration-300 group relative lg:-translate-y-2">
+              <div 
+                onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
+                className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/25 transition-all duration-300 group relative lg:-translate-y-2 cursor-pointer"
+              >
                 
                 {/* Badge Recomendado / 14 Días */}
                 <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-cyan-500 group-hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md transition-colors z-20">
@@ -852,7 +867,10 @@ export default function LandingPage() {
                 <div className="pt-8">
                   <button
                     type="button"
-                    onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleOpenPilotModal('Plan Full (Recomendado)')
+                    }}
                     className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-cyan-400 group-hover:bg-emerald-400 shadow-lg shadow-cyan-500/30 group-hover:shadow-emerald-500/40 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
                     <span className="block group-hover:hidden">Elegir Plan Full (Recomendado)</span>
