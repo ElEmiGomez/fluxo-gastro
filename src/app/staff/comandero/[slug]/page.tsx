@@ -522,98 +522,86 @@ export default function WaiterComanderoPage() {
         
         <TenantHeader viewType="comandero" tableNumber={selectedTable?.table_number.toString()} />
 
-        {/* 1. Alerta Pop-up de Llamada de Mesa (Persistente hasta que el mozo actúe) */}
-        {popupAlert && (
-          <div className={`fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-4 rounded-2xl font-black shadow-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top duration-300 border ${
-            popupAlert.text.toLowerCase().includes('cuenta')
-              ? 'bg-emerald-600 text-white border-emerald-500'
-              : 'bg-amber-500 text-slate-950 border-amber-400'
-          }`}>
-            <div className="flex items-center gap-3 min-w-0">
-              <Bell className="w-6 h-6 stroke-[2.5] animate-pulse flex-shrink-0" />
-              <div className="min-w-0">
-                <div className="text-xs font-black uppercase tracking-wider truncate">
-                  ¡Aviso Mesa #{popupAlert.table_number}!
+        {/* 1. CENTRO DE AVISOS Y LLAMADAS ACTIVAS (PERMANENTE HASTA ACCIÓN DEL MOZO) */}
+        {pendingCalls.length > 0 && (
+          <div className="bg-amber-500/15 border-b-2 border-amber-400 p-3 sm:p-4 shadow-md animate-in slide-in-from-top duration-200">
+            <div className="max-w-6xl mx-auto space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-amber-500 animate-ping flex-shrink-0" />
+                  <h3 className="text-xs sm:text-sm font-black text-amber-950 uppercase tracking-wide flex items-center gap-1.5">
+                    <Bell className="w-4 h-4 text-amber-800 stroke-[2.5]" />
+                    <span>Avisos de Salón Pendientes ({pendingCalls.length})</span>
+                  </h3>
                 </div>
-                <div className="text-xs font-bold mt-0.5 truncate">{popupAlert.text}</div>
+                <button
+                  type="button"
+                  onClick={() => pendingCalls.forEach(c => handleAttendCall(c.id))}
+                  className="text-xs font-black text-amber-900 hover:text-amber-950 underline cursor-pointer"
+                >
+                  Atender Todos
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                {pendingCalls.map(call => {
+                  const isBill = call.text.toLowerCase().includes('cuenta')
+                  return (
+                    <div
+                      key={call.id}
+                      className={`p-3.5 rounded-2xl border-2 shadow-md flex items-center justify-between gap-3 transition-all ${
+                        isBill
+                          ? 'bg-emerald-950 border-emerald-400 text-white'
+                          : 'bg-slate-900 border-amber-400 text-white'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const tbl = tables.find(t => t.table_number.toString() === call.table_number.toString())
+                          if (tbl) setSelectedTable(tbl)
+                        }}
+                        className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
+                      >
+                        <span className={`px-2.5 py-1 rounded-xl text-xs font-black flex-shrink-0 ${
+                          isBill ? 'bg-emerald-400 text-slate-950' : 'bg-amber-400 text-slate-950'
+                        }`}>
+                          Mesa #{call.table_number}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-black truncate">{call.text}</p>
+                          <span className="text-[10px] text-slate-400 block mt-0.5 font-semibold">Toca para abrir mesa</span>
+                        </div>
+                      </button>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleAttendCall(call.id)}
+                          className={`px-3 py-2 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1 cursor-pointer ${
+                            isBill
+                              ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950'
+                              : 'bg-amber-400 hover:bg-amber-300 text-slate-950'
+                          }`}
+                          title={isBill ? 'Confirmar cobro' : 'Marcar como atendido'}
+                        >
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          <span>{isBill ? 'Cobrado' : 'Atendido'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAttendCall(call.id)}
+                          className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                          title="Cerrar aviso"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <button
-                onClick={() => handleAttendCall(popupAlert.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md active:scale-95 ${
-                  popupAlert.text.toLowerCase().includes('cuenta')
-                    ? 'bg-white text-emerald-950 hover:bg-emerald-100'
-                    : 'bg-slate-950 text-white hover:bg-slate-900'
-                }`}
-              >
-                <Check className="w-4 h-4 stroke-[3]" />
-                <span>{popupAlert.text.toLowerCase().includes('cuenta') ? '✓ Cobrado' : 'Atendido'}</span>
-              </button>
-              <button
-                onClick={() => setPopupAlert(null)}
-                className={`p-2 rounded-xl transition-colors ${
-                  popupAlert.text.toLowerCase().includes('cuenta')
-                    ? 'text-emerald-200 hover:text-white hover:bg-emerald-700/50'
-                    : 'text-amber-900 hover:text-slate-950 hover:bg-amber-400/50'
-                }`}
-                title="Ocultar aviso"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 2. BARRA SUPERIOR DE AVISOS ACTIVOS CON COBRO RÁPIDO EN 1 TOQUE */}
-        {pendingCalls.length > 0 && (
-          <div className="bg-amber-100/95 border-b border-amber-300 px-4 py-2.5 text-xs font-bold text-amber-950 shadow-sm flex items-center justify-between gap-2 overflow-x-auto">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping flex-shrink-0" />
-              <span className="font-extrabold">Avisos activos ({pendingCalls.length}):</span>
-              {pendingCalls.map(call => {
-                const isBill = call.text.toLowerCase().includes('cuenta')
-                return (
-                  <div
-                    key={call.id}
-                    className="flex items-center gap-1.5 bg-amber-200/95 pl-2.5 pr-1 py-1 rounded-xl border border-amber-400 text-xs font-black text-amber-950 shadow-xs"
-                  >
-                    <button
-                      onClick={() => {
-                        const tbl = tables.find(t => t.table_number.toString() === call.table_number.toString())
-                        if (tbl) setSelectedTable(tbl)
-                      }}
-                      className="flex items-center gap-1.5 hover:underline"
-                      title="Seleccionar mesa en salón"
-                    >
-                      <Bell className="w-3.5 h-3.5 text-amber-800" />
-                      <span>Mesa #{call.table_number}: {call.text}</span>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleAttendCall(call.id)
-                      }}
-                      className={`px-2 py-1 rounded-lg text-[11px] font-black shadow-xs transition-all flex items-center gap-1 active:scale-95 ${
-                        isBill
-                          ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
-                          : 'bg-slate-900 hover:bg-slate-800 text-white'
-                      }`}
-                      title={isBill ? 'Marcar como cobrado en 1 toque' : 'Marcar como atendido'}
-                    >
-                      <Check size={12} strokeWidth={3} />
-                      <span>{isBill ? 'Cobrado' : 'Listo'}</span>
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-            <button
-              onClick={() => pendingCalls.forEach(c => handleAttendCall(c.id))}
-              className="text-[11px] text-amber-800 hover:underline font-extrabold whitespace-nowrap pl-2"
-            >
-              Limpiar todo
-            </button>
           </div>
         )}
 
