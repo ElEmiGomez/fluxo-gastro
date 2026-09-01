@@ -596,18 +596,49 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
               
               {/* Tarjeta 1: Plan Carta */}
-              <div className="bg-slate-800/60 border border-slate-700 rounded-2xl p-8 flex flex-col justify-between shadow-xl">
+              <div className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative overflow-hidden">
+                
+                {/* Badge Flotante Promocional en Hover */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>14 DÍAS GRATIS</span>
+                </div>
+
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-xl font-black text-white">Plan Carta</h3>
+                    <h3 className="text-xl font-black text-white group-hover:text-emerald-300 transition-colors">Plan Carta</h3>
                     <p className="text-xs text-slate-400 mt-1">
                       Para locales que buscan carta interactiva y agilidad de servicio en mesa.
                     </p>
                   </div>
 
-                  <div className="flex items-baseline gap-1 text-white">
-                    <span className="text-4xl sm:text-5xl font-black tracking-tight tabular-nums">39€</span>
-                    <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                  {/* BLOQUE DE PRECIO INTERACTIVO */}
+                  <div className="py-2">
+                    {/* Estado Normal (Desktop): 39€ /mes + IVA */}
+                    <div className="flex items-baseline gap-2 group-hover:hidden transition-all duration-200">
+                      <span className="text-4xl sm:text-5xl font-black text-white tracking-tight tabular-nums">39€</span>
+                      <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                    </div>
+
+                    {/* Estado Promocional (Hover en Desktop): ~39€~ 0€ durante 14 días */}
+                    <div className="hidden group-hover:flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-2xl sm:text-3xl font-black text-slate-500 line-through decoration-red-500 decoration-2 tabular-nums">39€</span>
+                        <span className="text-4xl sm:text-5xl font-black text-emerald-400 tracking-tight tabular-nums drop-shadow-[0_0_12px_rgba(52,211,153,0.35)]">0€</span>
+                        <span className="text-xs font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          Piloto 0€
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-400">
+                        Prueba completa 14 días &middot; Sin coste ni compromiso
+                      </span>
+                    </div>
+
+                    {/* Subtítulo visible en móvil */}
+                    <div className="sm:hidden mt-1 flex items-center gap-2 text-xs font-bold text-emerald-400">
+                      <span className="line-through text-slate-500">39€</span>
+                      <span>0€ los primeros 14 días</span>
+                    </div>
                   </div>
 
                   <ul className="space-y-3 text-xs sm:text-sm text-slate-300">
@@ -639,42 +670,61 @@ export default function LandingPage() {
                     href={getWhatsAppUrl('Plan Carta')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3.5 px-4 rounded-xl text-center text-xs sm:text-sm font-bold text-white bg-slate-700/80 hover:bg-emerald-600 hover:border-emerald-500 border border-slate-600 transition-all duration-300 block group shadow-md hover:shadow-emerald-500/20 active:scale-95 cursor-pointer"
+                    className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-white bg-slate-700/80 group-hover:bg-emerald-500 group-hover:text-slate-950 group-hover:shadow-lg group-hover:shadow-emerald-500/30 border border-slate-600 group-hover:border-emerald-400 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
-                    {/* Vista Desktop: Hover Interactivo */}
-                    <div className="hidden sm:block">
-                      <span className="block group-hover:hidden transition-all">Elegir Plan Carta</span>
-                      <span className="hidden group-hover:inline-flex items-center justify-center gap-1.5 text-white font-extrabold text-xs tracking-wide animate-in fade-in zoom-in-95 duration-200">
-                        <Sparkles className="w-4 h-4 text-amber-300" />
-                        <span>✨ Probar 14 días a 0€</span>
-                      </span>
-                    </div>
-
-                    {/* Vista Móvil: Doble Línea de Alta Claridad */}
-                    <div className="sm:hidden flex flex-col items-center justify-center py-0.5">
-                      <span className="font-extrabold text-sm text-white">Elegir Plan Carta</span>
-                      <span className="text-[11px] font-black text-amber-300 flex items-center gap-1 mt-0.5">
-                        <Sparkles className="w-3 h-3 text-amber-300" />
-                        <span>14 Días de Prueba a 0€</span>
-                      </span>
-                    </div>
+                    <span className="block group-hover:hidden">Elegir Plan Carta</span>
+                    <span className="hidden group-hover:inline-flex items-center justify-center gap-1.5 font-black">
+                      <Sparkles className="w-4 h-4" />
+                      <span>Iniciar Prueba Gratis (14 Días)</span>
+                    </span>
                   </a>
                 </div>
               </div>
 
               {/* Tarjeta 2: Plan Sala */}
-              <div className="bg-slate-800/60 border border-slate-700 rounded-2xl p-8 flex flex-col justify-between shadow-xl">
+              <div className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative overflow-hidden">
+                
+                {/* Badge Flotante Promocional en Hover */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>14 DÍAS GRATIS</span>
+                </div>
+
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-xl font-black text-white">Plan Sala</h3>
+                    <h3 className="text-xl font-black text-white group-hover:text-emerald-300 transition-colors">Plan Sala</h3>
                     <p className="text-xs text-slate-400 mt-1">
                       Para restaurantes con camareros en sala y terraza que requieren control antifraude.
                     </p>
                   </div>
 
-                  <div className="flex items-baseline gap-1 text-white">
-                    <span className="text-4xl sm:text-5xl font-black tracking-tight tabular-nums">69€</span>
-                    <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                  {/* BLOQUE DE PRECIO INTERACTIVO */}
+                  <div className="py-2">
+                    {/* Estado Normal (Desktop): 69€ /mes + IVA */}
+                    <div className="flex items-baseline gap-2 group-hover:hidden transition-all duration-200">
+                      <span className="text-4xl sm:text-5xl font-black text-white tracking-tight tabular-nums">69€</span>
+                      <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                    </div>
+
+                    {/* Estado Promocional (Hover en Desktop): ~69€~ 0€ durante 14 días */}
+                    <div className="hidden group-hover:flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-2xl sm:text-3xl font-black text-slate-500 line-through decoration-red-500 decoration-2 tabular-nums">69€</span>
+                        <span className="text-4xl sm:text-5xl font-black text-emerald-400 tracking-tight tabular-nums drop-shadow-[0_0_12px_rgba(52,211,153,0.35)]">0€</span>
+                        <span className="text-xs font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          Piloto 0€
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-400">
+                        Prueba completa 14 días &middot; Sin coste ni compromiso
+                      </span>
+                    </div>
+
+                    {/* Subtítulo visible en móvil */}
+                    <div className="sm:hidden mt-1 flex items-center gap-2 text-xs font-bold text-emerald-400">
+                      <span className="line-through text-slate-500">69€</span>
+                      <span>0€ los primeros 14 días</span>
+                    </div>
                   </div>
 
                   <ul className="space-y-3 text-xs sm:text-sm text-slate-300">
@@ -706,51 +756,67 @@ export default function LandingPage() {
                     href={getWhatsAppUrl('Plan Sala')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3.5 px-4 rounded-xl text-center text-xs sm:text-sm font-bold text-white bg-slate-700/80 hover:bg-emerald-600 hover:border-emerald-500 border border-slate-600 transition-all duration-300 block group shadow-md hover:shadow-emerald-500/20 active:scale-95 cursor-pointer"
+                    className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-white bg-slate-700/80 group-hover:bg-emerald-500 group-hover:text-slate-950 group-hover:shadow-lg group-hover:shadow-emerald-500/30 border border-slate-600 group-hover:border-emerald-400 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
-                    {/* Vista Desktop: Hover Interactivo */}
-                    <div className="hidden sm:block">
-                      <span className="block group-hover:hidden transition-all">Elegir Plan Sala</span>
-                      <span className="hidden group-hover:inline-flex items-center justify-center gap-1.5 text-white font-extrabold text-xs tracking-wide animate-in fade-in zoom-in-95 duration-200">
-                        <Sparkles className="w-4 h-4 text-amber-300" />
-                        <span>✨ Probar 14 días a 0€</span>
-                      </span>
-                    </div>
-
-                    {/* Vista Móvil: Doble Línea de Alta Claridad */}
-                    <div className="sm:hidden flex flex-col items-center justify-center py-0.5">
-                      <span className="font-extrabold text-sm text-white">Elegir Plan Sala</span>
-                      <span className="text-[11px] font-black text-amber-300 flex items-center gap-1 mt-0.5">
-                        <Sparkles className="w-3 h-3 text-amber-300" />
-                        <span>14 Días de Prueba a 0€</span>
-                      </span>
-                    </div>
+                    <span className="block group-hover:hidden">Elegir Plan Sala</span>
+                    <span className="hidden group-hover:inline-flex items-center justify-center gap-1.5 font-black">
+                      <Sparkles className="w-4 h-4" />
+                      <span>Iniciar Prueba Gratis (14 Días)</span>
+                    </span>
                   </a>
                 </div>
               </div>
 
               {/* Tarjeta 3: Plan Full (DESTACADA CON BORDE CIAN BRILLANTE & BADGE RECOMENDADO) */}
-              <div className="bg-slate-800/90 border-2 border-cyan-500 rounded-2xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 relative lg:-translate-y-2">
+              <div className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/25 transition-all duration-300 group relative lg:-translate-y-2 overflow-hidden">
                 
-                {/* Badge Recomendado */}
-                <div className="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-cyan-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md">
-                  Recomendado
+                {/* Badge Recomendado / 14 Días */}
+                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-cyan-500 group-hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md transition-colors">
+                  <span className="group-hover:hidden">Recomendado</span>
+                  <span className="hidden group-hover:inline-flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>14 DÍAS GRATIS</span>
+                  </span>
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <div className="inline-flex items-center gap-1.5 text-cyan-400 font-extrabold text-xs uppercase tracking-wider mb-1">
+                    <div className="inline-flex items-center gap-1.5 text-cyan-400 group-hover:text-emerald-300 font-extrabold text-xs uppercase tracking-wider mb-1 transition-colors">
                       <Layers className="w-4 h-4" /> Circuito Completo
                     </div>
-                    <h3 className="text-2xl font-black text-white">Plan Full</h3>
+                    <h3 className="text-2xl font-black text-white group-hover:text-emerald-300 transition-colors">Plan Full</h3>
                     <p className="text-xs text-slate-300 mt-1">
                       Solución integral: Comensal + Sala + Pantalla KDS o Tiqueteras térmicas.
                     </p>
                   </div>
 
-                  <div className="flex items-baseline gap-1 text-white">
-                    <span className="text-4xl sm:text-5xl font-black tracking-tight tabular-nums text-cyan-400">99€</span>
-                    <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                  {/* BLOQUE DE PRECIO INTERACTIVO */}
+                  <div className="py-2">
+                    {/* Estado Normal (Desktop): 99€ /mes + IVA */}
+                    <div className="flex items-baseline gap-2 group-hover:hidden transition-all duration-200">
+                      <span className="text-4xl sm:text-5xl font-black text-cyan-400 tracking-tight tabular-nums">99€</span>
+                      <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                    </div>
+
+                    {/* Estado Promocional (Hover en Desktop): ~99€~ 0€ durante 14 días */}
+                    <div className="hidden group-hover:flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="flex items-baseline gap-3">
+                        <span className="text-2xl sm:text-3xl font-black text-slate-500 line-through decoration-red-500 decoration-2 tabular-nums">99€</span>
+                        <span className="text-4xl sm:text-5xl font-black text-emerald-400 tracking-tight tabular-nums drop-shadow-[0_0_12px_rgba(52,211,153,0.35)]">0€</span>
+                        <span className="text-xs font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          Piloto 0€
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-slate-400">
+                        Prueba completa 14 días &middot; Sin coste ni compromiso
+                      </span>
+                    </div>
+
+                    {/* Subtítulo visible en móvil */}
+                    <div className="sm:hidden mt-1 flex items-center gap-2 text-xs font-bold text-emerald-400">
+                      <span className="line-through text-slate-500">99€</span>
+                      <span>0€ los primeros 14 días</span>
+                    </div>
                   </div>
 
                   <ul className="space-y-3 text-xs sm:text-sm text-slate-200">
@@ -782,25 +848,13 @@ export default function LandingPage() {
                     href={getWhatsAppUrl('Plan Full (Recomendado)')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3.5 px-4 rounded-xl text-center text-xs sm:text-sm font-black text-slate-950 bg-cyan-400 hover:bg-emerald-400 hover:text-slate-950 shadow-lg shadow-cyan-500/30 hover:shadow-emerald-500/40 transition-all duration-300 block group active:scale-95 cursor-pointer"
+                    className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-cyan-400 group-hover:bg-emerald-400 shadow-lg shadow-cyan-500/30 group-hover:shadow-emerald-500/40 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
-                    {/* Vista Desktop: Hover Interactivo */}
-                    <div className="hidden sm:block">
-                      <span className="block group-hover:hidden transition-all">Elegir Plan Full (Recomendado)</span>
-                      <span className="hidden group-hover:inline-flex items-center justify-center gap-1.5 text-slate-950 font-black text-xs tracking-wide animate-in fade-in zoom-in-95 duration-200">
-                        <Sparkles className="w-4 h-4 text-slate-950 fill-amber-300" />
-                        <span>🚀 Probar 14 días a 0€ (Sin Coste)</span>
-                      </span>
-                    </div>
-
-                    {/* Vista Móvil: Doble Línea de Alta Claridad */}
-                    <div className="sm:hidden flex flex-col items-center justify-center py-0.5">
-                      <span className="font-black text-sm text-slate-950">Elegir Plan Full (Recomendado)</span>
-                      <span className="text-[11px] font-black text-slate-900 flex items-center gap-1 mt-0.5 bg-cyan-300/60 px-2 py-0.5 rounded-full">
-                        <Sparkles className="w-3 h-3 text-amber-600 fill-amber-400" />
-                        <span>14 Días de Prueba a 0€</span>
-                      </span>
-                    </div>
+                    <span className="block group-hover:hidden">Elegir Plan Full (Recomendado)</span>
+                    <span className="hidden group-hover:inline-flex items-center justify-center gap-1.5 font-black">
+                      <Sparkles className="w-4 h-4 fill-amber-300 text-slate-950" />
+                      <span>Iniciar Prueba Gratis (14 Días)</span>
+                    </span>
                   </a>
                 </div>
               </div>
