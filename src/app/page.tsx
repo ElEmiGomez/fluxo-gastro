@@ -662,16 +662,16 @@ export default function LandingPage() {
                   </ul>
                 </div>
 
-                <div className="pt-8">
+                <div className="pt-8 w-full flex items-center justify-center">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleOpenPilotModal('Plan Carta (39€)')
                     }}
-                    className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-lg shadow-emerald-500/25 border border-emerald-300 transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                    className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-lg shadow-emerald-500/25 border border-emerald-300 transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none"
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4 flex-shrink-0" />
                     <span>Iniciar Prueba Gratis (14 Días)</span>
                   </button>
                 </div>
@@ -735,16 +735,16 @@ export default function LandingPage() {
                   </ul>
                 </div>
 
-                <div className="pt-8">
+                <div className="pt-8 w-full flex items-center justify-center">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleOpenPilotModal('Plan Sala (69€)')
                     }}
-                    className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-lg shadow-emerald-500/25 border border-emerald-300 transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                    className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-lg shadow-emerald-500/25 border border-emerald-300 transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none"
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4 flex-shrink-0" />
                     <span>Iniciar Prueba Gratis (14 Días)</span>
                   </button>
                 </div>
@@ -811,16 +811,16 @@ export default function LandingPage() {
                   </ul>
                 </div>
 
-                <div className="pt-8">
+                <div className="pt-8 w-full flex items-center justify-center">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleOpenPilotModal('Plan Full (Recomendado)')
                     }}
-                    className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-xl shadow-emerald-500/30 border border-emerald-300 transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                    className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-xl shadow-emerald-500/30 border border-emerald-300 transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none"
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4 flex-shrink-0" />
                     <span>Iniciar Prueba Gratis (14 Días)</span>
                   </button>
                 </div>
