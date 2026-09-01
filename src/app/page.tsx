@@ -29,8 +29,11 @@ import { FluxoLogo } from '@/components/common/FluxoLogo'
 const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '5493585187430'
 const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para mi restaurante.'
 
-const getWhatsAppUrl = () => {
-  const encoded = encodeURIComponent(DEFAULT_WHATSAPP_MSG)
+const getWhatsAppUrl = (planName?: string) => {
+  const msg = planName
+    ? `¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para el ${planName}.`
+    : DEFAULT_WHATSAPP_MSG
+  const encoded = encodeURIComponent(msg)
   return `https://wa.me/${WHATSAPP_PHONE}?text=${encoded}`
 }
 
@@ -633,12 +636,28 @@ export default function LandingPage() {
 
                 <div className="pt-8">
                   <a
-                    href={getWhatsAppUrl()}
+                    href={getWhatsAppUrl('Plan Carta')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3 px-4 rounded-xl text-center text-xs sm:text-sm font-bold text-white bg-slate-700/80 hover:bg-slate-700 border border-slate-600 transition-colors block"
+                    className="w-full py-3.5 px-4 rounded-xl text-center text-xs sm:text-sm font-bold text-white bg-slate-700/80 hover:bg-emerald-600 hover:border-emerald-500 border border-slate-600 transition-all duration-300 block group shadow-md hover:shadow-emerald-500/20 active:scale-95 cursor-pointer"
                   >
-                    Elegir Plan Carta
+                    {/* Vista Desktop: Hover Interactivo */}
+                    <div className="hidden sm:block">
+                      <span className="block group-hover:hidden transition-all">Elegir Plan Carta</span>
+                      <span className="hidden group-hover:inline-flex items-center justify-center gap-1.5 text-white font-extrabold text-xs tracking-wide animate-in fade-in zoom-in-95 duration-200">
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>✨ Probar 14 días a 0€</span>
+                      </span>
+                    </div>
+
+                    {/* Vista Móvil: Doble Línea de Alta Claridad */}
+                    <div className="sm:hidden flex flex-col items-center justify-center py-0.5">
+                      <span className="font-extrabold text-sm text-white">Elegir Plan Carta</span>
+                      <span className="text-[11px] font-black text-amber-300 flex items-center gap-1 mt-0.5">
+                        <Sparkles className="w-3 h-3 text-amber-300" />
+                        <span>14 Días de Prueba a 0€</span>
+                      </span>
+                    </div>
                   </a>
                 </div>
               </div>
@@ -684,12 +703,28 @@ export default function LandingPage() {
 
                 <div className="pt-8">
                   <a
-                    href={getWhatsAppUrl()}
+                    href={getWhatsAppUrl('Plan Sala')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3 px-4 rounded-xl text-center text-xs sm:text-sm font-bold text-white bg-slate-700/80 hover:bg-slate-700 border border-slate-600 transition-colors block"
+                    className="w-full py-3.5 px-4 rounded-xl text-center text-xs sm:text-sm font-bold text-white bg-slate-700/80 hover:bg-emerald-600 hover:border-emerald-500 border border-slate-600 transition-all duration-300 block group shadow-md hover:shadow-emerald-500/20 active:scale-95 cursor-pointer"
                   >
-                    Elegir Plan Sala
+                    {/* Vista Desktop: Hover Interactivo */}
+                    <div className="hidden sm:block">
+                      <span className="block group-hover:hidden transition-all">Elegir Plan Sala</span>
+                      <span className="hidden group-hover:inline-flex items-center justify-center gap-1.5 text-white font-extrabold text-xs tracking-wide animate-in fade-in zoom-in-95 duration-200">
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>✨ Probar 14 días a 0€</span>
+                      </span>
+                    </div>
+
+                    {/* Vista Móvil: Doble Línea de Alta Claridad */}
+                    <div className="sm:hidden flex flex-col items-center justify-center py-0.5">
+                      <span className="font-extrabold text-sm text-white">Elegir Plan Sala</span>
+                      <span className="text-[11px] font-black text-amber-300 flex items-center gap-1 mt-0.5">
+                        <Sparkles className="w-3 h-3 text-amber-300" />
+                        <span>14 Días de Prueba a 0€</span>
+                      </span>
+                    </div>
                   </a>
                 </div>
               </div>
@@ -744,12 +779,28 @@ export default function LandingPage() {
 
                 <div className="pt-8">
                   <a
-                    href={getWhatsAppUrl()}
+                    href={getWhatsAppUrl('Plan Full (Recomendado)')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3.5 px-4 rounded-xl text-center text-xs sm:text-sm font-black text-slate-950 bg-cyan-500 hover:bg-cyan-400 shadow-lg shadow-cyan-500/30 transition-all block active:scale-95"
+                    className="w-full py-3.5 px-4 rounded-xl text-center text-xs sm:text-sm font-black text-slate-950 bg-cyan-400 hover:bg-emerald-400 hover:text-slate-950 shadow-lg shadow-cyan-500/30 hover:shadow-emerald-500/40 transition-all duration-300 block group active:scale-95 cursor-pointer"
                   >
-                    Elegir Plan Full (Recomendado)
+                    {/* Vista Desktop: Hover Interactivo */}
+                    <div className="hidden sm:block">
+                      <span className="block group-hover:hidden transition-all">Elegir Plan Full (Recomendado)</span>
+                      <span className="hidden group-hover:inline-flex items-center justify-center gap-1.5 text-slate-950 font-black text-xs tracking-wide animate-in fade-in zoom-in-95 duration-200">
+                        <Sparkles className="w-4 h-4 text-slate-950 fill-amber-300" />
+                        <span>🚀 Probar 14 días a 0€ (Sin Coste)</span>
+                      </span>
+                    </div>
+
+                    {/* Vista Móvil: Doble Línea de Alta Claridad */}
+                    <div className="sm:hidden flex flex-col items-center justify-center py-0.5">
+                      <span className="font-black text-sm text-slate-950">Elegir Plan Full (Recomendado)</span>
+                      <span className="text-[11px] font-black text-slate-900 flex items-center gap-1 mt-0.5 bg-cyan-300/60 px-2 py-0.5 rounded-full">
+                        <Sparkles className="w-3 h-3 text-amber-600 fill-amber-400" />
+                        <span>14 Días de Prueba a 0€</span>
+                      </span>
+                    </div>
                   </a>
                 </div>
               </div>
