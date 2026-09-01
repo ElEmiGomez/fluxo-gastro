@@ -401,36 +401,88 @@ export async function GET(req: NextRequest) {
     .selector-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 10px;
     }
     .selector-label {
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 800;
       color: #94a3b8;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.6px;
     }
-    .select-input {
+    .local-selector-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .local-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
       background: #1e293b;
-      border: 1px solid #334155;
-      color: #ffffff;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: 600;
-      outline: none;
+      border: 1.5px solid #334155;
+      text-decoration: none;
+      color: #f8fafc;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       cursor: pointer;
-      transition: border-color 0.2s;
     }
-    .select-input:focus { border-color: #06b6d4; }
+    .local-card:hover {
+      background: #334155;
+      border-color: #06b6d4;
+      transform: translateY(-1px);
+    }
+    .local-card.active {
+      background: rgba(6, 182, 212, 0.12);
+      border-color: #06b6d4;
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+    }
+    .local-icon {
+      font-size: 24px;
+      line-height: 1;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+    .local-info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .local-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+    .local-card.active .local-name {
+      color: #22d3ee;
+    }
+    .local-tag {
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .check-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #06b6d4;
+      color: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: 0 2px 6px rgba(6, 182, 212, 0.4);
+    }
     .action-btn {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
       width: 100%;
-      padding: 12px 18px;
-      border-radius: 12px;
+      padding: 14px 18px;
+      border-radius: 14px;
       font-size: 13px;
       font-weight: 800;
       cursor: pointer;
@@ -443,7 +495,10 @@ export async function GET(req: NextRequest) {
       color: #020617;
       box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
     }
-    .btn-primary:hover { background: #22d3ee; }
+    .btn-primary:hover { 
+      background: #22d3ee;
+      transform: translateY(-1px);
+    }
     .btn-secondary {
       background: #1e293b;
       color: #f8fafc;
@@ -520,12 +575,35 @@ export async function GET(req: NextRequest) {
       </div>
 
       <div class="selector-group">
-        <label class="selector-label">Local de Demostración:</label>
-        <select class="select-input" onchange="window.location.href='/api/printers/receipt?slug=' + this.value">
-          <option value="burger-gourmet" ${slug === 'burger-gourmet' ? 'selected' : ''}>🍔 Burger Gourmet Noia</option>
-          <option value="taperia-casco-antigo" ${slug === 'taperia-casco-antigo' ? 'selected' : ''}>🐙 Tapería Casco Antigo</option>
-          <option value="terraza-malecon" ${slug === 'terraza-malecon' ? 'selected' : ''}>🍹 Terraza Malecón Bar</option>
-        </select>
+        <label class="selector-label">Seleccionar Local de Demostración:</label>
+        <div class="local-selector-grid">
+          <a href="/api/printers/receipt?slug=burger-gourmet" class="local-card ${slug === 'burger-gourmet' ? 'active' : ''}">
+            <span class="local-icon">🍔</span>
+            <div class="local-info">
+              <span class="local-name">Burger Gourmet Noia</span>
+              <span class="local-tag">Hamburguesería · Mesa #7</span>
+            </div>
+            ${slug === 'burger-gourmet' ? '<span class="check-dot">✓</span>' : ''}
+          </a>
+
+          <a href="/api/printers/receipt?slug=taperia-casco-antigo" class="local-card ${slug === 'taperia-casco-antigo' ? 'active' : ''}">
+            <span class="local-icon">🐙</span>
+            <div class="local-info">
+              <span class="local-name">Tapería Casco Antigo</span>
+              <span class="local-tag">Tapas Gallegas · Mesa #4</span>
+            </div>
+            ${slug === 'taperia-casco-antigo' ? '<span class="check-dot">✓</span>' : ''}
+          </a>
+
+          <a href="/api/printers/receipt?slug=terraza-malecon" class="local-card ${slug === 'terraza-malecon' ? 'active' : ''}">
+            <span class="local-icon">🍹</span>
+            <div class="local-info">
+              <span class="local-name">Terraza Malecón Bar</span>
+              <span class="local-tag">Cócteles &amp; Tardeo · Mesa #12</span>
+            </div>
+            ${slug === 'terraza-malecon' ? '<span class="check-dot">✓</span>' : ''}
+          </a>
+        </div>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px;">
