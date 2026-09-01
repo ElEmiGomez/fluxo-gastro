@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
-import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock } from 'lucide-react'
+import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector, TableStatusType } from '@/components/comandero/TableSelector'
@@ -865,49 +865,59 @@ export default function WaiterComanderoPage() {
               </div>
             )}
 
-            {/* C. Panel de Control de Mesa: Pax, Descuentos, Marchar Segundos, Pre-Cuenta, Transferir y Liberar */}
-            <div className="flex flex-col gap-2 bg-white p-3 rounded-2xl border border-slate-200 text-xs shadow-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-slate-800 font-extrabold">Mesa #{selectedTable.table_number}</span>
+            {/* C. Panel de Control de Mesa (Ordenado, Ergonómico y Limpio) */}
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+              
+              {/* Fila 1: Datos de Mesa, Comensales y Descuentos */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
+                <div className="flex items-center justify-between sm:justify-start gap-2.5">
+                  <span className="text-slate-900 font-extrabold text-sm">
+                    Mesa #{selectedTable.table_number}
+                  </span>
                   
-                  {/* Selector Rápido de Comensales (Pax) */}
-                  <div className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-xl border border-slate-200">
-                    <Users size={13} className="text-slate-600" />
-                    <span className="text-[11px] font-black text-slate-700">
+                  {/* Selector de Comensales (Pax) */}
+                  <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
+                    <Users size={14} className="text-slate-600" />
+                    <span className="text-xs font-black text-slate-800">
                       {tablePax[selectedTable.table_number] || 2} pax
                     </span>
-                    <button
-                      onClick={() => setTablePax(prev => ({
-                        ...prev,
-                        [selectedTable.table_number]: Math.max(1, (prev[selectedTable.table_number] || 2) - 1)
-                      }))}
-                      className="w-4 h-4 rounded bg-white hover:bg-slate-200 text-slate-700 font-black flex items-center justify-center text-xs shadow-xs"
-                      title="Menos comensales"
-                    >
-                      -
-                    </button>
-                    <button
-                      onClick={() => setTablePax(prev => ({
-                        ...prev,
-                        [selectedTable.table_number]: (prev[selectedTable.table_number] || 2) + 1
-                      }))}
-                      className="w-4 h-4 rounded bg-white hover:bg-slate-200 text-slate-700 font-black flex items-center justify-center text-xs shadow-xs"
-                      title="Más comensales"
-                    >
-                      +
-                    </button>
+                    <div className="flex items-center gap-0.5 ml-1">
+                      <button
+                        type="button"
+                        onClick={() => setTablePax(prev => ({
+                          ...prev,
+                          [selectedTable.table_number]: Math.max(1, (prev[selectedTable.table_number] || 2) - 1)
+                        }))}
+                        className="w-5 h-5 rounded-lg bg-white hover:bg-slate-200 text-slate-800 font-black flex items-center justify-center text-xs shadow-2xs cursor-pointer active:scale-95"
+                        title="Menos comensales"
+                      >
+                        -
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTablePax(prev => ({
+                          ...prev,
+                          [selectedTable.table_number]: (prev[selectedTable.table_number] || 2) + 1
+                        }))}
+                        className="w-5 h-5 rounded-lg bg-white hover:bg-slate-200 text-slate-800 font-black flex items-center justify-center text-xs shadow-2xs cursor-pointer active:scale-95"
+                        title="Más comensales"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
+                </div>
 
-                  {/* Selector de Descuento de Mesa */}
-                  <div className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-xl border border-slate-200">
-                    <span className="text-[10px] font-bold text-slate-500">Dto:</span>
+                {/* Selector de Descuento de Mesa */}
+                <div className="flex items-center justify-between sm:justify-end gap-1.5">
+                  <span className="text-xs font-bold text-slate-500">Dto:</span>
+                  <div className="flex items-center gap-1 bg-slate-50 p-0.5 rounded-xl border border-slate-200">
                     {[0, 5, 10, 15, 20].map((pct) => (
                       <button
                         key={pct}
                         type="button"
                         onClick={() => setTableDiscounts(prev => ({ ...prev, [selectedTable.table_number]: pct }))}
-                        className={`px-1.5 py-0.5 rounded-md text-[10px] font-black transition-all ${
+                        className={`px-2 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
                           (tableDiscounts[selectedTable.table_number] || 0) === pct
                             ? 'bg-blue-900 text-white shadow-xs'
                             : 'text-slate-600 hover:bg-slate-200'
@@ -918,61 +928,72 @@ export default function WaiterComanderoPage() {
                     ))}
                   </div>
                 </div>
-
-                {/* Botón Marchar Segundos */}
-                <button
-                  onClick={() => handleFireSecondCourses(selectedTable.table_number)}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition-all shadow-xs flex items-center gap-1 active:scale-95"
-                  title="Avisar a cocina que marchen los segundos platos"
-                >
-                  <span>🔥 Marchar Segundos</span>
-                </button>
               </div>
               
-              <div className="flex items-center justify-end gap-1.5 flex-wrap pt-1">
-                {/* Ver Pre-Cuenta */}
+              {/* Fila 2: Grid de Acciones Operativas Ordenadas en 2 Columnas (Móvil) / 4 (Desktop) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {/* 1. Marchar Segundos */}
                 <button
+                  type="button"
+                  onClick={() => handleFireSecondCourses(selectedTable.table_number)}
+                  className="h-11 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                  title="Avisar a cocina que marchen los segundos platos"
+                >
+                  <Flame className="w-4 h-4 text-slate-950 flex-shrink-0" />
+                  <span className="truncate">Marchar Segundos</span>
+                </button>
+
+                {/* 2. Pre-Cuenta */}
+                <button
+                  type="button"
                   onClick={() => setShowPreBill(true)}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-900 border border-slate-200 hover:border-blue-300 font-extrabold transition-all text-xs flex items-center gap-1 active:scale-95 shadow-xs"
+                  className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-900 border border-slate-200 hover:border-blue-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
                   title="Ver pre-cuenta digital desglosada"
                 >
-                  <Receipt size={13} className="text-blue-700" />
-                  <span>Pre-Cuenta</span>
+                  <Receipt className="w-4 h-4 text-blue-700 flex-shrink-0" />
+                  <span className="truncate">Pre-Cuenta</span>
                 </button>
 
-                {/* Transferir Mesa */}
+                {/* 3. Transferir Mesa */}
                 <button
+                  type="button"
                   onClick={() => setShowTransferModal(true)}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-slate-200 hover:border-amber-300 font-extrabold transition-all text-xs flex items-center gap-1 active:scale-95 shadow-xs"
+                  className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-800 hover:text-amber-900 border border-slate-200 hover:border-amber-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
                   title="Cambiar comanda a otra mesa"
                 >
-                  <RefreshCw size={13} className="text-amber-700" />
-                  <span>Transferir</span>
+                  <RefreshCw className="w-4 h-4 text-amber-700 flex-shrink-0" />
+                  <span className="truncate">Transferir</span>
                 </button>
 
-                {previousDrinksInTable.length > 0 && (
-                  <button
-                    onClick={() => {
-                      previousDrinksInTable.forEach(d => {
-                        handleAddItemToComanda(d.product, d.quantity, [], 'Repetición de ronda')
-                      })
-                      setOrderSentToast(true)
-                      setTimeout(() => setOrderSentToast(false), 2500)
-                    }}
-                    className="px-2.5 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-black transition-all text-xs flex items-center gap-1 border border-amber-300 shadow-xs active:scale-95"
-                    title="Añadir a la comanda las mismas bebidas que ya pidieron"
-                  >
-                    <span>🍺 Repetir ({previousDrinksInTable.reduce((s, d) => s + d.quantity, 0)})</span>
-                  </button>
-                )}
-
+                {/* 4. Liberar / Cobrar Mesa */}
                 <button
+                  type="button"
                   onClick={() => setShowFreeConfirmTable(selectedTable.table_number)}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 font-extrabold transition-all text-xs flex items-center gap-1 active:scale-95 shadow-xs"
+                  className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
+                  title="Cobrar y liberar mesa"
                 >
-                  <span>💳 Liberar</span>
+                  <CreditCard className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                  <span className="truncate">Liberar Mesa</span>
                 </button>
               </div>
+
+              {/* Botón extra si hay bebidas previas para repetir ronda */}
+              {previousDrinksInTable.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    previousDrinksInTable.forEach(d => {
+                      handleAddItemToComanda(d.product, d.quantity, [], 'Repetición de ronda')
+                    })
+                    setOrderSentToast(true)
+                    setTimeout(() => setOrderSentToast(false), 2500)
+                  }}
+                  className="w-full h-10 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-black transition-all text-xs flex items-center justify-center gap-1.5 border border-amber-300 shadow-xs active:scale-95 cursor-pointer"
+                  title="Añadir a la comanda las mismas bebidas que ya pidieron"
+                >
+                  <span>🍺 Repetir Ronda de Bebidas ({previousDrinksInTable.reduce((s, d) => s + d.quantity, 0)} uds)</span>
+                </button>
+              )}
             </div>
 
           </div>

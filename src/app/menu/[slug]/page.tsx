@@ -624,14 +624,15 @@ function DinerMenuContent() {
 
         {/* Notificación Toast Flotante */}
         {addedToast && (
-          <div className="fixed top-16 inset-x-3 z-50 max-w-md mx-auto p-3 rounded-2xl bg-blue-900 text-white font-bold shadow-2xl flex items-center justify-between animate-in slide-in-from-top duration-300 border border-blue-800">
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-blue-300 stroke-[3]" />
-              <span className="text-xs">¡{addedToast} {t('addedToCartToast') || 'añadido'}!</span>
+          <div className="fixed top-16 inset-x-3 z-50 max-w-md mx-auto p-3 rounded-2xl bg-blue-900 text-white font-bold shadow-2xl flex items-center justify-between gap-2 animate-in slide-in-from-top duration-300 border border-blue-800">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Check className="w-4 h-4 text-emerald-400 stroke-[3] flex-shrink-0" />
+              <span className="text-xs font-extrabold truncate">¡{addedToast} {t('addedToCartToast')}!</span>
             </div>
             <button
+              type="button"
               onClick={() => setIsCartOpen(true)}
-              className="text-xs underline font-black ml-2 text-amber-300"
+              className="text-xs underline font-black text-amber-300 hover:text-amber-200 flex-shrink-0 whitespace-nowrap cursor-pointer"
             >
               {t('viewCart')}
             </button>

@@ -370,6 +370,7 @@ export const TRANSLATIONS: Record<'gl' | 'es' | 'en', Record<string, string>> = 
     prefGlutenFree: 'Pan Sin Gluten (+1,00 €)',
     notesPlaceholder: 'Ej: Salsa aparte, carne bien sellada, sin hielo...',
     specialNotes: 'Aclaraciones Especiales',
+    addedToCartToast: 'añadido a tu comanda',
   },
 
   // 2. GALEGO
@@ -464,6 +465,7 @@ export const TRANSLATIONS: Record<'gl' | 'es' | 'en', Record<string, string>> = 
     prefGlutenFree: 'Pan Sen Glute (+1,00 €)',
     notesPlaceholder: 'Ex: Salsa á parte, carne ben marcada, sen xeo...',
     specialNotes: 'Aclaracións Especiais',
+    addedToCartToast: 'engadido á túa comanda',
   },
 
   // 3. ENGLISH
@@ -558,6 +560,7 @@ export const TRANSLATIONS: Record<'gl' | 'es' | 'en', Record<string, string>> = 
     prefGlutenFree: 'Gluten-Free Bun (+1.00 €)',
     notesPlaceholder: 'Ex: Sauce on the side, well seared, no ice...',
     specialNotes: 'Special Kitchen Notes',
+    addedToCartToast: 'added to your order',
   },
 }
 

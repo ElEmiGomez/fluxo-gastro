@@ -64,7 +64,7 @@ export function TenantHeader({ viewType, tableNumber }: TenantHeaderProps) {
           </div>
         </div>
 
-        {/* Mesa activa & Switcher */}
+        {/* Mesa activa & Estado */}
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           {tableNumber && (
             <div
@@ -79,17 +79,6 @@ export function TenantHeader({ viewType, tableNumber }: TenantHeaderProps) {
               <span>Mesa #{tableNumber}</span>
             </div>
           )}
-
-          {/* Estado de Seguridad del Rol */}
-          <div className="flex items-center gap-2">
-            <span className={`text-[10px] sm:text-[11px] font-bold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-xl border whitespace-nowrap ${
-              viewType === 'kitchen'
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-            }`}>
-              {viewTitles[viewType]}
-            </span>
-          </div>
         </div>
 
       </div>
