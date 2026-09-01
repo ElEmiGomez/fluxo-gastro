@@ -843,7 +843,7 @@ export default function LandingPage() {
                   {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
                   <div className="sm:hidden py-2 space-y-1.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-cyan-400 tracking-tight tabular-nums">99€</span>
+                      <span className="text-4xl font-black text-emerald-400 tracking-tight tabular-nums">99€</span>
                       <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                     </div>
                     <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md">
