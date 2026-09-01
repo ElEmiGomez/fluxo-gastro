@@ -22,7 +22,8 @@ import {
   Wine,
   Coffee,
   Flame,
-  MapPin
+  MapPin,
+  Printer
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
@@ -987,21 +988,29 @@ export default function LandingPage() {
       )}
 
       {/* ── 7. FOOTER ── */}
-      <footer className="border-t border-slate-800 py-6 px-4 bg-slate-950 text-xs text-slate-400">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2">
-            <span className="font-bold text-white">FLUXO</span>
-            <span>&middot;</span>
-            <span>Sistema Gastronómico en Tiempo Real.</span>
+      <footer className="border-t border-slate-800/80 py-8 px-4 bg-slate-950 text-xs text-slate-400">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
+          <div className="flex items-center justify-center sm:justify-start gap-3">
+            <FluxoLogo size="sm" />
+            <span className="font-bold text-slate-400">&middot; Sistema Gastronómico en Tiempo Real.</span>
           </div>
 
-          <div className="flex items-center justify-center sm:justify-end gap-4 text-slate-400">
-            <Link href="/legal" className="hover:text-white transition-colors">
-              Aviso Legal &amp; RGPD
+          <div className="flex items-center justify-center sm:justify-end gap-3 text-slate-400 flex-wrap">
+            <Link 
+              href="/legal" 
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-400 font-bold transition-all shadow-sm group"
+            >
+              <ShieldCheck className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <span>Aviso Legal &amp; RGPD</span>
             </Link>
-            <span>&middot;</span>
-            <Link href="/api/printers/receipt?slug=burger-gourmet&width=42" target="_blank" className="hover:text-white transition-colors">
-              Ticket ESC/POS
+
+            <Link 
+              href="/api/printers/receipt?slug=burger-gourmet" 
+              target="_blank" 
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 font-bold transition-all shadow-sm group"
+            >
+              <Printer className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span>Simulador Ticket ESC/POS</span>
             </Link>
           </div>
         </div>
