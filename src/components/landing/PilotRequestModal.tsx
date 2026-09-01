@@ -210,31 +210,31 @@ export function PilotRequestModal({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabecera del Modal */}
-        <div className="relative p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-800 flex items-start justify-between">
-          <div className="space-y-1.5 pr-8">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5" />
+        <div className="relative p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-800 flex items-start justify-between gap-4">
+          <div className="space-y-1.5 flex-1 min-w-0">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
+              <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
               <span>14 DÍAS DE PRUEBA A 0€</span>
             </div>
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight leading-tight">
               Solicitar Piloto para tu Restaurante
             </h3>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Digitalizamos tu carta y te dejamos el sistema listo para operar en menos de 24h.
+            <p className="text-xs text-slate-300">
+              Digitalizamos tu carta y la dejamos lista para operar en menos de 24h.
             </p>
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Contenido del Modal */}
-        <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6">
+        <div className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-5">
           {isSuccess ? (
             /* Pantalla de Éxito */
             <div className="text-center py-6 space-y-5 animate-in fade-in zoom-in-95">
@@ -445,14 +445,19 @@ export function PilotRequestModal({
               </div>
 
               {/* Garantías de Confianza */}
-              <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-700/60 flex items-center justify-between text-xs text-slate-300">
-                <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
-                  <ShieldCheck className="w-4 h-4" /> 0€ durante 14 días
-                </span>
-                <span className="text-slate-400">&bull;</span>
-                <span>Sin permanencia</span>
-                <span className="text-slate-400">&bull;</span>
-                <span>Setup incluido</span>
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-800/40 border border-slate-700/60 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-emerald-400">
+                  <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="whitespace-nowrap">0€ (14 días)</span>
+                </div>
+                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-300 border-x border-slate-700/60 px-1">
+                  <Check className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Sin permanencia</span>
+                </div>
+                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-300">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Setup incluido</span>
+                </div>
               </div>
 
               {/* Botón de Envío Principal */}
