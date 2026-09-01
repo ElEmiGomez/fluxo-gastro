@@ -65,10 +65,10 @@ export async function sendPilotLeadNotification(data: PilotLeadEmailData): Promi
     const roleInfo = data.contactRole ? ' (' + data.contactRole + ')' : ''
 
     await transporter.sendMail({
-      from: '"Fluxo Leads" <' + gmailUser + '>',
+      from: '"Fluxo - Nuevo Lead" <' + gmailUser + '>',
       to: targetEmail,
-      subject: '[Nuevo Lead 14 Dias] ' + data.restaurantName + ' - ' + data.contactName + roleInfo + ' (' + data.selectedPlan + ')',
-      text: 'Nueva solicitud de piloto 14 dias para ' + data.restaurantName + '. Contacto: ' + data.contactName + roleInfo + ', Tel: ' + data.phone + ', Plan: ' + data.selectedPlan,
+      subject: 'Fluxo - Nuevo Lead: ' + data.restaurantName + ' - ' + data.contactName + roleInfo + ' (' + data.selectedPlan + ')',
+      text: 'Fluxo - Nuevo Lead: Nueva solicitud de piloto 14 dias para ' + data.restaurantName + '. Contacto: ' + data.contactName + roleInfo + ', Tel: ' + data.phone + ', Plan: ' + data.selectedPlan,
       html: htmlContent
     })
 
