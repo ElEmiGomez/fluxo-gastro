@@ -1,0 +1,324 @@
+'use client'
+
+import React, { useState } from 'react'
+import {
+  X,
+  Sparkles,
+  CheckCircle2,
+  ShieldCheck,
+  Phone,
+  Store,
+  User,
+  MapPin,
+  Layers,
+  Send,
+  Loader2,
+  ArrowRight,
+  MessageSquare
+} from 'lucide-react'
+import { FluxoLogo } from '@/components/common/FluxoLogo'
+
+interface PilotRequestModalProps {
+  isOpen: boolean
+  onClose: () => void
+  initialPlan?: string
+  whatsAppPhone?: string
+}
+
+export function PilotRequestModal({
+  isOpen,
+  onClose,
+  initialPlan = 'Plan Full (Recomendado)',
+  whatsAppPhone = '5493585187430'
+}: PilotRequestModalProps) {
+  const [restaurantName, setRestaurantName] = useState('')
+  const [contactName, setContactName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [location, setLocation] = useState('Noia / Barbanza')
+  const [selectedPlan, setSelectedPlan] = useState(initialPlan)
+  const [notes, setNotes] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  if (!isOpen) return null
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMessage(null)
+
+    if (!restaurantName.trim() || !contactName.trim() || !phone.trim()) {
+      setErrorMessage('Por favor completa el nombre de tu restaurante, tu nombre y teléfono.')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const res = await fetch('/api/pilots/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          restaurantName,
+          contactName,
+          phone,
+          location,
+          selectedPlan,
+          notes
+        })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Ocurrió un error al enviar la solicitud.')
+      }
+
+      setIsSuccess(true)
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Error de conexión. Puedes escribirnos directamente por WhatsApp.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleOpenWhatsAppDirect = () => {
+    const text = encodeURIComponent(
+      '¡Hola! Solicité el Piloto Gratuito de 14 Días para ' + (restaurantName || 'mi restaurante') + ' (' + selectedPlan + '). Mi nombre es ' + (contactName || '') + ' (' + (phone || '') + ').'
+    )
+    window.open('https://wa.me/' + whatsAppPhone + '?text=' + text, '_blank')
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div 
+        className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-250 flex flex-col max-h-[92vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Cabecera del Modal */}
+        <div className="relative p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-800 flex items-start justify-between">
+          <div className="space-y-1.5 pr-8">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-black uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>14 DÍAS DE PRUEBA A 0€</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              Solicitar Piloto para tu Restaurante
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-300">
+              Digitalizamos tu carta y te dejamos el sistema listo para operar en menos de 24h.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Contenido del Modal */}
+        <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6">
+          {isSuccess ? (
+            /* Pantalla de Éxito */
+            <div className="text-center py-6 space-y-5 animate-in fade-in zoom-in-95">
+              <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-2xl font-black text-white">¡Solicitud Registrada con Éxito!</h4>
+                <p className="text-sm text-slate-300 max-w-md mx-auto">
+                  Gracias <strong className="text-white">{contactName}</strong>. Hemos recibido los datos de <strong className="text-white">{restaurantName}</strong> para el <strong className="text-cyan-400">{selectedPlan}</strong>.
+                </p>
+              </div>
+
+              <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 text-left space-y-2.5 max-w-md mx-auto text-xs text-slate-300">
+                <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>¿Qué sucederá a continuación?</span>
+                </div>
+                <ul className="space-y-1.5 list-disc list-inside text-slate-300 pl-1">
+                  <li>Un asesor técnico de Fluxo te contactará al teléfono <strong>{phone}</strong> en menos de 2 horas.</li>
+                  <li>Nos envías una foto o PDF de tu carta actual y la cargamos completa.</li>
+                  <li>Iniciamos los 14 días de prueba a 0€ sin tocar tu TPV ni pedir tarjeta.</li>
+                </ul>
+              </div>
+
+              <div className="pt-3 flex flex-col sm:flex-row gap-3 justify-center">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-bold transition-colors cursor-pointer"
+                >
+                  Entendido, cerrar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenWhatsAppDirect}
+                  className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition-colors shadow-lg shadow-emerald-600/30 cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>¿Tienes prisa? Abrir WhatsApp</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Formulario */
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {errorMessage && (
+                <div className="p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-semibold">
+                  {errorMessage}
+                </div>
+              )}
+
+              {/* 1. Nombre del Restaurante */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Nombre del Restaurante / Bar / Local *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <Store className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej: Tapería Casco Antigo, Burger Gourmet..."
+                    value={restaurantName}
+                    onChange={(e) => setRestaurantName(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 2. Persona de Contacto */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Tu Nombre y Cargo *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej: Manuel (Encargado / Dueño)"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Teléfono de Contacto */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Teléfono / WhatsApp de Contacto *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Ej: 612 345 678"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Localidad y Plan */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Población / Zona
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Ej: Noia, Ribeira, Santiago..."
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Plan Deseado para el Piloto
+                  </label>
+                  <select
+                    value={selectedPlan}
+                    onChange={(e) => setSelectedPlan(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                  >
+                    <option value="Plan Carta (39€)">Plan Carta (39€/mes) — Carta QR</option>
+                    <option value="Plan Sala (69€)">Plan Sala (69€/mes) — Comandero Mozo</option>
+                    <option value="Plan Full (Recomendado)">Plan Full (99€/mes) — Circuito Completo</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 5. Comentarios o enlace a carta */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Enlace a tu carta actual o comentarios (Opcional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Instagram, web o detalles de tu local (número de mesas, terraza...)"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors resize-none"
+                />
+              </div>
+
+              {/* Garantías de Confianza */}
+              <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-700/60 flex items-center justify-between text-xs text-slate-300">
+                <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
+                  <ShieldCheck className="w-4 h-4" /> 0€ durante 14 días
+                </span>
+                <span className="text-slate-400">&bull;</span>
+                <span>Sin permanencia</span>
+                <span className="text-slate-400">&bull;</span>
+                <span>Setup incluido</span>
+              </div>
+
+              {/* Botón de Envío Principal */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 px-6 rounded-xl font-black text-sm text-slate-950 bg-cyan-400 hover:bg-cyan-300 shadow-xl shadow-cyan-500/25 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Registrando solicitud...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>SOLICITAR PILOTO DE 14 DÍAS (0€)</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

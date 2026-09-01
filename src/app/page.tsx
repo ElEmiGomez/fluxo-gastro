@@ -25,6 +25,7 @@ import {
   MapPin
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
+import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
 
 const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '5493585187430'
 const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para mi restaurante.'
@@ -40,6 +41,13 @@ const getWhatsAppUrl = (planName?: string) => {
 export default function LandingPage() {
   const [popupsBlocked, setPopupsBlocked] = useState(false)
   const [selectedDemoSlug, setSelectedDemoSlug] = useState('burger-gourmet')
+  const [isPilotModalOpen, setIsPilotModalOpen] = useState(false)
+  const [selectedPlanForModal, setSelectedPlanForModal] = useState('Plan Full (Recomendado)')
+
+  const handleOpenPilotModal = (plan = 'Plan Full (Recomendado)') => {
+    setSelectedPlanForModal(plan)
+    setIsPilotModalOpen(true)
+  }
 
   const handleOpenDashboardsForSlug = (slug: string, table = 7) => {
     const w1 = window.open(`/menu/${slug}?table=${table}`, '_blank')
@@ -666,10 +674,9 @@ export default function LandingPage() {
                 </div>
 
                 <div className="pt-8">
-                  <a
-                    href={getWhatsAppUrl('Plan Carta')}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
                     className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-white bg-slate-700/80 group-hover:bg-emerald-500 group-hover:text-slate-950 group-hover:shadow-lg group-hover:shadow-emerald-500/30 border border-slate-600 group-hover:border-emerald-400 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
                     <span className="block group-hover:hidden">Elegir Plan Carta</span>
@@ -677,7 +684,7 @@ export default function LandingPage() {
                       <Sparkles className="w-4 h-4" />
                       <span>Iniciar Prueba Gratis (14 Días)</span>
                     </span>
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -752,10 +759,9 @@ export default function LandingPage() {
                 </div>
 
                 <div className="pt-8">
-                  <a
-                    href={getWhatsAppUrl('Plan Sala')}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
                     className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-white bg-slate-700/80 group-hover:bg-emerald-500 group-hover:text-slate-950 group-hover:shadow-lg group-hover:shadow-emerald-500/30 border border-slate-600 group-hover:border-emerald-400 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
                     <span className="block group-hover:hidden">Elegir Plan Sala</span>
@@ -763,7 +769,7 @@ export default function LandingPage() {
                       <Sparkles className="w-4 h-4" />
                       <span>Iniciar Prueba Gratis (14 Días)</span>
                     </span>
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -844,10 +850,9 @@ export default function LandingPage() {
                 </div>
 
                 <div className="pt-8">
-                  <a
-                    href={getWhatsAppUrl('Plan Full (Recomendado)')}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPilotModal('Plan Full (99€ - Recomendado)')}
                     className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-cyan-400 group-hover:bg-emerald-400 shadow-lg shadow-cyan-500/30 group-hover:shadow-emerald-500/40 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
                     <span className="block group-hover:hidden">Elegir Plan Full (Recomendado)</span>
@@ -855,7 +860,7 @@ export default function LandingPage() {
                       <Sparkles className="w-4 h-4 fill-amber-300 text-slate-950" />
                       <span>Iniciar Prueba Gratis (14 Días)</span>
                     </span>
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -887,15 +892,14 @@ export default function LandingPage() {
                 </p>
 
                 <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <a
-                    href={getWhatsAppUrl()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-sm sm:text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 transition-all active:scale-95"
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPilotModal('Plan Full (99€ - Recomendado)')}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-sm sm:text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 transition-all active:scale-95 cursor-pointer"
                   >
                     <span>Solicitar Piloto de 14 Días a 0€</span>
                     <ChevronRight className="w-5 h-5" />
-                  </a>
+                  </button>
 
                   <a
                     href="/menu/burger-gourmet?table=7"
@@ -984,6 +988,14 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* ── MODAL DE SOLICITUD DE PILOTO 14 DÍAS A 0€ ── */}
+      <PilotRequestModal
+        isOpen={isPilotModalOpen}
+        onClose={() => setIsPilotModalOpen(false)}
+        initialPlan={selectedPlanForModal}
+        whatsAppPhone={WHATSAPP_PHONE}
+      />
 
     </div>
   )
