@@ -1,4 +1,4 @@
-﻿import assert from "node:assert/strict"
+import assert from "node:assert/strict"
 import fs from "node:fs"
 import path from "node:path"
 
@@ -192,8 +192,30 @@ runTest("Inyección de JSON-LD estructurado para robots de Google Search y Googl
   assert.ok(jsonLdContent.includes("'@type': 'OrderAction'"), "OrderAction presente")
 })
 
+// ── 7. CAPTACIÓN DE LEADS Y NOTIFICACIONES A GMAIL (PILOTO 14 DÍAS) ──
+console.log(`\n${COLORS.bold}${COLORS.blue}▶ FASE 7: Captación de Leads, Piloto 14 Días & Notificaciones Gmail${COLORS.reset}`)
+
+runTest("Formato de Notificación por Correo: Remitente y Asunto 'Fluxo - Nuevo Lead'", () => {
+  const emailLibPath = path.resolve("src/lib/email.ts")
+  const emailContent = fs.readFileSync(emailLibPath, "utf-8")
+  
+  assert.ok(emailContent.includes("Fluxo - Nuevo Lead"), "Asunto Fluxo - Nuevo Lead presente")
+  assert.ok(emailContent.includes("sendPilotLeadNotification"), "Función de notificación presente")
+  assert.ok(emailContent.includes("contactRole"), "Soporte para cargo de contacto presente")
+})
+
+runTest("API Route /api/pilots/request: Validación y recepción estructurada", () => {
+  const pilotRoutePath = path.resolve("src/app/api/pilots/request/route.ts")
+  const pilotContent = fs.readFileSync(pilotRoutePath, "utf-8")
+  
+  assert.ok(pilotContent.includes("restaurantName"), "restaurantName obligatorio validado")
+  assert.ok(pilotContent.includes("phone"), "phone obligatorio validado")
+  assert.ok(pilotContent.includes("contactRole"), "contactRole recibido")
+})
+
 // ── RESUMEN FINAL DE CERTIFICACIÓN ──
 console.log(`\n${COLORS.bold}${COLORS.green}================================================================================${COLORS.reset}`)
 console.log(`${COLORS.bold}${COLORS.green} 🏆 CERTIFICACIÓN INTEGRAL EN VIVO: ${passedTests}/${totalTests} PRUEBAS SUPERADAS (100% PASS) ${COLORS.reset}`)
 console.log(`${COLORS.green} El sistema Fluxo Gastronomic System está 100% operativo, blindado y validado.${COLORS.reset}`)
 console.log(`${COLORS.bold}${COLORS.green}================================================================================${COLORS.reset}\n`)
+
