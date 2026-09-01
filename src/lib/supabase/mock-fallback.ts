@@ -1,4 +1,4 @@
-﻿import { Restaurant, Category, Product, Table, Order, OrderItem } from '@/types/database.types'
+import { Restaurant, Category, Product, Table, Order, OrderItem } from '@/types/database.types'
 
 export const MOCK_RESTAURANTS: Record<string, Restaurant> = {
   // ── 1. PERFIL DEMO 1: BURGER GOURMET NOIA ──
@@ -272,6 +272,17 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
 
   // ── 2. CATÁLOGO: TAPERÍA CASCO ANTIGO ──
   'taperia-casco-antigo': [
+    {
+      id: 'p-tca-menu-dia',
+      restaurant_id: 'c3333333-3333-3333-3333-333333333333',
+      category_id: 'cat-tca-1',
+      name: 'Menú Tradicional de Noia (1º + 2º + Bebida + Postre)',
+      description: 'Primero: Empanada gallega o Caldo gallego. Segundo: Raxo con patatas o Pescado del día. Incluye pan, copa de Ribeiro o Albariño y tarta de la abuela.',
+      price: 14.50,
+      image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+      model_3d_url: null,
+      is_available: true,
+    },
     {
       id: 'p-tca-pulpo',
       restaurant_id: 'c3333333-3333-3333-3333-333333333333',

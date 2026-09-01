@@ -73,16 +73,18 @@ export function CallWaiterButton({ tableNumber, lang = 'gl' }: CallWaiterButtonP
       title="Llamar al mozo a la mesa"
     >
       {isCalling ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600" />
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600 flex-shrink-0" />
       ) : called ? (
         <>
-          <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-          <span className="hidden min-[390px]:inline">{t('waiterNotified')}</span>
+          <CheckCircle2 className="w-3.5 h-3.5 text-white flex-shrink-0" />
+          <span className="hidden min-[420px]:inline">{t('waiterNotified')}</span>
+          <span className="min-[420px]:hidden text-[11px] font-bold">Avisado</span>
         </>
       ) : (
         <>
-          <Bell className="w-3.5 h-3.5 text-blue-900 animate-pulse" />
-          <span className="text-slate-800 hidden min-[390px]:inline">{t('callWaiter')}</span>
+          <Bell className="w-3.5 h-3.5 text-blue-900 animate-pulse flex-shrink-0" />
+          <span className="text-slate-800 hidden min-[420px]:inline">{t('callWaiter')}</span>
+          <span className="text-slate-800 min-[420px]:hidden text-[11px] font-extrabold">Mozo</span>
         </>
       )}
     </button>
