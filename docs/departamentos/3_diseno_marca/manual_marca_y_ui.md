@@ -59,3 +59,38 @@
   - **Minimalismo Operativo:** Fondo blanco y gris asfalto (`#F8FAFC`) de altísimo contraste legible bajo el sol de una terraza de Noia o el interior tenue de un mesón.
   - **Semáforo Intuitivo de Mesas:** Libre (gris/borde suave), Ocupada (azul salón), Llamando (ámbar fuego parpadeante) y Comanda Lista (verde esmeralda).
   - **Tipografía Tabular:** Alineación geométrica de importes para que el camarero identifique subtotales de un solo vistazo.
+
+---
+
+## 🖨️ 6. Materiales Físicos Imprimibles & Onboarding en Restaurante
+
+Para garantizar una adopción del 100% el primer día de servicio en terrazas y salas de Galicia (Noia, Barbanza, Santiago), se han estandarizado tres piezas físicas en formato HTML listo para imprimir:
+
+### 📄 6.1. Cartel de Bienvenida de Terraza A5 (`/public/cartel_bienvenida_terraza_a5.html`)
+* **Dimensiones:** A5 Vertical (`148mm × 210mm`).
+* **Ubicación:** Pizarra de entrada, pie de terraza o marco acrílico en barra.
+* **Propósito:** Explicar al comensal en 3 pasos visuales cómo pedir con el móvil sin instalar aplicaciones ni esperar al mozo.
+* **Características de Diseño:**
+  - Isotipo oficial de Fluxo en SVG vectorial.
+  - Código QR de alta resolución con selector de mesa/terraza.
+  - Acentos cromáticos en Cian Eléctrico (`#06B6D4`) y Azul Salón (`#0F172A`).
+  - Barra superior en pantalla con alternancia de Modo Claro/Oscuro y botón de impresión directa (`@media print`).
+
+### 📋 6.2. Guía Rápida / Chuleta de Barra para Camareros con PIN (`/public/chuleta_camarero_barra.html`)
+* **Dimensiones:** A5 Horizontal (`210mm × 148mm`).
+* **Ubicación:** Pegada o plastificada junto a la tiquetera ESC/POS, datáfono o caja de cobros.
+* **Propósito:** Capacitar a cualquier camarero nuevo en menos de 60 segundos sobre el protocolo del Mozo Gatekeeper (`pending_validation`), llamadas de mesa y seguridad de PIN.
+* **Características de Diseño:**
+  - Espacio interactivo en pantalla para personalizar el PIN del restaurante (`PIN STAFF: 1234`).
+  - Semáforo de estados de mesas en sala (Gris: Libre, Azul: Ocupada/Llamando, Ámbar: Validar comanda, Verde: Pase listo).
+  - Regla de oro visual: *"Toca $\rightarrow$ Valida $\rightarrow$ Marcha"*.
+
+### 🪟 6.3. Lote de Peanas QR de Metacrilato A6 (Mesas 1 a 10) (`/public/peanas_qr_imprimibles.html`)
+* **Dimensiones:** Hojas A4 (`210mm × 297mm`) conteniendo 2 peanas A6 (`105mm × 148mm`) por hoja con líneas de corte punteadas.
+* **Ubicación:** Soportes verticales de metacrilato transparente tipo "T" o "L" en cada mesa.
+* **Propósito:** Enlace directo de cada comensal a su mesa específica (`?table=1` a `?table=10`).
+* **Características de Diseño:**
+  - Selector de slug dinámico en pantalla para personalizar el nombre del local en tiempo real.
+  - Distintivo masivo `MESA X` de altísimo contraste solar.
+  - Iconografía clara de alérgenos y 0% comisiones.
+

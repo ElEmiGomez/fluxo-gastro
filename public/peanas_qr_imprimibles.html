@@ -2,186 +2,408 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Peanas QR Imprimibles (Mesas 1-10) - Fluxo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peanas QR de Metacrilato A6 (Mesas 1 a 10) — Fluxo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    @page { size: A4 portrait; margin: 10mm; }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
-    body { background: #f8fafc; color: #0f172a; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-    .print-bar { background: #0f172a; color: #fff; padding: 16px 24px; border-radius: 8px; max-width: 800px; width: 100%; text-align: center; margin-bottom: 20px; }
-    .print-bar button { margin-top: 10px; padding: 10px 20px; background: #2563eb; color: #fff; border: 0; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
-    .sheet { width: 210mm; min-height: 297mm; background: #fff; padding: 10mm; display: grid; grid-template-columns: 1fr 1fr; gap: 15mm; margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); page-break-after: always; }
-    .card { border: 2px dashed #94a3b8; border-radius: 14px; padding: 22px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; background: #fff; position: relative; }
-    .cut-label { position: absolute; top: -10px; left: 12px; font-size: 10px; color: #64748b; background: #fff; padding: 0 6px; font-weight: bold; }
-    .brand { font-size: 13px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: #0f172a; margin-bottom: 12px; }
-    .badge { background: #0f172a; color: #fff; font-size: 18px; font-weight: 900; padding: 6px 22px; border-radius: 9999px; margin-bottom: 12px; }
-    .title { font-size: 15px; font-weight: 800; margin-bottom: 4px; color: #0f172a; }
-    .subtitle { font-size: 11.5px; color: #64748b; margin-bottom: 14px; }
-    .qr-box { width: 140px; height: 140px; padding: 6px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 14px; display: flex; align-items: center; justify-content: center; background: #fff; }
-    .qr-box img { width: 100%; height: 100%; }
-    .features { list-style: none; font-size: 11px; color: #334155; font-weight: 600; line-height: 1.6; margin-bottom: 14px; text-align: left; }
-    .features li::before { content: '¹3 '; color: #10b981; font-weight: 900; }
-    .footer { font-size: 8.5px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 6px; width: 100%; }
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #090d16;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Barra Superior de Control en Pantalla */
+    .screen-toolbar {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 16px 24px;
+      border-radius: 16px;
+      max-width: 820px;
+      width: 100%;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+      border: 1px solid #1e293b;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .toolbar-info h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toolbar-info p {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+    .toolbar-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .input-group input {
+      background: #1e293b;
+      border: 1.5px solid #0284c7;
+      color: #ffffff;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #06b6d4 0%, #2563eb 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.35);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 6px 16px rgba(37,99,235,0.45);
+    }
+
+    /* Hoja de Impresión A4 (210mm x 297mm) */
+    .sheet-a4 {
+      width: 210mm;
+      min-height: 297mm;
+      background: #ffffff;
+      padding: 10mm;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10mm;
+      margin-bottom: 25px;
+      box-shadow: 0 15px 35px -10px rgba(0,0,0,0.6);
+      page-break-after: always;
+      position: relative;
+    }
+    .sheet-a4:last-of-type {
+      page-break-after: avoid;
+    }
+
+    /* Tarjeta A6 de Metacrilato (105mm x 148mm proporcional) */
+    .card-a6 {
+      border: 1.5px dashed #94a3b8;
+      border-radius: 12px;
+      padding: 14px 12px 10px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      text-align: center;
+      background: #ffffff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cut-guide-tag {
+      position: absolute;
+      top: 0;
+      right: 0;
+      background: #f1f5f9;
+      color: #64748b;
+      font-size: 7px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-bottom-left-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    /* Cabecera de la Tarjeta */
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 1.2px;
+      color: #0f172a;
+      line-height: 1;
+    }
+
+    /* Distintivo de Mesa */
+    .table-badge {
+      background: #0f172a;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 900;
+      padding: 4px 16px;
+      border-radius: 9999px;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid #334155;
+    }
+    .table-badge span {
+      color: #38bdf8;
+    }
+
+    .callout-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.2;
+      margin-bottom: 2px;
+    }
+    .callout-sub {
+      font-size: 9px;
+      color: #64748b;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    /* Contenedor del Código QR */
+    .qr-container {
+      width: 120px;
+      height: 120px;
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .qr-container img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Lista de Funcionalidades */
+    .features-list {
+      list-style: none;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      text-align: left;
+      font-size: 8.5px;
+      color: #334155;
+      font-weight: 600;
+      margin-bottom: 6px;
+      background: #f8fafc;
+      padding: 6px 8px;
+      border-radius: 6px;
+    }
+    .features-list li {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .features-list li::before {
+      content: "✓";
+      color: #10b981;
+      font-weight: 900;
+      font-size: 9px;
+    }
+
+    /* Pie de Tarjeta */
+    .card-footer {
+      font-size: 7.5px;
+      color: #94a3b8;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 4px;
+      width: 100%;
+      font-weight: 600;
+    }
+
+    /* Estilos para Impresión */
     @media print {
-      body { background: transparent; padding: 0; }
-      .print-bar { display: none; }
-      .sheet { box-shadow: none; margin: 0; padding: 0; width: 100%; }
+      body {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .screen-toolbar {
+        display: none !important;
+      }
+      .sheet-a4 {
+        box-shadow: none !important;
+        margin: 0 !important;
+        width: 210mm !important;
+        min-height: 297mm !important;
+        padding: 8mm !important;
+      }
+      .card-a6 {
+        border-style: dashed !important;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="print-bar">
-    <h2>Peanas QR de Terraza - Fluxo (Mesas 1 a 10)</h2>
-    <p>5 hojas A4 (2 peanas A6 por hoja). Listas para imprimir y colocar en soportes de metacrilato 3M.</p>
-    <button onclick="window.print()">Imprimir Juego Completo (Mesas 1-10)</button>
-  </div>
-  <div class="sheet">
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 1</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=1" alt="QR Mesa 1" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
+
+  <!-- Barra de Herramientas Superior -->
+  <div class="screen-toolbar">
+    <div class="toolbar-info">
+      <h2>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Lote de Peanas QR de Metacrilato A6 (Mesas 1 a 10)
+      </h2>
+      <p>5 hojas A4 (2 peanas A6 por hoja con marcas de corte). Listas para imprimir y plastificar.</p>
     </div>
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 2</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=2" alt="QR Mesa 2" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
+    <div class="toolbar-controls">
+      <div class="input-group">
+        <label for="tenantSlug">Slug Restaurante:</label>
+        <input type="text" id="tenantSlug" value="burger-gourmet" oninput="regenerateQrCodes(this.value)">
+      </div>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir 10 Peanas A6</button>
     </div>
   </div>
-  <div class="sheet">
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 3</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=3" alt="QR Mesa 3" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
-    </div>
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 4</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=4" alt="QR Mesa 4" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
-    </div>
-  </div>
-  <div class="sheet">
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 5</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=5" alt="QR Mesa 5" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
-    </div>
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 6</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=6" alt="QR Mesa 6" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
-    </div>
-  </div>
-  <div class="sheet">
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 7</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=7" alt="QR Mesa 7" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
-    </div>
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 8</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=8" alt="QR Mesa 8" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
-    </div>
-  </div>
-  <div class="sheet">
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 9</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=9" alt="QR Mesa 9" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
-    </div>
-    <div class="card">
-      <span class="cut-label">Recortar para metacrilato A6</span>
-      <div class="brand">FLUXO GASTRO</div>
-      <div class="badge">MESA 10</div>
-      <div class="title">Pide desde tu movil</div>
-      <div class="subtitle">Enfoca con tu camara para ver la carta y pedir al mozo</div>
-      <div class="qr-box"><img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/burger-gourmet?table=10" alt="QR Mesa 10" /></div>
-      <ul class="features">
-        <li>Carta interactiva con fotos y alergenos</li>
-        <li>Llama al camarero o pide la cuenta</li>
-        <li>Sin esperas ni errores en cocina</li>
-      </ul>
-      <div class="footer">Fluxo - Sistema Gastronomico Inteligente | 0% Comisiones</div>
-    </div>
-  </div>
-</body></html>
+
+  <!-- Contenedor de Hojas A4 -->
+  <div id="sheetsContainer"></div>
+
+  <script>
+    // Generador de SVG Fluxo reutilizable
+    function getFluxoSvg() {
+      return `
+        <svg width="20" height="20" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="fluxoBgGradPeana" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#2563EB" />
+              <stop offset="55%" stopColor="#1D4ED8" />
+              <stop offset="100%" stopColor="#0EA5E9" />
+            </linearGradient>
+          </defs>
+          <rect width="64" height="64" rx="18" fill="url(#fluxoBgGradPeana)" />
+          <path d="M23 48V16H45 M23 31H38" stroke="#FFFFFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="39" cy="46" r="4.2" fill="#38BDF8" />
+        </svg>
+      `;
+    }
+
+    function renderPeanas(slug) {
+      const container = document.getElementById('sheetsContainer');
+      let html = '';
+
+      for (let sheet = 0; sheet < 5; sheet++) {
+        const tableA = sheet * 2 + 1;
+        const tableB = sheet * 2 + 2;
+
+        html += `
+          <div class="sheet-a4">
+            <!-- Peana Mesa ${tableA} -->
+            <div class="card-a6">
+              <span class="cut-guide-tag">Corte A6 (105 × 148 mm)</span>
+              
+              <div class="card-header">
+                ${getFluxoSvg()}
+                <div class="brand-title">FLUXO GASTRO</div>
+              </div>
+
+              <div class="table-badge">MESA <span>${tableA}</span></div>
+
+              <div class="callout-title">Pide directo desde tu móvil</div>
+              <div class="callout-sub">Apunta con la cámara para abrir la carta digital</div>
+
+              <div class="qr-container">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/${slug}?table=${tableA}" alt="QR Mesa ${tableA}" />
+              </div>
+
+              <ul class="features-list">
+                <li>Carta visual con fotos reales y alérgenos</li>
+                <li>Llama al camarero o solicita la cuenta</li>
+                <li>0% Comisiones • Sin descargar apps</li>
+              </ul>
+
+              <div class="card-footer">
+                Fluxo Gastronomic System • Mesa ${tableA}
+              </div>
+            </div>
+
+            <!-- Peana Mesa ${tableB} -->
+            <div class="card-a6">
+              <span class="cut-guide-tag">Corte A6 (105 × 148 mm)</span>
+              
+              <div class="card-header">
+                ${getFluxoSvg()}
+                <div class="brand-title">FLUXO GASTRO</div>
+              </div>
+
+              <div class="table-badge">MESA <span>${tableB}</span></div>
+
+              <div class="callout-title">Pide directo desde tu móvil</div>
+              <div class="callout-sub">Apunta con la cámara para abrir la carta digital</div>
+
+              <div class="qr-container">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https://fluxo-gastro.vercel.app/menu/${slug}?table=${tableB}" alt="QR Mesa ${tableB}" />
+              </div>
+
+              <ul class="features-list">
+                <li>Carta visual con fotos reales y alérgenos</li>
+                <li>Llama al camarero o solicita la cuenta</li>
+                <li>0% Comisiones • Sin descargar apps</li>
+              </ul>
+
+              <div class="card-footer">
+                Fluxo Gastronomic System • Mesa ${tableB}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    function regenerateQrCodes(newSlug) {
+      const cleanSlug = newSlug.trim() || 'burger-gourmet';
+      renderPeanas(cleanSlug);
+    }
+
+    // Render inicial
+    renderPeanas('burger-gourmet');
+  </script>
+</body>
+</html>
+

@@ -85,7 +85,7 @@ Pásame por aquí una foto o el PDF de tu carta actual y mañana por la mañana 
 
 ## 5. Battle Cards de Inteligencia de Mercado (Actualización Dinámica)
 
-> **Última Actualización:** 2026-08-31  
+> **Última Actualización:** 2026-09-01  
 > **Objetivo:** Proporcionar munición comercial inmediata ante movimientos de competidores (Qamarero, Pikotea, Sunday) y cambios normativos (Veri*Factu, 37,5h).
 
 ### 🥊 Battle Card 1: Defensa frente a la ofensiva de Qamarero en Santiago de Compostela y A Coruña

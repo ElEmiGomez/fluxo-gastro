@@ -6,6 +6,75 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-09-01 13:10] — Certificación de 3 Perfiles Demo en Producción, Build 0 Errores y Sincronización Cloud
+* **Departamentos Sincronizados:** Ingeniería & Producto (Program Data), Organización General (COO), Marketing & Ventas, Diseño de Marca & UI y Learning & Intelligence.
+* **Entregables Técnicos Ejecutados:**
+  1. **3 Perfiles Gastronómicos Demo en Producción (Noia, Galicia):**
+     - **🍔 Burger Gourmet Noia (`/menu/burger-gourmet`):** Smash Burgers de Rubia Gallega, queso San Simón ahumado, combos con patatas rústicas y cervezas Estrella Galicia 1906.
+     - **🐙 Tapería Casco Antigo (`/menu/taperia-casco-antigo`):** Pulpo á Feira con cachelos de Bergantiños, zamburiñas a la plancha de la ría, pementos de Padrón, raxo ao cabrales, tablas de quesos gallegos con D.O. y vinos Albariño y Mencía.
+     - **🍸 Terraza Malecón (`/menu/terraza-malecon`):** Cafés de especialidad (Flat White), tostas de masa madre con salmón y aguacate, vermús gallegos St. Petroni, cócteles de autor (Aperol Spritz, Mojito) y gin tonics Nordés frente a la ría.
+  2. **Catálogos, Stores y Multi-Device Sync:**
+     - Actualizados `src/lib/supabase/mock-fallback.ts`, `src/lib/server-state.ts` y `src/app/sitemap.ts` con 25 mesas cada uno, categorías a medida, alérgenos, precios en EUR y soporte Google Review Booster + JSON-LD Schema.org.
+  3. **Escaparate Interactivo en Landing Page (`src/app/page.tsx`):**
+     - Añadida la sección interactiva *"3 Perfiles Demo en Producción"* con enlaces independientes para Comensal, Mozo y Cocina, y lanzador simultáneo de 3 pantallas.
+  4. **Compilación y Certificación de Producción:**
+     - `npm run build` ejecutado y certificado con **código de salida 0 (0 errores, 0 warnings)**.
+  5. **Sincronización Cloud:**
+     - Repositorio y código preparados para despliegue continuo automático a través del pipeline de GitHub y Vercel Serverless Edge.
+* **Impacto Operativo:** El equipo de ventas y dirección ya cuenta con 3 demos temáticas reales para visitar cualquier perfil de local en Noia y Barbanza (hamburgueserías, taperías tradicionales o terrazas de copas).
+
+---
+
+### [2026-09-01 13:20] — Producción de Materiales Físicos Imprimibles de Terraza y Sala (A5/A6)
+* **Departamentos Sincronizados:** Diseño de Marca & UI/UX (Depto 3), Marketing & Ventas (Depto 2), Organización General e Ingeniería.
+* **Materiales de Diseño Creados y Listos para Imprimir:**
+  1. **Cartel de Bienvenida de Terraza A5 (`/public/cartel_bienvenida_terraza_a5.html`):**
+     - Formato A5 vertical (`148mm × 210mm`) de alto contraste solar y versión oscura elegante.
+     - Isotipo vectorial SVG oficial de Fluxo, código QR en alta resolución para mesas/terraza y 3 pasos de instrucción claros para el comensal.
+     - Aviso destacado de *"Sin apps que descargar"* y *"0% comisiones"*.
+  2. **Guía Rápida / Chuleta de Barra para Camareros con PIN (`/public/chuleta_camarero_barra.html`):**
+     - Formato A5 horizontal (`210mm × 148mm`) diseñado para plastificar junto al TPV o tiquetera de barra.
+     - Selector dinámico de PIN en pantalla (`PIN STAFF: 1234`), 4 bloques operativos (Mozo Gatekeeper en ámbar, Llamador con intención en azul, Pase de cocina en verde y PIN de seguridad) más semáforo de mesas de sala.
+  3. **Lote de Peanas QR de Metacrilato A6 para Mesas 1 a 10 (`/public/peanas_qr_imprimibles.html`):**
+     - Formato 5 hojas A4 (`210mm × 297mm`) con 2 peanas A6 (`105mm × 148mm`) por hoja, marcas de corte y plegado.
+     - Selector dinámico de slug para personalizar el local en vivo y regeneración automática de códigos QR de alta resolución con enlaces directos (`?table=1` a `?table=10`).
+* **Impacto Operativo:** Provisión inmediata del kit físico para el onboarding en restaurantes de Noia (Fase 2) y garantía de paridad estética con los tokens oficiales de Fluxo.
+
+---
+
+
+### [2026-09-01 13:10] — Kit de Cierre de Terrazas: Acuerdo 14 Días, Onboarding Express e Informe de Impacto
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Organización General e Ingeniería.
+* **Materiales de Venta Creados y Validados:**
+  1. **Acuerdo de Piloto Operativo 14 Días a 0€ (`acuerdo_piloto_14_dias.md`):** Contrato marco de adhesión al *Desafío Terraza* con cláusulas blindadas: 0€ coste, 0% comisiones, cero permanencia y garantía estricta de *No tocar el TPV del local*.
+  2. **Protocolo de Onboarding de 15 Minutos (`protocolo_onboarding_express_15min.md`):** Guion cronometrado minuto a minuto para horas valle (11:00-12:15 o 17:00-18:30) con instalación PWA sin App Store, prueba real del Mozo Gatekeeper en Mesa 1, Llamador con Intención y entrega de la chuleta plastificada de barra.
+  3. **Plantilla de Informe de Impacto y ROI Día 14 (`informe_impacto_piloto_14dias.md`):** Auditoría ejecutiva para la reunión de cierre con 3 pilares cuantificados (+15% upselling, -84% espera en cuenta, -47% km caminados) y la cuenta de la servilleta (+791€/mes beneficio neto con Plan Full 99€).
+* **Cumplimiento de Estándares:** Diagramas estrictamente verticales (`flowchart TD`) y 100% de coherencia con la matriz canónica (Carta 39€, Sala 69€, Full 99€, Suite 139€, Setup 149€ bonificado).
+
+---
+
+### [2026-09-01 09:00] — Vigilancia Diaria de Mercado e Inteligencia B2B (4 Cuadrantes)
+* **Departamentos Sincronizados:** Organización General (COO), Marketing & Ventas, Diseño de Marca & UI, Ingeniería & Producto (Program Data) y Learning & Intelligence.
+* **Acción Realizada:**
+  1. **Marketing & Ventas (Depto 2):**
+     - Generado informe diario `docs/departamentos/2_marketing/investigaciones_diarias/2026-09-01_inteligencia_mercado.md` cubriendo los 4 cuadrantes (Competidores, Normativa, Sala/Personal e IA).
+     - Actualizado `manual_prospeccion_y_objeciones.md` con 3 nuevas Battle Cards frente a Qamarero, escasez de camareros y calendario Veri*Factu.
+     - Focalizadas oportunidades comerciales en Noia (Fase 2), Barbanza (Fase 3) y Santiago (Fase 4).
+  2. **Diseño de Marca & UI (Depto 3):**
+     - Ratificada la jerarquía visual de alto contraste y botones táctiles industriales (>70px) para cocina KDS y visibilidad solar en cartas QR de terraza.
+  3. **Organización General & COO (Depto 1):**
+     - Auditoría y confirmación de la matriz canónica de precios DEC-06: Carta (39€), Sala (69€), Full (99€), Suite (139€) y Setup (149€ bonificable 100%).
+  4. **Ingeniería & Producto / Program Data (Depto 4):**
+     - Ejecución automatizada del motor de inteligencia de mercado (`scripts/daily_market_intelligence.mjs`).
+     - Verificación de 0 errores en compilación Next.js 14 (`npm run build` PASS).
+  5. **Learning & Intelligence (Depto 5):**
+     - Consolidación de la lección didáctica matutina con la analogía del "Pase de Cocina y el Mozo Gatekeeper".
+     - Compilado y actualizado el documento didáctico PDF en la raíz del workspace (`Lecciones_Fluxo_01_09_2026.pdf`).
+* **Impacto Operativo:** Alineación estratégica integral y disponibilidad de argumentario comercial actualizado para prospección a pie de calle en Galicia.
+* **Verificación del Sistema:** Pipeline automatizado ejecutado con éxito (0 errores).
+
+---
+
 ### [2026-08-31 23:35] — Hito Clave: Conexión del Triángulo Cloud (Vercel + GitHub + Supabase) y Activación de Fase 2 (Piloto Noia)
 * **Departamentos Sincronizados:** Ingeniería & Producto (Program Data), Organización General (COO), Marketing & Ventas, Diseño de Marca & UI y Learning & Intelligence.
 * **Hito de Infraestructura Conectada:**

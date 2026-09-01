@@ -34,6 +34,8 @@ const globalStore = global as unknown as {
 if (!globalStore.__GASTRO_ORDERS__) {
   globalStore.__GASTRO_ORDERS__ = {
     'burger-gourmet': [],
+    'taperia-casco-antigo': [],
+    'terraza-malecon': [],
     'bella-napoli': [],
   }
 }
@@ -41,6 +43,8 @@ if (!globalStore.__GASTRO_ORDERS__) {
 if (!globalStore.__GASTRO_SERVICE_CALLS__) {
   globalStore.__GASTRO_SERVICE_CALLS__ = {
     'burger-gourmet': [],
+    'taperia-casco-antigo': [],
+    'terraza-malecon': [],
     'bella-napoli': [],
   }
 }
@@ -48,6 +52,8 @@ if (!globalStore.__GASTRO_SERVICE_CALLS__) {
 if (!globalStore.__GASTRO_TABLE_SESSIONS__) {
   globalStore.__GASTRO_TABLE_SESSIONS__ = {
     'burger-gourmet': {},
+    'taperia-casco-antigo': {},
+    'terraza-malecon': {},
     'bella-napoli': {},
   }
 }
@@ -55,6 +61,8 @@ if (!globalStore.__GASTRO_TABLE_SESSIONS__) {
 if (!globalStore.__GASTRO_ANALYTICS__) {
   globalStore.__GASTRO_ANALYTICS__ = {
     'burger-gourmet': [],
+    'taperia-casco-antigo': [],
+    'terraza-malecon': [],
     'bella-napoli': [],
   }
 }

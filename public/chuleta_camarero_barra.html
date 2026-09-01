@@ -2,48 +2,521 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Chuleta de Barra - Guia Rapida Mozo (Fluxo)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chuleta de Barra — Guía Rápida del Mozo con PIN | Fluxo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    @page { size: A5 landscape; margin: 6mm; }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
-    body { background: #0f172a; color: #fff; padding: 15px; }
-    .container { border: 2px solid #3b82f6; border-radius: 12px; padding: 15px; height: calc(100vh - 30px); display: flex; flex-direction: column; justify-content: space-between; }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; }
-    .title { font-size: 18px; font-weight: 900; color: #60a5fa; }
-    .pin-badge { background: #ef4444; color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 900; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 12px 0; }
-    .card { background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
-    .card h3 { font-size: 13px; color: #38bdf8; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
-    .card p { font-size: 11px; color: #cbd5e1; line-height: 1.4; }
-    .footer { display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; border-top: 1px solid #334155; padding-top: 6px; }
+    @page {
+      size: A5 landscape;
+      margin: 0;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #090d16;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Barra de Herramientas en Pantalla */
+    .screen-toolbar {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 14px 20px;
+      border-radius: 14px;
+      max-width: 800px;
+      width: 100%;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+      border: 1px solid #1e293b;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .toolbar-info h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toolbar-info p {
+      font-size: 11.5px;
+      color: #94a3b8;
+    }
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pin-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .pin-input {
+      width: 70px;
+      padding: 6px 10px;
+      background: #1e293b;
+      border: 1.5px solid #0284c7;
+      border-radius: 8px;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 14px;
+      text-align: center;
+      font-family: monospace;
+    }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 12.5px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #06b6d4 0%, #2563eb 100%);
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      box-shadow: 0 4px 14px rgba(37,99,235,0.45);
+    }
+
+    /* Lámina A5 Landscape Exacta (210mm x 148mm) */
+    .a5-landscape {
+      width: 210mm;
+      height: 148mm;
+      background: #ffffff;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 8mm 10mm 7mm 10mm;
+      box-shadow: 0 20px 40px -15px rgba(0,0,0,0.6);
+      page-break-after: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* Marco Exterior Decorativo */
+    .outer-border {
+      position: absolute;
+      top: 3mm;
+      left: 3mm;
+      right: 3mm;
+      bottom: 3mm;
+      border: 1.5px solid #0284c7;
+      border-radius: 10px;
+      pointer-events: none;
+    }
+
+    /* Cabecera */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 6px;
+      margin-bottom: 5px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .main-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1;
+      letter-spacing: -0.3px;
+    }
+    .main-sub {
+      font-size: 8.5px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #0284c7;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+    .pin-badge-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #0f172a;
+      padding: 4px 12px;
+      border-radius: 8px;
+      color: #ffffff;
+    }
+    .pin-badge-label {
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #38bdf8;
+    }
+    .pin-badge-value {
+      font-family: monospace;
+      font-size: 16px;
+      font-weight: 900;
+      color: #ffffff;
+      background: #2563eb;
+      padding: 1px 8px;
+      border-radius: 5px;
+      letter-spacing: 2px;
+    }
+
+    /* 4 Columnas / Tarjetas de Operativa Rápida */
+    .grid-rules {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      flex: 1;
+      margin: 4px 0;
+    }
+    .rule-card {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 7px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 4px;
+      border-bottom: 1px dashed #cbd5e1;
+      padding-bottom: 3px;
+    }
+    .card-icon {
+      font-size: 13px;
+    }
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.1;
+    }
+    .card-badge-amber {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #f59e0b;
+      font-size: 7.5px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .card-badge-blue {
+      background: #e0f2fe;
+      color: #0369a1;
+      border: 1px solid #0284c7;
+      font-size: 7.5px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .card-badge-green {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #10b981;
+      font-size: 7.5px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .card-badge-purple {
+      background: #f3e8ff;
+      color: #6b21a8;
+      border: 1px solid #a855f7;
+      font-size: 7.5px;
+      font-weight: 800;
+      padding: 1px 4px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .rule-steps {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 3.5px;
+      font-size: 8.5px;
+      color: #334155;
+      line-height: 1.25;
+    }
+    .rule-steps li {
+      position: relative;
+      padding-left: 10px;
+    }
+    .rule-steps li::before {
+      content: "•";
+      position: absolute;
+      left: 2px;
+      color: #0284c7;
+      font-weight: 900;
+    }
+    .rule-steps strong {
+      color: #0f172a;
+    }
+    .rule-highlight {
+      background: #e0f2fe;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-weight: 700;
+      color: #0369a1;
+      display: block;
+      margin-top: 3px;
+      text-align: center;
+      font-size: 8px;
+    }
+
+    /* Semáforo de Estado de Mesas */
+    .status-legend-bar {
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 6px;
+      padding: 4px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .legend-title {
+      font-size: 8.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #38bdf8;
+      flex-shrink: 0;
+    }
+    .legend-items {
+      display: flex;
+      gap: 10px;
+      font-size: 8px;
+      font-weight: 600;
+    }
+    .legend-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag-circle {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-gray { background: #94a3b8; }
+    .dot-blue { background: #38bdf8; }
+    .dot-amber { background: #f59e0b; }
+    .dot-green { background: #10b981; }
+
+    /* Pie */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 7.5px;
+      color: #64748b;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 3px;
+      font-weight: 600;
+    }
+    .footer strong {
+      color: #0f172a;
+    }
+
+    /* Modo Impresión */
+    @media print {
+      body {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .screen-toolbar {
+        display: none !important;
+      }
+      .a5-landscape {
+        box-shadow: none !important;
+        margin: 0 !important;
+        width: 210mm !important;
+        height: 148mm !important;
+        max-width: 210mm !important;
+        max-height: 148mm !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="title">FLUXO - GUIA RAPIDA DEL MOZO (BARRA)</div>
-      <div class="pin-badge">PIN STAFF: 1234</div>
-    </div>
 
-    <div class="grid">
-      <div class="card">
-        <h3>1. Comanda Entrante</h3>
-        <p>El movil vibra y suena. La mesa parpadea en amarillo (Pendiente de Validar).</p>
-      </div>
-      <div class="card">
-        <h3>2. Validar / Marchar</h3>
-        <p>Toca la mesa y pulsa <b>Validar</b>. La comanda viaja al KDS de cocina al instante.</p>
-      </div>
-      <div class="card">
-        <h3>3. Llamada o Cuenta</h3>
-        <p>Si parpadea en azul, el cliente pide la cuenta o atencion. Pulsa atendido.</p>
-      </div>
+  <!-- Barra Interactiva de Control en Pantalla -->
+  <div class="screen-toolbar">
+    <div class="toolbar-info">
+      <h2>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Chuleta de Barra para Camareros (A5 Horizontal / 210 × 148 mm)
+      </h2>
+      <p>Guía de plastificado rápido para colocar junto al TPV o en la estación de camareros.</p>
     </div>
-
-    <div class="footer">
-      <div>Acceso Comandero: /staff/comandero/...</div>
-      <div>Soporte Tecnico Fluxo (24/7)</div>
+    <div class="toolbar-actions">
+      <div class="pin-input-wrap">
+        <label for="pinModifier">PIN Local:</label>
+        <input type="text" id="pinModifier" class="pin-input" maxlength="6" value="1234" oninput="updatePin(this.value)">
+      </div>
+      <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir Chuleta A5</button>
     </div>
   </div>
+
+  <!-- Lámina A5 Landscape de Impresión -->
+  <div class="a5-landscape">
+    <div class="outer-border"></div>
+
+    <!-- Cabecera -->
+    <div class="header">
+      <div class="header-left">
+        <!-- Isotipo Oficial Fluxo Vectorial -->
+        <svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="fluxoBgGradChuleta" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#2563EB" />
+              <stop offset="55%" stopColor="#1D4ED8" />
+              <stop offset="100%" stopColor="#0EA5E9" />
+            </linearGradient>
+          </defs>
+          <rect width="64" height="64" rx="18" fill="url(#fluxoBgGradChuleta)" />
+          <path d="M23 48V16H45 M23 31H38" stroke="#FFFFFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="39" cy="46" r="4.2" fill="#38BDF8" />
+        </svg>
+        <div>
+          <div class="main-title">FLUXO — PROTOCOLO RÁPIDO DE SALA Y BARRA</div>
+          <div class="main-sub">Manual de Operaciones del Mozo • Cero Comisiones • Sin Cambio de TPV</div>
+        </div>
+      </div>
+
+      <div class="pin-badge-container">
+        <div class="pin-badge-label">PIN STAFF:</div>
+        <div class="pin-badge-value" id="displayPin">1234</div>
+      </div>
+    </div>
+
+    <!-- 4 Bloques Operativos -->
+    <div class="grid-rules">
+      <!-- 1. Mozo Gatekeeper -->
+      <div class="rule-card">
+        <div class="card-head">
+          <span class="card-icon">🛡️</span>
+          <div class="card-title">1. Mozo Gatekeeper</div>
+          <span class="card-badge-amber">Ámbar</span>
+        </div>
+        <ul class="rule-steps">
+          <li>El comensal pide desde la mesa $\rightarrow$ <strong>Vibración y aviso sonoro</strong> en el comandero.</li>
+          <li>La mesa parpadea en <strong>Ámbar</strong> (<code>pending_validation</code>).</li>
+          <li>Toca la mesa, revisa platos y pulsa <strong>CONFIRMAR A COCINA</strong>.</li>
+          <li><em>Si no confirmas, los platos NO entran a cocina (antifraude).</em></li>
+        </ul>
+        <span class="rule-highlight">Toca $\rightarrow$ Valida $\rightarrow$ Marcha</span>
+      </div>
+
+      <!-- 2. Llamador con Intención -->
+      <div class="rule-card">
+        <div class="card-head">
+          <span class="card-icon">🛎️</span>
+          <div class="card-title">2. Llamador & Cuenta</div>
+          <span class="card-badge-blue">Azul</span>
+        </div>
+        <ul class="rule-steps">
+          <li><strong>Azul Parpadeante:</strong> El cliente solicita atención presencial del mozo.</li>
+          <li><strong>Icono Cuenta / Tarjeta:</strong> Pide pagar. Llévale directamente el <strong>datáfono o ticket</strong>.</li>
+          <li>Ahorras el "viaje en vacío" de preguntar cómo quiere pagar.</li>
+          <li>Pulsa <strong>"Atendido"</strong> para silenciar el aviso.</li>
+        </ul>
+        <span class="rule-highlight">1 solo viaje con el datáfono</span>
+      </div>
+
+      <!-- 3. KDS de Cocina -->
+      <div class="rule-card">
+        <div class="card-head">
+          <span class="card-icon">🍳</span>
+          <div class="card-title">3. Pase de Cocina</div>
+          <span class="card-badge-green">Verde</span>
+        </div>
+        <ul class="rule-steps">
+          <li>Los cocineros avanzan estados tocando la pantalla KDS (>70px).</li>
+          <li><strong>Verde Fijo en Mesa:</strong> Platos listos en el pase de salida.</li>
+          <li>Recoge la bandeja y sírvela en mesa sin demoras térmicas.</li>
+          <li>La tiquetera <strong>ESC/POS</strong> imprime comanda de respaldo.</li>
+        </ul>
+        <span class="rule-highlight">Pase listo = Mesa en verde</span>
+      </div>
+
+      <!-- 4. PIN & Seguridad -->
+      <div class="rule-card">
+        <div class="card-head">
+          <span class="card-icon">🔐</span>
+          <div class="card-title">4. PIN & Sesión</div>
+          <span class="card-badge-purple">Seguridad</span>
+        </div>
+        <ul class="rule-steps">
+          <li>Introduce el PIN en <code>/staff/comandero</code>.</li>
+          <li><strong>Sesión activa de 12h:</strong> No cierres la pestaña del navegador.</li>
+          <li>Tras <strong>5 intentos fallidos</strong> se bloquea 15 min por seguridad.</li>
+          <li>En caso de desconexión WiFi, los datos se restauran solos.</li>
+        </ul>
+        <span class="rule-highlight">Acceso rápido desde el móvil</span>
+      </div>
+    </div>
+
+    <!-- Semáforo de Sala -->
+    <div class="status-legend-bar">
+      <div class="legend-title">🚦 Semáforo de Mesas:</div>
+      <div class="legend-items">
+        <div class="legend-tag"><div class="tag-circle dot-gray"></div><span>Gris: Libre</span></div>
+        <div class="legend-tag"><div class="tag-circle dot-blue"></div><span>Azul: Ocupada / Llamando</span></div>
+        <div class="legend-tag"><div class="tag-circle dot-amber"></div><span>Ámbar: Comanda por Validar</span></div>
+        <div class="legend-tag"><div class="tag-circle dot-green"></div><span>Verde: Platos Listos en Pase</span></div>
+      </div>
+    </div>
+
+    <!-- Pie -->
+    <div class="footer">
+      <div>Acceso Rápido: <strong>fluxo-gastro.vercel.app/staff/comandero/burger-gourmet</strong></div>
+      <div>Soporte Técnico Fluxo 24/7 • Diseñado para Alta Rotación en Sala y Terraza</div>
+    </div>
+  </div>
+
+  <script>
+    function updatePin(val) {
+      document.getElementById('displayPin').innerText = val || '----';
+    }
+  </script>
 </body>
 </html>
+

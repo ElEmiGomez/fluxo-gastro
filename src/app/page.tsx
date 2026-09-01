@@ -17,7 +17,12 @@ import {
   TrendingUp,
   Clock,
   Smartphone,
-  ChefHat
+  ChefHat,
+  Utensils,
+  Wine,
+  Coffee,
+  Flame,
+  MapPin
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 
@@ -31,15 +36,20 @@ const getWhatsAppUrl = () => {
 
 export default function LandingPage() {
   const [popupsBlocked, setPopupsBlocked] = useState(false)
+  const [selectedDemoSlug, setSelectedDemoSlug] = useState('burger-gourmet')
 
-  const handleOpenAllDashboards = () => {
-    const w1 = window.open('/menu/burger-gourmet?table=7', '_blank')
-    const w2 = window.open('/staff/comandero/burger-gourmet', '_blank')
-    const w3 = window.open('/staff/kitchen/burger-gourmet', '_blank')
+  const handleOpenDashboardsForSlug = (slug: string, table = 7) => {
+    const w1 = window.open(`/menu/${slug}?table=${table}`, '_blank')
+    const w2 = window.open(`/staff/comandero/${slug}`, '_blank')
+    const w3 = window.open(`/staff/kitchen/${slug}`, '_blank')
 
     if (!w2 || !w3) {
       setPopupsBlocked(true)
     }
+  }
+
+  const handleOpenAllDashboards = () => {
+    handleOpenDashboardsForSlug(selectedDemoSlug, 7)
   }
 
   return (
@@ -187,6 +197,237 @@ export default function LandingPage() {
               </div>
 
             </div>
+          </div>
+        </section>
+
+        {/* ── 2.5 PERFILES DEMO EN PRODUCCIÓN (NOIA, GALICIA) ── */}
+        <section className="py-16 bg-slate-950/80 border-b border-slate-800 relative">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-widest">
+                <MapPin className="w-3.5 h-3.5" />
+                <span>3 PERFILES DEMO LISTOS PARA PROBAR EN VIVO</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
+                Simula el flujo real en 3 conceptos gastronómicos
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto">
+                Abre la carta del cliente en tu móvil, el comandero del mozo en una tablet y el pase de cocina en tu pantalla para ver la sincronización instantánea en milisegundos.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+              
+              {/* PERFIL 1: BURGER GOURMET NOIA */}
+              <div className="bg-slate-900/90 border-2 border-blue-500/40 hover:border-blue-400 rounded-2xl p-6 flex flex-col justify-between shadow-2xl transition-all duration-300 group hover:-translate-y-1">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" /> Noia &middot; Alameda
+                    </span>
+                    <span className="text-xl">🍔</span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-black text-white group-hover:text-blue-400 transition-colors">
+                      Burger Gourmet Noia
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                      Smash Burgers, Vaca Rubia Gallega &amp; Cervezas 1906
+                    </p>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Carta con modificadores de punto de carne, extras de queso San Simón ahumado, combos con patatas rústicas y sugerencias automáticas de postre y café.
+                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold border border-slate-700">Smash Burgers</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold border border-slate-700">Rubia Gallega</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold border border-slate-700">Estrella 1906</span>
+                  </div>
+                </div>
+
+                <div className="pt-6 mt-6 border-t border-slate-800 space-y-2.5">
+                  <div className="grid grid-cols-3 gap-1.5 text-[11px] font-bold">
+                    <Link
+                      href="/menu/burger-gourmet?table=7"
+                      target="_blank"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-slate-200 hover:text-white border border-slate-700 transition-colors flex flex-col items-center gap-1"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Carta #7</span>
+                    </Link>
+                    <Link
+                      href="/staff/comandero/burger-gourmet"
+                      target="_blank"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-slate-200 hover:text-white border border-slate-700 transition-colors flex flex-col items-center gap-1"
+                    >
+                      <Utensils className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Mozo</span>
+                    </Link>
+                    <Link
+                      href="/staff/kitchen/burger-gourmet"
+                      target="_blank"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-slate-200 hover:text-white border border-slate-700 transition-colors flex flex-col items-center gap-1"
+                    >
+                      <ChefHat className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Cocina</span>
+                    </Link>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDashboardsForSlug('burger-gourmet', 7)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/20 active:scale-95 transition-all"
+                  >
+                    <span>Simular Todo (3 Pantallas)</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* PERFIL 2: TAPERÍA CASCO ANTIGO */}
+              <div className="bg-slate-900/90 border-2 border-red-500/40 hover:border-red-400 rounded-2xl p-6 flex flex-col justify-between shadow-2xl transition-all duration-300 group hover:-translate-y-1">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" /> Noia &middot; Casco Histórico
+                    </span>
+                    <span className="text-xl">🐙</span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-black text-white group-hover:text-red-400 transition-colors">
+                      Tapería Casco Antigo
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                      Pulpo á Feira, Zamburiñas da Ría, Pementos &amp; Vinos
+                    </p>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Especializada en tapas y raciones tradicionales gallegas, tablas de quesos D.O. (Arzúa, San Simón, Tetilla) y maridajes con Albariño y Mencía de la Ribeira Sacra.
+                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold border border-slate-700">Pulpo á Feira</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold border border-slate-700">Zamburiñas Noia</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold border border-slate-700">Albariño D.O.</span>
+                  </div>
+                </div>
+
+                <div className="pt-6 mt-6 border-t border-slate-800 space-y-2.5">
+                  <div className="grid grid-cols-3 gap-1.5 text-[11px] font-bold">
+                    <Link
+                      href="/menu/taperia-casco-antigo?table=4"
+                      target="_blank"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-slate-200 hover:text-white border border-slate-700 transition-colors flex flex-col items-center gap-1"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-red-400" />
+                      <span>Carta #4</span>
+                    </Link>
+                    <Link
+                      href="/staff/comandero/taperia-casco-antigo"
+                      target="_blank"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-slate-200 hover:text-white border border-slate-700 transition-colors flex flex-col items-center gap-1"
+                    >
+                      <Utensils className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Mozo</span>
+                    </Link>
+                    <Link
+                      href="/staff/kitchen/taperia-casco-antigo"
+                      target="_blank"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-slate-200 hover:text-white border border-slate-700 transition-colors flex flex-col items-center gap-1"
+                    >
+                      <ChefHat className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Cocina</span>
+                    </Link>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDashboardsForSlug('taperia-casco-antigo', 4)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-red-600/20 active:scale-95 transition-all"
+                  >
+                    <span>Simular Todo (3 Pantallas)</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* PERFIL 3: TERRAZA MALECÓN */}
+              <div className="bg-slate-900/90 border-2 border-teal-500/40 hover:border-teal-400 rounded-2xl p-6 flex flex-col justify-between shadow-2xl transition-all duration-300 group hover:-translate-y-1">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-teal-500/15 text-teal-400 border border-teal-500/30 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" /> Noia &middot; Paseo Marítimo
+                    </span>
+                    <span className="text-xl">🍸</span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-black text-white group-hover:text-teal-400 transition-colors">
+                      Terraza Malecón
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                      Café de Especialidad, Tardeo, Cócteles &amp; Vermús
+                    </p>
+                  </div>
+
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Concepto de alta rotación para terraza frente a la ría: tostas de masa madre, vermús St. Petroni, cócteles de autor, gin tonics Nordés y tartas de queso fluidas.
+                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold border border-slate-700">Flat White</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold border border-slate-700">Gin Nordés</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold border border-slate-700">Vermú Petroni</span>
+                  </div>
+                </div>
+
+                <div className="pt-6 mt-6 border-t border-slate-800 space-y-2.5">
+                  <div className="grid grid-cols-3 gap-1.5 text-[11px] font-bold">
+                    <Link
+                      href="/menu/terraza-malecon?table=12"
+                      target="_blank"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-slate-200 hover:text-white border border-slate-700 transition-colors flex flex-col items-center gap-1"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-teal-400" />
+                      <span>Carta #12</span>
+                    </Link>
+                    <Link
+                      href="/staff/comandero/terraza-malecon"
+                      target="_blank"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-slate-200 hover:text-white border border-slate-700 transition-colors flex flex-col items-center gap-1"
+                    >
+                      <Utensils className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Mozo</span>
+                    </Link>
+                    <Link
+                      href="/staff/kitchen/terraza-malecon"
+                      target="_blank"
+                      className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-center text-slate-200 hover:text-white border border-slate-700 transition-colors flex flex-col items-center gap-1"
+                    >
+                      <ChefHat className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Cocina</span>
+                    </Link>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDashboardsForSlug('terraza-malecon', 12)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-teal-600/20 active:scale-95 transition-all"
+                  >
+                    <span>Simular Todo (3 Pantallas)</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         </section>
 
