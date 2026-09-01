@@ -235,10 +235,42 @@ runTest("Landing Page Comercial: Beneficio de Reporte Mensual IA visible en Plan
   assert.ok(landingContent.includes("MonthlyReportModal"), "Modal de visualización de reporte mensual presente")
 })
 
+// ── 9. DASHBOARD DE ADMINISTRACIÓN & DIGITALIZADOR IA DE CARTA ──
+console.log(`\n${COLORS.bold}${COLORS.blue}▶ FASE 9: Administración de Carta, Toggle Agotado & Digitalizador IA${COLORS.reset}`)
+
+runTest("Endpoint /api/admin/menu: CRUD de productos, categorías y disponibilidad rápida", () => {
+  const adminMenuPath = path.resolve("src/app/api/admin/menu/route.ts")
+  const adminMenuContent = fs.readFileSync(adminMenuPath, "utf-8")
+  
+  assert.ok(adminMenuContent.includes("upsertServerProduct"), "Creación y edición de productos presente")
+  assert.ok(adminMenuContent.includes("upsertServerCategory"), "Creación y edición de categorías presente")
+  assert.ok(adminMenuContent.includes("toggleProductAvailability"), "Toggle rápido de disponibilidad presente")
+  assert.ok(adminMenuContent.includes("categories_reorder"), "Reordenación de categorías presente")
+})
+
+runTest("Endpoint /api/admin/ai-menu-import: Parser inteligente de texto a carta con 1 clic", () => {
+  const aiImportPath = path.resolve("src/app/api/admin/ai-menu-import/route.ts")
+  const aiImportContent = fs.readFileSync(aiImportPath, "utf-8")
+  
+  assert.ok(aiImportContent.includes("priceRegex"), "Extracción inteligente de precios numéricos presente")
+  assert.ok(aiImportContent.includes("isCategoryHeaderRegex"), "Clasificación automática en categorías presente")
+  assert.ok(aiImportContent.includes("save_to_menu"), "Publicación directa con 1 clic presente")
+})
+
+runTest("Dashboard /staff/admin/[slug]: Interfaz protegida por PIN y optimizada para móvil", () => {
+  const adminPagePath = path.resolve("src/app/staff/admin/[slug]/page.tsx")
+  const adminPageContent = fs.readFileSync(adminPagePath, "utf-8")
+  
+  assert.ok(adminPageContent.includes("StaffPinAuth"), "Protección por PIN de Staff presente")
+  assert.ok(adminPageContent.includes("handleToggleAvailability"), "Toggle táctil de platos agotados presente")
+  assert.ok(adminPageContent.includes("handleApplyAiMenu"), "Botón de importación con IA en 1 clic presente")
+})
+
 // ── RESUMEN FINAL DE CERTIFICACIÓN ──
 console.log(`\n${COLORS.bold}${COLORS.green}================================================================================${COLORS.reset}`)
 console.log(`${COLORS.bold}${COLORS.green} 🏆 CERTIFICACIÓN INTEGRAL EN VIVO: ${passedTests}/${totalTests} PRUEBAS SUPERADAS (100% PASS) ${COLORS.reset}`)
 console.log(`${COLORS.green} El sistema Fluxo Gastronomic System está 100% operativo, blindado y validado.${COLORS.reset}`)
 console.log(`${COLORS.bold}${COLORS.green}================================================================================${COLORS.reset}\n`)
+
 
 

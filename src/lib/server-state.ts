@@ -4,7 +4,8 @@
 // mozos y pantallas de cocina) se sincronicen en tiempo real localmente.
 // ==============================================================================
 
-import { Order, OrderStatus } from '@/types/database.types'
+import { Order, OrderStatus, Category, Product } from '@/types/database.types'
+import { MOCK_CATEGORIES, MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
 
 export interface ServiceCall {
   id: string
@@ -28,10 +29,30 @@ interface GlobalStoreState {
   __GASTRO_SERVICE_CALLS__: Record<string, ServiceCall[]>
   __GASTRO_TABLE_SESSIONS__: Record<string, Record<string | number, TableSession>>
   __GASTRO_ANALYTICS__: Record<string, AnalyticsEvent[]>
+  __GASTRO_CATEGORIES__: Record<string, Category[]>
+  __GASTRO_PRODUCTS__: Record<string, Product[]>
   __GASTRO_SSE_CLIENTS__: Array<(data: string) => void>
 }
 
 const g = global as unknown as Partial<GlobalStoreState>
+
+if (!g.__GASTRO_CATEGORIES__) {
+  g.__GASTRO_CATEGORIES__ = {
+    'burger-gourmet': [...(MOCK_CATEGORIES['burger-gourmet'] || [])],
+    'taperia-casco-antigo': [...(MOCK_CATEGORIES['taperia-casco-antigo'] || [])],
+    'terraza-malecon': [...(MOCK_CATEGORIES['terraza-malecon'] || [])],
+    'bella-napoli': [...(MOCK_CATEGORIES['bella-napoli'] || [])],
+  }
+}
+
+if (!g.__GASTRO_PRODUCTS__) {
+  g.__GASTRO_PRODUCTS__ = {
+    'burger-gourmet': [...(MOCK_PRODUCTS['burger-gourmet'] || [])],
+    'taperia-casco-antigo': [...(MOCK_PRODUCTS['taperia-casco-antigo'] || [])],
+    'terraza-malecon': [...(MOCK_PRODUCTS['terraza-malecon'] || [])],
+    'bella-napoli': [...(MOCK_PRODUCTS['bella-napoli'] || [])],
+  }
+}
 
 if (!g.__GASTRO_ORDERS__) {
   g.__GASTRO_ORDERS__ = {
@@ -492,4 +513,88 @@ export function getAnalyticsSummary(slug: string) {
     recentEventsCount: events.length,
   }
 }
+
+// ==============================================================================
+// GESTIÓN DINÁMICA DE CARTA (CATEGORÍAS Y PRODUCTOS EN MEMORIA & SYNC)
+// ==============================================================================
+
+export function getServerCategories(slug: string): Category[] {
+  if (!globalStore.__GASTRO_CATEGORIES__?.[slug]) {
+    if (!globalStore.__GASTRO_CATEGORIES__) globalStore.__GASTRO_CATEGORIES__ = {}
+    globalStore.__GASTRO_CATEGORIES__[slug] = [...(MOCK_CATEGORIES[slug] || MOCK_CATEGORIES['burger-gourmet'] || [])]
+  }
+  return globalStore.__GASTRO_CATEGORIES__[slug]
+}
+
+export function setServerCategories(slug: string, categories: Category[]): void {
+  if (!globalStore.__GASTRO_CATEGORIES__) globalStore.__GASTRO_CATEGORIES__ = {}
+  globalStore.__GASTRO_CATEGORIES__[slug] = categories
+  broadcastEvent({ type: 'menu_updated', slug })
+}
+
+export function upsertServerCategory(slug: string, category: Category): Category {
+  const current = getServerCategories(slug)
+  const idx = current.findIndex(c => c.id === category.id)
+  let updated: Category[]
+  if (idx >= 0) {
+    updated = current.map(c => (c.id === category.id ? { ...c, ...category } : c))
+  } else {
+    updated = [...current, category]
+  }
+  setServerCategories(slug, updated)
+  return category
+}
+
+export function deleteServerCategory(slug: string, categoryId: string): void {
+  const current = getServerCategories(slug)
+  setServerCategories(slug, current.filter(c => c.id !== categoryId))
+}
+
+export function getServerProducts(slug: string): Product[] {
+  if (!globalStore.__GASTRO_PRODUCTS__?.[slug]) {
+    if (!globalStore.__GASTRO_PRODUCTS__) globalStore.__GASTRO_PRODUCTS__ = {}
+    globalStore.__GASTRO_PRODUCTS__[slug] = [...(MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])]
+  }
+  return globalStore.__GASTRO_PRODUCTS__[slug]
+}
+
+export function setServerProducts(slug: string, products: Product[]): void {
+  if (!globalStore.__GASTRO_PRODUCTS__) globalStore.__GASTRO_PRODUCTS__ = {}
+  globalStore.__GASTRO_PRODUCTS__[slug] = products
+  broadcastEvent({ type: 'menu_updated', slug })
+}
+
+export function upsertServerProduct(slug: string, product: Product): Product {
+  const current = getServerProducts(slug)
+  const idx = current.findIndex(p => p.id === product.id)
+  let updated: Product[]
+  if (idx >= 0) {
+    updated = current.map(p => (p.id === product.id ? { ...p, ...product } : p))
+  } else {
+    updated = [product, ...current]
+  }
+  setServerProducts(slug, updated)
+  return product
+}
+
+export function toggleProductAvailability(slug: string, productId: string): boolean {
+  const current = getServerProducts(slug)
+  let nextState = true
+  const updated = current.map(p => {
+    if (p.id === productId) {
+      const isAvailable = p.is_available !== false
+      nextState = !isAvailable
+      return { ...p, is_available: nextState }
+    }
+    return p
+  })
+  setServerProducts(slug, updated)
+  return nextState
+}
+
+export function deleteServerProduct(slug: string, productId: string): void {
+  const current = getServerProducts(slug)
+  setServerProducts(slug, current.filter(p => p.id !== productId))
+}
+
 

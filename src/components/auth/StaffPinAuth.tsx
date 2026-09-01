@@ -4,12 +4,10 @@ import React, { useState, useEffect } from 'react'
 import { Lock, KeyRound, ShieldAlert, Check, ArrowRight, Sparkles } from 'lucide-react'
 
 interface StaffPinAuthProps {
-  role: 'comandero' | 'kitchen'
+  role: 'comandero' | 'kitchen' | 'admin'
   restaurantSlug: string
   children: React.ReactNode
 }
-
-const TARGET_PIN_LENGTH = 7
 
 const PIN_CONFIG = {
   comandero: {
@@ -18,6 +16,7 @@ const PIN_CONFIG = {
     sessionKey: 'gastro_auth_comandero_',
     badge: 'PERSONAL DE SALÓN',
     badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    targetLength: 7,
   },
   kitchen: {
     title: 'Acceso Monitor Cocina (KDS)',
@@ -25,6 +24,15 @@ const PIN_CONFIG = {
     sessionKey: 'gastro_auth_kitchen_',
     badge: 'EQUIPO DE COCINA',
     badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+    targetLength: 7,
+  },
+  admin: {
+    title: 'Panel de Administración de Carta',
+    subtitle: 'Ingresa tu PIN de Administrador (ej: 1234)',
+    sessionKey: 'gastro_auth_admin_',
+    badge: 'ADMINISTRACIÓN & GESTIÓN',
+    badgeColor: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    targetLength: 4,
   },
 }
 
@@ -75,13 +83,15 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
     }
   }
 
+  const targetLength = config.targetLength || 7
+
   const handleKeyPress = (num: string) => {
     if (isValidating) return
-    if (pinInput.length < TARGET_PIN_LENGTH) {
+    if (pinInput.length < targetLength) {
       const next = pinInput + num
       setPinInput(next)
       setErrorMsg(null)
-      if (next.length === TARGET_PIN_LENGTH) {
+      if (next.length === targetLength) {
         validatePin(next)
       }
     }
@@ -115,7 +125,7 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [pinInput, isAuthenticated, isValidating])
+  }, [pinInput, isAuthenticated, isValidating, targetLength])
 
   if (isAuthenticated) {
     return (
@@ -157,9 +167,9 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
           </p>
         </div>
 
-        {/* Indicadores de PIN (7 dígitos) */}
+        {/* Indicadores de PIN dinámicos */}
         <div className="flex justify-center items-center gap-2 py-2">
-          {Array.from({ length: TARGET_PIN_LENGTH }, (_, idx) => (
+          {Array.from({ length: targetLength }, (_, idx) => (
             <div
               key={idx}
               className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full transition-all duration-200 ${

@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
 
     const cleanPin = pin.trim()
 
-    // Si el PIN es correcto, siempre autorizar y resetear intentos
-    if (cleanPin === '4154928') {
+    // Si el PIN es correcto (1234 o 4154928), siempre autorizar y resetear intentos
+    if (cleanPin === '1234' || cleanPin === '4154928' || (role === 'admin' && cleanPin === '1234')) {
       failedAttempts.delete(ip)
       return NextResponse.json({ success: true, message: 'Autenticación exitosa' })
     }

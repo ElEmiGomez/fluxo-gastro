@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react'
 import Image from 'next/image'
 import { useParams, useSearchParams } from 'next/navigation'
 import {
@@ -207,67 +207,89 @@ function DinerMenuContent() {
         // ignore
       }
     }
+  }, [slug, tableNumber, searchParams])
 
-    async function loadData() {
-      const supabase = createBrowserClient()
-      if (supabase) {
-        try {
-          const { data: restData } = await supabase
-            .from('restaurants')
-            .select('*')
-            .eq('slug', slug)
-            .single()
-
-          if (restData) {
-            setRestaurant(restData)
-
-            const { data: catData } = await supabase
-              .from('categories')
-              .select('*')
-              .eq('restaurant_id', restData.id)
-              .order('order_index')
-
-            if (catData && catData.length > 0) {
-              setCategories(catData)
-              setSelectedCategory(catData[0].id)
-            }
-
-            const { data: prodData } = await supabase
-              .from('products')
-              .select('*')
-              .eq('restaurant_id', restData.id)
-              .eq('is_available', true)
-
-            if (prodData && prodData.length > 0) setProducts(prodData)
-
-            const { data: tableData } = await supabase
-              .from('tables')
-              .select('*')
-              .eq('restaurant_id', restData.id)
-              .order('table_number')
-
-            if (tableData) setTables(tableData)
-            return
-          }
-        } catch (e) {
-          console.log('Using local fallback data:', e)
+  const loadData = useCallback(async () => {
+    // 0. Cargar menú dinámico actualizado desde la API en tiempo real
+    try {
+      const menuRes = await fetch(`/api/admin/menu?slug=${slug}`).then(r => r.json())
+      if (menuRes.success) {
+        if (menuRes.restaurant) setRestaurant(menuRes.restaurant)
+        if (menuRes.categories && menuRes.categories.length > 0) {
+          setCategories(menuRes.categories)
+          setSelectedCategory(prev => prev || menuRes.categories[0].id)
         }
+        if (menuRes.products && menuRes.products.length > 0) {
+          setProducts(menuRes.products.filter((p: any) => p.is_available !== false))
+        }
+        const tablesFallback = MOCK_TABLES[slug] || []
+        setTables(tablesFallback)
+        return
       }
+    } catch (e) {
+      console.log('Error fetching dynamic menu, checking Supabase/mock:', e)
+    }
 
-      if (MOCK_RESTAURANTS[slug]) {
-        setRestaurant(MOCK_RESTAURANTS[slug])
-        const cats = MOCK_CATEGORIES[slug] || []
-        setCategories(cats)
-        if (cats.length > 0) {
-          setSelectedCategory(cats[0].id)
+    const supabase = createBrowserClient()
+    if (supabase) {
+      try {
+        const { data: restData } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('slug', slug)
+          .single()
+
+        if (restData) {
+          setRestaurant(restData)
+
+          const { data: catData } = await supabase
+            .from('categories')
+            .select('*')
+            .eq('restaurant_id', restData.id)
+            .order('order_index')
+
+          if (catData && catData.length > 0) {
+            setCategories(catData)
+            setSelectedCategory(catData[0].id)
+          }
+
+          const { data: prodData } = await supabase
+            .from('products')
+            .select('*')
+            .eq('restaurant_id', restData.id)
+            .eq('is_available', true)
+
+          if (prodData && prodData.length > 0) setProducts(prodData)
+
+          const { data: tableData } = await supabase
+            .from('tables')
+            .select('*')
+            .eq('restaurant_id', restData.id)
+            .order('table_number')
+
+          if (tableData) setTables(tableData)
+          return
         }
-        setProducts(MOCK_PRODUCTS[slug] || [])
-        setTables(MOCK_TABLES[slug] || [])
+      } catch (e) {
+        console.log('Using local fallback data:', e)
       }
     }
 
+    if (MOCK_RESTAURANTS[slug]) {
+      setRestaurant(MOCK_RESTAURANTS[slug])
+      const cats = MOCK_CATEGORIES[slug] || []
+      setCategories(cats)
+      if (cats.length > 0) {
+        setSelectedCategory(cats[0].id)
+      }
+      setProducts(MOCK_PRODUCTS[slug] || [])
+      setTables(MOCK_TABLES[slug] || [])
+    }
+  }, [slug])
+
+  useEffect(() => {
     loadData()
-  }, [slug, tableNumber])
+  }, [loadData])
 
   // 2. Sincronización en vivo del estado del pedido en Cocina para el comensal
   useEffect(() => {
@@ -363,6 +385,11 @@ function DinerMenuContent() {
             if (data.new_session_id) {
               setSessionId(data.new_session_id)
             }
+            return
+          }
+
+          if (data.type === 'menu_updated') {
+            loadData()
             return
           }
 
