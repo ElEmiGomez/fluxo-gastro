@@ -11,13 +11,83 @@ import {
   User,
   Briefcase,
   MapPin,
+  LocateFixed,
   Layers,
   Send,
   Loader2,
   ArrowRight,
-  MessageSquare
+  MessageSquare,
+  Globe
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
+
+const POPULAR_LOCATIONS = {
+  espana: [
+    'Noia / Barbanza (A Coruña)',
+    'Santiago de Compostela (A Coruña)',
+    'A Coruña Capital',
+    'Vigo (Pontevedra)',
+    'Pontevedra Capital',
+    'Ourense Capital',
+    'Lugo Capital',
+    'Ferrol (A Coruña)',
+    'Ribeira (A Coruña)',
+    'Vilagarcía de Arousa (Pontevedra)',
+    'Madrid (Comunidad de Madrid)',
+    'Barcelona (Cataluña)',
+    'Valencia (Comunidad Valenciana)',
+    'Sevilla (Andalucía)',
+    'Málaga / Costa del Sol (Andalucía)',
+    'Bilbao / Vizcaya (País Vasco)',
+    'San Sebastián / Donostia (País Vasco)',
+    'Palma de Mallorca (Baleares)',
+    'Ibiza (Baleares)',
+    'Las Palmas de Gran Canaria (Canarias)',
+    'Santa Cruz de Tenerife (Canarias)',
+    'Zaragoza (Aragón)',
+    'Alicante (Comunidad Valenciana)',
+    'Murcia Capital',
+    'Granada (Andalucía)',
+    'Córdoba Capital (Andalucía)',
+    'Cádiz / Jerez (Andalucía)',
+    'Gijón / Oviedo (Asturias)',
+    'Santander (Cantabria)',
+    'Valladolid (Castilla y León)',
+    'Salamanca (Castilla y León)',
+    'Toledo (Castilla-La Mancha)',
+    'Pamplona (Navarra)',
+    'Logroño (La Rioja)',
+    'Badajoz / Mérida (Extremadura)'
+  ],
+  argentina: [
+    'Buenos Aires - CABA',
+    'Buenos Aires - Gran Buenos Aires (GBA)',
+    'Buenos Aires - Mar del Plata',
+    'Buenos Aires - La Plata',
+    'Buenos Aires - Bahía Blanca / Tandil',
+    'Córdoba - Córdoba Capital',
+    'Córdoba - Río Cuarto',
+    'Córdoba - Villa Carlos Paz',
+    'Córdoba - Villa María',
+    'Santa Fe - Rosario',
+    'Santa Fe - Santa Fe Capital',
+    'Santa Fe - Rafaela',
+    'Mendoza - Gran Mendoza',
+    'Mendoza - San Rafael',
+    'Tucumán - San Miguel de Tucumán',
+    'Salta - Salta Capital',
+    'Neuquén - Neuquén Capital',
+    'Río Negro - Bariloche',
+    'San Juan - San Juan Capital',
+    'Entre Ríos - Paraná / Concordia',
+    'Corrientes - Corrientes Capital',
+    'Misiones - Posadas / Iguazú',
+    'Chaco - Resistencia',
+    'Santiago del Estero Capital',
+    'Chubut - Puerto Madryn / Comodoro Rivadavia',
+    'Tierra del Fuego - Ushuaia'
+  ]
+}
 
 interface PilotRequestModalProps {
   isOpen: boolean
@@ -36,9 +106,11 @@ export function PilotRequestModal({
   const [contactName, setContactName] = useState('')
   const [contactRole, setContactRole] = useState('')
   const [phone, setPhone] = useState('')
-  const [location, setLocation] = useState('Noia / Barbanza')
+  const [location, setLocation] = useState('Noia / Barbanza (A Coruña)')
   const [selectedPlan, setSelectedPlan] = useState(initialPlan)
   const [notes, setNotes] = useState('')
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false)
+  const [locationStatus, setLocationStatus] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -83,6 +155,67 @@ export function PilotRequestModal({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Acepta única y exclusivamente números
+    const numericValue = e.target.value.replace(/\D/g, '')
+    setPhone(numericValue)
+  }
+
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Bloquear cualquier carácter no numérico en teclado físico de PC
+    const allowedKeys = [
+      'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Home', 'End'
+    ]
+    if (!allowedKeys.includes(e.key) && !/^\d$/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault()
+    }
+  }
+
+  const handleDetectLocation = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      setLocationStatus('Geolocalización no soportada en este navegador.')
+      return
+    }
+
+    setIsDetectingLocation(true)
+    setLocationStatus('Detectando tu ubicación por GPS...')
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+            { headers: { 'Accept-Language': 'es' } }
+          )
+          const data = await res.json()
+          const city = data.address?.city || data.address?.town || data.address?.village || data.address?.municipality || data.address?.county
+          const state = data.address?.state || data.address?.province
+          const country = data.address?.country
+
+          const parts = [city, state, country].filter(Boolean)
+          const detected = parts.join(', ')
+
+          if (detected) {
+            setLocation(detected)
+            setLocationStatus(`Ubicación detectada: ${detected}`)
+          } else {
+            setLocationStatus('Ubicación detectada (coordenadas aproximadas).')
+          }
+        } catch {
+          setLocationStatus('No se pudo obtener el nombre exacto de la localidad.')
+        } finally {
+          setIsDetectingLocation(false)
+        }
+      },
+      () => {
+        setIsDetectingLocation(false)
+        setLocationStatus('Permiso de GPS no concedido. Selecciona tu zona del menú.')
+      },
+      { timeout: 8000, enableHighAccuracy: false }
+    )
   }
 
   const handleOpenWhatsAppDirect = () => {
@@ -251,31 +384,91 @@ export function PilotRequestModal({
                     </div>
                     <input
                       type="tel"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       required
-                      placeholder="Ej: 612 345 678"
+                      placeholder="Ej: 612345678 o 3585187430"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={handlePhoneChange}
+                      onKeyDown={handlePhoneKeyDown}
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
                     />
                   </div>
+                  <p className="text-[10px] text-slate-400">Solo números, sin guiones ni espacios.</p>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    Población / Zona
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                      Población / Zona
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleDetectLocation}
+                      disabled={isDetectingLocation}
+                      className="text-[11px] font-bold text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                      title="Detectar ubicación actual mediante GPS"
+                    >
+                      <LocateFixed className={`w-3.5 h-3.5 ${isDetectingLocation ? 'animate-spin text-cyan-300' : ''}`} />
+                      <span>{isDetectingLocation ? 'Detectando...' : 'Detectar GPS'}</span>
+                    </button>
+                  </div>
+
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                       <MapPin className="w-4 h-4" />
                     </div>
                     <input
                       type="text"
-                      placeholder="Ej: Noia, Ribeira, Santiago..."
+                      list="locations-autocomplete"
+                      placeholder="Escribe o selecciona tu zona..."
                       value={location}
-                      onChange={(e) => setLocation(e.target.value)}
+                      onChange={(e) => {
+                        setLocation(e.target.value)
+                        setLocationStatus(null)
+                      }}
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
                     />
+                    <datalist id="locations-autocomplete">
+                      {[...POPULAR_LOCATIONS.espana, ...POPULAR_LOCATIONS.argentina].map((loc) => (
+                        <option key={loc} value={loc} />
+                      ))}
+                    </datalist>
                   </div>
+
+                  {/* Menú selector rápido de ubicaciones de España y Argentina */}
+                  <select
+                    value={POPULAR_LOCATIONS.espana.includes(location) || POPULAR_LOCATIONS.argentina.includes(location) ? location : 'custom'}
+                    onChange={(e) => {
+                      if (e.target.value !== 'custom') {
+                        setLocation(e.target.value)
+                        setLocationStatus(null)
+                      }
+                    }}
+                    className="w-full px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700/80 text-[11px] text-slate-300 focus:outline-none focus:border-cyan-500 transition-colors cursor-pointer"
+                  >
+                    <option value="custom">📍 Menú de Ciudades (España / Argentina)</option>
+                    <optgroup label="🇪🇸 España">
+                      {POPULAR_LOCATIONS.espana.map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="🇦🇷 Argentina">
+                      {POPULAR_LOCATIONS.argentina.map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+
+                  {locationStatus && (
+                    <p className="text-[11px] text-cyan-400 font-medium flex items-center gap-1 animate-in fade-in">
+                      <span>{locationStatus}</span>
+                    </p>
+                  )}
                 </div>
               </div>
 
