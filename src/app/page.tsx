@@ -655,14 +655,13 @@ export default function LandingPage() {
 
                     {/* Hover Verde Promo */}
                     <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
-                      <div className="flex items-baseline gap-2.5">
+                      <div className="flex items-baseline gap-3">
                         <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">39€</span>
                         <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
-                        <span className="text-emerald-300 text-sm font-extrabold uppercase tracking-wide">14 DÍAS</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse flex-shrink-0" />
-                        <span>¡Prueba 14 días a 0€ sin ningún compromiso!</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                       </div>
                     </div>
                   </div>
@@ -761,14 +760,13 @@ export default function LandingPage() {
 
                     {/* Hover Verde Promo */}
                     <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
-                      <div className="flex items-baseline gap-2.5">
+                      <div className="flex items-baseline gap-3">
                         <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">69€</span>
                         <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
-                        <span className="text-emerald-300 text-sm font-extrabold uppercase tracking-wide">14 DÍAS</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse flex-shrink-0" />
-                        <span>¡Prueba 14 días a 0€ sin ningún compromiso!</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                       </div>
                     </div>
                   </div>
@@ -870,14 +868,13 @@ export default function LandingPage() {
 
                     {/* Hover Verde Promo */}
                     <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
-                      <div className="flex items-baseline gap-2.5">
+                      <div className="flex items-baseline gap-3">
                         <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">99€</span>
                         <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
-                        <span className="text-cyan-300 text-sm font-extrabold uppercase tracking-wide">14 DÍAS</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse flex-shrink-0" />
-                        <span>¡Prueba 14 días a 0€ sin ningún compromiso!</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                       </div>
                     </div>
                   </div>
