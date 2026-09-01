@@ -607,18 +607,20 @@ export default function LandingPage() {
               {/* Tarjeta 1: Plan Carta */}
               <div 
                 onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
-                className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative cursor-pointer"
+                className="bg-slate-800/60 border border-slate-700 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 group relative cursor-pointer"
               >
                 
                 {/* Badge Flotante Promocional */}
-                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>14 DÍAS DE PRUEBA 0€</span>
+                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-blue-500/40 group-hover:border-emerald-400 text-blue-300 group-hover:text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20 transition-colors duration-300">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors" />
+                  <span className="sm:hidden">14 DÍAS DE PRUEBA 0€</span>
+                  <span className="hidden sm:inline group-hover:hidden">PLAN CARTA DIGITAL</span>
+                  <span className="hidden sm:group-hover:inline">✨ 14 DÍAS DE PRUEBA 0€</span>
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-xl font-black text-white group-hover:text-emerald-300 transition-colors">Plan Carta</h3>
+                    <h3 className="text-xl font-black text-white group-hover:text-emerald-300 transition-colors duration-300">Plan Carta</h3>
                     <p className="text-xs text-slate-400 mt-1">
                       Para locales que buscan carta interactiva y agilidad de servicio en mesa.
                     </p>
@@ -637,53 +639,53 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  {/* 💻 VISTA PC / DESKTOP: Efecto Hover interactivo con precio tachado a 0€ */}
-                  <div className="hidden sm:block py-2 min-h-[72px]">
-                    {/* Estado Normal (sin hover) */}
+                  {/* 💻 VISTA PC: Azul por default -> Verde promo con precio tachado en Hover */}
+                  <div className="hidden sm:block py-2 min-h-[76px]">
+                    {/* Default Azul */}
                     <div className="group-hover:hidden transition-all duration-300">
                       <div className="flex items-baseline gap-2">
                         <span className="text-5xl font-black text-white tracking-tight tabular-nums">39€</span>
                         <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
-                        <Sparkles className="w-3 h-3 flex-shrink-0" />
-                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
+                        <Sparkles className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                        <span>Suscripción mensual flexible &middot; Sin permanencia</span>
                       </div>
                     </div>
 
-                    {/* Estado Hover (al pasar el cursor en PC) */}
+                    {/* Hover Verde Promo */}
                     <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
                       <div className="flex items-baseline gap-2.5">
                         <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">39€</span>
                         <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
                         <span className="text-emerald-300 text-sm font-extrabold uppercase tracking-wide">14 DÍAS</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
-                        <span>¡Prueba gratuita de 14 días sin permanencia!</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse flex-shrink-0" />
+                        <span>¡Prueba 14 días a 0€ sin ningún compromiso!</span>
                       </div>
                     </div>
                   </div>
 
                   <ul className="space-y-3 text-xs sm:text-sm text-slate-300">
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Carta digital interactiva QR autogestionable</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Modificadores estructurados (sin texto libre)</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Llamador con intención (Agua, Pan, Cuenta)</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Generador de cartelería QR para mesas</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Cumplimiento normativo europeo de alérgenos</span>
                     </li>
                   </ul>
@@ -696,10 +698,14 @@ export default function LandingPage() {
                       e.stopPropagation()
                       handleOpenPilotModal('Plan Carta (39€)')
                     }}
-                    className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-lg shadow-emerald-500/25 border border-emerald-300 transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none"
+                    className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none
+                      bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 border border-blue-400/30
+                      group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/30 group-hover:border-emerald-300"
                   >
                     <Sparkles className="w-4 h-4 flex-shrink-0" />
-                    <span>Iniciar Prueba Gratis (14 Días)</span>
+                    <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
+                    <span className="hidden sm:inline group-hover:hidden">Elegir Plan Carta (39€)</span>
+                    <span className="hidden sm:group-hover:inline">✨ Probar 14 Días a 0€ · Sin Coste</span>
                   </button>
                 </div>
               </div>
@@ -707,18 +713,20 @@ export default function LandingPage() {
               {/* Tarjeta 2: Plan Sala */}
               <div 
                 onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
-                className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative cursor-pointer"
+                className="bg-slate-800/60 border border-slate-700 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 group relative cursor-pointer"
               >
                 
                 {/* Badge Flotante Promocional */}
-                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>14 DÍAS DE PRUEBA 0€</span>
+                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-blue-500/40 group-hover:border-emerald-400 text-blue-300 group-hover:text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20 transition-colors duration-300">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors" />
+                  <span className="sm:hidden">14 DÍAS DE PRUEBA 0€</span>
+                  <span className="hidden sm:inline group-hover:hidden">COMANDERO & SALA</span>
+                  <span className="hidden sm:group-hover:inline">✨ 14 DÍAS DE PRUEBA 0€</span>
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-xl font-black text-white group-hover:text-emerald-300 transition-colors">Plan Sala</h3>
+                    <h3 className="text-xl font-black text-white group-hover:text-emerald-300 transition-colors duration-300">Plan Sala</h3>
                     <p className="text-xs text-slate-400 mt-1">
                       Para restaurantes con camareros en sala y terraza que requieren control antifraude.
                     </p>
@@ -737,53 +745,53 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  {/* 💻 VISTA PC / DESKTOP: Efecto Hover interactivo con precio tachado a 0€ */}
-                  <div className="hidden sm:block py-2 min-h-[72px]">
-                    {/* Estado Normal (sin hover) */}
+                  {/* 💻 VISTA PC: Azul por default -> Verde promo con precio tachado en Hover */}
+                  <div className="hidden sm:block py-2 min-h-[76px]">
+                    {/* Default Azul */}
                     <div className="group-hover:hidden transition-all duration-300">
                       <div className="flex items-baseline gap-2">
                         <span className="text-5xl font-black text-white tracking-tight tabular-nums">69€</span>
                         <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
-                        <Sparkles className="w-3 h-3 flex-shrink-0" />
-                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
+                        <Sparkles className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                        <span>Comandero para todos tus camareros &middot; Sin permanencia</span>
                       </div>
                     </div>
 
-                    {/* Estado Hover (al pasar el cursor en PC) */}
+                    {/* Hover Verde Promo */}
                     <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
                       <div className="flex items-baseline gap-2.5">
                         <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">69€</span>
                         <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
                         <span className="text-emerald-300 text-sm font-extrabold uppercase tracking-wide">14 DÍAS</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
-                        <span>¡Prueba gratuita de 14 días sin permanencia!</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse flex-shrink-0" />
+                        <span>¡Prueba 14 días a 0€ sin ningún compromiso!</span>
                       </div>
                     </div>
                   </div>
 
                   <ul className="space-y-3 text-xs sm:text-sm text-slate-300">
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span><strong>Todo lo incluido en el Plan Carta</strong></span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Comandero móvil de mozos con validación obligatoria</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Filtro anti-fraude en mesa (Gatekeeper)</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Mapa de mesas y selector visual de salón</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-blue-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Avisos de cobro por método (Datáfono o Efectivo)</span>
                     </li>
                   </ul>
@@ -796,10 +804,14 @@ export default function LandingPage() {
                       e.stopPropagation()
                       handleOpenPilotModal('Plan Sala (69€)')
                     }}
-                    className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-lg shadow-emerald-500/25 border border-emerald-300 transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none"
+                    className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none
+                      bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 border border-blue-400/30
+                      group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/30 group-hover:border-emerald-300"
                   >
                     <Sparkles className="w-4 h-4 flex-shrink-0" />
-                    <span>Iniciar Prueba Gratis (14 Días)</span>
+                    <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
+                    <span className="hidden sm:inline group-hover:hidden">Elegir Plan Sala (69€)</span>
+                    <span className="hidden sm:group-hover:inline">✨ Probar 14 Días a 0€ · Sin Coste</span>
                   </button>
                 </div>
               </div>
@@ -807,21 +819,23 @@ export default function LandingPage() {
               {/* Tarjeta 3: Plan Full (DESTACADA CON BORDE CIAN BRILLANTE & BADGE RECOMENDADO) */}
               <div 
                 onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
-                className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/25 transition-all duration-300 group relative lg:-translate-y-2 cursor-pointer"
+                className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/30 transition-all duration-300 group relative lg:-translate-y-2 cursor-pointer"
               >
                 
                 {/* Badge Recomendado / 14 Días */}
-                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-cyan-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1">
+                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-cyan-500 group-hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1 transition-colors duration-300">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Recomendado &middot; 14 DÍAS 0€</span>
+                  <span className="sm:hidden">RECOMENDADO &middot; 14 DÍAS 0€</span>
+                  <span className="hidden sm:inline group-hover:hidden">RECOMENDADO &middot; CIRCUITO COMPLETO</span>
+                  <span className="hidden sm:group-hover:inline">✨ PROBAR 14 DÍAS A 0€</span>
                 </div>
 
                 <div className="space-y-6">
                   <div>
-                    <div className="inline-flex items-center gap-1.5 text-cyan-400 group-hover:text-emerald-300 font-extrabold text-xs uppercase tracking-wider mb-1 transition-colors">
+                    <div className="inline-flex items-center gap-1.5 text-cyan-400 group-hover:text-emerald-300 font-extrabold text-xs uppercase tracking-wider mb-1 transition-colors duration-300">
                       <Layers className="w-4 h-4" /> Circuito Completo
                     </div>
-                    <h3 className="text-2xl font-black text-white group-hover:text-emerald-300 transition-colors">Plan Full</h3>
+                    <h3 className="text-2xl font-black text-white group-hover:text-emerald-300 transition-colors duration-300">Plan Full</h3>
                     <p className="text-xs text-slate-300 mt-1">
                       Solución integral: Comensal + Sala + Pantalla KDS o Tiqueteras térmicas.
                     </p>
@@ -840,53 +854,53 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  {/* 💻 VISTA PC / DESKTOP: Efecto Hover interactivo con precio tachado a 0€ */}
-                  <div className="hidden sm:block py-2 min-h-[72px]">
-                    {/* Estado Normal (sin hover) */}
+                  {/* 💻 VISTA PC: Azul/Cian por default -> Verde promo con precio tachado en Hover */}
+                  <div className="hidden sm:block py-2 min-h-[76px]">
+                    {/* Default Azul/Cian */}
                     <div className="group-hover:hidden transition-all duration-300">
                       <div className="flex items-baseline gap-2">
                         <span className="text-5xl font-black text-cyan-400 tracking-tight tabular-nums">99€</span>
                         <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
-                        <Sparkles className="w-3 h-3 flex-shrink-0" />
-                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
+                        <Sparkles className="w-3 h-3 text-cyan-400 flex-shrink-0" />
+                        <span>Menú QR + Comandero + Cocina KDS &middot; Todo incluido</span>
                       </div>
                     </div>
 
-                    {/* Estado Hover (al pasar el cursor en PC) */}
+                    {/* Hover Verde Promo */}
                     <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
                       <div className="flex items-baseline gap-2.5">
                         <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">99€</span>
-                        <span className="text-5xl font-black text-cyan-400 tracking-tight tabular-nums">0€</span>
+                        <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
                         <span className="text-cyan-300 text-sm font-extrabold uppercase tracking-wide">14 DÍAS</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-cyan-300 bg-cyan-500/20 border border-cyan-400/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                        <Sparkles className="w-3 h-3 text-cyan-400 animate-pulse" />
-                        <span>¡Prueba gratuita de 14 días sin permanencia!</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/40 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse flex-shrink-0" />
+                        <span>¡Prueba 14 días a 0€ sin ningún compromiso!</span>
                       </div>
                     </div>
                   </div>
 
                   <ul className="space-y-3 text-xs sm:text-sm text-slate-200">
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span><strong>Todo lo del Plan Carta y Plan Sala</strong></span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Monitor KDS industrial con botones gigantes (&gt;70px)</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Alerta sonora de timbre al marchar comandas</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>API compatible con Impresoras Térmicas ESC/POS</span>
                     </li>
                     <li className="flex items-start gap-2.5">
-                      <Check className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Soporte prioritario y puesta en marcha garantizada</span>
                     </li>
                   </ul>
@@ -899,10 +913,14 @@ export default function LandingPage() {
                       e.stopPropagation()
                       handleOpenPilotModal('Plan Full (Recomendado)')
                     }}
-                    className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 shadow-xl shadow-emerald-500/30 border border-emerald-300 transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none"
+                    className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none
+                      bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-xl shadow-cyan-500/25 border border-cyan-300/40
+                      group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/35 group-hover:border-emerald-300"
                   >
                     <Sparkles className="w-4 h-4 flex-shrink-0" />
-                    <span>Iniciar Prueba Gratis (14 Días)</span>
+                    <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
+                    <span className="hidden sm:inline group-hover:hidden">Elegir Plan Full (Recomendado)</span>
+                    <span className="hidden sm:group-hover:inline">✨ Probar 14 Días a 0€ · Sin Coste</span>
                   </button>
                 </div>
               </div>
