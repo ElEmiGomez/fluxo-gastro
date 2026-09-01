@@ -5,6 +5,7 @@ import { sendPilotLeadNotification } from '@/lib/email'
 interface PilotRequestBody {
   restaurantName: string
   contactName: string
+  contactRole?: string
   phone: string
   location?: string
   selectedPlan: string
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
     console.log('[LEAD PILOTO 14 DÍAS] Solicitud recibida:', {
       restaurant: body.restaurantName,
       contact: body.contactName,
+      role: body.contactRole || 'No especificado',
       phone: body.phone,
       location: body.location || 'No especificada',
       plan: body.selectedPlan || 'Plan Full',
@@ -38,6 +40,7 @@ export async function POST(req: NextRequest) {
       await sendPilotLeadNotification({
         restaurantName: body.restaurantName,
         contactName: body.contactName,
+        contactRole: body.contactRole,
         phone: body.phone,
         location: body.location,
         selectedPlan: body.selectedPlan,
@@ -54,7 +57,7 @@ export async function POST(req: NextRequest) {
         await supabase.from('pilot_leads').insert([
           {
             restaurant_name: body.restaurantName,
-            contact_name: body.contactName,
+            contact_name: body.contactRole ? `${body.contactName} (${body.contactRole})` : body.contactName,
             phone: body.phone,
             location: body.location || null,
             selected_plan: body.selectedPlan,

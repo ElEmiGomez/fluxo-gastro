@@ -9,6 +9,7 @@ import {
   Phone,
   Store,
   User,
+  Briefcase,
   MapPin,
   Layers,
   Send,
@@ -33,6 +34,7 @@ export function PilotRequestModal({
 }: PilotRequestModalProps) {
   const [restaurantName, setRestaurantName] = useState('')
   const [contactName, setContactName] = useState('')
+  const [contactRole, setContactRole] = useState('')
   const [phone, setPhone] = useState('')
   const [location, setLocation] = useState('Noia / Barbanza')
   const [selectedPlan, setSelectedPlan] = useState(initialPlan)
@@ -61,6 +63,7 @@ export function PilotRequestModal({
         body: JSON.stringify({
           restaurantName,
           contactName,
+          contactRole,
           phone,
           location,
           selectedPlan,
@@ -83,8 +86,9 @@ export function PilotRequestModal({
   }
 
   const handleOpenWhatsAppDirect = () => {
+    const roleText = contactRole ? ` (${contactRole})` : ''
     const text = encodeURIComponent(
-      '¡Hola! Solicité el Piloto Gratuito de 14 Días para ' + (restaurantName || 'mi restaurante') + ' (' + selectedPlan + '). Mi nombre es ' + (contactName || '') + ' (' + (phone || '') + ').'
+      '¡Hola! Solicité el Piloto Gratuito de 14 Días para ' + (restaurantName || 'mi restaurante') + ' (' + selectedPlan + '). Mi nombre es ' + (contactName || '') + roleText + ' (' + (phone || '') + ').'
     )
     window.open('https://wa.me/' + whatsAppPhone + '?text=' + text, '_blank')
   }
@@ -198,7 +202,7 @@ export function PilotRequestModal({
                 {/* 2. Persona de Contacto */}
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    Tu Nombre y Cargo *
+                    Tu Nombre *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -207,7 +211,7 @@ export function PilotRequestModal({
                     <input
                       type="text"
                       required
-                      placeholder="Ej: Manuel (Encargado / Dueño)"
+                      placeholder="Ej: Manuel, Lucía..."
                       value={contactName}
                       onChange={(e) => setContactName(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
@@ -215,7 +219,28 @@ export function PilotRequestModal({
                   </div>
                 </div>
 
-                {/* 3. Teléfono de Contacto */}
+                {/* 3. Cargo / Puesto */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Cargo / Puesto
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                      <Briefcase className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Ej: Dueño, Encargado, Maitre..."
+                      value={contactRole}
+                      onChange={(e) => setContactRole(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Teléfono & Población */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
                     Teléfono / WhatsApp de Contacto *
@@ -234,10 +259,7 @@ export function PilotRequestModal({
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* 4. Localidad y Plan */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
                     Población / Zona
@@ -255,24 +277,25 @@ export function PilotRequestModal({
                     />
                   </div>
                 </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    Plan Deseado para el Piloto
-                  </label>
-                  <select
-                    value={selectedPlan}
-                    onChange={(e) => setSelectedPlan(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
-                  >
-                    <option value="Plan Carta (39€)">Plan Carta (39€/mes) — Carta QR</option>
-                    <option value="Plan Sala (69€)">Plan Sala (69€/mes) — Comandero Mozo</option>
-                    <option value="Plan Full (Recomendado)">Plan Full (99€/mes) — Circuito Completo</option>
-                  </select>
-                </div>
               </div>
 
-              {/* 5. Comentarios o enlace a carta */}
+              {/* 5. Selector de Plan */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Plan Deseado para el Piloto
+                </label>
+                <select
+                  value={selectedPlan}
+                  onChange={(e) => setSelectedPlan(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                >
+                  <option value="Plan Carta (39€)">Plan Carta (39€/mes) — Carta QR</option>
+                  <option value="Plan Sala (69€)">Plan Sala (69€/mes) — Comandero Mozo</option>
+                  <option value="Plan Full (Recomendado)">Plan Full (99€/mes) — Circuito Completo</option>
+                </select>
+              </div>
+
+              {/* 6. Comentarios o enlace a carta */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Enlace a tu carta actual o comentarios (Opcional)

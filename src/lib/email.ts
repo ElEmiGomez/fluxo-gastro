@@ -3,6 +3,7 @@ import nodemailer from 'nodemailer'
 export interface PilotLeadEmailData {
   restaurantName: string
   contactName: string
+  contactRole?: string
   phone: string
   location?: string
   selectedPlan: string
@@ -42,6 +43,7 @@ export async function sendPilotLeadNotification(data: PilotLeadEmailData): Promi
         '<p style="margin: 0 0 10px 0;"><strong>Restaurante / Bar:</strong> <span style="color: #22d3ee; font-size: 18px; font-weight: bold;">' + data.restaurantName + '</span></p>' +
         '<hr style="border: 0; border-top: 1px solid #1e293b; margin: 12px 0;" />' +
         '<p style="margin: 0 0 8px 0;"><strong>Persona de Contacto:</strong> <span style="color: #ffffff;">' + data.contactName + '</span></p>' +
+        (data.contactRole ? '<p style="margin: 0 0 8px 0;"><strong>Cargo / Puesto:</strong> <span style="color: #e2e8f0;">' + data.contactRole + '</span></p>' : '') +
         '<p style="margin: 0 0 8px 0;"><strong>Telefono / WhatsApp:</strong> <span style="color: #34d399; font-weight: bold;">' + data.phone + '</span></p>' +
         '<p style="margin: 0 0 8px 0;"><strong>Poblacion / Zona:</strong> <span style="color: #cbd5e1;">' + (data.location || 'No especificada') + '</span></p>' +
         '<p style="margin: 0 0 8px 0;"><strong>Plan Elegido:</strong> <span style="color: #38bdf8; font-weight: bold;">' + data.selectedPlan + '</span></p>' +
@@ -60,11 +62,13 @@ export async function sendPilotLeadNotification(data: PilotLeadEmailData): Promi
       '</div>' +
     '</div>';
 
+    const roleInfo = data.contactRole ? ' (' + data.contactRole + ')' : ''
+
     await transporter.sendMail({
       from: '"Fluxo Leads" <' + gmailUser + '>',
       to: targetEmail,
-      subject: '[Nuevo Lead 14 Dias] ' + data.restaurantName + ' - ' + data.contactName + ' (' + data.selectedPlan + ')',
-      text: 'Nueva solicitud de piloto 14 dias para ' + data.restaurantName + '. Contacto: ' + data.contactName + ', Tel: ' + data.phone + ', Plan: ' + data.selectedPlan,
+      subject: '[Nuevo Lead 14 Dias] ' + data.restaurantName + ' - ' + data.contactName + roleInfo + ' (' + data.selectedPlan + ')',
+      text: 'Nueva solicitud de piloto 14 dias para ' + data.restaurantName + '. Contacto: ' + data.contactName + roleInfo + ', Tel: ' + data.phone + ', Plan: ' + data.selectedPlan,
       html: htmlContent
     })
 
