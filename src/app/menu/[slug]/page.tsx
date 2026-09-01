@@ -1357,6 +1357,10 @@ function DinerMenuContent() {
           tableNumber={tableNumber}
           sessionId={sessionId}
           lang={currentLang}
+          products={products}
+          onAddProduct={(product) => {
+            handleUpdateProductQuantity(product, 1)
+          }}
           canRequestBill={Boolean(tableOrderStatus && !isTablePaid)}
           onAddSuggestedDrink={(drinkId) => {
             const drink = products.find(p => p.id === drinkId)

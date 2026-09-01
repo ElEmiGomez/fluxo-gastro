@@ -302,16 +302,11 @@ export default function WaiterComanderoPage() {
 
         setTableStatuses(statusMap)
 
-        // 3. Popup grande: Mostrar SOLO 1 VEZ por llamada nueva
+        // 3. Popup grande: Mostrar por llamada nueva y persistir hasta que el mozo la atienda
         formattedPendingCalls.forEach(call => {
           if (!seenCallIdsRef.current.has(call.id)) {
             seenCallIdsRef.current.add(call.id)
             setPopupAlert(call)
-
-            if (popupTimerRef.current) clearTimeout(popupTimerRef.current)
-            popupTimerRef.current = setTimeout(() => {
-              setPopupAlert(null)
-            }, 4000)
           }
         })
       } catch (e) {
@@ -527,33 +522,46 @@ export default function WaiterComanderoPage() {
         
         <TenantHeader viewType="comandero" tableNumber={selectedTable?.table_number.toString()} />
 
-        {/* 1. Alerta Pop-up de Llamada de Mesa */}
+        {/* 1. Alerta Pop-up de Llamada de Mesa (Persistente hasta que el mozo actúe) */}
         {popupAlert && (
-          <div className={`fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-4 rounded-2xl font-black shadow-2xl flex items-center justify-between animate-in fade-in slide-in-from-top duration-300 border ${
+          <div className={`fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-4 rounded-2xl font-black shadow-2xl flex items-center justify-between gap-2 animate-in fade-in slide-in-from-top duration-300 border ${
             popupAlert.text.toLowerCase().includes('cuenta')
               ? 'bg-emerald-600 text-white border-emerald-500'
               : 'bg-amber-500 text-slate-950 border-amber-400'
           }`}>
-            <div className="flex items-center gap-3">
-              <Bell className="w-6 h-6 stroke-[2.5] animate-pulse" />
-              <div>
-                <div className="text-xs font-black uppercase tracking-wider">
+            <div className="flex items-center gap-3 min-w-0">
+              <Bell className="w-6 h-6 stroke-[2.5] animate-pulse flex-shrink-0" />
+              <div className="min-w-0">
+                <div className="text-xs font-black uppercase tracking-wider truncate">
                   ¡Aviso Mesa #{popupAlert.table_number}!
                 </div>
-                <div className="text-xs font-bold mt-0.5">{popupAlert.text}</div>
+                <div className="text-xs font-bold mt-0.5 truncate">{popupAlert.text}</div>
               </div>
             </div>
-            <button
-              onClick={() => handleAttendCall(popupAlert.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md active:scale-95 ${
-                popupAlert.text.toLowerCase().includes('cuenta')
-                  ? 'bg-white text-emerald-950 hover:bg-emerald-100'
-                  : 'bg-slate-950 text-white hover:bg-slate-900'
-              }`}
-            >
-              <Check className="w-4 h-4 stroke-[3]" />
-              <span>{popupAlert.text.toLowerCase().includes('cuenta') ? '✓ Marcar Cobrado' : 'Atendido'}</span>
-            </button>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                onClick={() => handleAttendCall(popupAlert.id)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-md active:scale-95 ${
+                  popupAlert.text.toLowerCase().includes('cuenta')
+                    ? 'bg-white text-emerald-950 hover:bg-emerald-100'
+                    : 'bg-slate-950 text-white hover:bg-slate-900'
+                }`}
+              >
+                <Check className="w-4 h-4 stroke-[3]" />
+                <span>{popupAlert.text.toLowerCase().includes('cuenta') ? '✓ Cobrado' : 'Atendido'}</span>
+              </button>
+              <button
+                onClick={() => setPopupAlert(null)}
+                className={`p-2 rounded-xl transition-colors ${
+                  popupAlert.text.toLowerCase().includes('cuenta')
+                    ? 'text-emerald-200 hover:text-white hover:bg-emerald-700/50'
+                    : 'text-amber-900 hover:text-slate-950 hover:bg-amber-400/50'
+                }`}
+                title="Ocultar aviso"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
 

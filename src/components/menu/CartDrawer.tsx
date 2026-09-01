@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import Image from 'next/image'
 import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice } from 'lucide-react'
-import { CartItem } from '@/types/database.types'
+import { CartItem, Product } from '@/types/database.types'
 import { useTenant } from '@/components/tenant/TenantProvider'
 import { formatCurrency } from '@/lib/utils'
 import { createMockOrder } from '@/lib/supabase/mock-fallback'
@@ -22,7 +22,9 @@ interface CartDrawerProps {
   tableNumber: string | null
   sessionId?: string | null
   lang?: string
+  products?: Product[]
   onOpenTableSelector?: () => void
+  onAddProduct?: (product: Product) => void
   onAddSuggestedDrink?: (productId: string) => void
   onAddSuggestedDessert?: (productId: string) => void
   canRequestBill?: boolean
@@ -38,7 +40,9 @@ export function CartDrawer({
   tableNumber,
   sessionId,
   lang = 'gl',
+  products = [],
   onOpenTableSelector,
+  onAddProduct,
   onAddSuggestedDrink,
   onAddSuggestedDessert,
   canRequestBill = false,
@@ -247,7 +251,7 @@ export function CartDrawer({
         {/* Backdrop suave desenfocado */}
         <div 
           onClick={onClose}
-          className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+          className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
         />
 
         {/* CONTENEDOR TIPO BOTTOM SHEET / DRAWER LATERAL */}
@@ -269,14 +273,14 @@ export function CartDrawer({
                   {t('yourOrder')}
                 </h2>
                 <p className="text-xs text-slate-500 font-medium">
-                  {tableNumber ? `${t('tableNumberLabel')} #${tableNumber}` : 'Mesa'} &middot; {restaurant?.name || 'Fluxo'}
+                  {tableNumber ? `${t('tableNumberLabel')} #${tableNumber}` : 'Mesa'} &middot; {validCart.length} {validCart.length === 1 ? (t('itemSingle') || 'producto') : (t('items') || 'productos')}
                 </p>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -342,7 +346,7 @@ export function CartDrawer({
                 {canRequestBill && (
                   <button
                     onClick={() => setShowBillModal(true)}
-                    className="px-4 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-800 text-xs font-bold shadow-sm hover:bg-slate-50 flex items-center gap-2"
+                    className="px-4 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-800 text-xs font-bold shadow-sm hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
                   >
                     <Receipt className="w-4 h-4 text-blue-900" />
                     <span>{t('requestBill')}</span>
@@ -359,7 +363,7 @@ export function CartDrawer({
                   {!isDictateMode && (
                     <button
                       onClick={() => setShowClearConfirm(true)}
-                      className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1 hover:underline p-1"
+                      className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1 hover:underline p-1 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>{t('clearCart')}</span>
@@ -368,7 +372,7 @@ export function CartDrawer({
                 </div>
 
                 {/* SUGERENCIA 1: BEBIDAS SI NO HAY NINGUNA */}
-                {!hasDrinks && (
+                {!hasDrinks && suggestedDrinksList.length > 0 && (
                   <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl space-y-2 animate-in fade-in">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black text-amber-950 flex items-center gap-1.5">
@@ -377,32 +381,30 @@ export function CartDrawer({
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onAddSuggestedDrink?.('p-bsa-1')
-                        }}
-                        className="px-2.5 py-1.5 rounded-xl bg-white border border-amber-300 text-[11px] font-bold text-slate-800 shadow-xs flex items-center gap-1 hover:bg-amber-100 whitespace-nowrap active:scale-95 transition-transform"
-                      >
-                        <span>🍋 Limonada (3,20 €)</span>
-                        <Plus size={12} className="text-amber-700" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onAddSuggestedDrink?.('p-bca-1')
-                        }}
-                        className="px-2.5 py-1.5 rounded-xl bg-white border border-amber-300 text-[11px] font-bold text-slate-800 shadow-xs flex items-center gap-1 hover:bg-amber-100 whitespace-nowrap active:scale-95 transition-transform"
-                      >
-                        <span>🍺 Cerveza IPA (4,20 €)</span>
-                        <Plus size={12} className="text-amber-700" />
-                      </button>
+                      {suggestedDrinksList.map(drink => (
+                        <button
+                          key={drink.id}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+                            if (onAddProduct) {
+                              onAddProduct(drink)
+                            } else if (onAddSuggestedDrink) {
+                              onAddSuggestedDrink(drink.id)
+                            }
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-white border border-amber-300 text-[11px] font-bold text-slate-800 shadow-xs flex items-center gap-1 hover:bg-amber-100 whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
+                        >
+                          <span>{drink.name.includes('Limonada') ? '🍋' : drink.name.includes('Vino') || drink.name.includes('Albariño') || drink.name.includes('Mencía') ? '🍷' : drink.name.includes('Vermú') ? '🍹' : '🍺'} {drink.name.split('(')[0].trim()} ({formatCurrency(drink.price)})</span>
+                          <Plus size={12} className="text-amber-700" />
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
 
                 {/* SUGERENCIA 2: POSTRE SI HAY COMIDA PRINCIPAL Y NO HAY POSTRE */}
-                {hasFood && !hasDessert && (
+                {hasFood && !hasDessert && suggestedDessertsList.length > 0 && (
                   <div className="p-3 bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-200 rounded-2xl space-y-2 animate-in fade-in">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black text-rose-950 flex items-center gap-1.5">
@@ -411,16 +413,24 @@ export function CartDrawer({
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 overflow-x-auto pt-1 no-scrollbar">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onAddSuggestedDessert?.('p-pos-1')
-                        }}
-                        className="px-2.5 py-1.5 rounded-xl bg-white border border-pink-300 text-[11px] font-bold text-slate-800 shadow-xs flex items-center gap-1 hover:bg-pink-100 whitespace-nowrap active:scale-95 transition-transform"
-                      >
-                        <span>🍫 Volcán Chocolate (5,80 €)</span>
-                        <Plus size={12} className="text-pink-700" />
-                      </button>
+                      {suggestedDessertsList.map(dessert => (
+                        <button
+                          key={dessert.id}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+                            if (onAddProduct) {
+                              onAddProduct(dessert)
+                            } else if (onAddSuggestedDessert) {
+                              onAddSuggestedDessert(dessert.id)
+                            }
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-white border border-pink-300 text-[11px] font-bold text-slate-800 shadow-xs flex items-center gap-1 hover:bg-pink-100 whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
+                        >
+                          <span>🍰 {dessert.name.split('(')[0].trim()} ({formatCurrency(dessert.price)})</span>
+                          <Plus size={12} className="text-pink-700" />
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}

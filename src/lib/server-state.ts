@@ -294,17 +294,31 @@ export function validateTableSession(
   tableNumber: string | number,
   clientSessionId?: string
 ): { valid: boolean; currentSessionId: string; reason?: string } {
-  const currentSession = getOrCreateTableSession(slug, tableNumber)
+  if (!globalStore.__GASTRO_TABLE_SESSIONS__) {
+    globalStore.__GASTRO_TABLE_SESSIONS__ = {}
+  }
+  if (!globalStore.__GASTRO_TABLE_SESSIONS__[slug]) {
+    globalStore.__GASTRO_TABLE_SESSIONS__[slug] = {}
+  }
 
-  // Si el cliente comensal envía un session_id anterior que no coincide con la sesión actual
-  if (clientSessionId && currentSession.session_id && clientSessionId !== currentSession.session_id) {
+  let currentSession = globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber]
+
+  // Si no hay sesión o la mesa estaba libre, adoptamos la sesión del comensal
+  if (!currentSession || currentSession.status === 'free') {
+    currentSession = {
+      table_number: tableNumber,
+      status: 'busy',
+      session_id: clientSessionId || `sess-${tableNumber}-${Date.now()}`,
+      last_updated_at: new Date().toISOString(),
+    }
+    globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber] = currentSession
     return {
-      valid: false,
+      valid: true,
       currentSessionId: currentSession.session_id,
-      reason: 'SESSION_EXPIRED',
     }
   }
 
+  // Si la mesa ya tiene una sesión activa con comensales, permitimos agregar platos a la misma mesa
   return {
     valid: true,
     currentSessionId: currentSession.session_id,
