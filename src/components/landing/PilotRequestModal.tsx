@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   X,
   Sparkles,
@@ -119,6 +119,18 @@ export function PilotRequestModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (initialPlan) {
+      if (initialPlan.includes('Carta')) {
+        setSelectedPlan('Plan Carta (39€)')
+      } else if (initialPlan.includes('Sala')) {
+        setSelectedPlan('Plan Sala (69€)')
+      } else {
+        setSelectedPlan('Plan Full (Recomendado)')
+      }
+    }
+  }, [initialPlan, isOpen])
 
   if (!isOpen) return null
 
@@ -396,19 +408,24 @@ export function PilotRequestModal({
                 </div>
               </div>
 
-              {/* 5. Selector de Plan */}
+              {/* 5. Selector de Plan (Preseleccionado automáticamente) */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Plan Deseado para el Piloto
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Plan Seleccionado para la Prueba
+                  </label>
+                  <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                    14 días a 0€
+                  </span>
+                </div>
                 <select
                   value={selectedPlan}
                   onChange={(e) => setSelectedPlan(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors cursor-pointer"
                 >
-                  <option value="Plan Carta (39€)">Plan Carta (39€/mes) — Carta QR</option>
-                  <option value="Plan Sala (69€)">Plan Sala (69€/mes) — Comandero Mozo</option>
-                  <option value="Plan Full (Recomendado)">Plan Full (99€/mes) — Circuito Completo</option>
+                  <option value="Plan Carta (39€)">Plan Carta (39€/mes) — Carta QR Digital</option>
+                  <option value="Plan Sala (69€)">Plan Sala (69€/mes) — Comandero de Sala</option>
+                  <option value="Plan Full (Recomendado)">Plan Full (99€/mes) — Circuito Completo (Recomendado)</option>
                 </select>
               </div>
 

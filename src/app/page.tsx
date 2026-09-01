@@ -852,7 +852,7 @@ export default function LandingPage() {
                 <div className="pt-8">
                   <button
                     type="button"
-                    onClick={() => handleOpenPilotModal('Plan Full (99€ - Recomendado)')}
+                    onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
                     className="w-full py-4 px-4 rounded-2xl text-center text-xs sm:text-sm font-black text-slate-950 bg-cyan-400 group-hover:bg-emerald-400 shadow-lg shadow-cyan-500/30 group-hover:shadow-emerald-500/40 transition-all duration-300 block active:scale-95 cursor-pointer"
                   >
                     <span className="block group-hover:hidden">Elegir Plan Full (Recomendado)</span>
@@ -894,7 +894,7 @@ export default function LandingPage() {
                 <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
                   <button
                     type="button"
-                    onClick={() => handleOpenPilotModal('Plan Full (99€ - Recomendado)')}
+                    onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-sm sm:text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 transition-all active:scale-95 cursor-pointer"
                   >
                     <span>Solicitar Piloto de 14 Días a 0€</span>
