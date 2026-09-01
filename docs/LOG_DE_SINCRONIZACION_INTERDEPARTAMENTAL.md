@@ -219,3 +219,16 @@
   - Supabase Cloud: https://oicugcbdlxfjikkgjjah.supabase.co (8 tablas, RLS, Realtime y Stored Procedure Atomica)
   - Vercel Serverless: Proyecto fluxo-gastro desplegado en produccion 24/7 con 0 errores.
 - **Estado del Sistema:** 100% Operativo para el Piloto de Terraza en Noia.
+
+---
+## [2026-09-01 13:00] LANZAMIENTO DE LA FASE 2: PILOTO DE VALIDACION EN NOIA
+- **Departamento:** Todos los Departamentos / COO & Mentor
+- **Hito:** Preparacion del Kit de Desembarco en Terrazas de Noia.
+- **Entregables Completados:**
+  1. PDF Didactico del Dia: Lecciones_Fluxo_01_09_2026.pdf (Metricas de rotacion y ticket medio).
+  2. Acuerdo Comercial de 14 Dias a 0€ y sin permanencia (acuerdo_piloto_14_dias.md).
+  3. Carteleria A5 de bienvenida a la terraza (cartel_bienvenida_terraza_a5.html).
+  4. Chuleta rapida de barra para camareros con PIN 1234 (chuleta_camarero_barra.html).
+  5. Protocolo de capacitacion de 15 minutos en hora valle (protocolo_onboarding_camareros.md).
+  6. Plantilla del Informe de Impacto Combinado del Dia 14 (informe_impacto_piloto_dia_14.md).
+  7. 3 perfiles de demostracion en Supabase Cloud (Burger Gourmet, Taperia Casco Antigo, Terraza Malecon).
