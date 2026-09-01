@@ -20,7 +20,8 @@ import {
   Flame,
   LayoutList,
   LayoutGrid,
-  Receipt
+  Receipt,
+  Clock
 } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
@@ -47,7 +48,7 @@ function DinerMenuContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const slug = (params?.slug as string) || 'burger-gourmet'
-  const tableParam = searchParams.get('table') || '4'
+  const tableParam = searchParams?.get('table') || '4'
 
   const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
   const [categories, setCategories] = useState<Category[]>(() => MOCK_CATEGORIES[slug] || [])
@@ -127,7 +128,7 @@ function DinerMenuContent() {
       }
 
       // Inicializar o recuperar sesión temporal UUID (Resiliente a Safari iOS ITP)
-      const urlSession = searchParams.get('session')
+      const urlSession = searchParams?.get('session')
       const localStoredSession = typeof window !== 'undefined' ? localStorage.getItem(`gastro_session_${slug}_${tableNumber}`) : null
 
       if (urlSession) {
@@ -539,7 +540,7 @@ function DinerMenuContent() {
               <FluxoLogo size={36} />
               <div className="min-w-0 flex-1">
                 <h1 className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight truncate">
-                  {searchParams.get('local') || restaurant.name || 'Nombre del Local'}
+                  {searchParams?.get('local') || restaurant.name || 'Nombre del Local'}
                 </h1>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className="text-[11px] font-black text-blue-600 bg-blue-50 px-2 py-0.2 rounded-md border border-blue-100 uppercase">

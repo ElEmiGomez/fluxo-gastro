@@ -23,16 +23,18 @@ export interface TableSession {
 }
 
 // Estado global en memoria de Node.js (persiste durante la ejecución del servidor)
-const globalStore = global as unknown as {
-  __GASTRO_ORDERS__?: Record<string, Order[]>
-  __GASTRO_SERVICE_CALLS__?: Record<string, ServiceCall[]>
-  __GASTRO_TABLE_SESSIONS__?: Record<string, Record<string | number, TableSession>>
-  __GASTRO_ANALYTICS__?: Record<string, AnalyticsEvent[]>
-  __GASTRO_SSE_CLIENTS__?: Array<(data: string) => void>
+interface GlobalStoreState {
+  __GASTRO_ORDERS__: Record<string, Order[]>
+  __GASTRO_SERVICE_CALLS__: Record<string, ServiceCall[]>
+  __GASTRO_TABLE_SESSIONS__: Record<string, Record<string | number, TableSession>>
+  __GASTRO_ANALYTICS__: Record<string, AnalyticsEvent[]>
+  __GASTRO_SSE_CLIENTS__: Array<(data: string) => void>
 }
 
-if (!globalStore.__GASTRO_ORDERS__) {
-  globalStore.__GASTRO_ORDERS__ = {
+const g = global as unknown as Partial<GlobalStoreState>
+
+if (!g.__GASTRO_ORDERS__) {
+  g.__GASTRO_ORDERS__ = {
     'burger-gourmet': [],
     'taperia-casco-antigo': [],
     'terraza-malecon': [],
@@ -40,8 +42,8 @@ if (!globalStore.__GASTRO_ORDERS__) {
   }
 }
 
-if (!globalStore.__GASTRO_SERVICE_CALLS__) {
-  globalStore.__GASTRO_SERVICE_CALLS__ = {
+if (!g.__GASTRO_SERVICE_CALLS__) {
+  g.__GASTRO_SERVICE_CALLS__ = {
     'burger-gourmet': [],
     'taperia-casco-antigo': [],
     'terraza-malecon': [],
@@ -49,8 +51,8 @@ if (!globalStore.__GASTRO_SERVICE_CALLS__) {
   }
 }
 
-if (!globalStore.__GASTRO_TABLE_SESSIONS__) {
-  globalStore.__GASTRO_TABLE_SESSIONS__ = {
+if (!g.__GASTRO_TABLE_SESSIONS__) {
+  g.__GASTRO_TABLE_SESSIONS__ = {
     'burger-gourmet': {},
     'taperia-casco-antigo': {},
     'terraza-malecon': {},
@@ -58,8 +60,8 @@ if (!globalStore.__GASTRO_TABLE_SESSIONS__) {
   }
 }
 
-if (!globalStore.__GASTRO_ANALYTICS__) {
-  globalStore.__GASTRO_ANALYTICS__ = {
+if (!g.__GASTRO_ANALYTICS__) {
+  g.__GASTRO_ANALYTICS__ = {
     'burger-gourmet': [],
     'taperia-casco-antigo': [],
     'terraza-malecon': [],
@@ -67,9 +69,11 @@ if (!globalStore.__GASTRO_ANALYTICS__) {
   }
 }
 
-if (!globalStore.__GASTRO_SSE_CLIENTS__) {
-  globalStore.__GASTRO_SSE_CLIENTS__ = []
+if (!g.__GASTRO_SSE_CLIENTS__) {
+  g.__GASTRO_SSE_CLIENTS__ = []
 }
+
+const globalStore = g as GlobalStoreState
 
 // ==============================================================================
 // GESTOR DE IDEMPOTENCIA (Anti-Duplicación de Comandas por Doble Clic o Mala Conexión)
@@ -89,9 +93,9 @@ export function getIdempotentOrder(key: string): Order | null {
 export function saveIdempotentOrder(key: string, order: Order, ttlMs: number = 300000): void {
   if (idempotencyStore.size > 2000) {
     const now = Date.now()
-    for (const [k, val] of idempotencyStore.entries()) {
+    Array.from(idempotencyStore.entries()).forEach(([k, val]) => {
       if (now > val.expiresAt) idempotencyStore.delete(k)
-    }
+    })
   }
   idempotencyStore.set(key, { order, expiresAt: Date.now() + ttlMs })
 }
@@ -380,7 +384,7 @@ export function transferTableSession(slug: string, fromTable: string | number, t
   orders.forEach(o => {
     if (o.table_number?.toString() === fromTable.toString()) {
       o.table_number = toTable
-      if (o.table) o.table.table_number = toTable
+      if (o.table) o.table.table_number = parseInt(toTable.toString(), 10) || 1
     }
   })
 

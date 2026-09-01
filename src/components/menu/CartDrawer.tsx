@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import Image from 'next/image'
-import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice } from 'lucide-react'
+import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice, Clock } from 'lucide-react'
 import { CartItem, Product } from '@/types/database.types'
 import { useTenant } from '@/components/tenant/TenantProvider'
 import { formatCurrency } from '@/lib/utils'
@@ -61,6 +61,46 @@ export function CartDrawer({
   if (!idempotencyKeyRef.current) {
     idempotencyKeyRef.current = `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
   }
+
+  // Listas de sugerencias calculadas con seguridad
+  const suggestedDrinksList = (products || []).filter(p => {
+    const name = (p.name || '').toLowerCase()
+    const catId = p.category_id || ''
+    return (
+      catId === 'cat-12' ||
+      catId === 'cat-13' ||
+      catId === 'cat-14' ||
+      catId === 'cat-15' ||
+      name.includes('limonada') ||
+      name.includes('cerveza') ||
+      name.includes('gaseosa') ||
+      name.includes('trago') ||
+      name.includes('gin') ||
+      name.includes('agua') ||
+      name.includes('vino') ||
+      name.includes('albariño') ||
+      name.includes('mencía') ||
+      name.includes('vermú')
+    )
+  }).slice(0, 3)
+
+  const suggestedDessertsList = (products || []).filter(p => {
+    const name = (p.name || '').toLowerCase()
+    const catId = p.category_id || ''
+    return (
+      catId === 'cat-11' ||
+      name.includes('postre') ||
+      name.includes('volcán') ||
+      name.includes('volcan') ||
+      name.includes('cheesecake') ||
+      name.includes('tarta') ||
+      name.includes('helado') ||
+      name.includes('flan') ||
+      name.includes('tiramisú') ||
+      name.includes('tiramisu') ||
+      name.includes('brownie')
+    )
+  }).slice(0, 3)
 
   if (!isOpen) return null
 

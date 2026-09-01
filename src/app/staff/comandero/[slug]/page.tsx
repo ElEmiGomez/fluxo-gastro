@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
-import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2 } from 'lucide-react'
+import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector, TableStatusType } from '@/components/comandero/TableSelector'
@@ -11,7 +11,7 @@ import { ProductModifierModal } from '@/components/comandero/ProductModifierModa
 import { PreBillModal } from '@/components/comandero/PreBillModal'
 import { OrderSummaryBar } from '@/components/comandero/OrderSummaryBar'
 import { CartDrawer } from '@/components/menu/CartDrawer'
-import { Product, Category, Table, CartItem, Restaurant, Order } from '@/types/database.types'
+import { Product, Category, Table, CartItem, Restaurant, Order, CourseType } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
@@ -174,7 +174,7 @@ export default function WaiterComanderoPage() {
 
       setServerOrders(prev => prev.filter(o => o.table_number?.toString() !== tableNum.toString()))
       setTableCarts(prev => ({ ...prev, [tableNum]: [] }))
-      setTableStatuses(prev => ({ ...prev, [tableNum]: 'free' }))
+      setTableStatuses(prev => ({ ...prev, [tableNum]: 'free' as TableStatusType }))
     } catch (e) {
       console.error('Error freeing table:', e)
     }

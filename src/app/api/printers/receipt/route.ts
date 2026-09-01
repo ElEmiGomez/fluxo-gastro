@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getRestaurantBySlug, getRestaurantOrders } from '@/lib/supabase/repository'
 import { formatCurrency } from '@/lib/utils'
+import { Order } from '@/types/database.types'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,12 +83,9 @@ export async function GET(req: NextRequest) {
     const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
     const orders = await getRestaurantOrders(restaurantId, slug)
 
-    let targetOrder = orderId ? orders.find(o => o.id === orderId) : orders[0]
-    
-    // Si no hay comanda en base de datos, usamos el fallback realista para garantizar que NUNCA de error
-    if (!targetOrder) {
-      targetOrder = FALLBACK_DEMO_ORDERS[slug] || FALLBACK_DEMO_ORDERS['burger-gourmet']
-    }
+    const targetOrder: Order = (orderId ? orders.find(o => o.id === orderId) : orders[0]) 
+      || FALLBACK_DEMO_ORDERS[slug] 
+      || FALLBACK_DEMO_ORDERS['burger-gourmet']
 
     const restName = (restaurant?.name || (slug === 'taperia-casco-antigo' ? 'Tapería Casco Antigo' : slug === 'terraza-malecon' ? 'Terraza Malecón' : 'Burger Gourmet Noia')).toUpperCase()
     const tableNum = targetOrder.table_number || targetOrder.table?.table_number || '7'

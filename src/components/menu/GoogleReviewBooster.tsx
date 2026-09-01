@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect } from 'react'
 import { Star, Sparkles, X, ExternalLink, HeartHandshake } from 'lucide-react'
@@ -49,7 +49,7 @@ export function GoogleReviewBooster({
 
   const handleSelectStar = (stars: number) => {
     setSelectedRating(stars)
-    triggerHaptic(HAPTIC_PATTERNS.success)
+    triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
 
     if (stars >= 4) {
       setTimeout(() => {
