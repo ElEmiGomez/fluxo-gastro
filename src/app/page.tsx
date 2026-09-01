@@ -27,7 +27,7 @@ import {
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 
 const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '5493585187430'
-const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría recibir más información y probar el sistema en mi restaurante.'
+const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para mi restaurante.'
 
 const getWhatsAppUrl = () => {
   const encoded = encodeURIComponent(DEFAULT_WHATSAPP_MSG)
@@ -73,7 +73,7 @@ export default function LandingPage() {
               Planes &amp; Precios
             </a>
             <a href="#contacto" className="hover:text-cyan-400 transition-colors">
-              Mes de Prueba
+              Piloto 14 Días
             </a>
           </nav>
 
@@ -769,16 +769,16 @@ export default function LandingPage() {
 
               <div className="relative z-10 max-w-2xl mx-auto space-y-4">
                 <span className="inline-block text-xs font-black uppercase tracking-widest text-cyan-400">
-                  Prueba Sin Fricción ni Compromiso
+                  Desafío Piloto Sin Riesgo
                 </span>
                 
                 <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                  Inicia hoy tu mes de prueba gratuito
+                  Inicia hoy tu prueba piloto de 14 días a 0€
                 </h2>
 
                 <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
                   No te preocupes por cargar platos, fotos ni alérgenos. 
-                  <strong className="text-white"> El setup del menú lo hacemos nosotros:</strong> envíanos tu carta física o en PDF y en 24 horas tendrás tu sistema 100% operativo en tu local.
+                  <strong className="text-white"> El setup de tu carta y la puesta en marcha la hacemos nosotros:</strong> envíanos tu menú y en 24 horas lo tendrás activo en sala y terraza para medir el aumento real de ventas y rotación durante 14 días sin coste.
                 </p>
 
                 <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -788,7 +788,7 @@ export default function LandingPage() {
                     rel="noopener noreferrer"
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-sm sm:text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 transition-all active:scale-95"
                   >
-                    <span>Comenzar Mi Mes de Prueba</span>
+                    <span>Solicitar Piloto de 14 Días a 0€</span>
                     <ChevronRight className="w-5 h-5" />
                   </a>
 
@@ -804,7 +804,7 @@ export default function LandingPage() {
                 </div>
 
                 <p className="text-xs text-slate-400 pt-2">
-                  Sin tarjeta de crédito requerida &middot; Cancelación inmediata en cualquier momento
+                  0€ durante el piloto &middot; Sin tarjeta ni permanencia &middot; Soporte presencial incluido
                 </p>
               </div>
 
