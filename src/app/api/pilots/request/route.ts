@@ -1,5 +1,6 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
+import { sendPilotLeadNotification } from '@/lib/email'
 
 interface PilotRequestBody {
   restaurantName: string
@@ -31,6 +32,20 @@ export async function POST(req: NextRequest) {
       notes: body.notes || '',
       date: new Date().toISOString()
     })
+
+    // Enviar notificación a Gmail en segundo plano
+    try {
+      await sendPilotLeadNotification({
+        restaurantName: body.restaurantName,
+        contactName: body.contactName,
+        phone: body.phone,
+        location: body.location,
+        selectedPlan: body.selectedPlan,
+        notes: body.notes
+      })
+    } catch (emailErr) {
+      console.warn('[LEAD PILOTO] Nota: no se pudo despachar el email (verificar configuración de Gmail):', emailErr)
+    }
 
     // Intentar persistir en Supabase si está disponible
     try {
