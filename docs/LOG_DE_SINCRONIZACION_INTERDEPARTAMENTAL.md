@@ -6,6 +6,25 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-09-01 13:55] — Resolución de Incidencias UX/UI, Sugerencias de Upsell y Resiliencia de Sesiones de Mesa
+* **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4), Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2) y Organización General (Depto 1).
+* **Correcciones Técnicas Certificadas:**
+  1. **Internacionalización y Textos de Botón Flotante (`src/lib/i18n.ts`, `src/app/menu/[slug]/page.tsx`):**
+     - Añadidas claves oficiales `viewCart` ("Ver Comanda" / "View Order") e `itemSingle`/`items` ("1 producto · Mesa #X" / "N productos · Mesa #X").
+  2. **Botones de Sugerencias de Venta Cruzada (Bebidas y Postres en `src/components/menu/CartDrawer.tsx`):**
+     - Sustituidos IDs estáticos por detección dinámica de bebidas y postres reales del local activo (`products`) con feedback táctil inmediato (`triggerHaptic`).
+  3. **Resiliencia de Sesiones de Mesa en Vercel Serverless (`src/lib/server-state.ts`, `src/lib/supabase/repository.ts`):**
+     - Eliminado el bloqueo falso positivo de sesión expirada al auto-adoptar e inicializar las sesiones activas de mesas disponibles en el primer pedido.
+  4. **Persistencia de Avisos en el Comandero del Mozo (`src/app/staff/comandero/[slug]/page.tsx`):**
+     - Eliminado el temporizador de auto-descarte de 4 segundos; los avisos de llamadas de comensales y comandas pendientes de validación (`pending_validation`) permanecen fijos en pantalla hasta confirmación o descarte explícito.
+* **Estado de Certificación:**
+  - Build Next.js 14: **0 errores**.
+  - Test Suite E2E: **122/122 PASS**.
+  - Test Suite en Vivo: **17/17 PASS**.
+  - Repositorio y Vercel sincronizados en `main`.
+
+---
+
 ### [2026-09-01 13:40] — Unificación Institucional del Piloto de 14 Días a 0€ y Despliegue en Vivo
 * **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3), Ingeniería & Producto (Depto 4) y Learning & Intelligence (Depto 5).
 * **Consenso y Alineación Total:**
