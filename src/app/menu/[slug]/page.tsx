@@ -1012,7 +1012,7 @@ function DinerMenuContent() {
           ) : viewMode === 'list' ? (
             /* VISTA 1: LISTADO MODERNO CON JERARQUÍA ELEGANTE Y ESPACIO HOLGADO */
             <div className="space-y-2.5">
-              {filteredProducts.map((product) => {
+              {filteredProducts.map((product, idx) => {
                 const qty = getProductQuantityInCart(product.id)
                 const isExpanded = Boolean(expandedProductIds[product.id])
 
@@ -1045,9 +1045,16 @@ function DinerMenuContent() {
 
                       {/* TÍTULO Y PRECIO EN LÍNEAS SEPARADAS (ESPACIO HOLGADO) */}
                       <div className="flex-1 min-w-0 pr-1 space-y-0.5">
-                        <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2">
-                          {translateProductName(currentLang, product.id, product.name)}
-                        </h3>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2">
+                            {translateProductName(currentLang, product.id, product.name)}
+                          </h3>
+                          {idx === 0 && totalCartCount === 0 && (
+                            <span className="text-[9px] font-extrabold text-blue-700 bg-blue-100/90 px-1.5 py-0.5 rounded-md animate-pulse">
+                              ✨ Toca + para pedir
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-black text-xs sm:text-sm text-blue-700 tabular-nums">
                             {product.price_type === 'weight'
@@ -1072,7 +1079,9 @@ function DinerMenuContent() {
                         {qty === 0 ? (
                           <button
                             onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                            className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 smooth-press shadow-xs"
+                            className={`w-8 h-8 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 smooth-press shadow-xs ${
+                              idx === 0 && totalCartCount === 0 ? 'ring-2 ring-blue-500/60 ring-offset-1 animate-pulse' : ''
+                            }`}
                             title="Añadir a la comanda"
                           >
                             <Plus size={16} />
