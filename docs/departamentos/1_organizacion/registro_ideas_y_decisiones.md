@@ -21,6 +21,7 @@
 | **DEC-11** | 01/09/2026 | Dirección / COO & Mkt | **Estrategia Tri-Perfil para Piloto en Noia**. | Cubrir simultáneamente Hamburgueserías (Alameda/Cantón), Taperías Tradicionales (Casco Histórico) y Terrazas de Malecón/Puerto para acelerar la captación. |
 | **DEC-12** | 01/09/2026 | Dirección / Operaciones | **Capacitación en Modo Asistido Mixto (15 Minutos en Hora Valle + Chuleta de Barra)**. | Formación presencial ágil (17:00 a 18:30) con chuleta adhesiva laminada en barra para asegurar 0 resistencia al cambio por parte de los camareros. |
 | **DEC-13** | 01/09/2026 | Dirección / Marketing | **Informe Combinado de Impacto del Día 14 para Cierre de Contrato**. | Demostrar al hostelero los 3 pilares de retorno: Ventas extra por fotos (+15%), rotación de mesas (15 min ahorrados) y nuevas reseñas de 5 estrellas en Google. |
+| **DEC-14** | 01/09/2026 | Dirección / Operaciones & COO | **Protocolo de Soporte Híbrido durante el Piloto (Presencial 1er Fin de Semana + WhatsApp de Guardia)**. | Presencia física del equipo en el primer turno de alta afluencia (viernes/sábado) y canal prioritario de WhatsApp para dar máxima tranquilidad al hostelero. |
 
 ---
 
