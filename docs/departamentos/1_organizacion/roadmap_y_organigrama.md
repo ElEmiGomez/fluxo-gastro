@@ -2,7 +2,7 @@
 > **Departamento:** Organización General  
 > **Rol:** Chief Operating Officer (COO) & Coordinación General  
 > **Chat Asociado:** [`1dcc3fea-fde9-44f8-bb24-e0e2afd26f22`](conversation://1dcc3fea-fde9-44f8-bb24-e0e2afd26f22)  
-> **Última Actualización:** 31 de Agosto de 2026
+> **Última Actualización:** 01 de Septiembre de 2026
 
 ---
 
@@ -11,7 +11,7 @@
 ```mermaid
 flowchart TD
     F1["✅ Fase 1: Validación Local & Túnel (100% COMPLETADA)"]
-    F1 --> F2["🚀 Fase 2: Piloto Noia & Nube 24/7 (EN EJECUCIÓN: Vercel + GitHub + Supabase)"]
+    F1 --> F2["🚀 Fase 2: Piloto Noia & Nube 24/7 (EN EJECUCIÓN ACTIVA: Vercel + GitHub + Supabase)"]
     F2 --> F3["⏳ Fase 3: Consolidación Barbanza (Hito 1.000€ MRR)"]
     F3 --> F4["⏳ Fase 4: Desembarco Santiago de Compostela"]
     F4 --> F5["⏳ Fase 5: Expansión Regional & Nacional"]
@@ -25,53 +25,52 @@ flowchart TD
 
 ---
 
-## ☀️ Tablero Diario de Tareas (Standup de Aceleración Diaria)
+## ☀️ Tablero Diario de Tareas (Standup de Aceleración Diaria — 01/09/2026)
 > **Regla de Operación de la Startup:** Cada mañana se establece el despacho de tareas prioritarias por departamento. Todo lo correspondiente a desarrollo de software, base de datos, APIs, seguridad e infraestructura se ejecuta estrictamente dentro de **Program Data (Ingeniería y Producto)**.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 🌅 DESPACHO MATUTINO DIARIO — PRIORIDADES DEL DÍA                       │
-│    Objetivo General: Fase 2 Activa — Piloto Noia & Producción 24/7      │
+│ 🌅 DESPACHO MATUTINO DIARIO — PRIORIDADES DEL DÍA (01/09/2026)          │
+│    Objetivo General: Fase 2 Activa — Kit de Piloto en Terrazas de Noia   │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🏛️ 1. ORGANIZACIÓN GENERAL (COO / Coordinación General)                 │
 │  ├─ [x] Sincronización y registro en el Libro Diario Interdepartamental │
-│  ├─ [x] Establecer matriz y cuadro vertical de tareas diarias           │
-│  ├─ [x] Registrar DEC-10 (Conexión Triángulo Cloud: GitHub+Vercel+Supa)│
-│  └─ [x] Activar oficialmente el seguimiento de Fase 2 (Piloto Noia)     │
+│  ├─ [x] Actualizar Roadmap con Fase 2 en ejecución activa               │
+│  ├─ [x] Registrar DEC-11 a DEC-13 (Estrategia Tri-Perfil, Onboarding)  │
+│  └─ [x] Plan de Trabajo en Equipo (prompt_draft.md) actualizado         │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 📈 2. MARKETING & VENTAS (Captación & Go-to-Market)                     │
-│  ├─ [x] Mapeo de los 5 restaurantes de terraza en Noia (prospeccion.md)│
-│  ├─ [x] Guion de abordaje en horas valle (17:00 a 19:30) y objeciones  │
-│  ├─ [x] Actualizar demo comercial con la URL en vivo 24/7 de Vercel    │
-│  └─ [ ] Ejecutar visitas presenciales con el One-Pager y Calculadora ROI│
+│  ├─ [x] Acuerdo de Piloto de 14 Días a 0€ y sin permanencia redactado   │
+│  ├─ [x] Protocolo de Onboarding de 15 min en Hora Valle (17:00-18:30)   │
+│  ├─ [x] Plantilla de Informe Combinado de Impacto del Día 14            │
+│  └─ [ ] Visita y presentación presencial a los locales piloto de Noia   │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🎨 3. DISEÑO DE MARCA & UI/UX (Identidad & Ergonomía Visual)            │
-│  ├─ [x] Maquetar peanas QR imprimibles de terraza A4/A6 (HTML listo)   │
-│  ├─ [x] Validar contraste solar de la carta móvil para terrazas         │
-│  ├─ [x] Configurar QR con dominio productivo final de Vercel            │
-│  └─ [ ] Imprimir el primer juego físico de peanas para el piloto Noia  │
+│  ├─ [x] Cartel A5 de bienvenida a la terraza ("Pide sin esperar")       │
+│  ├─ [x] Guía rápida / Chuleta de barra para camareros con PIN 1234      │
+│  ├─ [x] Lote de peanas QR de mesas 1 a 10 listas para imprimir          │
+│  └─ [ ] Impresión física y montaje en metacrilato con cinta 3M          │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ ⚙️ 4. INGENIERÍA & PRODUCTO — [PROGRAM DATA] (Desarrollo & Software)    │
-│  ├─ [x] Mozo Gatekeeper y KDS Industrial completados al 100%           │
-│  ├─ [x] Google Review Booster (5 estrellas) y SEO Semántico Schema.org  │
-│  ├─ [x] Verificación de compilación Next.js 14 en producción (0 errores)│
-│  ├─ [x] Conexión de infraestructura: GitHub CI/CD + Vercel + Supabase  │
-│  └─ [x] Script y prueba de certificación E2E superada (5/5 PASS)       │
+│  ├─ [x] 3 Perfiles Demo en Supabase Cloud (Burger, Tapería, Malecón)    │
+│  ├─ [x] Build de Producción Next.js 14 certificado (0 errores)          │
+│  ├─ [x] Sincronización CI/CD automática con GitHub y Vercel             │
+│  └─ [ ] Monitoreo de latencia y Realtime WebSockets en pruebas de campo │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🧠 5. LEARNING & INTELLIGENCE (Memoria Operativa & Buenas Prácticas)    │
-│  ├─ [x] Análisis competitivo de Qamarero (0% comisiones / 0 cambio TPV) │
-│  ├─ [x] Compilar PDF didáctico con analogías gastronómicas del día      │
-│  └─ [x] Mantener actualizado el repositorio de conocimiento central     │
+│  ├─ [x] Compilar PDF didáctico del día: Lecciones_Fluxo_01_09_2026.pdf  │
+│  ├─ [x] Registro de métricas de oro: Rotación de mesa y Ticket Medio    │
+│  └─ [x] Mantener repositorio de conocimiento interdepartamental al día  │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 

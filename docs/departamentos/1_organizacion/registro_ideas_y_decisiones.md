@@ -18,6 +18,9 @@
 | **DEC-08** | 31/08/2026 | Chat Program Data / SEO | **SEO Semántico Gastronómico (`Schema.org/Restaurant` + `Menu`)**. | Inyección de datos estructurados para convertir cada carta de Fluxo en web oficial indexable en Google Maps, eliminando el dolor de "Sin web propia". |
 | **DEC-09** | 31/08/2026 | Dirección / COO | **Creación del Departamento 5: Learning & Intelligence**. | Centralizar la memoria corporativa, auditorías de la competencia, patrones agénticos en Antigravity y manuales de buenas prácticas interdepartamentales. |
 | **DEC-10** | 31/08/2026 | Ingeniería / Program Data | **Conexión Productiva Nube 24/7 (GitHub + Vercel + Supabase Cloud)**. | Transición de Fase 1 a Fase 2 (Piloto Noia). Despliegue continuo serverless con base de datos PostgreSQL RLS administrada y disponibilidad permanente para pruebas en vivo y visitas comerciales. |
+| **DEC-11** | 01/09/2026 | Dirección / COO & Mkt | **Estrategia Tri-Perfil para Piloto en Noia**. | Cubrir simultáneamente Hamburgueserías (Alameda/Cantón), Taperías Tradicionales (Casco Histórico) y Terrazas de Malecón/Puerto para acelerar la captación. |
+| **DEC-12** | 01/09/2026 | Dirección / Operaciones | **Capacitación en Modo Asistido Mixto (15 Minutos en Hora Valle + Chuleta de Barra)**. | Formación presencial ágil (17:00 a 18:30) con chuleta adhesiva laminada en barra para asegurar 0 resistencia al cambio por parte de los camareros. |
+| **DEC-13** | 01/09/2026 | Dirección / Marketing | **Informe Combinado de Impacto del Día 14 para Cierre de Contrato**. | Demostrar al hostelero los 3 pilares de retorno: Ventas extra por fotos (+15%), rotación de mesas (15 min ahorrados) y nuevas reseñas de 5 estrellas en Google. |
 
 ---
 
