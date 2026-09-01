@@ -411,6 +411,17 @@ export function CartDrawer({
                   )}
                 </div>
 
+                {/* MENSAJE TRANQUILIZADOR PARA PERSONAS MAYORES O POCO TECNOLÓGICAS */}
+                <div className="p-3 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200 rounded-2xl flex items-center gap-2.5 text-xs text-blue-950 font-semibold shadow-2xs animate-in fade-in">
+                  <div className="w-7 h-7 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold flex-shrink-0 shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 stroke-[2.5]" />
+                  </div>
+                  <div className="min-w-0 flex-1 leading-snug">
+                    <span className="font-extrabold text-blue-950 block text-[11px] uppercase tracking-wide">Tranquilidad Total</span>
+                    <span className="text-[11px] text-slate-700">{t('reassuranceCartNotice')}</span>
+                  </div>
+                </div>
+
                 {/* SUGERENCIA 1: BEBIDAS SI NO HAY NINGUNA */}
                 {!hasDrinks && suggestedDrinksList.length > 0 && (
                   <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl space-y-2 animate-in fade-in">
@@ -625,6 +636,12 @@ export function CartDrawer({
                     <span>Pedir Cuenta</span>
                   </button>
                 )}
+              </div>
+
+              {/* AVISO PREVIO AL ENVÍO */}
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-600 font-bold bg-slate-50 py-1.5 px-3 rounded-xl border border-slate-200/80">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5] flex-shrink-0" />
+                <span className="truncate">El mozo confirmará el pedido contigo en la Mesa #{tableNumber}</span>
               </div>
 
               {!isDictateMode ? (

@@ -41,6 +41,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { TOP_LANGUAGES, getTranslation, translateCategoryName, translateProductName, translateProductDescription } from '@/lib/i18n'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
+import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 
@@ -639,6 +640,13 @@ function DinerMenuContent() {
           </div>
         )}
 
+        {/* GUÍA VISUAL INTERACTIVA (MICRO-ONBOARDING DE 4 PASOS RÁPIDOS) */}
+        <MicroOnboardingBanner
+          lang={currentLang}
+          tableNumber={tableNumber}
+          onOpenCallWaiter={() => setShowServiceModal(true)}
+        />
+
         {/* TRACKER EN VIVO DE ESTADO EN COCINA (Clickeable para ver el camino del pedido) */}
         {tableOrderStatus && (
           <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full">
@@ -706,7 +714,7 @@ function DinerMenuContent() {
             {tableOrderStatus === 'pending_validation' && (
               <div
                 onClick={() => setShowTimelineModal(true)}
-                className="p-3 rounded-2xl bg-amber-500/10 border border-amber-400/50 text-amber-950 shadow-xs flex items-center justify-between gap-3 animate-in fade-in cursor-pointer hover:bg-amber-500/15 transition-all"
+                className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-400/50 text-amber-950 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in cursor-pointer hover:bg-amber-500/15 transition-all"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs animate-pulse">
@@ -726,9 +734,22 @@ function DinerMenuContent() {
                     </p>
                   </div>
                 </div>
-                <div className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-[11px] font-black text-amber-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
-                  <span>En Espera</span>
-                  <ChevronRight size={12} />
+                <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowServiceModal(true)
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-amber-200/90 hover:bg-amber-300 text-amber-950 text-[10px] font-bold border border-amber-300/80 transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <Bell size={11} />
+                    <span>Llamar al mozo</span>
+                  </button>
+                  <div className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-[11px] font-black text-amber-950 flex items-center gap-1 shadow-xs">
+                    <span>En Espera</span>
+                    <ChevronRight size={12} />
+                  </div>
                 </div>
               </div>
             )}
@@ -1248,6 +1269,14 @@ function DinerMenuContent() {
         {/* 3. Barra Flotante Inferior de Comanda (Mobile-First) */}
         {totalCartCount > 0 && (
           <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 gpu-layer">
+            {/* Tooltip contextual animado discreto */}
+            <div className="flex justify-end pr-2 pb-1.5 animate-in fade-in">
+              <div className="bg-slate-900/95 text-white border border-blue-400/40 text-[10px] sm:text-[11px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 animate-bounce backdrop-blur-md">
+                <Sparkles size={11} className="text-amber-300 flex-shrink-0" />
+                <span>{t('tooltipAddToCartNotice')}</span>
+              </div>
+            </div>
+
             <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.35)] flex items-center justify-between border border-slate-800 animate-in slide-in-from-bottom duration-350 ease-[cubic-bezier(0.16,1,0.3,1)]">
               <div className="flex items-center space-x-2.5 min-w-0">
                 <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-600/30 flex-shrink-0 animate-pop">
@@ -1265,7 +1294,7 @@ function DinerMenuContent() {
 
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-extrabold flex items-center space-x-1 transition-all shadow-md shadow-blue-600/30 smooth-press flex-shrink-0"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-extrabold flex items-center space-x-1 transition-all shadow-md shadow-blue-600/30 smooth-press flex-shrink-0 cursor-pointer"
               >
                 <span>{t('viewCart')}</span>
                 <ChevronRight size={15} />
