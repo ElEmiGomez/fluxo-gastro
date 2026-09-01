@@ -23,13 +23,17 @@
 | **DEC-13** | 01/09/2026 | Dirección / Marketing | **Informe Combinado de Impacto del Día 14 para Cierre de Contrato**. | Demostrar al hostelero los 3 pilares de retorno: Ventas extra por fotos (+15%), rotación de mesas (15 min ahorrados) y nuevas reseñas de 5 estrellas en Google. |
 | **DEC-14** | 01/09/2026 | Dirección / Operaciones & COO | **Protocolo de Soporte Híbrido durante el Piloto (Presencial 1er Fin de Semana + WhatsApp de Guardia)**. | Presencia física del equipo en el primer turno de alta afluencia (viernes/sábado) y canal prioritario de WhatsApp para dar máxima tranquilidad al hostelero. |
 | **DEC-15** | 01/09/2026 | Marketing & Program Data | **Unificación Institucional de la Oferta: Piloto Gratuito de 14 Días a 0€**. | Alineación 100% de la Landing Page, Navbar, CTA y WhatsApp con el acuerdo de prospección comercial y el informe de impacto del Día 14. |
+| **DEC-16** | 01/09/2026 | Organización & Program Data | **Dashboard de Administración de Carta + Asistente IA de Digitalización**. | Panel para que el hostelero gestione categorías, platos y precios en tiempo real, con asistente IA que digitaliza fotos/textos de cartas físicas a Supabase en 60s. |
+| **DEC-17** | 01/09/2026 | Organización & Program Data | **Módulo "Menú del Día" & Recomendación Dinámica en Cabecera**. | Soporte para menús a precio cerrado (1º + 2º + postre/bebida) y conmutador de Promoción Estrella según el tipo de local. |
+| **DEC-18** | 01/09/2026 | Marketing & Organización | **Inclusión de Reporte Mensual de Eficiencia y Rentabilidad en Plan Full**. | Informe mensual ejecutivo para dueños con horas de mayor demora, platos de mayor/menor rotación y sugerencias de IA para optimizar la sala. |
+| **DEC-19** | 01/09/2026 | UI/UX & Feedback Real | **Guía Interactiva Paso a Paso para el Comensal (Onboarding de Sala)**. | Micro-indicadores visuales ("Toca para elegir -> Revisa comanda -> Mozo valida -> Pide cuenta") para guiar a usuarios no tecnológicos hasta el pago. |
 
 ---
 
 ## 💡 Banco de Ideas Futuras (Backlog Priorizado)
 
-* [ ] **Carga Masiva de Carta desde Excel / CSV:** Facilitar al dueño enviarnos su carta en una hoja de cálculo simple.
 * [ ] **Control de Stock Dinámico ("Se Agotó"):** Botón rápido en el comandero del mozo para ocultar un plato de la carta cuando se acabe el ingrediente.
 * [ ] **Recomendación Inteligente de Postre/Café:** Al pasar la comanda a estado `delivered`, sugerir sutilmente cafés o postres caseros para aumentar el ticket medio.
 * [ ] **Telemetría de Tiempos de Pase:** Detección de cuellos de botella entre comanda confirmada y entrega en mesa para optimizar cocina en Plan Suite.
+* [ ] **Integración de Impresión Automática en Cocina vía Webhooks:** Disparo directo a tiqueteras térmicas sin depender de pantalla física.
 

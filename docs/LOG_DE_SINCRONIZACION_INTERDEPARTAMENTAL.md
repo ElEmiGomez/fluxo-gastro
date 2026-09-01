@@ -334,3 +334,14 @@
   5. Protocolo de capacitacion de 15 minutos en hora valle (protocolo_onboarding_camareros.md).
   6. Plantilla del Informe de Impacto Combinado del Dia 14 (informe_impacto_piloto_dia_14.md).
   7. 3 perfiles de demostracion en Supabase Cloud (Burger Gourmet, Taperia Casco Antigo, Terraza Malecon).
+
+---
+## [2026-09-01 23:15] REGISTRO DE NUEVAS FUNCIONALIDADES CLAVE PARA PROGRAM DATA (DEC-16 A DEC-19)
+- **Departamento:** Organización General / COO
+- **Hito:** Especificación y Asentamiento de 4 Requerimientos Estratégicos de Producto:
+- **Resumen de Decisiones:**
+  1. **DEC-16:** Dashboard de Administración de Carta + Asistente IA de Digitalización (`prompt to menu` desde foto/texto).
+  2. **DEC-17:** Módulo "Menú del Día" (Precio cerrado 1°+2)postre+bebida) y Banner de Promo Estrella.
+  3. **DEC-18:** Inclusión del Reporte Mensual de Eficiencia y Rentabilidad Gastronómica en el Plan Full (99€/139€).
+  4. **DEC-19:** Guía Interactiva Paso a Paso en la Carta PWA para Comensales (Onboarding de Sala).
+  5. **Entregables:** Prompts estructurados listos para ejecución en Program Data.
