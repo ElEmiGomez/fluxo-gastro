@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import { ChefHat, Volume2, VolumeX, RefreshCw, Layers, Sparkles, Utensils, Wine, Flame, Maximize2, Minimize2, Undo2 } from 'lucide-react'
+import { ChefHat, Volume2, VolumeX, RefreshCw, Layers, Sparkles, Utensils, Wine, Flame, Maximize2, Minimize2, Undo2, Check, X } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { KitchenTicket } from '@/components/kitchen/KitchenTicket'
@@ -30,6 +30,8 @@ export default function KitchenKDSPage() {
   const [stationFilter, setStationFilter] = useState<StationFilterType>('all')
 
   const previousOrdersCountRef = useRef<number>(0)
+  const seenOrderIdsRef = useRef<Set<string>>(new Set())
+  const dispatchedOrderIdsRef = useRef<Set<string>>(new Set())
 
   // Toggle de Pantalla Completa con 1 Toque
   const toggleFullscreen = () => {
@@ -45,6 +47,7 @@ export default function KitchenKDSPage() {
   const handleUndoLastDispatch = () => {
     if (recentDispatchedOrders.length === 0) return
     const last = recentDispatchedOrders[0]
+    dispatchedOrderIdsRef.current.delete(last.id)
     handleUpdateStatus(last.id, 'preparing')
     setRecentDispatchedOrders(prev => prev.slice(1))
   }
@@ -96,16 +99,38 @@ export default function KitchenKDSPage() {
           const data = await res.json()
           if (data.orders) {
             // La cocina solo recibe comandas ya validadas por el mozo (Cero pedidos falsos)
-            const currentOrders: Order[] = data.orders.filter((o: Order) => o.status !== 'pending_validation')
+            const incomingOrders: Order[] = data.orders.filter((o: Order) => o.status !== 'pending_validation')
 
-            // Detectar nueva orden entrante para sonar campana
-            if (previousOrdersCountRef.current > 0 && currentOrders.length > previousOrdersCountRef.current) {
+            // Detectar nueva orden entrante real para sonar campana
+            let hasNewUnseenOrder = false
+            incomingOrders.forEach(ord => {
+              if (!seenOrderIdsRef.current.has(ord.id) && ord.status !== 'delivered' && ord.status !== 'cancelled') {
+                seenOrderIdsRef.current.add(ord.id)
+                hasNewUnseenOrder = true
+              }
+            })
+
+            if (hasNewUnseenOrder && previousOrdersCountRef.current > 0) {
               if (soundEnabled) playKitchenChime()
               setNewOrderAlert(true)
-              setTimeout(() => setNewOrderAlert(false), 5000)
             }
-            previousOrdersCountRef.current = currentOrders.length
-            setOrders(currentOrders)
+            previousOrdersCountRef.current = incomingOrders.length
+
+            // Reconciliación con State Lock para evitar parpadeos en tickets de cocina
+            setOrders(prev => {
+              const map = new Map<string, Order>()
+              prev.forEach(ord => {
+                if (!dispatchedOrderIdsRef.current.has(ord.id) && ord.status !== 'delivered' && ord.status !== 'cancelled') {
+                  map.set(ord.id, ord)
+                }
+              })
+              incomingOrders.forEach(ord => {
+                if (!dispatchedOrderIdsRef.current.has(ord.id) && ord.status !== 'delivered' && ord.status !== 'cancelled') {
+                  map.set(ord.id, ord)
+                }
+              })
+              return Array.from(map.values())
+            })
           }
         }
       } catch (err) {
@@ -155,6 +180,10 @@ export default function KitchenKDSPage() {
     const targetOrd = orders.find(o => o.id === orderId)
     if (targetOrd && (newStatus === 'ready' || newStatus === 'delivered')) {
       setRecentDispatchedOrders(prev => [targetOrd, ...prev.slice(0, 4)])
+    }
+
+    if (newStatus === 'delivered' || newStatus === 'cancelled') {
+      dispatchedOrderIdsRef.current.add(orderId)
     }
 
     // 2. Notificar a la API del servidor
@@ -226,11 +255,21 @@ export default function KitchenKDSPage() {
         
         <TenantHeader viewType="kitchen" />
 
-        {/* Notificación de Nueva Comanda */}
+        {/* Notificación de Nueva Comanda con Confirmación Manual */}
         {newOrderAlert && (
-          <div className="bg-blue-900 text-white p-3 text-center font-black text-sm flex items-center justify-center gap-2 shadow-md animate-bounce">
-            <Sparkles className="w-5 h-5 text-blue-300" />
-            <span>¡NUEVA COMANDA ENVIADA A COCINA!</span>
+          <div className="bg-blue-900 text-white px-4 py-3 shadow-lg border-b border-blue-700 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Sparkles className="w-5 h-5 text-amber-400 animate-pulse flex-shrink-0" />
+              <span className="font-black text-xs sm:text-sm uppercase tracking-wide">¡NUEVA COMANDA ENVIADA A COCINA!</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setNewOrderAlert(false)}
+              className="px-3 py-1.5 rounded-xl bg-blue-800 hover:bg-blue-700 text-white font-black text-xs border border-blue-600 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 flex-shrink-0 shadow-xs"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Entendido</span>
+            </button>
           </div>
         )}
 

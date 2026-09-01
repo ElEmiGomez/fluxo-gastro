@@ -6,6 +6,7 @@ import {
 } from '@/lib/server-state'
 import {
   getRestaurantBySlug,
+  getRestaurantServiceCalls,
   createServiceCall,
   attendServiceCall,
 } from '@/lib/supabase/repository'
@@ -16,7 +17,9 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
-    const calls = getServerServiceCalls(slug)
+    const restaurant = await getRestaurantBySlug(slug)
+    const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+    const calls = await getRestaurantServiceCalls(restaurantId, slug)
     return NextResponse.json({ calls })
   } catch (err: any) {
     return NextResponse.json({ error: err.message, calls: [] }, { status: 500 })

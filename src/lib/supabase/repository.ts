@@ -457,6 +457,36 @@ export async function createServiceCall(
 }
 
 /**
+ * 7.1 LLAMADAS DE SERVICIO: Obtener llamadas activas del restaurante (Supabase + Memoria Reconciliada)
+ */
+export async function getRestaurantServiceCalls(restaurantId: string, slug: string): Promise<ServiceCall[]> {
+  const memCalls = getServerServiceCalls(slug).filter(c => c.status === 'pending')
+  const supabase = createServerClient()
+  if (supabase && isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from('service_calls')
+        .select('*')
+        .eq('restaurant_id', restaurantId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        // Reconciliar con memoria para no perder llamadas recientes entre lambdas de Vercel
+        const map = new Map<string, ServiceCall>()
+        memCalls.forEach(c => map.set(c.id, c))
+        ;(data as ServiceCall[]).forEach(c => map.set(c.id, c))
+        return Array.from(map.values())
+      }
+    } catch (e) {
+      console.warn('Error fetching service calls from Supabase:', e)
+    }
+  }
+
+  return memCalls
+}
+
+/**
  * 8. LLAMADAS DE SERVICIO: Atender llamada
  */
 export async function attendServiceCall(

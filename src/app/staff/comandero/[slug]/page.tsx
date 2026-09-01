@@ -65,11 +65,14 @@ export default function WaiterComanderoPage() {
   const [readyOrderAlert, setReadyOrderAlert] = useState<string | number | null>(null)
   const [serverOrders, setServerOrders] = useState<Order[]>([])
 
-  // Sistema de Avisos: Popup inicial (1 sola vez) + Notificación chiquita persistente
+  // Sistema de Avisos: Estado Reconciliado Persistente (Anti-Flicker / Anti-Desaparición)
   const [popupAlert, setPopupAlert] = useState<PendingServiceCall | null>(null)
   const [pendingCalls, setPendingCalls] = useState<PendingServiceCall[]>([])
   
-  // Set de IDs ya vistos para que el popup grande salte SOLO 1 VEZ por llamada
+  // Set de IDs ya atendidos o procesados para State Lock infalible
+  const attendedCallIdsRef = useRef<Set<string>>(new Set())
+  const validatedOrderIdsRef = useRef<Set<string>>(new Set())
+  const cancelledOrderIdsRef = useRef<Set<string>>(new Set())
   const seenCallIdsRef = useRef<Set<string>>(new Set())
   const popupTimerRef = useRef<any>(null)
 
@@ -100,8 +103,9 @@ export default function WaiterComanderoPage() {
     }
   }, [])
 
-  // Marcar llamada como atendida (Servidor + Local)
+  // Marcar llamada como atendida (Servidor + Local con State Lock)
   const handleAttendCall = async (callId: string) => {
+    attendedCallIdsRef.current.add(callId)
     seenCallIdsRef.current.add(callId)
     setPendingCalls(prev => prev.filter(c => c.id !== callId))
     if (popupAlert?.id === callId) {
@@ -235,17 +239,67 @@ export default function WaiterComanderoPage() {
           fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
         ])
 
-        const orders: Order[] = ordersRes.orders || []
-        const calls: any[] = callsRes.calls || []
-        const sessions = tablesRes.sessions || {}
+        const incomingOrders: Order[] = ordersRes.orders || []
+        const incomingCalls: any[] = callsRes.calls || []
 
-        setServerOrders(orders)
+        // 1. Reconciliación de Órdenes con State Lock
+        setServerOrders(prev => {
+          const map = new Map<string, Order>()
+          prev.forEach(ord => {
+            if (!cancelledOrderIdsRef.current.has(ord.id)) {
+              map.set(ord.id, ord)
+            }
+          })
+          incomingOrders.forEach(ord => {
+            if (!cancelledOrderIdsRef.current.has(ord.id)) {
+              if (validatedOrderIdsRef.current.has(ord.id) && ord.status === 'pending_validation') {
+                map.set(ord.id, { ...ord, status: 'pending' })
+              } else {
+                map.set(ord.id, ord)
+              }
+            }
+          })
+          return Array.from(map.values())
+        })
+
+        // 2. Reconciliación de Avisos de Servicio con State Lock (Anti-Flicker)
+        const serverPendingCalls = incomingCalls.filter((c: any) => c.status === 'pending' && !attendedCallIdsRef.current.has(c.id))
+
+        const formattedPendingCalls: PendingServiceCall[] = serverPendingCalls.map((c: any) => {
+          let desc = 'Solicita atención del mozo'
+          if (c.call_type === 'order_dictate') desc = 'Comanda lista para dictar al mozo'
+          else if (c.call_type.startsWith('bill_')) desc = `Pide la cuenta (${c.call_type.replace('bill_', '')})`
+          else if (c.call_type.startsWith('service_')) desc = `Solicita: ${c.call_type.replace('service_', '')}`
+
+          return {
+            id: c.id,
+            table_number: c.table_number,
+            call_type: c.call_type,
+            text: desc,
+          }
+        })
+
+        // Actualizar lista persistente fusionando con las previas
+        setPendingCalls(prev => {
+          const map = new Map<string, PendingServiceCall>()
+          prev.forEach(call => {
+            if (!attendedCallIdsRef.current.has(call.id)) {
+              map.set(call.id, call)
+            }
+          })
+          formattedPendingCalls.forEach(call => {
+            if (!attendedCallIdsRef.current.has(call.id)) {
+              map.set(call.id, call)
+            }
+          })
+          return Array.from(map.values())
+        })
 
         const statusMap: Record<string | number, TableStatusType> = {}
         const dwellMap: Record<string | number, number> = {}
 
-        // 1. Mesas con órdenes creadas (permanecen ocupadas 'busy' o 'ready' hasta que el mozo presione 'Liberar Mesa')
-        orders.forEach(ord => {
+        // 3. Mesas con órdenes creadas
+        incomingOrders.forEach(ord => {
           const tblNum = ord.table?.table_number || ord.table_number
           if (tblNum) {
             if (ord.status === 'ready') {
@@ -265,34 +319,14 @@ export default function WaiterComanderoPage() {
 
         setTableDwellMinutes(dwellMap)
 
-        // 2. Mesas con carritos locales con platos cargados
+        // 4. Mesas con carritos locales
         Object.entries(tableCarts).forEach(([tblNum, items]) => {
           if (items && items.length > 0 && !statusMap[tblNum]) {
             statusMap[tblNum] = 'busy'
           }
         })
 
-        // 3. Avisos de servicio pendientes
-        const serverPendingCalls = calls.filter((c: any) => c.status === 'pending')
-
-        const formattedPendingCalls: PendingServiceCall[] = serverPendingCalls.map((c: any) => {
-          let desc = 'Solicita atención del mozo'
-          if (c.call_type === 'order_dictate') desc = 'Comanda lista para dictar al mozo'
-          else if (c.call_type.startsWith('bill_')) desc = `Pide la cuenta (${c.call_type.replace('bill_', '')})`
-          else if (c.call_type.startsWith('service_')) desc = `Solicita: ${c.call_type.replace('service_', '')}`
-
-          return {
-            id: c.id,
-            table_number: c.table_number,
-            call_type: c.call_type,
-            text: desc,
-          }
-        })
-
-        // Actualizar lista persistente de llamadas activas
-        setPendingCalls(formattedPendingCalls)
-
-        // Semáforo amarillo para mesas con llamada pendiente (prioridad sobre busy)
+        // Semáforo amarillo para mesas con llamada pendiente
         formattedPendingCalls.forEach(call => {
           const tblNum = call.table_number
           if (tblNum && statusMap[tblNum] !== 'ready') {
@@ -301,14 +335,6 @@ export default function WaiterComanderoPage() {
         })
 
         setTableStatuses(statusMap)
-
-        // 3. Popup grande: Mostrar por llamada nueva y persistir hasta que el mozo la atienda
-        formattedPendingCalls.forEach(call => {
-          if (!seenCallIdsRef.current.has(call.id)) {
-            seenCallIdsRef.current.add(call.id)
-            setPopupAlert(call)
-          }
-        })
       } catch (e) {
         console.log('Error syncing server data in comandero:', e)
       }
@@ -658,6 +684,10 @@ export default function WaiterComanderoPage() {
                       <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
                         <button
                           onClick={async () => {
+                            validatedOrderIdsRef.current.add(valOrder.id)
+                            setServerOrders(prev =>
+                              prev.map(o => o.id === valOrder.id ? { ...o, status: 'pending' } : o)
+                            )
                             try {
                               await fetch('/api/orders', {
                                 method: 'PATCH',
@@ -668,22 +698,22 @@ export default function WaiterComanderoPage() {
                                   status: 'pending',
                                 }),
                               })
-                              setServerOrders(prev =>
-                                prev.map(o => o.id === valOrder.id ? { ...o, status: 'pending' } : o)
-                              )
                             } catch (e) {
                               console.error('Error al validar comanda:', e)
                             }
                           }}
-                          className="flex-1 py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide"
+                          className="flex-1 py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer"
                           title="Enviar a cocina tras verificar verbalmente en mesa"
                         >
                           <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
                           <span>Confirmar a Cocina</span>
                         </button>
                         <button
+                          type="button"
                           onClick={async () => {
                             if (confirm(`¿Descartar comanda de Mesa #${valOrder.table_number}?`)) {
+                              cancelledOrderIdsRef.current.add(valOrder.id)
+                              setServerOrders(prev => prev.filter(o => o.id !== valOrder.id))
                               try {
                                 await fetch('/api/orders', {
                                   method: 'PATCH',
@@ -694,13 +724,12 @@ export default function WaiterComanderoPage() {
                                     status: 'cancelled',
                                   }),
                                 })
-                                setServerOrders(prev => prev.filter(o => o.id !== valOrder.id))
                               } catch (e) {
                                 console.error('Error al cancelar comanda:', e)
                               }
                             }
                           }}
-                          className="p-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-black text-xs border border-red-200 transition-colors"
+                          className="p-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-black text-xs border border-red-200 transition-colors cursor-pointer"
                           title="Descartar comanda falsa o errónea"
                         >
                           <Trash2 className="w-4 h-4" />
