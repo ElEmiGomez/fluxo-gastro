@@ -213,9 +213,32 @@ runTest("API Route /api/pilots/request: Validación y recepción estructurada", 
   assert.ok(pilotContent.includes("contactRole"), "contactRole recibido")
 })
 
+// ── 8. REPORTE MENSUAL EJECUTIVO IA & MATRIZ BCG DE EFICIENCIA ──
+console.log(`\n${COLORS.bold}${COLORS.blue}▶ FASE 8: Reporte Mensual Ejecutivo IA & Matriz BCG de Rentabilidad${COLORS.reset}`)
+
+runTest("Endpoint /api/analytics/monthly-report: Generación de métricas de congestión y sala", () => {
+  const reportRoutePath = path.resolve("src/app/api/analytics/monthly-report/route.ts")
+  const reportContent = fs.readFileSync(reportRoutePath, "utf-8")
+  
+  assert.ok(reportContent.includes("congestion_hours"), "Cálculo de horas de congestión presente")
+  assert.ok(reportContent.includes("table_times"), "Tiempos medios de sala presentes")
+  assert.ok(reportContent.includes("bcg_matrix"), "Matriz BCG del menú presente")
+  assert.ok(reportContent.includes("terrace_extra_revenue"), "Ingresos extras de terraza presentes")
+  assert.ok(reportContent.includes("ai_suggestions"), "Sugerencias accionables de IA presentes")
+})
+
+runTest("Landing Page Comercial: Beneficio de Reporte Mensual IA visible en Plan Full", () => {
+  const landingPath = path.resolve("src/app/page.tsx")
+  const landingContent = fs.readFileSync(landingPath, "utf-8")
+  
+  assert.ok(landingContent.includes("Reporte Mensual de Eficiencia"), "Beneficio de reporte mensual presente en landing")
+  assert.ok(landingContent.includes("MonthlyReportModal"), "Modal de visualización de reporte mensual presente")
+})
+
 // ── RESUMEN FINAL DE CERTIFICACIÓN ──
 console.log(`\n${COLORS.bold}${COLORS.green}================================================================================${COLORS.reset}`)
 console.log(`${COLORS.bold}${COLORS.green} 🏆 CERTIFICACIÓN INTEGRAL EN VIVO: ${passedTests}/${totalTests} PRUEBAS SUPERADAS (100% PASS) ${COLORS.reset}`)
 console.log(`${COLORS.green} El sistema Fluxo Gastronomic System está 100% operativo, blindado y validado.${COLORS.reset}`)
 console.log(`${COLORS.bold}${COLORS.green}================================================================================${COLORS.reset}\n`)
+
 

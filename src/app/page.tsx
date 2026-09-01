@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
+import { MonthlyReportModal } from '@/components/analytics/MonthlyReportModal'
 
 const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '5493585187430'
 const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para mi restaurante.'
@@ -43,6 +44,7 @@ export default function LandingPage() {
   const [popupsBlocked, setPopupsBlocked] = useState(false)
   const [selectedDemoSlug, setSelectedDemoSlug] = useState('burger-gourmet')
   const [isPilotModalOpen, setIsPilotModalOpen] = useState(false)
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [selectedPlanForModal, setSelectedPlanForModal] = useState('Plan Full (Recomendado)')
 
   const handleOpenPilotModal = (plan = 'Plan Full (Recomendado)') => {
@@ -886,6 +888,25 @@ export default function LandingPage() {
                     </li>
                     <li className="flex items-start gap-2.5">
                       <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
+                      <div className="space-y-0.5">
+                        <span><strong>Reporte Mensual de Eficiencia &amp; Rentabilidad con IA</strong> (Horas punta, matriz BCG de platos y optimización de terraza)</span>
+                        <div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setIsReportModalOpen(true)
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-black text-cyan-400 group-hover:text-emerald-300 underline hover:text-white transition-colors cursor-pointer"
+                          >
+                            <span>👁️ Ver muestra del reporte ejecutivo</span>
+                            <ExternalLink size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                       <span>Monitor KDS industrial con botones gigantes (&gt;70px)</span>
                     </li>
                     <li className="flex items-start gap-2.5">
@@ -1061,6 +1082,13 @@ export default function LandingPage() {
         onClose={() => setIsPilotModalOpen(false)}
         initialPlan={selectedPlanForModal}
         whatsAppPhone={WHATSAPP_PHONE}
+      />
+
+      {/* ── MODAL DE MUESTRA DEL REPORTE MENSUAL EJECUTIVO IA ── */}
+      <MonthlyReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        slug="burger-gourmet"
       />
 
     </div>
