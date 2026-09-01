@@ -593,13 +593,13 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch pt-4">
               
               {/* Tarjeta 1: Plan Carta */}
-              <div className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative overflow-hidden">
+              <div className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative">
                 
                 {/* Badge Flotante Promocional en Hover */}
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-sm">
+                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 z-20">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                   <span>14 DÍAS GRATIS</span>
                 </div>
@@ -682,10 +682,10 @@ export default function LandingPage() {
               </div>
 
               {/* Tarjeta 2: Plan Sala */}
-              <div className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative overflow-hidden">
+              <div className="bg-slate-800/60 border border-slate-700 hover:border-emerald-500 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/15 transition-all duration-300 group relative">
                 
                 {/* Badge Flotante Promocional en Hover */}
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-sm">
+                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-emerald-400 text-emerald-300 text-[11px] font-black tracking-wide shadow-md opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-1.5 z-20">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                   <span>14 DÍAS GRATIS</span>
                 </div>
@@ -768,10 +768,10 @@ export default function LandingPage() {
               </div>
 
               {/* Tarjeta 3: Plan Full (DESTACADA CON BORDE CIAN BRILLANTE & BADGE RECOMENDADO) */}
-              <div className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/25 transition-all duration-300 group relative lg:-translate-y-2 overflow-hidden">
+              <div className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/25 transition-all duration-300 group relative lg:-translate-y-2">
                 
                 {/* Badge Recomendado / 14 Días */}
-                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-cyan-500 group-hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md transition-colors">
+                <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-cyan-500 group-hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md transition-colors z-20">
                   <span className="group-hover:hidden">Recomendado</span>
                   <span className="hidden group-hover:inline-flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5" />
