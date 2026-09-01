@@ -625,14 +625,43 @@ export default function LandingPage() {
                   </div>
 
                   {/* BLOQUE DE PRECIO */}
-                  <div className="py-2 space-y-1.5">
+                  {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
+                  <div className="sm:hidden py-2 space-y-1.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl sm:text-5xl font-black text-white tracking-tight tabular-nums">39€</span>
+                      <span className="text-4xl font-black text-white tracking-tight tabular-nums">39€</span>
                       <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                     </div>
                     <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md">
                       <Sparkles className="w-3 h-3 flex-shrink-0" />
                       <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                    </div>
+                  </div>
+
+                  {/* 💻 VISTA PC / DESKTOP: Efecto Hover interactivo con precio tachado a 0€ */}
+                  <div className="hidden sm:block py-2 min-h-[72px]">
+                    {/* Estado Normal (sin hover) */}
+                    <div className="group-hover:hidden transition-all duration-300">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-5xl font-black text-white tracking-tight tabular-nums">39€</span>
+                        <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
+                        <Sparkles className="w-3 h-3 flex-shrink-0" />
+                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                      </div>
+                    </div>
+
+                    {/* Estado Hover (al pasar el cursor en PC) */}
+                    <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
+                      <div className="flex items-baseline gap-2.5">
+                        <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">39€</span>
+                        <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
+                        <span className="text-emerald-300 text-sm font-extrabold uppercase tracking-wide">14 DÍAS</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
+                        <span>¡Prueba gratuita de 14 días sin permanencia!</span>
+                      </div>
                     </div>
                   </div>
 
@@ -696,14 +725,43 @@ export default function LandingPage() {
                   </div>
 
                   {/* BLOQUE DE PRECIO */}
-                  <div className="py-2 space-y-1.5">
+                  {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
+                  <div className="sm:hidden py-2 space-y-1.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl sm:text-5xl font-black text-white tracking-tight tabular-nums">69€</span>
+                      <span className="text-4xl font-black text-white tracking-tight tabular-nums">69€</span>
                       <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                     </div>
                     <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md">
                       <Sparkles className="w-3 h-3 flex-shrink-0" />
                       <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                    </div>
+                  </div>
+
+                  {/* 💻 VISTA PC / DESKTOP: Efecto Hover interactivo con precio tachado a 0€ */}
+                  <div className="hidden sm:block py-2 min-h-[72px]">
+                    {/* Estado Normal (sin hover) */}
+                    <div className="group-hover:hidden transition-all duration-300">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-5xl font-black text-white tracking-tight tabular-nums">69€</span>
+                        <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
+                        <Sparkles className="w-3 h-3 flex-shrink-0" />
+                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                      </div>
+                    </div>
+
+                    {/* Estado Hover (al pasar el cursor en PC) */}
+                    <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
+                      <div className="flex items-baseline gap-2.5">
+                        <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">69€</span>
+                        <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
+                        <span className="text-emerald-300 text-sm font-extrabold uppercase tracking-wide">14 DÍAS</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-emerald-300 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-emerald-400 animate-pulse" />
+                        <span>¡Prueba gratuita de 14 días sin permanencia!</span>
+                      </div>
                     </div>
                   </div>
 
@@ -770,14 +828,43 @@ export default function LandingPage() {
                   </div>
 
                   {/* BLOQUE DE PRECIO */}
-                  <div className="py-2 space-y-1.5">
+                  {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
+                  <div className="sm:hidden py-2 space-y-1.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl sm:text-5xl font-black text-cyan-400 tracking-tight tabular-nums">99€</span>
+                      <span className="text-4xl font-black text-cyan-400 tracking-tight tabular-nums">99€</span>
                       <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                     </div>
                     <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md">
                       <Sparkles className="w-3 h-3 flex-shrink-0" />
                       <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                    </div>
+                  </div>
+
+                  {/* 💻 VISTA PC / DESKTOP: Efecto Hover interactivo con precio tachado a 0€ */}
+                  <div className="hidden sm:block py-2 min-h-[72px]">
+                    {/* Estado Normal (sin hover) */}
+                    <div className="group-hover:hidden transition-all duration-300">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-5xl font-black text-cyan-400 tracking-tight tabular-nums">99€</span>
+                        <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
+                        <Sparkles className="w-3 h-3 flex-shrink-0" />
+                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                      </div>
+                    </div>
+
+                    {/* Estado Hover (al pasar el cursor en PC) */}
+                    <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
+                      <div className="flex items-baseline gap-2.5">
+                        <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">99€</span>
+                        <span className="text-5xl font-black text-cyan-400 tracking-tight tabular-nums">0€</span>
+                        <span className="text-cyan-300 text-sm font-extrabold uppercase tracking-wide">14 DÍAS</span>
+                      </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-black text-cyan-300 bg-cyan-500/20 border border-cyan-400/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-cyan-400 animate-pulse" />
+                        <span>¡Prueba gratuita de 14 días sin permanencia!</span>
+                      </div>
                     </div>
                   </div>
 
