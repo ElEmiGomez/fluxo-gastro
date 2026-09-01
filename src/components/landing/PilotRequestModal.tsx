@@ -409,22 +409,22 @@ export function PilotRequestModal({
               </div>
 
               {/* Plan Seleccionado Automáticamente (Sin pasos innecesarios) */}
-              <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-black">
+              <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-black flex-shrink-0">
                     <Sparkles className="w-4 h-4" />
                   </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                      Plan Seleccionado para la Prueba
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">
+                      Plan Seleccionado
                     </span>
-                    <span className="text-sm font-black text-white">
+                    <span className="text-sm font-black text-white truncate block">
                       {selectedPlan}
                     </span>
                   </div>
                 </div>
-                <div>
-                  <span className="text-xs font-black text-emerald-400 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40">
+                <div className="flex-shrink-0">
+                  <span className="text-xs font-black text-emerald-400 bg-emerald-500/20 px-3 py-1.5 rounded-full border border-emerald-500/40 whitespace-nowrap inline-block">
                     14 días a 0€
                   </span>
                 </div>
