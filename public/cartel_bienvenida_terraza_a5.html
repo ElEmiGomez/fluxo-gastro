@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Cartel de Bienvenida Terraza A5 - Fluxo</title>
+  <style>
+    @page { size: A5 portrait; margin: 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: #0f172a; color: #fff; display: flex; flex-direction: column; justify-content: space-between; align-items: center; min-height: 100vh; padding: 25px 20px; text-align: center; }
+    .badge { background: #2563eb; color: #fff; padding: 6px 16px; border-radius: 999px; font-size: 13px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 15px; }
+    .title { font-size: 28px; font-weight: 900; line-height: 1.2; margin-bottom: 10px; color: #f8fafc; }
+    .title span { color: #38bdf8; }
+    .subtitle { font-size: 14px; color: #94a3b8; line-height: 1.5; margin-bottom: 20px; max-width: 320px; }
+    .steps-box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 18px 15px; width: 100%; max-width: 340px; margin-bottom: 20px; text-align: left; }
+    .step-item { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 13px; font-weight: 600; color: #e2e8f0; }
+    .step-item:last-child { margin-bottom: 0; }
+    .step-num { width: 26px; height: 26px; background: #38bdf8; color: #0f172a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; flex-shrink: 0; }
+    .footer { font-size: 11px; color: #64748b; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; width: 100%; }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="badge">Servicio Rapido de Terraza</div>
+    <h1 class="title">Pide desde tu movil<br><span>sin esperar al mozo</span></h1>
+    <p class="subtitle">Escanea el codigo QR de tu mesa para ver la carta completa con fotos, precios y alergenos.</p>
+  </div>
+
+  <div class="steps-box">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div>Apunta con la camara al QR de la mesa</div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div>Elige tus tapas, bebidas o platos</div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div>Envia tu comanda o llama al camarero</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Tecnologia Fluxo Gastronomic System - Sin Apps que descargar
+  </div>
+</body>
+</html>

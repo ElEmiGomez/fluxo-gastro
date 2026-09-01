@@ -17,6 +17,7 @@
 | **DEC-07** | 31/08/2026 | Chat Program Data / Mkt | **Google Review Booster de 1 Toque**. | Captura pasiva de 5 estrellas en sobremesa y precuenta sin necesidad de pasarelas de pago ni tocar el TPV contable. Neutraliza el lead magnet de Qamarero. |
 | **DEC-08** | 31/08/2026 | Chat Program Data / SEO | **SEO Semántico Gastronómico (`Schema.org/Restaurant` + `Menu`)**. | Inyección de datos estructurados para convertir cada carta de Fluxo en web oficial indexable en Google Maps, eliminando el dolor de "Sin web propia". |
 | **DEC-09** | 31/08/2026 | Dirección / COO | **Creación del Departamento 5: Learning & Intelligence**. | Centralizar la memoria corporativa, auditorías de la competencia, patrones agénticos en Antigravity y manuales de buenas prácticas interdepartamentales. |
+| **DEC-10** | 31/08/2026 | Ingeniería / Program Data | **Conexión Productiva Nube 24/7 (GitHub + Vercel + Supabase Cloud)**. | Transición de Fase 1 a Fase 2 (Piloto Noia). Despliegue continuo serverless con base de datos PostgreSQL RLS administrada y disponibilidad permanente para pruebas en vivo y visitas comerciales. |
 
 ---
 

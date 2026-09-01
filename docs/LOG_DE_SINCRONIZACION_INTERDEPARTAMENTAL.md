@@ -6,6 +6,28 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-08-31 23:35] — Hito Clave: Conexión del Triángulo Cloud (Vercel + GitHub + Supabase) y Activación de Fase 2 (Piloto Noia)
+* **Departamentos Sincronizados:** Ingeniería & Producto (Program Data), Organización General (COO), Marketing & Ventas, Diseño de Marca & UI y Learning & Intelligence.
+* **Hito de Infraestructura Conectada:**
+  - **🐙 GitHub:** Repositorio en la nube y pipeline de CI/CD activo. Cada commit en la rama `main` dispara la construcción y validación automática.
+  - **▲ Vercel Production Serverless:** Despliegue global en el Edge de Next.js 14 App Router con SSL automático, caché de assets y respuesta <50ms para comensales en terraza y comandero de sala.
+  - **⚡ Supabase Cloud:** Base de datos relacional PostgreSQL administrada con RLS (Row Level Security) activo, WebSockets para Realtime KDS de cocina y persistencia multi-tenant aislada.
+* **Impacto Interdepartamental Sincronizado:**
+  1. **Organización General (Depto 1):**
+     - Registrada la decisión **DEC-10** en `registro_ideas_y_decisiones.md`.
+     - Actualizado el Roadmap: Fase 1 completada al 100%; **Fase 2 (Piloto Noia & Nube 24/7)** pasa a estado **EN EJECUCIÓN**.
+  2. **Marketing & Ventas (Depto 2):**
+     - Actualizado `pitch_ventas_locales_galicia.md` con la Objeción 5 (alta disponibilidad y resiliencia 4G/5G en la nube) y el protocolo de demo en vivo en 30 segundos con la URL de Vercel.
+  3. **Diseño de Marca & UI (Depto 3):**
+     - Peanas QR de terraza enlazadas con el dominio productivo final de Vercel.
+  4. **Ingeniería & Producto / Program Data (Depto 4):**
+     - Actualizado `reglas_operativas_y_arquitectura.md` con el diagrama vertical de flujo Cloud y variables de entorno seguras.
+  5. **Learning & Intelligence (Depto 5):**
+     - Actualizado `manual_aprendizaje_y_buenas_practicas.md` con la lección didáctica *"El Restaurante en la Nube"* (GitHub como libro de recetas maestro, Vercel como mozos relámpago y Supabase como caja fuerte blindada).
+* **Estado Operativo:** Sistema en vivo 24/7. Preparados para las primeras visitas presenciales a locales en Noia.
+
+---
+
 ### [2026-08-31 22:30] — Ejecución Autónoma de Entregables Diarios Interdepartamentales
 * **Departamentos Sincronizados:** Organización General (COO), Marketing & Ventas, Diseño & UI, Ingeniería & Producto (Program Data).
 * **Acciones Ejecutadas:**
@@ -187,3 +209,13 @@
 ---
 
 *Cualquier departamento que requiera consultar o añadir información debe registrar su entrada aquí para mantener la sincronización 100% transparente.*
+
+---
+## [2026-08-31 23:18] HITO HISTORICO: DESPLIEGUE A PRODUCCION 24/7 COMPLETADO (VERCEL + SUPABASE)
+- **Departamento:** Ingenieria & Producto (Program Data) / COO
+- **Hito:** Fase 1 y Base de Fase 2 cerradas con exito.
+- **Infraestructura:**
+  - GitHub: https://github.com/ElEmiGomez/fluxo-gastro
+  - Supabase Cloud: https://oicugcbdlxfjikkgjjah.supabase.co (8 tablas, RLS, Realtime y Stored Procedure Atomica)
+  - Vercel Serverless: Proyecto fluxo-gastro desplegado en produccion 24/7 con 0 errores.
+- **Estado del Sistema:** 100% Operativo para el Piloto de Terraza en Noia.

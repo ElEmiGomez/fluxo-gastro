@@ -1,0 +1,53 @@
+html = '''<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Chuleta de Barra - Guia Rapida Mozo (Fluxo)</title>
+  <style>
+    @page { size: A5 landscape; margin: 6mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: #0f172a; color: #fff; padding: 15px; }
+    .container { border: 2px solid #3b82f6; border-radius: 12px; padding: 15px; height: calc(100vh - 30px); display: flex; flex-direction: column; justify-content: space-between; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 8px; }
+    .title { font-size: 18px; font-weight: 900; color: #60a5fa; }
+    .pin-badge { background: #ef4444; color: #fff; padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 900; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 12px 0; }
+    .card { background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
+    .card h3 { font-size: 13px; color: #38bdf8; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .card p { font-size: 11px; color: #cbd5e1; line-height: 1.4; }
+    .footer { display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; border-top: 1px solid #334155; padding-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">FLUXO - GUIA RAPIDA DEL MOZO (BARRA)</div>
+      <div class="pin-badge">PIN STAFF: 1234</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>1. Comanda Entrante</h3>
+        <p>El movil vibra y suena. La mesa parpadea en amarillo (Pendiente de Validar).</p>
+      </div>
+      <div class="card">
+        <h3>2. Validar / Marchar</h3>
+        <p>Toca la mesa y pulsa <b>Validar</b>. La comanda viaja al KDS de cocina al instante.</p>
+      </div>
+      <div class="card">
+        <h3>3. Llamada o Cuenta</h3>
+        <p>Si parpadea en azul, el cliente pide la cuenta o atencion. Pulsa atendido.</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Acceso Comandero: /staff/comandero/...</div>
+      <div>Soporte Tecnico Fluxo (24/7)</div>
+    </div>
+  </div>
+</body>
+</html>'''
+
+open('public/chuleta_camarero_barra.html', 'w', encoding='utf-8').write(html)
+open('docs/departamentos/3_diseno_marca/chuleta_camarero_barra.html', 'w', encoding='utf-8').write(html)
+print('Chuleta de barra creada con exito')

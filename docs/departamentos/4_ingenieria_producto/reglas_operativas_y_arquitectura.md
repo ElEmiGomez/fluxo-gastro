@@ -28,3 +28,32 @@
 5. **API de Impresoras Térmicas (ESC/POS):**
    - Endpoint: `/api/printers/receipt?order_id=...&width=42`.
    - Generación de comandos binarios con inicialización (`\x1b@`), campana sonora (`\x1bB\x02\x02`) y corte de papel automático (`\x1dV\x00`).
+
+---
+
+## ☁️ 6. Arquitectura Productiva Cloud: El Triángulo de Alta Disponibilidad
+
+```mermaid
+flowchart TD
+    DEV["💻 Entorno de Desarrollo Local<br/>(Visual Studio Code / Antigravity)"]
+    DEV -->|git push main| GH["🐙 GitHub Repository<br/>(Control de Versiones & CI/CD Pipeline)"]
+    GH -->|Automatic Deploy Hook| VER["▲ Vercel Production Serverless<br/>(Next.js 14 App Router & Global Edge Network)"]
+    VER -->|SSR Queries / Mutations + Realtime| SUPA["⚡ Supabase Cloud (PostgreSQL Managed)<br/>• Row Level Security (RLS) Activo<br/>• Realtime WebSocket Channel<br/>• Backups Automáticos"]
+    
+    VER -->|PWA / HTTPS 24/7| USERS["👥 Clientes & Personal de Sala<br/>• Comensales en Terraza (/menu/[slug])<br/>• Comandero Móvil (/staff/comandero/[slug])<br/>• KDS Cocina (/staff/kitchen/[slug])"]
+    
+    style DEV fill:#0f172a,stroke:#334155,stroke-width:2px,color:#ffffff
+    style GH fill:#24292f,stroke:#4a5568,stroke-width:2px,color:#ffffff
+    style VER fill:#000000,stroke:#3b82f6,stroke-width:2px,color:#ffffff
+    style SUPA fill:#166534,stroke:#22c55e,stroke-width:2px,color:#ffffff
+    style USERS fill:#1e3a8a,stroke:#60a5fa,stroke-width:2px,color:#ffffff
+```
+
+* **Variables de Entorno en Vercel:**
+  - `NEXT_PUBLIC_SUPABASE_URL`: Endpoint de Supabase Cloud.
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Llave pública para lecturas con RLS.
+  - `SUPABASE_SERVICE_ROLE_KEY`: Llave segura para transacciones de backend.
+  - `NEXT_PUBLIC_APP_URL`: Dominio oficial de producción en Vercel (`https://fluxo-*.vercel.app` o dominio propio).
+* **Garantía Operativa:**
+  - Cero dependencias de servidores locales encendidos o túneles ngrok/localtunnel efímeros.
+  - Respaldo transaccional en PostgreSQL con failover y escalado automático de peticiones concurrentes en picos de terraza.

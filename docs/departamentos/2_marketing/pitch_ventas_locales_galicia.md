@@ -28,3 +28,15 @@
 ### Objeción 4: *"No quiero pagar comisiones bancarias raras"*
 * **Respuesta:**  
   *"Fluxo no toca tu dinero ni cobra comisiones. El cobro lo sigues haciendo tú con tu datáfono de toda la vida o en efectivo en la caja. La app solo te ayuda a que la comanda llegue rápido a cocina."*
+
+### Objeción 5: *"¿Y si se me corta el sistema o se cae el servidor un sábado por la noche?"*
+* **Respuesta:**  
+  *"El sistema no corre en un ordenador viejo del bar que se pueda apagar o romper. Está alojado en la nube de alta disponibilidad de Vercel y Supabase (con réplicas automáticas y seguridad bancaria). Si el WiFi de tu local falla, los camareros y comensales siguen operando con su 4G/5G del móvil sin perder un solo ticket ni una sola llamada de mesa."*
+
+---
+
+## 📱 Demostración en Vivo en la Nube (30 Segundos)
+1. Abre tu móvil con la URL oficial de producción de Vercel.
+2. Muestra la rapidez instantánea de carga de la carta (/menu/burger-gourmet).
+3. Haz un pedido de prueba y muestra cómo le llega al instante al comandero del mozo (/staff/comandero/burger-gourmet).
+4. Muestra el botón de "Google Review Booster" (+1 toque de 5 estrellas) para aumentar las reseñas del local.

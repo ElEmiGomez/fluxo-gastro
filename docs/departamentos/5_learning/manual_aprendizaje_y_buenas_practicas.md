@@ -1,4 +1,4 @@
-﻿# 🧠 DEPARTAMENTO 5: LEARNING & KNOWLEDGE BASE — FLUXO
+# 🧠 DEPARTAMENTO 5: LEARNING & KNOWLEDGE BASE — FLUXO
 
 > **Departamento:** Aprendizaje Continuo, Auditoría de Mercado & Metodología Agéntica  
 > **Propósito:** Capitalizar cada dato del mercado, analizar competidores y blindar las mejores prácticas de desarrollo y gobernanza en Fluxo.  
@@ -51,3 +51,27 @@ Cuando un agente se active en cualquier conversación del proyecto Fluxo, debe e
    - **KDS táctil masivo (>70px) y soporte térmico ESC/POS**.
    - **Idempotencia SQL por UUID v4** y resiliencia Safari iOS.
    - **0% comisiones por ticket y cero cambio de TPV**.
+
+---
+
+## 4. 🎓 Lección Didáctica: El "Restaurante en la Nube" (GitHub + Vercel + Supabase)
+
+Para entender cómo funciona nuestra infraestructura conectada sin tecnicismos complejos:
+
+```mermaid
+flowchart TD
+    REC["📖 1. El Libro de Recetas Central (GitHub)<br/>Guarda cada versión del menú y las reglas de la cocina sin que nadie las borre."]
+    REC -->|Envío Automático| MOZOS["⚡ 2. El Equipo de Mozos Relámpago (Vercel Edge)<br/>Reparte las cartas digitales y pantallas a los clientes en milisegundos."]
+    MOZOS -->|Anotación Segura| DESPENSA["🏦 3. La Gran Despensa y Caja Fuerte (Supabase Cloud)<br/>Guarda las comandas, mesas y pedidos con llave de seguridad (RLS)."]
+    
+    style REC fill:#24292f,stroke:#4a5568,stroke-width:2px,color:#ffffff
+    style MOZOS fill:#000000,stroke:#3b82f6,stroke-width:2px,color:#ffffff
+    style DESPENSA fill:#166534,stroke:#22c55e,stroke-width:2px,color:#ffffff
+```
+
+1. **🐙 GitHub es el *Libro Maestro de Recetas y Procedimientos*:**  
+   Si varios cocineros modifican la carta, GitHub lleva el registro exacto de quién cambió cada ingrediente, permite volver atrás si una receta falla y aprueba solo los platos probados.
+2. **▲ Vercel es el *Ejército de Camareros Relámpago*:**  
+   No importa si entran 5 clientes o 500 a la vez en la terraza de Noia: Vercel crea copias instantáneas de la carta en servidores distribuidos para que el menú cargue al instante bajo el sol.
+3. **⚡ Supabase es la *Caja Fuerte y el Tablero Central de Cocina*:**  
+   Es donde se guardan las comandas reales, el estado de las mesas y los cobros. Gracias a las políticas **RLS (Row Level Security)**, cada restaurante solo puede ver sus propias mesas y ningún cliente puede espiar las comandas de otra mesa.

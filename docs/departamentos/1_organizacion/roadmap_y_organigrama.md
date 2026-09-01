@@ -9,17 +9,18 @@
 ## 🧭 Las 5 Fases de Despliegue Cronológico
 
 ```mermaid
-graph LR
-    F1["Fase 1: Validación Local & Túnel"] --> F2["Fase 2: Piloto Noia"]
-    F2 --> F3["Fase 3: Barbanza"]
-    F3 --> F4["Fase 4: Santiago"]
-    F4 --> F5["Fase 5: Expansión Regional/Nacional"]
+flowchart TD
+    F1["✅ Fase 1: Validación Local & Túnel (100% COMPLETADA)"]
+    F1 --> F2["🚀 Fase 2: Piloto Noia & Nube 24/7 (EN EJECUCIÓN: Vercel + GitHub + Supabase)"]
+    F2 --> F3["⏳ Fase 3: Consolidación Barbanza (Hito 1.000€ MRR)"]
+    F3 --> F4["⏳ Fase 4: Desembarco Santiago de Compostela"]
+    F4 --> F5["⏳ Fase 5: Expansión Regional & Nacional"]
     
-    style F1 fill:#22c55e,stroke:#166534,stroke-width:2px,color:#ffffff
-    style F2 fill:#3b82f6,stroke:#1e40af,stroke-width:1px,color:#ffffff
-    style F3 fill:#64748b,stroke:#334155,stroke-width:1px,color:#ffffff
-    style F4 fill:#64748b,stroke:#334155,stroke-width:1px,color:#ffffff
-    style F5 fill:#64748b,stroke:#334155,stroke-width:1px,color:#ffffff
+    style F1 fill:#166534,stroke:#22c55e,stroke-width:2px,color:#ffffff
+    style F2 fill:#1d4ed8,stroke:#3b82f6,stroke-width:3px,color:#ffffff
+    style F3 fill:#334155,stroke:#64748b,stroke-width:1px,color:#94a3b8
+    style F4 fill:#334155,stroke:#64748b,stroke-width:1px,color:#94a3b8
+    style F5 fill:#334155,stroke:#64748b,stroke-width:1px,color:#94a3b8
 ```
 
 ---
@@ -30,20 +31,22 @@ graph LR
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ 🌅 DESPACHO MATUTINO DIARIO — PRIORIDADES DEL DÍA                       │
-│    Objetivo General: Transición rápida de Fase 1 a Fase 2 (Piloto Noia) │
+│    Objetivo General: Fase 2 Activa — Piloto Noia & Producción 24/7      │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🏛️ 1. ORGANIZACIÓN GENERAL (COO / Coordinación General)                 │
 │  ├─ [x] Sincronización y registro en el Libro Diario Interdepartamental │
 │  ├─ [x] Establecer matriz y cuadro vertical de tareas diarias           │
-│  └─ [x] Integrar y validar entregables autónomos de todos los deptos    │
+│  ├─ [x] Registrar DEC-10 (Conexión Triángulo Cloud: GitHub+Vercel+Supa)│
+│  └─ [x] Activar oficialmente el seguimiento de Fase 2 (Piloto Noia)     │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 📈 2. MARKETING & VENTAS (Captación & Go-to-Market)                     │
 │  ├─ [x] Mapeo de los 5 restaurantes de terraza en Noia (prospeccion.md)│
 │  ├─ [x] Guion de abordaje en horas valle (17:00 a 19:30) y objeciones  │
+│  ├─ [x] Actualizar demo comercial con la URL en vivo 24/7 de Vercel    │
 │  └─ [ ] Ejecutar visitas presenciales con el One-Pager y Calculadora ROI│
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
@@ -51,6 +54,7 @@ graph LR
 │ 🎨 3. DISEÑO DE MARCA & UI/UX (Identidad & Ergonomía Visual)            │
 │  ├─ [x] Maquetar peanas QR imprimibles de terraza A4/A6 (HTML listo)   │
 │  ├─ [x] Validar contraste solar de la carta móvil para terrazas         │
+│  ├─ [x] Configurar QR con dominio productivo final de Vercel            │
 │  └─ [ ] Imprimir el primer juego físico de peanas para el piloto Noia  │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
@@ -59,9 +63,8 @@ graph LR
 │  ├─ [x] Mozo Gatekeeper y KDS Industrial completados al 100%           │
 │  ├─ [x] Google Review Booster (5 estrellas) y SEO Semántico Schema.org  │
 │  ├─ [x] Verificación de compilación Next.js 14 en producción (0 errores)│
-│  ├─ [x] Guía y runbook de despliegue a la nube (Vercel + Supabase Cloud)│
-│  ├─ [x] Script y prueba de certificación E2E superada (5/5 PASS)       │
-│  └─ [ ] Conexión de credenciales Vercel + Supabase por el usuario      │
+│  ├─ [x] Conexión de infraestructura: GitHub CI/CD + Vercel + Supabase  │
+│  └─ [x] Script y prueba de certificación E2E superada (5/5 PASS)       │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
