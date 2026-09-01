@@ -630,11 +630,11 @@ export default function LandingPage() {
                   {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
                   <div className="sm:hidden py-2 space-y-1.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-white tracking-tight tabular-nums">39€</span>
+                      <span className="text-4xl font-black text-white group-hover:text-emerald-300 tracking-tight tabular-nums transition-colors duration-300">39€</span>
                       <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                     </div>
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md">
-                      <Sparkles className="w-3 h-3 flex-shrink-0" />
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 group-hover:text-emerald-300 bg-blue-500/10 group-hover:bg-emerald-500/15 border border-blue-500/20 group-hover:border-emerald-500/30 px-2.5 py-0.5 rounded-md transition-all duration-300">
+                      <Sparkles className="w-3 h-3 text-blue-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
                       <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                     </div>
                   </div>
@@ -735,11 +735,11 @@ export default function LandingPage() {
                   {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
                   <div className="sm:hidden py-2 space-y-1.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-white tracking-tight tabular-nums">69€</span>
+                      <span className="text-4xl font-black text-white group-hover:text-emerald-300 tracking-tight tabular-nums transition-colors duration-300">69€</span>
                       <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                     </div>
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-md">
-                      <Sparkles className="w-3 h-3 flex-shrink-0" />
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 group-hover:text-emerald-300 bg-blue-500/10 group-hover:bg-emerald-500/15 border border-blue-500/20 group-hover:border-emerald-500/30 px-2.5 py-0.5 rounded-md transition-all duration-300">
+                      <Sparkles className="w-3 h-3 text-blue-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
                       <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                     </div>
                   </div>
@@ -843,11 +843,11 @@ export default function LandingPage() {
                   {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
                   <div className="sm:hidden py-2 space-y-1.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-cyan-400 tracking-tight tabular-nums">99€</span>
+                      <span className="text-4xl font-black text-cyan-400 group-hover:text-emerald-400 tracking-tight tabular-nums transition-colors duration-300">99€</span>
                       <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                     </div>
-                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-md">
-                      <Sparkles className="w-3 h-3 text-cyan-400 flex-shrink-0" />
+                    <div className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 group-hover:text-emerald-300 bg-cyan-500/10 group-hover:bg-emerald-500/15 border border-cyan-500/20 group-hover:border-emerald-500/30 px-2.5 py-0.5 rounded-md transition-all duration-300">
+                      <Sparkles className="w-3 h-3 text-cyan-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
                       <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                     </div>
                   </div>
