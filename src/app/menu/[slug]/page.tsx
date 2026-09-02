@@ -335,37 +335,25 @@ function DinerMenuContent() {
         }
 
         const serverOrdersList: any[] = ordersRes.orders || []
-        const localOrdersList: any[] = typeof window !== 'undefined' ? getMockOrders(slug) : []
-
-        // Fusionar órdenes por ID priorizando los datos más recientes del servidor
-        const combinedMap = new Map<string, any>()
-        localOrdersList.forEach(o => {
-          if (o && o.id) combinedMap.set(o.id, o)
-        })
-        serverOrdersList.forEach(o => {
-          if (o && o.id) combinedMap.set(o.id, o)
-        })
-        const allOrders = Array.from(combinedMap.values())
-
-        const tableOrders = allOrders.filter(
+        // El tracker de fases solo se activa cuando la comanda es enviada por el mozo a cocina
+        const activeKitchenOrders = serverOrdersList.filter(
           o => (o.table_number?.toString() === tableNumber?.toString() ||
                 o.table?.table_number?.toString() === tableNumber?.toString() ||
                 o.table_id === `table-${tableNumber}`) &&
-               o.status !== 'cancelled'
+               ['pending', 'preparing', 'ready', 'delivered'].includes(o.status)
         )
 
-        if (tableOrders.length === 0) {
+        if (activeKitchenOrders.length === 0) {
           setTableOrderStatus(null)
           setTableTotalAmount(0)
         } else {
-          const total = tableOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
+          const total = activeKitchenOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
           setTableTotalAmount(total)
 
-          const isReady = tableOrders.some(o => o.status === 'ready')
-          const isPreparing = tableOrders.some(o => o.status === 'preparing')
-          const isPending = tableOrders.some(o => o.status === 'pending')
-          const isPendingValidation = tableOrders.some(o => o.status === 'pending_validation')
-          const isDelivered = tableOrders.length > 0 && tableOrders.every(o => o.status === 'delivered')
+          const isReady = activeKitchenOrders.some(o => o.status === 'ready')
+          const isPreparing = activeKitchenOrders.some(o => o.status === 'preparing')
+          const isPending = activeKitchenOrders.some(o => o.status === 'pending')
+          const isDelivered = activeKitchenOrders.length > 0 && activeKitchenOrders.every(o => o.status === 'delivered')
 
           if (isReady) {
             setTableOrderStatus('ready')
@@ -373,8 +361,6 @@ function DinerMenuContent() {
             setTableOrderStatus('preparing')
           } else if (isPending) {
             setTableOrderStatus('pending')
-          } else if (isPendingValidation) {
-            setTableOrderStatus('pending_validation')
           } else if (isDelivered) {
             setTableOrderStatus('delivered')
           } else {
@@ -761,49 +747,6 @@ function DinerMenuContent() {
                 <div className="px-2.5 py-1 rounded-xl bg-white border border-emerald-300 text-[11px] font-black text-emerald-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
                   <span>{t('viewPhases')}</span>
                   <ChevronRight size={12} />
-                </div>
-              </div>
-            )}
-
-            {tableOrderStatus === 'pending_validation' && (
-              <div
-                onClick={() => setShowTimelineModal(true)}
-                className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-400/50 text-amber-950 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in cursor-pointer hover:bg-amber-500/15 transition-all"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs animate-pulse">
-                    <Clock className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
-                        {t('tableNumberLabel')} #{tableNumber}
-                      </span>
-                    </div>
-                    <h4 className="font-extrabold text-xs text-amber-950 leading-tight truncate">
-                      Comanda en espera de validación
-                    </h4>
-                    <p className="text-[10px] text-amber-800 mt-0.5 leading-snug">
-                      El mozo se acercará a tu mesa para confirmar tu comanda antes de marcharla a cocina.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-auto">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowServiceModal(true)
-                    }}
-                    className="px-2.5 py-1 rounded-xl bg-amber-200/90 hover:bg-amber-300 text-amber-950 text-[10px] font-bold border border-amber-300/80 transition-colors flex items-center gap-1 cursor-pointer"
-                  >
-                    <Bell size={11} />
-                    <span>Llamar al mozo</span>
-                  </button>
-                  <div className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-[11px] font-black text-amber-950 flex items-center gap-1 shadow-xs">
-                    <span>En Espera</span>
-                    <ChevronRight size={12} />
-                  </div>
                 </div>
               </div>
             )}
