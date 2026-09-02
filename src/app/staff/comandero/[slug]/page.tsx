@@ -74,6 +74,7 @@ export default function WaiterComanderoPage() {
   const validatedOrderIdsRef = useRef<Set<string>>(new Set())
   const cancelledOrderIdsRef = useRef<Set<string>>(new Set())
   const seenCallIdsRef = useRef<Set<string>>(new Set())
+  const seenReadyOrderIdsRef = useRef<Set<string>>(new Set())
   const popupTimerRef = useRef<any>(null)
 
   // Helper para modificar el carrito de la mesa activa
@@ -304,6 +305,11 @@ export default function WaiterComanderoPage() {
           if (tblNum) {
             if (ord.status === 'ready') {
               statusMap[tblNum] = 'ready'
+              if (!seenReadyOrderIdsRef.current.has(ord.id)) {
+                seenReadyOrderIdsRef.current.add(ord.id)
+                setReadyOrderAlert(tblNum)
+                playKitchenChime()
+              }
             } else if (!statusMap[tblNum]) {
               statusMap[tblNum] = 'busy'
             }
@@ -746,14 +752,31 @@ export default function WaiterComanderoPage() {
 
         {/* Alerta de Plato Listo para Servir en Salón */}
         {readyOrderAlert && (
-          <div className="fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-4 rounded-2xl bg-emerald-600 text-white font-black shadow-2xl flex items-center justify-between animate-bounce border border-emerald-500">
+          <div
+            onClick={() => {
+              const target = tables.find(t => t.table_number.toString() === readyOrderAlert.toString())
+              if (target) setSelectedTable(target)
+              setReadyOrderAlert(null)
+            }}
+            className="fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-4 rounded-2xl bg-emerald-600 text-white font-black shadow-2xl flex items-center justify-between animate-bounce border border-emerald-500 cursor-pointer active:scale-98 transition-all"
+          >
             <div className="flex items-center gap-3">
               <BellRing className="w-7 h-7 text-white stroke-[2.5]" />
               <div>
                 <div className="text-sm font-black uppercase">¡Comanda Lista en Cocina!</div>
-                <div className="text-xs text-emerald-100">Retirar pedido caliente para Mesa #{readyOrderAlert}</div>
+                <div className="text-xs text-emerald-100">Toca para ir a Mesa #{readyOrderAlert} y servir</div>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setReadyOrderAlert(null)
+              }}
+              className="p-1.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-800 text-white flex-shrink-0"
+            >
+              <X size={16} />
+            </button>
           </div>
         )}
 
