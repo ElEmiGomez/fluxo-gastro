@@ -330,6 +330,7 @@ export async function createOrder(
  * 5. COMANDAS: Obtener órdenes del restaurante
  */
 export async function getRestaurantOrders(restaurantId: string, slug: string): Promise<Order[]> {
+  const memOrders = getServerOrders(slug)
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -350,19 +351,25 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
         .order('created_at', { ascending: false })
 
       if (!error && data && data.length > 0) {
-        const mapped = (data as unknown as Order[]).map(o => ({
-          ...o,
-          table_number: o.table_number || (o.table ? o.table.table_number : 1)
-        }))
-        mapped.forEach(ord => addServerOrder(slug, ord))
-        return mapped
+        const map = new Map<string, Order>()
+        memOrders.forEach(ord => map.set(ord.id, ord))
+        ;(data as unknown as Order[]).forEach(o => {
+          const tableNum = o.table_number || (o.table ? o.table.table_number : 1)
+          const existing = map.get(o.id)
+          if (existing) {
+            map.set(o.id, { ...o, table_number: tableNum, status: existing.status })
+          } else {
+            map.set(o.id, { ...o, table_number: tableNum })
+          }
+        })
+        return Array.from(map.values())
       }
     } catch (e) {
       console.warn('Error fetching orders from Supabase:', e)
     }
   }
 
-  return getServerOrders(slug)
+  return memOrders
 }
 
 /**

@@ -34,7 +34,7 @@ interface GlobalStoreState {
   __GASTRO_SSE_CLIENTS__: Array<(data: string) => void>
 }
 
-const g = global as unknown as Partial<GlobalStoreState>
+const g = (globalThis as unknown as Partial<GlobalStoreState>)
 
 if (!g.__GASTRO_CATEGORIES__) {
   g.__GASTRO_CATEGORIES__ = {
@@ -146,16 +146,22 @@ export function getServerOrders(slug: string): Order[] {
 }
 
 export function addServerOrder(slug: string, order: Order): Order {
+  if (!globalStore.__GASTRO_ORDERS__) {
+    globalStore.__GASTRO_ORDERS__ = {}
+  }
   if (!globalStore.__GASTRO_ORDERS__[slug]) {
     globalStore.__GASTRO_ORDERS__[slug] = []
   }
   const existingIdx = globalStore.__GASTRO_ORDERS__[slug].findIndex(o => o.id === order.id)
   if (existingIdx >= 0) {
-    globalStore.__GASTRO_ORDERS__[slug][existingIdx] = order
+    globalStore.__GASTRO_ORDERS__[slug][existingIdx] = {
+      ...globalStore.__GASTRO_ORDERS__[slug][existingIdx],
+      ...order,
+    }
   } else {
     globalStore.__GASTRO_ORDERS__[slug].unshift(order)
+    broadcastEvent({ type: 'order_created', slug, order })
   }
-  broadcastEvent({ type: 'order_created', slug, order })
   return order
 }
 
@@ -164,36 +170,25 @@ export function updateServerOrderStatus(
   orderId: string,
   status: OrderStatus
 ): { orders: Order[]; error?: string } {
+  if (!globalStore.__GASTRO_ORDERS__) {
+    globalStore.__GASTRO_ORDERS__ = {}
+  }
   if (!globalStore.__GASTRO_ORDERS__[slug]) {
     globalStore.__GASTRO_ORDERS__[slug] = []
   }
-  const orders = globalStore.__GASTRO_ORDERS__[slug]
-  const existingIdx = orders.findIndex(o => o.id === orderId)
 
-  let updated: Order[]
-  if (existingIdx >= 0) {
-    updated = orders.map(o => (o.id === orderId ? { ...o, status } : o))
-  } else {
-    // Si no estaba en el slug actual, buscar en los demás almacenes de slugs
-    let foundOrder: Order | undefined
-    for (const otherSlug of Object.keys(globalStore.__GASTRO_ORDERS__)) {
-      const match = globalStore.__GASTRO_ORDERS__[otherSlug]?.find(o => o.id === orderId)
-      if (match) {
-        foundOrder = { ...match, status }
-        break
-      }
-    }
-
-    if (foundOrder) {
-      updated = [foundOrder, ...orders]
-    } else {
-      updated = orders
+  let found = false
+  for (const s of Object.keys(globalStore.__GASTRO_ORDERS__)) {
+    const list = globalStore.__GASTRO_ORDERS__[s] || []
+    const idx = list.findIndex(o => o.id === orderId)
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], status }
+      found = true
     }
   }
 
-  globalStore.__GASTRO_ORDERS__[slug] = updated
   broadcastEvent({ type: 'order_updated', slug, orderId, status })
-  return { orders: updated }
+  return { orders: globalStore.__GASTRO_ORDERS__[slug] || [] }
 }
 
 export function clearServerOrders(slug: string): void {

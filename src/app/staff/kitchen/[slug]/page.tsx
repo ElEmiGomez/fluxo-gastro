@@ -22,7 +22,7 @@ export default function KitchenKDSPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [newOrderAlert, setNewOrderAlert] = useState(false)
-  const [filterStatus, setFilterStatus] = useState<'active' | 'all' | 'ready'>('active')
+  const [filterStatus, setFilterStatus] = useState<'active' | 'all' | 'ready'>('all')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [recentDispatchedOrders, setRecentDispatchedOrders] = useState<Order[]>([])
   

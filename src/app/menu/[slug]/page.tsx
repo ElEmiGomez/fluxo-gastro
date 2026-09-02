@@ -356,10 +356,7 @@ function DinerMenuContent() {
                ['pending', 'preparing', 'ready', 'delivered'].includes(o.status)
         )
 
-        if (activeKitchenOrders.length === 0) {
-          setTableOrderStatus(null)
-          setTableTotalAmount(0)
-        } else {
+        if (activeKitchenOrders.length > 0) {
           const total = activeKitchenOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
           setTableTotalAmount(total)
 
@@ -376,8 +373,17 @@ function DinerMenuContent() {
             setTableOrderStatus('pending')
           } else if (isDelivered) {
             setTableOrderStatus('delivered')
-          } else {
+          }
+        } else if (serverOrdersList.length > 0) {
+          // Si el servidor devolvió órdenes pero ninguna corresponde a esta mesa activa, limpiar a null
+          const tableHasAnyOrders = serverOrdersList.some(
+            o => o.table_number?.toString() === tableNumber?.toString() ||
+                 o.table?.table_number?.toString() === tableNumber?.toString() ||
+                 o.table_id === `table-${tableNumber}`
+          )
+          if (!tableHasAnyOrders) {
             setTableOrderStatus(null)
+            setTableTotalAmount(0)
           }
         }
       } catch (e) {
