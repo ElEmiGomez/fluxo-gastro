@@ -432,7 +432,7 @@ export async function createServiceCall(
         .single()
 
       if (!error && data) {
-        broadcastEvent({ type: 'service_call', slug, call: data })
+        addServerServiceCall(slug, data)
         return data as ServiceCall
       }
     } catch (e) {
