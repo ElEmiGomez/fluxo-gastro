@@ -125,7 +125,9 @@ export default function KitchenKDSPage() {
                 }
               })
               incomingOrders.forEach(ord => {
-                if (!dispatchedOrderIdsRef.current.has(ord.id) && ord.status !== 'delivered' && ord.status !== 'cancelled') {
+                if (ord.status === 'delivered' || ord.status === 'cancelled') {
+                  map.delete(ord.id)
+                } else if (!dispatchedOrderIdsRef.current.has(ord.id)) {
                   map.set(ord.id, ord)
                 }
               })

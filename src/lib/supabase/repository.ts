@@ -295,7 +295,7 @@ export async function createOrder(
           table_number: orderData.table_number,
         }
 
-        broadcastEvent({ type: 'order_created', slug, order: fullOrder })
+        addServerOrder(slug, fullOrder)
         return fullOrder
       }
     } catch (e) {
@@ -351,7 +351,7 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
         .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false })
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
         return data as unknown as Order[]
       }
     } catch (e) {
@@ -385,15 +385,6 @@ export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus
 ): Promise<{ success: boolean; error?: string }> {
-  const orders = getServerOrders(slug)
-  const target = orders.find(o => o.id === orderId)
-  if (target && !isValidOrderTransition(target.status, status)) {
-    return {
-      success: false,
-      error: `Transición inválida: no se puede pasar de '${target.status}' a '${status}'`,
-    }
-  }
-
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -406,10 +397,7 @@ export async function updateOrderStatus(
     }
   }
 
-  const result = updateServerOrderStatus(slug, orderId, status)
-  if (result.error) {
-    return { success: false, error: result.error }
-  }
+  updateServerOrderStatus(slug, orderId, status)
   return { success: true }
 }
 

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect } from 'react'
 import {
@@ -8,8 +8,8 @@ import {
   BookmarkCheck,
   Send,
   UtensilsCrossed,
-  CreditCard,
-  CheckCircle2
+  CheckCircle2,
+  ChevronRight
 } from 'lucide-react'
 import { getTranslation } from '@/lib/i18n'
 import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
@@ -17,27 +17,32 @@ import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
 interface MicroOnboardingBannerProps {
   lang?: string
   tableNumber?: string
+  onScrollToMenu?: () => void
+  onOpenCart?: () => void
   onOpenCallWaiter?: () => void
 }
 
-const STORAGE_KEY = 'gastro_onboarding_collapsed_v1'
+const STORAGE_KEY = 'gastro_onboarding_collapsed_v2'
 
 export function MicroOnboardingBanner({
-  lang = 'gl',
+  lang = 'es',
   tableNumber = '4',
+  onScrollToMenu,
+  onOpenCart,
   onOpenCallWaiter
 }: MicroOnboardingBannerProps) {
   const t = (k: string) => getTranslation(lang, k)
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false)
+  // Por default: cerrado/colapsado para no saturar la pantalla del comensal
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(true)
   const [isMounted, setIsMounted] = useState<boolean>(false)
 
-  // Cargar preferencia persistente de colapso
+  // Cargar preferencia persistente si el usuario la abrió expresamente
   useEffect(() => {
     setIsMounted(true)
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved === 'true') {
-        setIsCollapsed(true)
+      if (saved !== null) {
+        setIsCollapsed(saved === 'true')
       }
     } catch {
       // ignore
@@ -58,9 +63,27 @@ export function MicroOnboardingBanner({
     })
   }
 
+  const handleStepClick = (stepNum: string) => {
+    triggerHaptic(HAPTIC_PATTERNS.TAP)
+    if (stepNum === '1') {
+      if (onScrollToMenu) {
+        onScrollToMenu()
+      } else {
+        const target = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }
+    } else if (stepNum === '2') {
+      if (onOpenCart) onOpenCart()
+    } else if (stepNum === '3') {
+      if (onOpenCallWaiter) onOpenCallWaiter()
+    }
+  }
+
   if (!isMounted) return null
 
-  // Si está minimizado: mostrar la píldora compacta y accesible para reabrirlo cuando el usuario desee
+  // Si está minimizado: mostrar la píldora compacta y accesible para abrirlo cuando el usuario desee
   if (isCollapsed) {
     return (
       <div className="max-w-2xl mx-auto px-3.5 pt-2 pb-1 animate-in fade-in duration-200">
@@ -71,10 +94,10 @@ export function MicroOnboardingBanner({
         >
           <div className="flex items-center gap-2">
             <span className="text-base leading-none">💡</span>
-            <span className="font-extrabold text-blue-900">{t('onboardingShow')}</span>
+            <span className="font-extrabold text-blue-900">{t('onboardingShow') || '¿Cómo pedir desde tu mesa?'}</span>
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-            <span>Ver guía</span>
+          <div className="flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-white px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
+            <span>Ver 3 pasos</span>
             <ChevronDown size={13} className="stroke-[2.5]" />
           </div>
         </button>
@@ -87,45 +110,31 @@ export function MicroOnboardingBanner({
       num: '1',
       emoji: '📌',
       icon: BookmarkCheck,
-      title: t('onboardingStep1Title'),
-      desc: t('onboardingStep1Desc'),
-      color: 'from-blue-600 to-indigo-600',
-      badgeBg: 'bg-blue-600 text-white',
-      border: 'border-blue-200/80',
-      highlight: 'text-blue-950'
+      title: t('onboardingStep1Title') || '1. Elige',
+      desc: t('onboardingStep1Desc') || 'Toca cualquier plato para ver foto y personalizarlo.',
+      actionLabel: 'Ver platos 👇',
+      border: 'border-blue-200/80 hover:border-blue-400',
+      badgeBg: 'bg-blue-900 text-white',
     },
     {
       num: '2',
       emoji: '🚀',
       icon: Send,
-      title: t('onboardingStep2Title'),
-      desc: t('onboardingStep2Desc'),
-      color: 'from-indigo-600 to-violet-600',
-      badgeBg: 'bg-indigo-600 text-white',
-      border: 'border-indigo-200/80',
-      highlight: 'text-indigo-950'
+      title: t('onboardingStep2Title') || '2. Pide',
+      desc: t('onboardingStep2Desc') || 'Revisa tu selección y envíala al mozo.',
+      actionLabel: 'Ver comanda 🛒',
+      border: 'border-indigo-200/80 hover:border-indigo-400',
+      badgeBg: 'bg-indigo-700 text-white',
     },
     {
       num: '3',
       emoji: '🍽️',
       icon: UtensilsCrossed,
-      title: t('onboardingStep3Title'),
-      desc: t('onboardingStep3Desc'),
-      color: 'from-amber-500 to-orange-600',
+      title: t('onboardingStep3Title') || '3. Disfruta',
+      desc: t('onboardingStep3Desc') || 'Pide más rondas de bebidas o llama al mozo.',
+      actionLabel: 'Servicios 🛎️',
+      border: 'border-amber-200/80 hover:border-amber-400',
       badgeBg: 'bg-amber-600 text-white',
-      border: 'border-amber-200/80',
-      highlight: 'text-amber-950'
-    },
-    {
-      num: '4',
-      emoji: '💳',
-      icon: CreditCard,
-      title: t('onboardingStep4Title'),
-      desc: t('onboardingStep4Desc'),
-      color: 'from-emerald-600 to-teal-600',
-      badgeBg: 'bg-emerald-600 text-white',
-      border: 'border-emerald-200/80',
-      highlight: 'text-emerald-950'
     }
   ]
 
@@ -141,10 +150,10 @@ export function MicroOnboardingBanner({
             </div>
             <div className="min-w-0">
               <h3 className="text-xs sm:text-sm font-black text-slate-900 leading-tight">
-                {t('onboardingTitle')}
+                {t('onboardingTitle') || 'Guía Rápida de Pedido'}
               </h3>
               <p className="text-[10px] sm:text-[11px] text-blue-900 font-semibold mt-0.5">
-                4 pasos sencillos para pedir cómodo desde tu mesa #{tableNumber}
+                3 pasos sencillos para pedir cómodo desde tu mesa #{tableNumber}
               </p>
             </div>
           </div>
@@ -155,32 +164,40 @@ export function MicroOnboardingBanner({
             className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-[11px] font-bold flex items-center gap-1 transition-colors flex-shrink-0 cursor-pointer"
             title="Minimizar guía"
           >
-            <span className="hidden sm:inline">{t('onboardingMinimize')}</span>
+            <span className="hidden sm:inline">{t('onboardingMinimize') || 'Minimizar'}</span>
             <ChevronUp size={13} className="stroke-[2.5]" />
           </button>
         </div>
 
-        {/* Cuadrícula de 4 Pasos (2x2 en móvil / 4 columnas en tablet/desktop) */}
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+        {/* Cuadrícula de 3 Pasos Clickeables */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
           {steps.map((step) => {
             return (
               <div
                 key={step.num}
-                className={`p-2.5 rounded-2xl bg-white border ${step.border} shadow-2xs flex flex-col justify-between space-y-1.5 hover:bg-slate-50/80 transition-all`}
+                onClick={() => handleStepClick(step.num)}
+                className={`p-3 rounded-2xl bg-white border ${step.border} shadow-2xs flex flex-col justify-between space-y-2 hover:bg-slate-50 hover:shadow-xs transition-all cursor-pointer group active:scale-98`}
               >
-                <div className="flex items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base leading-none">{step.emoji}</span>
-                    <span className="text-xs font-black text-slate-900">{step.title}</span>
+                <div>
+                  <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-slate-100">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-base leading-none">{step.emoji}</span>
+                      <span className="text-xs font-black text-slate-900">{step.title}</span>
+                    </div>
+                    <span className={`w-4 h-4 rounded-full ${step.badgeBg} text-[10px] font-black flex items-center justify-center flex-shrink-0 shadow-2xs`}>
+                      {step.num}
+                    </span>
                   </div>
-                  <span className={`w-4 h-4 rounded-full ${step.badgeBg} text-[10px] font-black flex items-center justify-center flex-shrink-0 shadow-2xs`}>
-                    {step.num}
-                  </span>
+
+                  <p className="text-[11px] text-slate-600 leading-snug font-medium mt-1.5">
+                    {step.desc}
+                  </p>
                 </div>
 
-                <p className="text-[11px] text-slate-600 leading-snug font-medium">
-                  {step.desc}
-                </p>
+                <div className="pt-1 flex items-center justify-between text-[10px] font-extrabold text-blue-900 group-hover:text-blue-700">
+                  <span>{step.actionLabel}</span>
+                  <ChevronRight size={12} className="transform group-hover:translate-x-0.5 transition-transform" />
+                </div>
               </div>
             )
           })}

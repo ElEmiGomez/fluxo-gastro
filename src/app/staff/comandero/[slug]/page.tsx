@@ -494,6 +494,8 @@ export default function WaiterComanderoPage() {
           total_amount: totalAmount,
           items: formattedItems,
           discount_percentage: discountPct,
+          created_by: 'waiter',
+          status: 'pending',
         }),
       })
 
@@ -1137,6 +1139,9 @@ export default function WaiterComanderoPage() {
           isOpen={isCartDetailsOpen}
           onClose={() => setIsCartDetailsOpen(false)}
           cart={cart}
+          isWaiter={true}
+          lang="es"
+          onSendWaiterOrder={handleSendOrderToKitchen}
           onUpdateQuantity={(idx, q) => {
             updateCartForCurrentTable(prev => {
               if (q <= 0) return prev.filter((_, i) => i !== idx)

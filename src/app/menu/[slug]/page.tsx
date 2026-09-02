@@ -667,10 +667,17 @@ function DinerMenuContent() {
           </div>
         )}
 
-        {/* GUÍA VISUAL INTERACTIVA (MICRO-ONBOARDING DE 4 PASOS RÁPIDOS) */}
+        {/* GUÍA VISUAL INTERACTIVA (MICRO-ONBOARDING DE 3 PASOS ACCIONABLES) */}
         <MicroOnboardingBanner
           lang={currentLang}
           tableNumber={tableNumber}
+          onScrollToMenu={() => {
+            const target = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
+            if (target) {
+              target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }
+          }}
+          onOpenCart={() => setIsCartOpen(true)}
           onOpenCallWaiter={() => setShowServiceModal(true)}
         />
 
