@@ -358,14 +358,17 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
 
       if (!error && data && data.length > 0) {
         const map = new Map<string, Order>()
-        // 1. Cargar órdenes de Supabase
+        const overrides = (globalThis as any).__GASTRO_STATUS_OVERRIDES__ || {}
+        // 1. Cargar órdenes de Supabase con overrides de estado aplicados
         ;(data as unknown as Order[]).forEach(o => {
           const tableNum = o.table_number || (o.table ? o.table.table_number : 1)
-          map.set(o.id, { ...o, table_number: tableNum })
+          const effStatus = overrides[o.id] || o.status
+          map.set(o.id, { ...o, status: effStatus, table_number: tableNum })
         })
         // 2. Superponer memoria (estado fresco en tiempo real)
         memOrders.forEach(ord => {
-          map.set(ord.id, ord)
+          const effStatus = overrides[ord.id] || ord.status
+          map.set(ord.id, { ...ord, status: effStatus })
         })
         return Array.from(map.values())
       }

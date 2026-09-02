@@ -26,6 +26,7 @@ export interface TableSession {
 // Estado global en memoria de Node.js (persiste durante la ejecución del servidor)
 interface GlobalStoreState {
   __GASTRO_ORDERS__: Record<string, Order[]>
+  __GASTRO_STATUS_OVERRIDES__: Record<string, OrderStatus>
   __GASTRO_SERVICE_CALLS__: Record<string, ServiceCall[]>
   __GASTRO_TABLE_SESSIONS__: Record<string, Record<string | number, TableSession>>
   __GASTRO_ANALYTICS__: Record<string, AnalyticsEvent[]>
@@ -142,7 +143,9 @@ export function isValidOrderTransition(currentStatus: string, nextStatus: string
 
 // Helpers de Órdenes
 export function getServerOrders(slug: string): Order[] {
-  return globalStore.__GASTRO_ORDERS__?.[slug] || []
+  const list = globalStore.__GASTRO_ORDERS__?.[slug] || []
+  const overrides = globalStore.__GASTRO_STATUS_OVERRIDES__ || {}
+  return list.map(o => (overrides[o.id] ? { ...o, status: overrides[o.id] } : o))
 }
 
 export function addServerOrder(slug: string, order: Order): Order {
@@ -151,6 +154,9 @@ export function addServerOrder(slug: string, order: Order): Order {
   }
   if (!globalStore.__GASTRO_ORDERS__[slug]) {
     globalStore.__GASTRO_ORDERS__[slug] = []
+  }
+  if (!globalStore.__GASTRO_STATUS_OVERRIDES__) {
+    globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
   }
   const existingIdx = globalStore.__GASTRO_ORDERS__[slug].findIndex(o => o.id === order.id)
   if (existingIdx >= 0) {
@@ -176,7 +182,14 @@ export function updateServerOrderStatus(
   if (!globalStore.__GASTRO_ORDERS__[slug]) {
     globalStore.__GASTRO_ORDERS__[slug] = []
   }
+  if (!globalStore.__GASTRO_STATUS_OVERRIDES__) {
+    globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
+  }
 
+  // 1. Guardar override persistente del estado de esta orden
+  globalStore.__GASTRO_STATUS_OVERRIDES__[orderId] = status
+
+  // 2. Actualizar en todas las listas de memoria activas
   let found = false
   for (const s of Object.keys(globalStore.__GASTRO_ORDERS__)) {
     const list = globalStore.__GASTRO_ORDERS__[s] || []
@@ -187,8 +200,22 @@ export function updateServerOrderStatus(
     }
   }
 
+  // 3. Si no estaba en memoria aún, registrar la orden para que el mozo y cliente la reciban
+  if (!found) {
+    globalStore.__GASTRO_ORDERS__[slug].unshift({
+      id: orderId,
+      restaurant_id: slug,
+      table_number: 1,
+      status,
+      total_amount: 0,
+      order_items: [],
+      created_at: new Date().toISOString(),
+    } as any)
+  }
+
+  // 4. Emitir evento SSE para sincronización instantánea en Mozo y Cliente
   broadcastEvent({ type: 'order_updated', slug, orderId, status })
-  return { orders: globalStore.__GASTRO_ORDERS__[slug] || [] }
+  return { orders: getServerOrders(slug) }
 }
 
 export function clearServerOrders(slug: string): void {

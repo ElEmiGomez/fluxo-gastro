@@ -360,19 +360,19 @@ function DinerMenuContent() {
           const total = activeKitchenOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
           setTableTotalAmount(total)
 
+          const isDelivered = activeKitchenOrders.length > 0 && activeKitchenOrders.every(o => o.status === 'delivered')
           const isReady = activeKitchenOrders.some(o => o.status === 'ready')
           const isPreparing = activeKitchenOrders.some(o => o.status === 'preparing')
           const isPending = activeKitchenOrders.some(o => o.status === 'pending')
-          const isDelivered = activeKitchenOrders.length > 0 && activeKitchenOrders.every(o => o.status === 'delivered')
 
-          if (isReady) {
+          if (isDelivered) {
+            setTableOrderStatus('delivered')
+          } else if (isReady) {
             setTableOrderStatus('ready')
           } else if (isPreparing) {
             setTableOrderStatus('preparing')
           } else if (isPending) {
             setTableOrderStatus('pending')
-          } else if (isDelivered) {
-            setTableOrderStatus('delivered')
           }
         } else if (serverOrdersList.length > 0) {
           // Si el servidor devolvió órdenes pero ninguna corresponde a esta mesa activa, limpiar a null
