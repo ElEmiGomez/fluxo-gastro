@@ -21,7 +21,7 @@ export function GoogleReviewBooster({
   variant = 'card',
   onReviewOpened,
 }: GoogleReviewBoosterProps) {
-  const [isDismissed, setIsDismissed] = useState(true)
+  const [isDismissed, setIsDismissed] = useState(false)
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
   const [feedbackSent, setFeedbackSent] = useState(false)
 
@@ -31,20 +31,8 @@ export function GoogleReviewBooster({
       ? `https://search.google.com/local/writereview?placeid=${googlePlaceId}`
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurantName)}`)
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const dismissed = localStorage.getItem(`fluxo_review_dismissed_${restaurantSlug}`)
-      if (!dismissed) {
-        setIsDismissed(false)
-      }
-    }
-  }, [restaurantSlug])
-
   const handleDismiss = () => {
     setIsDismissed(true)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`fluxo_review_dismissed_${restaurantSlug}`, 'true')
-    }
   }
 
   const handleSelectStar = (stars: number) => {

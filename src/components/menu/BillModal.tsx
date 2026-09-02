@@ -7,6 +7,7 @@ import { GoogleReviewBooster } from '@/components/menu/GoogleReviewBooster'
 interface BillModalProps {
   isOpen: boolean
   onClose: () => void
+  onBillRequested?: () => void
   tableNumber: string | null
   slug: string
   restaurantName?: string
@@ -18,6 +19,7 @@ interface BillModalProps {
 export function BillModal({
   isOpen,
   onClose,
+  onBillRequested,
   tableNumber,
   slug,
   restaurantName = 'Fluxo Gastro',
@@ -33,6 +35,7 @@ export function BillModal({
 
   const handleRequestBill = async (paymentMethod: string) => {
     setIsSubmitting(true)
+    onBillRequested?.()
     const splitNote = splitCount > 1 && totalAmount ? ` (Dividida ÷${splitCount}: ${(totalAmount / splitCount).toFixed(2)} €/pers)` : ''
     setBillRequested(`${paymentMethod}${splitNote}`)
 

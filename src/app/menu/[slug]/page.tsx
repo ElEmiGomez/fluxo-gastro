@@ -77,6 +77,7 @@ function DinerMenuContent() {
   const [showTimelineModal, setShowTimelineModal] = useState(false)
   const [showDirectBillModal, setShowDirectBillModal] = useState(false)
   const [isTablePaid, setIsTablePaid] = useState(false)
+  const [hasRequestedBill, setHasRequestedBill] = useState(false)
   const [tableTotalAmount, setTableTotalAmount] = useState<number>(0)
   const [addedToast, setAddedToast] = useState<string | null>(null)
 
@@ -315,10 +316,21 @@ function DinerMenuContent() {
         if (thisTableSession && thisTableSession.status === 'free') {
           setTableOrderStatus(null)
           setIsTablePaid(false)
+          setHasRequestedBill(false)
           return
         }
 
         const calls: any[] = callsRes.calls || []
+        const activeBillCall = calls.some(
+          (c: any) =>
+            c.table_number?.toString() === tableNumber?.toString() &&
+            c.call_type?.startsWith('bill_') &&
+            c.status === 'pending'
+        )
+        if (activeBillCall) {
+          setHasRequestedBill(true)
+        }
+
         const isBillPaid = calls.some(
           (c: any) =>
             c.table_number?.toString() === tableNumber?.toString() &&
@@ -329,6 +341,7 @@ function DinerMenuContent() {
         if (isBillPaid) {
           setIsTablePaid(true)
           setTableOrderStatus(null)
+          setHasRequestedBill(false)
           return
         } else {
           setIsTablePaid(false)
@@ -768,82 +781,118 @@ function DinerMenuContent() {
             )}
 
             {tableOrderStatus === 'delivered' && (
-              <div className="space-y-2">
-                <div className="p-3.5 rounded-2xl bg-slate-900 text-white border border-slate-700 shadow-md flex items-center justify-between gap-3 animate-in fade-in">
-                  <div 
-                    onClick={() => setShowTimelineModal(true)}
-                    className="flex items-center gap-3 cursor-pointer flex-1 min-w-0"
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                      <UtensilsCrossed className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-extrabold text-xs text-amber-300 leading-tight truncate">
-                        {t('orderDeliveredTitle')} #{tableNumber}!
-                      </h4>
-                      <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
-                        {t('enjoyMeal')}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowDirectBillModal(true)}
-                    className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black shadow-sm flex items-center gap-1 whitespace-nowrap flex-shrink-0 transition-transform active:scale-95"
-                  >
-                    <Receipt className="w-3.5 h-3.5" />
-                    <span>{t('billButton')}</span>
-                  </button>
-                </div>
+              <div className="space-y-3 animate-in fade-in duration-300">
+                {!hasRequestedBill ? (
+                  /* OPCIÓN UNIFICADA COMPACTA: PEDIDO ENTREGADO + ACCIONES RÁPIDAS (CAFÉ/POSTRES Y CUENTA) */
+                  <div className="p-3.5 bg-slate-900 text-white rounded-2xl border border-slate-700/80 shadow-md space-y-3">
+                    {/* Cabecera compacta con estado entregado */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                          <UtensilsCrossed className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                              {t('tableNumberLabel')} #{tableNumber}
+                            </span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          </div>
+                          <h4 className="font-extrabold text-xs text-white leading-tight truncate">
+                            {t('orderDeliveredTitle')} · ¡Buen provecho!
+                          </h4>
+                        </div>
+                      </div>
 
-                {/* SUGERENCIA SUTIL DE SOBREMESA / CAFÉ & POSTRE TRAS SERVIR */}
-                <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200/80 shadow-xs flex items-center justify-between gap-2 animate-in fade-in duration-300">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-base flex-shrink-0">☕</span>
-                    <div className="min-w-0">
-                      <span className="text-[11px] font-extrabold text-amber-950 block leading-tight">
-                        {t('coffeeDessertPrompt')}
-                      </span>
-                      <span className="text-[10px] text-amber-800 leading-none">
-                        {t('addOneTouchPrompt')}
-                      </span>
+                      {/* Botón para ver fases de comanda */}
+                      <button
+                        type="button"
+                        onClick={() => setShowTimelineModal(true)}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
+                      >
+                        <span>{t('viewPhases')}</span>
+                        <ChevronRight size={11} />
+                      </button>
+                    </div>
+
+                    {/* Mensaje de tranquilidad / sobremesa */}
+                    <p className="text-[11px] text-slate-300 leading-snug">
+                      ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
+                    </p>
+
+                    {/* 2 Botoncitos en la misma fila sin sobrecargar verticalmente */}
+                    <div className="grid grid-cols-2 gap-2 pt-0.5">
+                      {/* Botón 1: Café o Postres */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const dessertCat = categories.find(c => c.name.toUpperCase().includes('POSTRE')) || categories.find(c => c.id === 'cat-10') || categories[0]
+                          if (dessertCat) {
+                            setSelectedCategory(dessertCat.id)
+                          }
+                          const catEl = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
+                          if (catEl) {
+                            catEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }
+                          triggerHaptic(HAPTIC_PATTERNS.TAP)
+                        }}
+                        className="p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                      >
+                        <span className="text-sm">☕🍰</span>
+                        <span>Café / Postres</span>
+                      </button>
+
+                      {/* Botón 2: Pedir la Cuenta */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDirectBillModal(true)
+                          triggerHaptic(HAPTIC_PATTERNS.TAP)
+                        }}
+                        className="p-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span>{t('billButton')}</span>
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button
-                      onClick={() => {
-                        const coffee = products.find(p => p.name.toLowerCase().includes('café') || p.name.toLowerCase().includes('cafe') || p.category_id === 'cat-12') || products[0]
-                        if (coffee) handleUpdateProductQuantity(coffee, 1)
-                      }}
-                      className="px-2.5 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold shadow-xs transition-all flex items-center gap-1 active:scale-95"
-                    >
-                      <span>{t('addCoffee')}</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        const dessertCat = categories.find(c => c.name.toUpperCase().includes('POSTRE')) || categories.find(c => c.id === 'cat-10')
-                        if (dessertCat) {
-                          setSelectedCategory(dessertCat.id)
-                        }
-                        const catEl = document.getElementById('menu-category-tabs')
-                        if (catEl) {
-                          catEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                        }
-                      }}
-                      className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 hover:bg-amber-100 text-amber-950 text-[11px] font-bold shadow-xs transition-all active:scale-95"
-                    >
-                      <span>{t('desserts')}</span>
-                    </button>
-                  </div>
-                </div>
+                ) : (
+                  /* VISTA TRAS PEDIR LA CUENTA: AVISO AL MOZO + GOOGLE REVIEW BOOSTER MIENTRAS LLEGA */
+                  <div className="space-y-3 animate-in fade-in duration-300">
+                    <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                          <Receipt className="w-4 h-4 animate-bounce" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                            Mesa #{tableNumber} · Cuenta Solicitada
+                          </span>
+                          <h4 className="font-extrabold text-xs text-white leading-tight truncate">
+                            El mozo se acerca a tu mesa para cobrar
+                          </h4>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowServiceModal(true)}
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 text-[11px] font-bold border border-emerald-700/60 transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
+                      >
+                        <Bell size={12} />
+                        <span>Llamar</span>
+                      </button>
+                    </div>
 
-                {/* Tarjeta Google Review Booster en Sobremesa */}
-                <GoogleReviewBooster
-                  restaurantName={restaurant.name}
-                  restaurantSlug={restaurant.slug}
-                  googleReviewUrl={restaurant.google_review_url}
-                  googlePlaceId={restaurant.google_place_id}
-                  variant="card"
-                />
+                    {/* Tarjeta Google Review Booster (Aparece únicamente al pedir la cuenta mientras viene el mozo) */}
+                    <GoogleReviewBooster
+                      restaurantName={restaurant.name}
+                      restaurantSlug={restaurant.slug}
+                      googleReviewUrl={restaurant.google_review_url}
+                      googlePlaceId={restaurant.google_place_id}
+                      variant="card"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1433,6 +1482,7 @@ function DinerMenuContent() {
         <BillModal
           isOpen={showDirectBillModal}
           onClose={() => setShowDirectBillModal(false)}
+          onBillRequested={() => setHasRequestedBill(true)}
           tableNumber={tableNumber}
           slug={restaurant.slug}
           restaurantName={restaurant.name}
