@@ -75,3 +75,21 @@ flowchart TD
    No importa si entran 5 clientes o 500 a la vez en la terraza de Noia: Vercel crea copias instantáneas de la carta en servidores distribuidos para que el menú cargue al instante bajo el sol.
 3. **⚡ Supabase es la *Caja Fuerte y el Tablero Central de Cocina*:**  
    Es donde se guardan las comandas reales, el estado de las mesas y los cobros. Gracias a las políticas **RLS (Row Level Security)**, cada restaurante solo puede ver sus propias mesas y ningún cliente puede espiar las comandas de otra mesa.
+
+---
+
+## 5. 🍳 Lección Didáctica: La Pizarra Magnética y el Megáfono sin Ecos (Realtime SSE)
+
+```mermaid
+flowchart TD
+    PIZARRA["🧲 La Pizarra Magnética de Cocina (globalThis)<br/>Anota los pedidos activos en memoria para respuesta instantánea en 0 milisegundos."]
+    PIZARRA -->|Solo al cambiar un ticket| MEGAFONO["📢 El Megáfono de Cocina (SSE Broadcast)<br/>Avisa al camarero: '¡Marchando Mesa 4!' o '¡Listo para Servir!'"]
+    MEGAFONO --> MOZO["🤵 El Mozo en Salón<br/>Recibe el aviso de inmediato sin preguntar 20 veces por segundo."]
+```
+
+* **¿Por qué ocurrían los "parpadeos" o rebotes?**  
+  Imagina que cada vez que el camarero se asoma a la puerta de la cocina solo a mirar la pizarra, el cocinero le grita por el megáfono la lista completa de platos. El camarero se confunde y vuelve a preguntar, creando un eco ensordecedor.
+* **La Solución Fluxo:**  
+  1. Mirar la pizarra (consultas `GET`) es silencioso y no activa el megáfono.
+  2. El megáfono (`broadcastEvent`) solo suena cuando ocurre una **acción real**: cuando entra una nueva comanda o cuando el chef pulsa *"Listo para Servir"*.
+  3. El camarero tiene su tablet sincronizada en 0 milisegundos y el cliente ve su línea temporal fija y estable.

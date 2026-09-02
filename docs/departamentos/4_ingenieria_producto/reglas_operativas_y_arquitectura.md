@@ -57,3 +57,31 @@ flowchart TD
 * **Garantía Operativa:**
   - Cero dependencias de servidores locales encendidos o túneles ngrok/localtunnel efímeros.
   - Respaldo transaccional en PostgreSQL con failover y escalado automático de peticiones concurrentes en picos de terraza.
+
+---
+
+## ⚡ 7. Sincronización en Tiempo Real y Memoria Viva (`globalThis` + SSE)
+
+```mermaid
+flowchart TD
+    KDS["🍳 Cocina marca 'Listo'"] --> API["📡 PATCH /api/orders (status: ready)"]
+    API --> MEM["🧠 Memoria Compartida globalThis (Actualización Atómica)"]
+    MEM --> BROAD["📢 broadcastEvent('order_updated')"]
+    BROAD --> MOZO["🔔 Comandero: Mesa Verde + Alerta Superior + Chime Acústico"]
+    BROAD --> DINER["📱 Menú Comensal: Banner Fijo 'Comanda Lista para Servir'"]
+```
+
+1. **Memoria Singleton `globalThis`:**
+   - Previene desincronizaciones entre worker threads o server actions en Next.js.
+   - Las consultas de lectura `GET` nunca emiten broadcasts de eventos para evitar bucles recursivos de polling.
+2. **Estado de Comanda Blindado (`Sticky State`):**
+   - El estado del pedido en la pantalla del cliente no se borra ante micro-latencias de red; solo se limpia cuando el mozo libera la mesa (`free`) o se completa el cobro de la cuenta (`attended`).
+
+---
+
+## ☕ 8. Ciclo de Sobremesa y Google Review Booster
+
+1. **Tarjeta Unificada de Entrega:**
+   - Al marcarse `delivered`, se muestra una sola tarjeta compacta en fondo oscuro con dos botones: `[☕🍰 Café / Postres]` (acceso directo al catálogo) y `[💳 Pedir la Cuenta]`.
+2. **Momento Psicológico Óptimo:**
+   - La tarjeta de reseñas en Google Maps (`<GoogleReviewBooster />`) permanece oculta durante la comida y se activa **exclusivamente al solicitar la cuenta**, aprovechando la espera antes del cobro para captar valoraciones de 5 estrellas.

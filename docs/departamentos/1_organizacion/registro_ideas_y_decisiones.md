@@ -26,7 +26,9 @@
 | **DEC-16** | 01/09/2026 | Organización & Program Data | **Dashboard de Administración de Carta + Asistente IA de Digitalización**. | Panel para que el hostelero gestione categorías, platos y precios en tiempo real, con asistente IA que digitaliza fotos/textos de cartas físicas a Supabase en 60s. |
 | **DEC-17** | 01/09/2026 | Organización & Program Data | **Módulo "Menú del Día" & Recomendación Dinámica en Cabecera**. | Soporte para menús a precio cerrado (1º + 2º + postre/bebida) y conmutador de Promoción Estrella según el tipo de local. |
 | **DEC-18** | 01/09/2026 | Marketing & Organización | **Inclusión de Reporte Mensual de Eficiencia y Rentabilidad en Plan Full**. | Informe mensual ejecutivo para dueños con horas de mayor demora, platos de mayor/menor rotación y sugerencias de IA para optimizar la sala. |
-| **DEC-19** | 01/09/2026 | UI/UX & Feedback Real | **Guía Interactiva Paso a Paso para el Comensal (Onboarding de Sala)**. | Micro-indicadores visuales ("Toca para elegir -> Revisa comanda -> Mozo valida -> Pide cuenta") para guiar a usuarios no tecnológicos hasta el pago. |
+| **DEC-19** | 01/09/2026 | UI/UX & Feedback Real | **Guía Interactiva Paso a Paso para el Comensal (Onboarding de Sala)**. | *Superada por DEC-20.* |
+| **DEC-20** | 02/09/2026 | UI/UX & Program Data | **Unificación a 3 Pasos de Onboarding y Tarjeta Única de Sobremesa**. | Reducción de la carga cognitiva: Guía en 3 pasos (1. Elige, 2. Pide, 3. Disfruta) y fusión de las tarjetas de sobremesa en una sola tarjeta compacta en fondo oscuro con 2 botones (`[☕🍰 Café / Postres]` y `[💳 Pedir la Cuenta]`). |
+| **DEC-21** | 02/09/2026 | Marketing & Program Data | **Google Review Booster Condicional al Solicitar la Cuenta**. | Ocultar la solicitud de valoración durante la comida y activarla exclusivamente al pedir la cuenta (`hasRequestedBill`), aprovechando el tiempo muerto de espera mientras el mozo llega a cobrar. |
 
 ---
 

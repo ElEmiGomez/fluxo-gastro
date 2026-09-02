@@ -6,6 +6,30 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-09-02 11:50] — Unificación UX de 3 Pasos, Tarjeta Compacta de Sobremesa y Resiliencia en Tiempo Real
+* **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4), Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2), Organización General (Depto 1) y Learning & Intelligence (Depto 5).
+* **Consenso e Implementaciones Técnicas Aprobadas:**
+  1. **Guía Rápida Unificada en 3 Pasos Limpios (`src/components/menu/MicroOnboardingBanner.tsx`, `src/lib/i18n.ts`):**
+     - Reducción oficial a 3 pasos (`1. Elige · 2. Pide · 3. Disfruta`) en Gallego, Español e Inglés.
+     - Eliminación de dobles iconos y discrepancias numéricas en la interfaz.
+  2. **Tarjeta Única Compacta de Sobremesa y Momento Óptimo de Google Review Booster (`src/app/menu/[slug]/page.tsx`, `src/components/menu/GoogleReviewBooster.tsx`):**
+     - Sustitución de 3 tarjetas apiladas por 1 sola tarjeta compacta en fondo oscuro con 2 botones de acceso rápido: `[☕🍰 Café / Postres]` (filtra a carta) y `[💳 Pedir la Cuenta]` (abre modal de pago).
+     - Activación de `<GoogleReviewBooster />` **exclusivamente al solicitar la cuenta** (`hasRequestedBill`), aprovechando los 60-90 segundos de espera mientras el mozo acude a la mesa para captar reseñas de 5 estrellas en Google Maps.
+  3. **Erradicación del Bucle de Retroalimentación SSE y Resiliencia de Red (`src/lib/server-state.ts`, `src/lib/supabase/repository.ts`):**
+     - Eliminada la emisión de eventos SSE en consultas `GET` de repositorio para prevenir tormentas de polling.
+     - Memoria compartida atómica en `globalThis` de Node.js singleton.
+     - Estado de comanda blindado e inmutable (`sticky state`) en el menú del comensal: evita parpadeos o reseteos a `null` ante micro-latencias de red.
+  4. **Notificación Bidireccional Inmediata Cocina ➔ Mozo ➔ Comensal (`src/app/staff/comandero/[slug]/page.tsx`, `src/app/staff/kitchen/[slug]/page.tsx`):**
+     - Al marcar un pedido como terminado en cocina (`ready`), el comandero del mozo ilumina la mesa en verde brillante, dispara la alerta superior interactiva y emite el sonido acústico.
+     - En el teléfono del cliente, el banner de fases se actualiza instantáneamente a *"¡Tu comanda está lista para servir!"*.
+* **Estado de Certificación:**
+  - Build Next.js 14: **9/9 rutas optimizadas (0 errores)**.
+  - Test Suite en Vivo: **24/24 PASS (100%)**.
+  - Repositorio GitHub: Sincronizado en rama `main`.
+  - PDF Didáctico de Mentoría: Actualizado en `Lecciones_Fluxo_02_09_2026.pdf`.
+
+---
+
 ### [2026-09-01 13:55] — Resolución de Incidencias UX/UI, Sugerencias de Upsell y Resiliencia de Sesiones de Mesa
 * **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4), Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2) y Organización General (Depto 1).
 * **Correcciones Técnicas Certificadas:**

@@ -94,3 +94,17 @@ Para garantizar una adopción del 100% el primer día de servicio en terrazas y 
   - Distintivo masivo `MESA X` de altísimo contraste solar.
   - Iconografía clara de alérgenos y 0% comisiones.
 
+---
+
+## 🧭 7. Micro-Onboarding de 3 Pasos & Tarjeta Compacta de Sobremesa
+
+1. **Guía Rápida de Comensal (`<MicroOnboardingBanner />`):**
+   - **3 Pasos Limpios:** 📌 1. Elige $\rightarrow$ 🚀 2. Pide $\rightarrow$ 🍽️ 3. Disfruta.
+   - Píldora minimizable con toque accesible para no saturar la vista vertical de la carta.
+2. **Tarjeta Unificada de Sobremesa en Mesa Entregada:**
+   - **Contenedor:** Tarjeta oscura en `bg-slate-900` con bordes redondeados `rounded-3xl` y tipografía blanca de alto contraste.
+   - **Botones Paralelos (2 Columnas):**
+     - Botón Izquierdo: `[☕🍰 Café / Postres]` (Filtro dinámico de carta).
+     - Botón Derecho: `[💳 Pedir la Cuenta]` (Abre modal de opciones de pago en mesa).
+   - **Google Review Booster:** Desplegado de forma no invasiva únicamente cuando el comensal confirma la llamada para cobrar.
+
