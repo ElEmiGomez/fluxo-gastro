@@ -487,8 +487,8 @@ export default function WaiterComanderoPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          slug: restaurant.slug,
-          restaurant_id: restaurant.id,
+          slug: restaurant?.slug || slug,
+          restaurant_id: restaurant?.id || '',
           table_id: selectedTable.id,
           table_number: selectedTable.table_number,
           total_amount: totalAmount,

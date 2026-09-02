@@ -259,22 +259,28 @@ export async function createOrder(
         }
       }
 
-      // 2. Fallback con INSERT ... ON CONFLICT (idempotency_key) DO NOTHING en el SDK
-      const { data: newOrder, error: orderErr } = await supabase
-        .from('orders')
-        .upsert(
-          {
+      // 2. Inserción con o sin Idempotencia en Supabase
+      const insertQuery = orderData.idempotency_key
+        ? supabase.from('orders').upsert(
+            {
+              restaurant_id: restaurantId,
+              table_session_id: orderData.table_session_id || null,
+              table_number: orderData.table_number,
+              total_amount: orderData.total_amount,
+              status: initialStatus,
+              idempotency_key: orderData.idempotency_key,
+            },
+            { onConflict: 'idempotency_key', ignoreDuplicates: true }
+          )
+        : supabase.from('orders').insert({
             restaurant_id: restaurantId,
             table_session_id: orderData.table_session_id || null,
             table_number: orderData.table_number,
             total_amount: orderData.total_amount,
             status: initialStatus,
-            idempotency_key: orderData.idempotency_key || null,
-          },
-          { onConflict: 'idempotency_key', ignoreDuplicates: true }
-        )
-        .select('*')
-        .single()
+          })
+
+      const { data: newOrder, error: orderErr } = await insertQuery.select('*').single()
 
       if (!orderErr && newOrder) {
         // Insertar items solo si es una orden nueva
@@ -352,15 +358,14 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
 
       if (!error && data && data.length > 0) {
         const map = new Map<string, Order>()
-        memOrders.forEach(ord => map.set(ord.id, ord))
+        // 1. Cargar órdenes de Supabase
         ;(data as unknown as Order[]).forEach(o => {
           const tableNum = o.table_number || (o.table ? o.table.table_number : 1)
-          const existing = map.get(o.id)
-          if (existing) {
-            map.set(o.id, { ...o, table_number: tableNum, status: existing.status })
-          } else {
-            map.set(o.id, { ...o, table_number: tableNum })
-          }
+          map.set(o.id, { ...o, table_number: tableNum })
+        })
+        // 2. Superponer memoria (estado fresco en tiempo real)
+        memOrders.forEach(ord => {
+          map.set(ord.id, ord)
         })
         return Array.from(map.values())
       }
