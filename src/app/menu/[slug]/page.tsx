@@ -436,9 +436,20 @@ function DinerMenuContent() {
 
     pollInterval = setInterval(checkOrderStatus, 2000)
 
+    // Manejar desbloqueo de móvil / retorno a pestaña
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkOrderStatus()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleVisibilityChange)
+
     return () => {
       if (sseEventSource) sseEventSource.close()
       if (pollInterval) clearInterval(pollInterval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleVisibilityChange)
     }
   }, [slug, tableNumber])
 

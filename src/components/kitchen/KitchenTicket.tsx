@@ -46,7 +46,7 @@ export function KitchenTicket({
         statusLabel: 'Listo para Servir',
         statusColor: 'text-emerald-700 font-bold',
         dotColor: 'bg-emerald-500',
-        timerLabel: `Listo (${waitingMinutes} min)`,
+        timerLabel: `Listo (hace ${waitingMinutes} min)`,
       }
     }
     if (waitingMinutes >= 20) {
@@ -57,7 +57,7 @@ export function KitchenTicket({
         statusLabel: 'Demorado en Cocina',
         statusColor: 'text-red-700 font-bold',
         dotColor: 'bg-red-600 animate-ping',
-        timerLabel: `⏱ ${waitingMinutes} min (Urgente)`,
+        timerLabel: `⏱ Hace ${waitingMinutes} min (Urgente)`,
       }
     }
     if (waitingMinutes >= 10) {
@@ -68,7 +68,7 @@ export function KitchenTicket({
         statusLabel: 'En Marcha',
         statusColor: 'text-amber-700 font-bold',
         dotColor: 'bg-amber-500',
-        timerLabel: `⏱ ${waitingMinutes} min`,
+        timerLabel: `⏱ Hace ${waitingMinutes} min`,
       }
     }
     return {
@@ -78,11 +78,14 @@ export function KitchenTicket({
       statusLabel: 'A Tiempo',
       statusColor: 'text-slate-600 font-bold',
       dotColor: 'bg-emerald-500',
-      timerLabel: `⏱ ${waitingMinutes} min`,
+      timerLabel: waitingMinutes > 0 ? `⏱ Hace ${waitingMinutes} min` : '⏱ Hace < 1 min',
     }
   }
 
   const urgency = getUrgencyStyles()
+  const orderTimeFormatted = order.created_at
+    ? new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '--:--'
 
   return (
     <div
@@ -111,7 +114,7 @@ export function KitchenTicket({
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className={`w-2 h-2 rounded-full ${urgency.dotColor} flex-shrink-0`} />
               <span className={`text-xs block ${urgency.statusColor}`}>
-                {urgency.statusLabel}
+                {urgency.statusLabel} &middot; <span className="text-[11px] font-medium text-slate-500">{orderTimeFormatted}</span>
               </span>
             </div>
           </div>

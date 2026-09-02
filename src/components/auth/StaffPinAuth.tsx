@@ -44,14 +44,20 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isValidating, setIsValidating] = useState<boolean>(false)
 
-  // Siempre limpiar cualquier rastro previo para garantizar que siempre pida el PIN
+  // Restaurar sesión de turno si está dentro de las 12 horas (protección contra bloqueo de móvil)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.clear()
+        const stored = localStorage.getItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (parsed?.auth && Date.now() - parsed.timestamp < 12 * 60 * 60 * 1000) {
+            setIsAuthenticated(true)
+          }
+        }
       } catch {}
     }
-  }, [])
+  }, [role, restaurantSlug])
 
   const validatePin = async (pinToTest: string) => {
     const cleanPin = pinToTest.trim()
@@ -71,6 +77,12 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
       const data = await res.json()
       if (res.ok && data.success) {
         setIsAuthenticated(true)
+        try {
+          localStorage.setItem(
+            `fluxo_staff_auth_${role}_${restaurantSlug}`,
+            JSON.stringify({ auth: true, timestamp: Date.now() })
+          )
+        } catch {}
       } else {
         setErrorMsg(data.error || 'PIN incorrecto. Intenta nuevamente.')
         setPinInput('')

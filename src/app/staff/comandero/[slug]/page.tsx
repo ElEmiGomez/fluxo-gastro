@@ -63,7 +63,25 @@ export default function WaiterComanderoPage() {
   const [tableStatuses, setTableStatuses] = useState<Record<string | number, TableStatusType>>({})
   const [tableDwellMinutes, setTableDwellMinutes] = useState<Record<string | number, number>>({})
   const [readyOrderAlert, setReadyOrderAlert] = useState<string | number | null>(null)
-  const [serverOrders, setServerOrders] = useState<Order[]>([])
+  const [serverOrders, setServerOrders] = useState<Order[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`fluxo_comandero_orders_${slug}`)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) {
+            const now = Date.now()
+            return parsed.filter(
+              (o: Order) =>
+                o.status !== 'cancelled' &&
+                now - new Date(o.created_at).getTime() < 12 * 60 * 60 * 1000
+            )
+          }
+        }
+      } catch {}
+    }
+    return []
+  })
 
   // Sistema de Avisos: Estado Reconciliado Persistente (Anti-Flicker / Anti-Desaparición)
   const [popupAlert, setPopupAlert] = useState<PendingServiceCall | null>(null)
@@ -76,6 +94,15 @@ export default function WaiterComanderoPage() {
   const seenCallIdsRef = useRef<Set<string>>(new Set())
   const seenReadyOrderIdsRef = useRef<Set<string>>(new Set())
   const popupTimerRef = useRef<any>(null)
+
+  // Persistir comandas en localStorage para blindaje contra suspensión de pestañas en móvil
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(`fluxo_comandero_orders_${slug}`, JSON.stringify(serverOrders))
+      } catch {}
+    }
+  }, [serverOrders, slug])
 
   // Helper para modificar el carrito de la mesa activa
   const updateCartForCurrentTable = (updater: (prev: CartItem[]) => CartItem[]) => {
@@ -386,10 +413,21 @@ export default function WaiterComanderoPage() {
 
     loadInitialData()
 
+    // Manejar desbloqueo de móvil / cambio de pestaña de vuelta a la app
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncServerData()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleVisibilityChange)
+
     return () => {
       if (sseEventSource) sseEventSource.close()
       if (pollInterval) clearInterval(pollInterval)
       if (popupTimerRef.current) clearTimeout(popupTimerRef.current)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleVisibilityChange)
     }
   }, [slug])
 

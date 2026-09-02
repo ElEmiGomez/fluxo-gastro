@@ -19,7 +19,26 @@ export default function KitchenKDSPage() {
   const slug = (params?.slug as string) || 'burger-gourmet'
 
   const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
-  const [orders, setOrders] = useState<Order[]>([])
+  const [orders, setOrders] = useState<Order[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`fluxo_kds_orders_${slug}`)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) {
+            const now = Date.now()
+            return parsed.filter(
+              (o: Order) =>
+                o.status !== 'delivered' &&
+                o.status !== 'cancelled' &&
+                now - new Date(o.created_at).getTime() < 12 * 60 * 60 * 1000
+            )
+          }
+        }
+      } catch {}
+    }
+    return []
+  })
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [newOrderAlert, setNewOrderAlert] = useState(false)
   const [filterStatus, setFilterStatus] = useState<'active' | 'all' | 'ready'>('all')
@@ -33,6 +52,16 @@ export default function KitchenKDSPage() {
   const seenOrderIdsRef = useRef<Set<string>>(new Set())
   const dispatchedOrderIdsRef = useRef<Set<string>>(new Set())
   const localStatusOverridesRef = useRef<Map<string, { status: OrderStatus; timestamp: number }>>(new Map())
+
+  // Persistir comandas activas en localStorage para blindaje total contra bloqueo de pantalla o suspensión en móvil
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const active = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled')
+        localStorage.setItem(`fluxo_kds_orders_${slug}`, JSON.stringify(active))
+      } catch {}
+    }
+  }, [orders, slug])
 
   // Toggle de Pantalla Completa con 1 Toque
   const toggleFullscreen = () => {
@@ -175,9 +204,20 @@ export default function KitchenKDSPage() {
 
     initKDS()
 
+    // Manejar desbloqueo de móvil / cambio de pestaña de vuelta a la app
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchServerOrders()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleVisibilityChange)
+
     return () => {
       if (sseEventSource) sseEventSource.close()
       if (pollInterval) clearInterval(pollInterval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleVisibilityChange)
     }
   }, [slug, soundEnabled])
 
