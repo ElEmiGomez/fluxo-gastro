@@ -207,18 +207,21 @@ export function updateServerOrderStatus(
     }
   }
 
-  // 3. Si no estaba en memoria aún, registrar la orden respetando la mesa real
-  if (!found) {
-    const finalTableNum = tableNumber ? parseInt(String(tableNumber), 10) : 1
-    globalStore.__GASTRO_ORDERS__[slug].unshift({
-      id: orderId,
-      restaurant_id: slug,
-      table_number: finalTableNum,
-      status,
-      total_amount: 0,
-      order_items: [],
-      created_at: new Date().toISOString(),
-    } as any)
+  // 3. Si no se encontró por ID pero se especificó número de mesa, actualizar la comanda activa de esa mesa
+  if (!found && tableNumber) {
+    const tblInt = parseInt(String(tableNumber), 10)
+    const list = globalStore.__GASTRO_ORDERS__[slug] || []
+    const tableOrderIdx = list.findIndex(
+      o => (o.table_number === tblInt || o.table?.table_number === tblInt) && o.status !== 'cancelled' && o.status !== 'delivered'
+    )
+    if (tableOrderIdx >= 0) {
+      list[tableOrderIdx] = {
+        ...list[tableOrderIdx],
+        status,
+      }
+      globalStore.__GASTRO_STATUS_OVERRIDES__[list[tableOrderIdx].id] = status
+      found = true
+    }
   }
 
   // 4. Emitir evento SSE para sincronización instantánea en Mozo y Cliente

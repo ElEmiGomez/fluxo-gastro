@@ -90,6 +90,7 @@ export default function WaiterComanderoPage() {
   // Set de IDs ya atendidos o procesados para State Lock infalible
   const attendedCallIdsRef = useRef<Set<string>>(new Set())
   const validatedOrderIdsRef = useRef<Set<string>>(new Set())
+  const deliveredOrderIdsRef = useRef<Set<string>>(new Set())
   const cancelledOrderIdsRef = useRef<Set<string>>(new Set())
   const seenCallIdsRef = useRef<Set<string>>(new Set())
   const seenReadyOrderIdsRef = useRef<Set<string>>(new Set())
@@ -155,19 +156,28 @@ export default function WaiterComanderoPage() {
   // Al seleccionar una mesa, cambiar la selección
   const handleSelectTableAndClearAlerts = (table: Table) => {
     setSelectedTable(table)
+    if (readyOrderAlert?.toString() === table.table_number.toString()) {
+      setReadyOrderAlert(null)
+    }
   }
 
   const [showFreeConfirmTable, setShowFreeConfirmTable] = useState<number | string | null>(null)
 
   // Entregar un ticket o comanda individual específica
-  const handleDeliverSingleOrder = async (orderId: string) => {
+  const handleDeliverSingleOrder = async (orderId: string, tableNum?: number | string) => {
+    deliveredOrderIdsRef.current.add(orderId)
+    setServerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'delivered' } : o))
+    
+    if (tableNum && readyOrderAlert?.toString() === tableNum.toString()) {
+      setReadyOrderAlert(null)
+    }
+
     try {
       await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, orderId, status: 'delivered' }),
+        body: JSON.stringify({ slug, orderId, status: 'delivered', table_number: tableNum }),
       })
-      setServerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'delivered' } : o))
     } catch (e) {
       console.error('Error delivering single order:', e)
     }
@@ -175,13 +185,17 @@ export default function WaiterComanderoPage() {
 
   // Marcar todos los platos listos de la mesa como entregados
   const handleMarkDelivered = async (tableNum: string | number) => {
+    if (readyOrderAlert?.toString() === tableNum.toString()) {
+      setReadyOrderAlert(null)
+    }
+
     try {
       const readyOrders = serverOrders.filter(
         o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString()) && o.status === 'ready'
       )
 
       for (const ord of readyOrders) {
-        await handleDeliverSingleOrder(ord.id)
+        await handleDeliverSingleOrder(ord.id, tableNum)
       }
     } catch (e) {
       console.error('Error marking all delivered:', e)
@@ -280,7 +294,9 @@ export default function WaiterComanderoPage() {
           })
           incomingOrders.forEach(ord => {
             if (!cancelledOrderIdsRef.current.has(ord.id)) {
-              if (validatedOrderIdsRef.current.has(ord.id) && ord.status === 'pending_validation') {
+              if (deliveredOrderIdsRef.current.has(ord.id)) {
+                map.set(ord.id, { ...ord, status: 'delivered' })
+              } else if (validatedOrderIdsRef.current.has(ord.id) && ord.status === 'pending_validation') {
                 map.set(ord.id, { ...ord, status: 'pending' })
               } else {
                 map.set(ord.id, ord)
@@ -330,7 +346,8 @@ export default function WaiterComanderoPage() {
         incomingOrders.forEach(ord => {
           const tblNum = ord.table?.table_number || ord.table_number
           if (tblNum) {
-            if (ord.status === 'ready') {
+            const isDelivered = deliveredOrderIdsRef.current.has(ord.id) || ord.status === 'delivered'
+            if (ord.status === 'ready' && !isDelivered) {
               statusMap[tblNum] = 'ready'
               if (!seenReadyOrderIdsRef.current.has(ord.id)) {
                 seenReadyOrderIdsRef.current.add(ord.id)
@@ -349,6 +366,11 @@ export default function WaiterComanderoPage() {
             }
           }
         })
+
+        // Si la mesa de la alerta ya no tiene platos pendientes en ready, silenciar banner
+        if (readyOrderAlert && statusMap[readyOrderAlert] !== 'ready') {
+          setReadyOrderAlert(null)
+        }
 
         setTableDwellMinutes(dwellMap)
 

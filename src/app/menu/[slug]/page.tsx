@@ -350,31 +350,34 @@ function DinerMenuContent() {
         }
 
         const serverOrdersList: any[] = ordersRes.orders || []
-        // El tracker de fases solo se activa cuando la comanda es enviada por el mozo a cocina
-        const activeKitchenOrders = serverOrdersList.filter(
-          o => (o.table_number?.toString() === tableNumber?.toString() ||
-                o.table?.table_number?.toString() === tableNumber?.toString() ||
-                o.table_id === `table-${tableNumber}`) &&
-               ['pending', 'preparing', 'ready', 'delivered'].includes(o.status)
-        )
+        // Filtrar órdenes de esta mesa creadas en las últimas 6 horas
+        const tableOrders = serverOrdersList
+          .filter(
+            o => (o.table_number?.toString() === tableNumber?.toString() ||
+                  o.table?.table_number?.toString() === tableNumber?.toString() ||
+                  o.table_id === `table-${tableNumber}`) &&
+                 ['pending', 'preparing', 'ready', 'delivered'].includes(o.status)
+          )
+          .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
 
-        if (activeKitchenOrders.length > 0) {
-          const total = activeKitchenOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
+        if (tableOrders.length > 0) {
+          const total = tableOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
           setTableTotalAmount(total)
 
-          const isDelivered = activeKitchenOrders.length > 0 && activeKitchenOrders.every(o => o.status === 'delivered')
-          const isReady = activeKitchenOrders.some(o => o.status === 'ready')
-          const isPreparing = activeKitchenOrders.some(o => o.status === 'preparing')
-          const isPending = activeKitchenOrders.some(o => o.status === 'pending')
+          // Evaluar si hay pedidos pendientes o en cocina activos
+          const hasReady = tableOrders.some(o => o.status === 'ready')
+          const hasPreparing = tableOrders.some(o => o.status === 'preparing')
+          const hasPending = tableOrders.some(o => o.status === 'pending')
 
-          if (isDelivered) {
-            setTableOrderStatus('delivered')
-          } else if (isReady) {
+          if (hasReady) {
             setTableOrderStatus('ready')
-          } else if (isPreparing) {
+          } else if (hasPreparing) {
             setTableOrderStatus('preparing')
-          } else if (isPending) {
+          } else if (hasPending) {
             setTableOrderStatus('pending')
+          } else {
+            // Todos los pedidos están entregados -> Fase de Sobremesa
+            setTableOrderStatus('delivered')
           }
         }
       } catch (e) {
