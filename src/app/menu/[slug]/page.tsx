@@ -38,7 +38,7 @@ import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
 import { Product, Category, CartItem, Restaurant, Table, OrderStatus } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { createBrowserClient } from '@/lib/supabase/client'
-import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
+import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES, getMockOrders } from '@/lib/supabase/mock-fallback'
 import { TOP_LANGUAGES, getTranslation, translateCategoryName, translateProductName, translateProductDescription } from '@/lib/i18n'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
@@ -334,9 +334,24 @@ function DinerMenuContent() {
           setIsTablePaid(false)
         }
 
-        const orders: any[] = ordersRes.orders || []
-        const tableOrders = orders.filter(
-          o => o.table_number?.toString() === tableNumber?.toString()
+        const serverOrdersList: any[] = ordersRes.orders || []
+        const localOrdersList: any[] = typeof window !== 'undefined' ? getMockOrders(slug) : []
+
+        // Fusionar órdenes por ID priorizando los datos más recientes del servidor
+        const combinedMap = new Map<string, any>()
+        localOrdersList.forEach(o => {
+          if (o && o.id) combinedMap.set(o.id, o)
+        })
+        serverOrdersList.forEach(o => {
+          if (o && o.id) combinedMap.set(o.id, o)
+        })
+        const allOrders = Array.from(combinedMap.values())
+
+        const tableOrders = allOrders.filter(
+          o => (o.table_number?.toString() === tableNumber?.toString() ||
+                o.table?.table_number?.toString() === tableNumber?.toString() ||
+                o.table_id === `table-${tableNumber}`) &&
+               o.status !== 'cancelled'
         )
 
         if (tableOrders.length === 0) {

@@ -127,16 +127,13 @@ export default function KitchenKDSPage() {
                 }
               })
               incomingOrders.forEach(ord => {
-                if (ord.status === 'delivered' || ord.status === 'cancelled') {
+                const override = localStatusOverridesRef.current.get(ord.id)
+                const effectiveStatus = (override && now - override.timestamp < 10000) ? override.status : ord.status
+
+                if (effectiveStatus === 'delivered' || effectiveStatus === 'cancelled' || dispatchedOrderIdsRef.current.has(ord.id)) {
                   map.delete(ord.id)
-                } else if (!dispatchedOrderIdsRef.current.has(ord.id)) {
-                  const override = localStatusOverridesRef.current.get(ord.id)
-                  // Si el usuario acaba de tocar el botón localmente, mantener el estado optimista
-                  if (override && now - override.timestamp < 10000 && ord.status === 'pending' && override.status !== 'pending') {
-                    map.set(ord.id, { ...ord, status: override.status })
-                  } else {
-                    map.set(ord.id, ord)
-                  }
+                } else {
+                  map.set(ord.id, { ...ord, status: effectiveStatus })
                 }
               })
               return Array.from(map.values())
@@ -211,9 +208,13 @@ export default function KitchenKDSPage() {
     }).catch(console.error)
 
     // 3. Actualizar estado local inmediatamente
-    setOrders(prev =>
-      prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o))
-    )
+    if (newStatus === 'delivered' || newStatus === 'cancelled') {
+      setOrders(prev => prev.filter(o => o.id !== orderId))
+    } else {
+      setOrders(prev =>
+        prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o))
+      )
+    }
     updateMockOrderStatus(slug, orderId, newStatus)
   }
 
@@ -355,6 +356,16 @@ export default function KitchenKDSPage() {
               )}
 
               <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold">
+                <button
+                  onClick={() => setFilterStatus('all')}
+                  className={`px-3 py-1.5 rounded-xl transition-all ${
+                    filterStatus === 'all'
+                      ? 'bg-white text-slate-950 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Todas ({orders.length})
+                </button>
                 <button
                   onClick={() => setFilterStatus('active')}
                   className={`px-3 py-1.5 rounded-xl transition-all ${
