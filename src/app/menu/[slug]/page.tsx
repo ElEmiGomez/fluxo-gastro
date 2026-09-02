@@ -335,7 +335,9 @@ function DinerMenuContent() {
           (c: any) =>
             c.table_number?.toString() === tableNumber?.toString() &&
             c.status === 'attended' &&
-            c.call_type?.startsWith('bill_')
+            c.call_type?.startsWith('bill_') &&
+            c.created_at &&
+            Date.now() - new Date(c.created_at).getTime() < 15 * 60 * 1000
         )
 
         if (isBillPaid) {
@@ -373,17 +375,6 @@ function DinerMenuContent() {
             setTableOrderStatus('preparing')
           } else if (isPending) {
             setTableOrderStatus('pending')
-          }
-        } else if (serverOrdersList.length > 0) {
-          // Si el servidor devolvió órdenes pero ninguna corresponde a esta mesa activa, limpiar a null
-          const tableHasAnyOrders = serverOrdersList.some(
-            o => o.table_number?.toString() === tableNumber?.toString() ||
-                 o.table?.table_number?.toString() === tableNumber?.toString() ||
-                 o.table_id === `table-${tableNumber}`
-          )
-          if (!tableHasAnyOrders) {
-            setTableOrderStatus(null)
-            setTableTotalAmount(0)
           }
         }
       } catch (e) {

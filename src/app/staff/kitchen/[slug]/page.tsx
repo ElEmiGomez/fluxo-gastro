@@ -146,8 +146,7 @@ export default function KitchenKDSPage() {
             }
             previousOrdersCountRef.current = incomingOrders.length
 
-            // Reconciliación con State Lock para evitar parpadeos en tickets de cocina
-            const now = Date.now()
+            // Reconciliación con Jerarquía de Estados (Monótona Creciente - Cero Parpadeos)
             setOrders(prev => {
               const map = new Map<string, Order>()
               prev.forEach(ord => {
@@ -155,9 +154,19 @@ export default function KitchenKDSPage() {
                   map.set(ord.id, ord)
                 }
               })
+              const STATUS_RANK: Record<string, number> = {
+                pending_validation: 0,
+                pending: 1,
+                preparing: 2,
+                ready: 3,
+                delivered: 4,
+                cancelled: 5,
+              }
               incomingOrders.forEach(ord => {
                 const override = localStatusOverridesRef.current.get(ord.id)
-                const effectiveStatus = (override && now - override.timestamp < 10000) ? override.status : ord.status
+                const overrideRank = override ? (STATUS_RANK[override.status] ?? 0) : 0
+                const incomingRank = STATUS_RANK[ord.status] ?? 0
+                const effectiveStatus = overrideRank > incomingRank ? override!.status : ord.status
 
                 if (effectiveStatus === 'delivered' || effectiveStatus === 'cancelled' || dispatchedOrderIdsRef.current.has(ord.id)) {
                   map.delete(ord.id)
@@ -228,6 +237,8 @@ export default function KitchenKDSPage() {
 
     // 1. Tracking para deshacer último despacho
     const targetOrd = orders.find(o => o.id === orderId)
+    const tableNum = targetOrd?.table?.table_number ?? targetOrd?.table_number ?? 1
+
     if (targetOrd && (newStatus === 'ready' || newStatus === 'delivered')) {
       setRecentDispatchedOrders(prev => [targetOrd, ...prev.slice(0, 4)])
     }
@@ -236,7 +247,7 @@ export default function KitchenKDSPage() {
       dispatchedOrderIdsRef.current.add(orderId)
     }
 
-    // 2. Notificar a la API del servidor
+    // 2. Notificar a la API del servidor con la mesa exacta
     fetch('/api/orders', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -244,6 +255,7 @@ export default function KitchenKDSPage() {
         slug,
         orderId,
         status: newStatus,
+        table_number: tableNum,
       }),
     }).catch(console.error)
 

@@ -44,15 +44,17 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isValidating, setIsValidating] = useState<boolean>(false)
 
-  // Restaurar sesión de turno si está dentro de las 12 horas (protección contra bloqueo de móvil)
+  // Restaurar sesión de turno si está dentro de los 15 minutos (solicitado por el usuario)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
         if (stored) {
           const parsed = JSON.parse(stored)
-          if (parsed?.auth && Date.now() - parsed.timestamp < 12 * 60 * 60 * 1000) {
+          if (parsed?.auth && Date.now() - parsed.timestamp < 15 * 60 * 1000) {
             setIsAuthenticated(true)
+          } else {
+            setIsAuthenticated(false)
           }
         }
       } catch {}

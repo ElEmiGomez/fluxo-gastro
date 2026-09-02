@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { slug = 'burger-gourmet', orderId, status } = body
+    const { slug = 'burger-gourmet', orderId, status, table_number, tableNumber } = body
     if (!orderId || !status) {
       return NextResponse.json({ error: 'Faltan parámetros orderId o status' }, { status: 400 })
     }
@@ -186,7 +186,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: `Estado inválido: ${status}` }, { status: 400 })
     }
 
-    const result = await updateOrderStatus(slug, orderId, status)
+    const effectiveTableNum = table_number ?? tableNumber
+    const result = await updateOrderStatus(slug, orderId, status, effectiveTableNum)
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 })
     }

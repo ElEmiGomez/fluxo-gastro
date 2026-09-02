@@ -401,7 +401,8 @@ export async function getActiveOrdersByTable(
 export async function updateOrderStatus(
   slug: string,
   orderId: string,
-  status: OrderStatus
+  status: OrderStatus,
+  tableNumber?: number | string
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
@@ -415,7 +416,7 @@ export async function updateOrderStatus(
     }
   }
 
-  updateServerOrderStatus(slug, orderId, status)
+  updateServerOrderStatus(slug, orderId, status, tableNumber)
   return { success: true }
 }
 

@@ -174,7 +174,8 @@ export function addServerOrder(slug: string, order: Order): Order {
 export function updateServerOrderStatus(
   slug: string,
   orderId: string,
-  status: OrderStatus
+  status: OrderStatus,
+  tableNumber?: number | string
 ): { orders: Order[]; error?: string } {
   if (!globalStore.__GASTRO_ORDERS__) {
     globalStore.__GASTRO_ORDERS__ = {}
@@ -195,17 +196,24 @@ export function updateServerOrderStatus(
     const list = globalStore.__GASTRO_ORDERS__[s] || []
     const idx = list.findIndex(o => o.id === orderId)
     if (idx >= 0) {
-      list[idx] = { ...list[idx], status }
+      const existing = list[idx]
+      const parsedTbl = tableNumber ? parseInt(String(tableNumber), 10) : existing.table_number
+      list[idx] = {
+        ...existing,
+        status,
+        table_number: parsedTbl,
+      }
       found = true
     }
   }
 
-  // 3. Si no estaba en memoria aún, registrar la orden para que el mozo y cliente la reciban
+  // 3. Si no estaba en memoria aún, registrar la orden respetando la mesa real
   if (!found) {
+    const finalTableNum = tableNumber ? parseInt(String(tableNumber), 10) : 1
     globalStore.__GASTRO_ORDERS__[slug].unshift({
       id: orderId,
       restaurant_id: slug,
-      table_number: 1,
+      table_number: finalTableNum,
       status,
       total_amount: 0,
       order_items: [],
@@ -214,7 +222,7 @@ export function updateServerOrderStatus(
   }
 
   // 4. Emitir evento SSE para sincronización instantánea en Mozo y Cliente
-  broadcastEvent({ type: 'order_updated', slug, orderId, status })
+  broadcastEvent({ type: 'order_updated', slug, orderId, status, tableNumber })
   return { orders: getServerOrders(slug) }
 }
 
