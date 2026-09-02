@@ -189,8 +189,11 @@ export function updateServerOrderStatus(
     globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
   }
 
-  // 1. Guardar override persistente del estado de esta orden
+  // 1. Guardar override persistente del estado de esta orden por ID y por Mesa
   globalStore.__GASTRO_STATUS_OVERRIDES__[orderId] = status
+  if (tableNumber) {
+    globalStore.__GASTRO_STATUS_OVERRIDES__[`${slug}_table_${tableNumber}`] = status
+  }
 
   // 2. Actualizar en todas las listas de memoria activas
   let found = false
@@ -205,6 +208,9 @@ export function updateServerOrderStatus(
         status,
         table_number: parsedTbl,
       }
+      if (parsedTbl) {
+        globalStore.__GASTRO_STATUS_OVERRIDES__[`${s}_table_${parsedTbl}`] = status
+      }
       found = true
     }
   }
@@ -214,7 +220,7 @@ export function updateServerOrderStatus(
     const tblInt = parseInt(String(tableNumber), 10)
     const list = globalStore.__GASTRO_ORDERS__[slug] || []
     const tableOrderIdx = list.findIndex(
-      o => (o.table_number === tblInt || o.table?.table_number === tblInt) && o.status !== 'cancelled' && o.status !== 'delivered'
+      o => (o.table_number === tblInt || o.table?.table_number === tblInt) && o.status !== 'cancelled'
     )
     if (tableOrderIdx >= 0) {
       list[tableOrderIdx] = {

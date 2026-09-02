@@ -366,21 +366,9 @@ function DinerMenuContent() {
           const total = tableOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
           setTableTotalAmount(total)
 
-          // Evaluar si hay pedidos pendientes o en cocina activos
-          const hasReady = tableOrders.some(o => o.status === 'ready')
-          const hasPreparing = tableOrders.some(o => o.status === 'preparing')
-          const hasPending = tableOrders.some(o => o.status === 'pending')
-
-          if (hasReady) {
-            setTableOrderStatus('ready')
-          } else if (hasPreparing) {
-            setTableOrderStatus('preparing')
-          } else if (hasPending) {
-            setTableOrderStatus('pending')
-          } else {
-            // Todos los pedidos están entregados -> Fase de Sobremesa
-            setTableOrderStatus('delivered')
-          }
+          // El estado de la mesa sigue la comanda activa más reciente
+          const latestOrder = tableOrders[0]
+          setTableOrderStatus(latestOrder.status)
         }
       } catch (e) {
         console.log('Error checking order status for diner:', e)

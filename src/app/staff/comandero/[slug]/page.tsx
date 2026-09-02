@@ -365,21 +365,29 @@ export default function WaiterComanderoPage() {
           const tblNum = ord.table?.table_number || ord.table_number
           if (tblNum) {
             const isDelivered = deliveredOrderIdsRef.current.has(ord.id) || ord.status === 'delivered'
+            const numKey = Number(tblNum)
+            const strKey = String(tblNum)
             if (ord.status === 'ready' && !isDelivered) {
               statusMap[tblNum] = 'ready'
+              statusMap[numKey] = 'ready'
+              statusMap[strKey] = 'ready'
               if (!seenReadyOrderIdsRef.current.has(ord.id)) {
                 seenReadyOrderIdsRef.current.add(ord.id)
                 setReadyOrderAlert(tblNum)
                 playKitchenChime()
               }
-            } else if (!statusMap[tblNum]) {
+            } else if (!statusMap[tblNum] && !statusMap[numKey]) {
               statusMap[tblNum] = 'busy'
+              statusMap[numKey] = 'busy'
+              statusMap[strKey] = 'busy'
             }
 
             if (ord.created_at) {
               const mins = Math.max(1, Math.floor((Date.now() - new Date(ord.created_at).getTime()) / 60000))
               if (!dwellMap[tblNum] || mins > dwellMap[tblNum]) {
                 dwellMap[tblNum] = mins
+                dwellMap[numKey] = mins
+                dwellMap[strKey] = mins
               }
             }
           }

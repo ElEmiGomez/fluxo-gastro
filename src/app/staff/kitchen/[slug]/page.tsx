@@ -251,19 +251,7 @@ export default function KitchenKDSPage() {
       dispatchedOrderIdsRef.current.add(orderId)
     }
 
-    // 2. Notificar a la API del servidor con la mesa exacta
-    fetch('/api/orders', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        slug,
-        orderId,
-        status: newStatus,
-        table_number: tableNum,
-      }),
-    }).catch(console.error)
-
-    // 3. Actualizar estado local inmediatamente
+    // 2. Actualizar estado local inmediatamente
     if (newStatus === 'delivered' || newStatus === 'cancelled') {
       setOrders(prev => prev.filter(o => o.id !== orderId))
     } else {
@@ -272,6 +260,22 @@ export default function KitchenKDSPage() {
       )
     }
     updateMockOrderStatus(slug, orderId, newStatus)
+
+    // 3. Notificar a la API del servidor con la mesa exacta (await para sincronización garantizada)
+    try {
+      await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          orderId,
+          status: newStatus,
+          table_number: tableNum,
+        }),
+      })
+    } catch (err) {
+      console.error('Error updating order status from kitchen:', err)
+    }
   }
 
   // Filtrado de comandas por estado
