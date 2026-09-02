@@ -254,9 +254,7 @@ export async function createOrder(
             order_items: orderData.items as any,
             table_number: orderData.table_number,
           }
-          if (!atomicResult.idempotent) {
-            broadcastEvent({ type: 'order_created', slug, order: fullOrder })
-          }
+          addServerOrder(slug, fullOrder)
           return fullOrder
         }
       }
@@ -352,7 +350,12 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
         .order('created_at', { ascending: false })
 
       if (!error && data && data.length > 0) {
-        return data as unknown as Order[]
+        const mapped = (data as unknown as Order[]).map(o => ({
+          ...o,
+          table_number: o.table_number || (o.table ? o.table.table_number : 1)
+        }))
+        mapped.forEach(ord => addServerOrder(slug, ord))
+        return mapped
       }
     } catch (e) {
       console.warn('Error fetching orders from Supabase:', e)

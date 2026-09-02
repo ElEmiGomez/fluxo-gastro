@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import Image from 'next/image'
 import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice, Clock } from 'lucide-react'
-import { CartItem, Product } from '@/types/database.types'
+import { CartItem, Product, OrderStatus } from '@/types/database.types'
 import { useTenant } from '@/components/tenant/TenantProvider'
 import { formatCurrency } from '@/lib/utils'
 import { createMockOrder } from '@/lib/supabase/mock-fallback'
@@ -214,7 +214,7 @@ export function CartDrawer({
         idempotency_key: idempotencyKeyRef.current,
         total_amount: totalAmount,
         created_by: isWaiter ? 'waiter' : 'diner',
-        status: isWaiter ? 'pending' : 'pending_validation',
+        status: (isWaiter ? 'pending' : 'pending_validation') as OrderStatus,
         items: validCart.map(item => ({
           product_id: item.product?.id || '',
           quantity: item.quantity,
@@ -245,7 +245,10 @@ export function CartDrawer({
         throw new Error(data.message || data.error || 'Error al enviar la comanda al servidor')
       }
 
-      createMockOrder(restaurant?.slug || 'burger-gourmet', payload)
+      createMockOrder(restaurant?.slug || 'burger-gourmet', {
+        ...payload,
+        id: data.order?.id || data.id,
+      })
 
       triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
       idempotencyKeyRef.current = ''

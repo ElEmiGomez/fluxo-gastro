@@ -32,6 +32,7 @@ export default function KitchenKDSPage() {
   const previousOrdersCountRef = useRef<number>(0)
   const seenOrderIdsRef = useRef<Set<string>>(new Set())
   const dispatchedOrderIdsRef = useRef<Set<string>>(new Set())
+  const localStatusOverridesRef = useRef<Map<string, { status: OrderStatus; timestamp: number }>>(new Map())
 
   // Toggle de Pantalla Completa con 1 Toque
   const toggleFullscreen = () => {
@@ -117,6 +118,7 @@ export default function KitchenKDSPage() {
             previousOrdersCountRef.current = incomingOrders.length
 
             // Reconciliación con State Lock para evitar parpadeos en tickets de cocina
+            const now = Date.now()
             setOrders(prev => {
               const map = new Map<string, Order>()
               prev.forEach(ord => {
@@ -128,7 +130,13 @@ export default function KitchenKDSPage() {
                 if (ord.status === 'delivered' || ord.status === 'cancelled') {
                   map.delete(ord.id)
                 } else if (!dispatchedOrderIdsRef.current.has(ord.id)) {
-                  map.set(ord.id, ord)
+                  const override = localStatusOverridesRef.current.get(ord.id)
+                  // Si el usuario acaba de tocar el botón localmente, mantener el estado optimista
+                  if (override && now - override.timestamp < 10000 && ord.status === 'pending' && override.status !== 'pending') {
+                    map.set(ord.id, { ...ord, status: override.status })
+                  } else {
+                    map.set(ord.id, ord)
+                  }
                 }
               })
               return Array.from(map.values())
@@ -178,6 +186,9 @@ export default function KitchenKDSPage() {
 
   // Actualizar estado de comanda
   const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
+    // 0. Registrar override optimista para blindar contra rebotes en polling
+    localStatusOverridesRef.current.set(orderId, { status: newStatus, timestamp: Date.now() })
+
     // 1. Tracking para deshacer último despacho
     const targetOrd = orders.find(o => o.id === orderId)
     if (targetOrd && (newStatus === 'ready' || newStatus === 'delivered')) {

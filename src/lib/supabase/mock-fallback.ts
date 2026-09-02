@@ -1,4 +1,4 @@
-import { Restaurant, Category, Product, Table, Order, OrderItem } from '@/types/database.types'
+import { Restaurant, Category, Product, Table, Order, OrderItem, OrderStatus } from '@/types/database.types'
 
 export const MOCK_RESTAURANTS: Record<string, Restaurant> = {
   // ── 1. PERFIL DEMO 1: BURGER GOURMET NOIA ──
@@ -576,8 +576,8 @@ export function saveMockOrders(slug: string, orders: Order[]) {
   }
 }
 
-export function createMockOrder(slug: string, newOrder: { restaurant_id: string; table_id: string; table_number?: number; total_amount: number; items: { product_id: string; quantity: number; notes: string | null }[] }): Order {
-  const orderId = `ord-${Date.now()}`
+export function createMockOrder(slug: string, newOrder: { id?: string; restaurant_id: string; table_id: string; table_number?: number; total_amount: number; status?: OrderStatus; items: { product_id: string; quantity: number; notes: string | null }[] }): Order {
+  const orderId = newOrder.id || `ord-${Date.now()}`
   const now = new Date().toISOString()
   
   const tables = MOCK_TABLES[slug] || []
@@ -601,7 +601,7 @@ export function createMockOrder(slug: string, newOrder: { restaurant_id: string;
     id: orderId,
     restaurant_id: newOrder.restaurant_id,
     table_id: matchedTable?.id || newOrder.table_id,
-    status: 'pending',
+    status: newOrder.status || 'pending',
     total_amount: newOrder.total_amount,
     created_at: now,
     table_number: tableNumber,

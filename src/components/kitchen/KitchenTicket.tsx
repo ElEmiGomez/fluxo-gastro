@@ -129,7 +129,7 @@ export function KitchenTicket({
         {order.order_items && order.order_items.length > 0 && (
           <div className="flex items-center justify-between pb-1 text-xs text-slate-500 font-bold border-b border-slate-200/60">
             <span>Platos a Despachar ({order.order_items.length})</span>
-            {order.order_items.length > 1 && (
+            {order.status !== 'pending' && order.order_items.length > 1 && (
               <button
                 type="button"
                 onClick={() => {
@@ -144,7 +144,7 @@ export function KitchenTicket({
                   }
                   setCompletedItemIds(nextMap)
                 }}
-                className="text-[11px] px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 hover:border-emerald-300 font-black flex items-center gap-1 transition-all shadow-xs active:scale-95"
+                className="text-[11px] px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 hover:border-emerald-300 font-black flex items-center gap-1 transition-all shadow-xs active:scale-95 cursor-pointer"
                 title="Marcar todos los platos de este ticket como listos con 1 toque"
               >
                 <CheckCircle2 size={12} className="text-emerald-600" />
@@ -155,6 +155,11 @@ export function KitchenTicket({
                 </span>
               </button>
             )}
+            {order.status === 'pending' && (
+              <span className="text-[10px] text-amber-800 font-bold bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                Pulsa Iniciar para tachar
+              </span>
+            )}
           </div>
         )}
 
@@ -164,17 +169,20 @@ export function KitchenTicket({
             const imageUrl = item.product?.image_url
             const itemKey = item.id || `${item.product_id}-${idx}`
             const isDone = Boolean(completedItemIds[itemKey])
+            const canClick = order.status !== 'pending'
 
             return (
               <div
                 key={itemKey}
-                onClick={() => toggleItemCompleted(itemKey)}
-                className={`p-2.5 rounded-2xl border transition-all duration-200 cursor-pointer select-none flex gap-3 items-start ${
-                  isDone
-                    ? 'bg-emerald-50/70 border-emerald-300 opacity-60'
-                    : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-xs'
+                onClick={canClick ? () => toggleItemCompleted(itemKey) : undefined}
+                className={`p-2.5 rounded-2xl border transition-all duration-200 select-none flex gap-3 items-start ${
+                  !canClick
+                    ? 'bg-white border-slate-200/90 cursor-default'
+                    : isDone
+                    ? 'bg-emerald-50/70 border-emerald-300 opacity-60 cursor-pointer'
+                    : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-xs cursor-pointer'
                 }`}
-                title="Toca para marcar este plato como listo / despachado individualmente"
+                title={canClick ? "Toca para marcar este plato como listo" : "Inicia preparación para tachar este plato"}
               >
                 {/* Miniatura visual del plato */}
                 <div

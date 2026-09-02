@@ -8,35 +8,34 @@ pdf_path = 'Lecciones_Fluxo_02_09_2026.pdf'
 doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=32, leftMargin=32, topMargin=26, bottomMargin=26)
 styles = getSampleStyleSheet()
 
-title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=13.5, leading=16.5, textColor=colors.HexColor('#0f172a'))
+title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=13, leading=16, textColor=colors.HexColor('#0f172a'))
 h2_style = ParagraphStyle('H2Style', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=9.5, leading=12, textColor=colors.HexColor('#1e40af'))
-body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=7.6, leading=10.2, textColor=colors.HexColor('#334155'))
-callout_style = ParagraphStyle('Callout', parent=styles['Normal'], fontName='Helvetica-Oblique', fontSize=7.8, leading=10.2, textColor=colors.HexColor('#0f172a'))
+body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=10, textColor=colors.HexColor('#334155'))
+callout_style = ParagraphStyle('Callout', parent=styles['Normal'], fontName='Helvetica-Oblique', fontSize=7.8, leading=10, textColor=colors.HexColor('#0f172a'))
 
 story = []
 
-story.append(Paragraph('FLUXO - Lección del Día: El Mozo como Guardián de Sala y la Cocina en Tiempo Real', title_style))
+story.append(Paragraph('FLUXO - Lección del Día: Causa Raíz, Bloqueo Optimista e Integridad de Comandas', title_style))
 story.append(Paragraph('02 de Septiembre de 2026 | Mentor de Programación & Program Data Fluxo', body_style))
 story.append(Spacer(1, 5))
 
-story.append(Paragraph('1. La Analogía del Restaurante: La Jerarquía y el Orden de la Comanda', h2_style))
-story.append(Paragraph('En un restaurante de alto rendimiento, nunca un cliente entra a los fogones a gritarle al cocinero lo que quiere comer. '
-                       'El flujo natural y seguro funciona como una sinfonía perfectamente coordinada:<br/>'
-                       '• <b>1. El Comensal (La Mesa):</b> Elige sus platos con tranquilidad en su móvil, ve fotos y suma sugerencias. Al terminar, toca <b>"Enviar Comanda al Mozo"</b> (nace en espera de validación). Cero riesgo de error o pedidos fantasma.<br/>'
-                       '• <b>2. El Mozo (El Guardián):</b> Se acerca a la mesa, corrobora que hay clientes reales y que no hay dudas. Toca <b>"Confirmar a Cocina"</b> y el pedido marcha directamente a los fogones.<br/>'
-                       '• <b>3. El Mozo en Barra/Salón (Comanda Directa):</b> Cuando el camarero toma comanda a mano, dispone del botón directo <b>"Enviar a Cocina"</b> sin intermediarios.<br/>'
-                       '• <b>4. La Cocina (KDS Pantalla Táctil):</b> Solo recibe comandas aprobadas por el personal de sala, evitando marchar comida innecesaria.', body_style))
+story.append(Paragraph('1. La Analogía del Restaurante: La Comanda Física vs La Sincronización Digital', h2_style))
+story.append(Paragraph('En un restaurante tradicional, cuando el jefe de cocina agarra la comanda de la Mesa #7 y grita <i>"¡Marchando dos hamburguesas!"</i>, esa orden queda fija en el riel de cocina. '
+                       'En el mundo digital ocurría un error crítico por falta de un cerrojo de estado:<br/>'
+                       '• <b>El Problema del Rebote:</b> Al tocar <i>"Iniciar Preparación"</i>, la pantalla cambiaba a <i>"Marcar Listo"</i>, pero un segundo después la comprobación automática de fondo (polling) devolvía el estado antiguo y la comanda volvía a <i>"Iniciar Preparación"</i>.<br/>'
+                       '• <b>La Solución (Bloqueo Optimista):</b> Hemos implementado un cerrojo que respeta la acción táctil del cocinero de inmediato y bloquea cualquier sobreescritura de fondo durante 10 segundos.<br/>'
+                       '• <b>Protección de Mesa & Platos:</b> Se eliminó la creación de pedidos sintéticos que forzaban la mesa a #1 o limpiaban los platos. Mesa #7 mantiene sus 3 productos intactos de principio a fin.', body_style))
 story.append(Spacer(1, 5))
 
 table_data = [
-  [Paragraph('<b>Punto de la Operación</b>', body_style), Paragraph('<b>Experiencia Visual & Flujo</b>', body_style), Paragraph('<b>Impacto Operativo Fluxo</b>', body_style)],
-  [Paragraph('🛒 <b>Carrito del Cliente</b><br/><i>(Menú Digital QR)</i>', body_style), Paragraph('1º Platos elegidos &rarr; 2º Sugerencias compactas con acordeón &rarr; 3º Tranquilidad Total.', body_style), Paragraph('Diseño limpio y sin sobrecarga visual para personas mayores o terrazas.', body_style)],
-  [Paragraph('💡 <b>Guía de 3 Pasos</b><br/><i>(Micro-Onboarding)</i>', body_style), Paragraph('Paso 1: Scroll a platos. Paso 2: Abrir comanda. Paso 3: Llamar al mozo / rondas.', body_style), Paragraph('Inicia cerrado por defecto para no tapar la carta; accionable con 1 toque.', body_style)],
-  [Paragraph('👨‍🍳 <b>Sincronización Mozo &rarr; Cocina</b><br/><i>(Comandero y KDS)</i>', body_style), Paragraph('Validación en mesa y comandas de mozo marchan a cocina al instante vía SSE.', body_style), Paragraph('Cero pedidos perdidos o desincronizados entre dispositivos móviles y PC.', body_style)],
-  [Paragraph('🇪🇸 <b>Idioma de Sala y Cocina</b><br/><i>(Paneles de Personal)</i>', body_style), Paragraph('Comandero y Cocina siempre en Español. Traducción sólo en la carta del cliente.', body_style), Paragraph('Claridad operativa inmediata para todo el equipo de trabajo del local.', body_style)]
+  [Paragraph('<b>Módulo / Pantalla</b>', body_style), Paragraph('<b>Comportamiento Anterior vs Corregido</b>', body_style), Paragraph('<b>Impacto Operativo en el Restaurante</b>', body_style)],
+  [Paragraph('👨‍🍳 <b>Cocina KDS</b><br/><i>(Tachar Platos)</i>', body_style), Paragraph('Bloqueado tachar antes de Iniciar Preparación. Solo al marchar se activa el tachado individual y "Tachar Todo".', body_style), Paragraph('Evita que el cocinero marque platos como listos antes de haberlos puesto al fuego.', body_style)],
+  [Paragraph('🔒 <b>Blindaje de Estado</b><br/><i>(Anti-Rebote)</i>', body_style), Paragraph('Al pulsar "Iniciar Preparación" queda firme en "Listo para Servir" sin retroceder jamás.', body_style), Paragraph('Tranquilidad absoluta para el personal: los botones responden al primer toque.', body_style)],
+  [Paragraph('📱 <b>Carta del Comensal</b><br/><i>(Barra de Fases)</i>', body_style), Paragraph('La barra superior muestra siempre las 5 fases (Validación, Cola, Fogones, Listo, Servido) sin parpadear.', body_style), Paragraph('El cliente sabe en todo momento el avance real de su comida desde su móvil.', body_style)],
+  [Paragraph('🏷️ <b>Integridad de Mesa #7</b><br/><i>(Backend & Memoria)</i>', body_style), Paragraph('Sincronización unificada de IDs entre servidor y cliente. Cero reseteos a Mesa #1 o ítems vacíos.', body_style), Paragraph('Cero confusiones entre mesas: cada plato llega a quien lo pidió.', body_style)]
 ]
 
-t = Table(table_data, colWidths=[120, 215, 195])
+t = Table(table_data, colWidths=[115, 220, 195])
 t.setStyle(TableStyle([
   ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#f1f5f9')),
   ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cbd5e1')),
@@ -46,19 +45,20 @@ t.setStyle(TableStyle([
 story.append(t)
 story.append(Spacer(1, 5))
 
-story.append(Paragraph('2. ¿Por qué es vital que el cliente NUNCA envíe directo a cocina?', h2_style))
-story.append(Paragraph('Si un cliente pudiera enviar directo a cocina sin pasar por el mozo:<br/>'
-                       '1. Se generarían comandas por error de niños jugando con el móvil.<br/>'
-                       '2. Cocina empezaría a preparar platos en mesas vacías si alguien escaneó el QR por curiosidad.<br/>'
-                       '3. Con el filtro de validación de Fluxo, <b>el mozo tiene el control total de los tiempos y de la sala</b>.', body_style))
+story.append(Paragraph('2. ¿Cuál era el Factor Común de los errores que aparecían y desaparecían?', h2_style))
+story.append(Paragraph('El factor común era una <b>carrera de sincronización (Race Condition)</b> entre tres capas:<br/>'
+                       '1. El estado local en pantalla (que respondía al toque inmediato).<br/>'
+                       '2. El almacenamiento en memoria del servidor (que si no encontraba el ID creaba un pedido vacío para Mesa 1).<br/>'
+                       '3. La consulta de fondo cada 1.5s (que sobreescribía la pantalla con los datos antiguos antes de que el servidor guardara el cambio).<br/>'
+                       'Al unificar los IDs y aplicar el <b>Bloqueo Optimista</b>, el sistema queda 100% blindado y estable.', body_style))
 story.append(Spacer(1, 5))
 
 story.append(Paragraph('3. Pregunta Didáctica para el Alumno', h2_style))
-story.append(Paragraph('¿Por qué el banner de guía inicia cerrado por defecto y tiene sólo 3 pasos interactivos?<br/>'
-                       '<i>Respuesta: Para que la carta del comensal respire limpia desde el primer segundo en cualquier móvil, y si el cliente tiene dudas, con 1 toque la guía lo lleva directo a ver los platos, abrir la comanda o llamar al mozo.</i>', body_style))
+story.append(Paragraph('¿Por qué en un sistema en tiempo real como Fluxo es necesario un "Bloqueo Optimista" de 10 segundos al tocar un botón?<br/>'
+                       '<i>Respuesta: Porque la red puede tardar unos milisegundos en responder. El bloqueo optimista asegura que la pantalla del usuario no tiemble ni rebote hacia atrás mientras la base de datos procesa la orden.</i>', body_style))
 story.append(Spacer(1, 4))
 
-story.append(Paragraph('💡 Conclusión: La experiencia de usuario en hostelería debe ser tan fluida y natural como la atención humana: clara, sin botones confusos y con el personal siempre al mando.', callout_style))
+story.append(Paragraph('💡 Conclusión: Un software gastronómico de élite debe ser tan sólido como una roca: lo que se toca en pantalla es ley y la información de sala y cocina permanece sincronizada a la perfección.', callout_style))
 
 doc.build(story)
 print('PDF generado exitosamente: ' + pdf_path)

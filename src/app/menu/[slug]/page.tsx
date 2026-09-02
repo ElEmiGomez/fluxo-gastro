@@ -349,7 +349,8 @@ function DinerMenuContent() {
           const isReady = tableOrders.some(o => o.status === 'ready')
           const isPreparing = tableOrders.some(o => o.status === 'preparing')
           const isPending = tableOrders.some(o => o.status === 'pending')
-          const isDelivered = tableOrders.every(o => o.status === 'delivered')
+          const isPendingValidation = tableOrders.some(o => o.status === 'pending_validation')
+          const isDelivered = tableOrders.length > 0 && tableOrders.every(o => o.status === 'delivered')
 
           if (isReady) {
             setTableOrderStatus('ready')
@@ -357,8 +358,12 @@ function DinerMenuContent() {
             setTableOrderStatus('preparing')
           } else if (isPending) {
             setTableOrderStatus('pending')
+          } else if (isPendingValidation) {
+            setTableOrderStatus('pending_validation')
           } else if (isDelivered) {
             setTableOrderStatus('delivered')
+          } else {
+            setTableOrderStatus(null)
           }
         }
       } catch (e) {

@@ -174,18 +174,21 @@ export function updateServerOrderStatus(
   if (existingIdx >= 0) {
     updated = orders.map(o => (o.id === orderId ? { ...o, status } : o))
   } else {
-    // Si la orden existía en Supabase y no estaba en memoria, la inicializamos
-    const syntheticOrder: Order = {
-      id: orderId,
-      restaurant_id: 'a1111111-1111-1111-1111-111111111111',
-      table_id: 'table-1',
-      table_number: 1,
-      status,
-      total_amount: 0,
-      created_at: new Date().toISOString(),
-      order_items: [],
+    // Si no estaba en el slug actual, buscar en los demás almacenes de slugs
+    let foundOrder: Order | undefined
+    for (const otherSlug of Object.keys(globalStore.__GASTRO_ORDERS__)) {
+      const match = globalStore.__GASTRO_ORDERS__[otherSlug]?.find(o => o.id === orderId)
+      if (match) {
+        foundOrder = { ...match, status }
+        break
+      }
     }
-    updated = [syntheticOrder, ...orders]
+
+    if (foundOrder) {
+      updated = [foundOrder, ...orders]
+    } else {
+      updated = orders
+    }
   }
 
   globalStore.__GASTRO_ORDERS__[slug] = updated
