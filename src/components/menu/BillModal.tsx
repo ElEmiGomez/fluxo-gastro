@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react'
 import { X, Receipt, Banknote, CreditCard, QrCode, ArrowRight, CheckCircle2, Users } from 'lucide-react'
-import { GoogleReviewBooster } from '@/components/menu/GoogleReviewBooster'
 
 interface BillModalProps {
   isOpen: boolean
@@ -167,17 +166,6 @@ export function BillModal({
               </div>
               <ArrowRight size={14} className="text-slate-400" />
             </button>
-          </div>
-
-          {/* Módulo Google Review Booster (Captura sutil de 5 estrellas) */}
-          <div className="pt-1">
-            <GoogleReviewBooster
-              restaurantName={restaurantName}
-              restaurantSlug={slug}
-              googleReviewUrl={googleReviewUrl}
-              googlePlaceId={googlePlaceId}
-              variant="compact"
-            />
           </div>
 
           {billRequested && (

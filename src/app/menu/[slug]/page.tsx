@@ -876,28 +876,24 @@ function DinerMenuContent() {
                 ) : (
                   /* VISTA TRAS PEDIR LA CUENTA: AVISO AL MOZO + GOOGLE REVIEW BOOSTER MIENTRAS LLEGA */
                   <div className="space-y-3 animate-in fade-in duration-300">
-                    <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                          <Receipt className="w-4 h-4 animate-bounce" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                            Mesa #{tableNumber} · Cuenta Solicitada
-                          </span>
-                          <h4 className="font-extrabold text-xs text-white leading-tight truncate">
-                            El mozo se acerca a tu mesa para cobrar
-                          </h4>
-                        </div>
+                    <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                        <Receipt className="w-5 h-5 animate-pulse" />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowServiceModal(true)}
-                        className="px-2.5 py-1.5 rounded-xl bg-emerald-900/80 hover:bg-emerald-800 text-emerald-200 text-[11px] font-bold border border-emerald-700/60 transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
-                      >
-                        <Bell size={12} />
-                        <span>Llamar</span>
-                      </button>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                            Mesa #{tableNumber} &middot; Cuenta Solicitada
+                          </span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        </div>
+                        <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
+                          El mozo ya va hacia tu mesa para realizar el cobro
+                        </h4>
+                        <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
+                          ¡Gracias por tu visita! Puedes valorar tu experiencia mientras llega el mozo.
+                        </p>
+                      </div>
                     </div>
 
                     {/* Tarjeta Google Review Booster (Aparece únicamente al pedir la cuenta mientras viene el mozo) */}
