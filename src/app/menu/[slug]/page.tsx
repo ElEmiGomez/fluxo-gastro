@@ -349,7 +349,9 @@ function DinerMenuContent() {
           setIsTablePaid(false)
         }
 
-        const serverOrdersList: any[] = ordersRes.orders || []
+        const serverOrdersList: any[] = (ordersRes.orders || []).filter(
+          (o: any) => o.order_items && o.order_items.length > 0
+        )
         // Filtrar órdenes de esta mesa creadas en las últimas 6 horas
         const tableOrders = serverOrdersList
           .filter(

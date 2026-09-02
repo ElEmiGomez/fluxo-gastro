@@ -35,6 +35,10 @@ export function KitchenTicket({
     return () => clearInterval(interval)
   }, [order.created_at])
 
+  if (!order || !order.order_items || order.order_items.length === 0) {
+    return null
+  }
+
   const tableNumberDisplay = order.table?.table_number ?? order.table_number ?? '?'
 
   const getUrgencyStyles = () => {

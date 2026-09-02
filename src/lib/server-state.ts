@@ -145,7 +145,9 @@ export function isValidOrderTransition(currentStatus: string, nextStatus: string
 export function getServerOrders(slug: string): Order[] {
   const list = globalStore.__GASTRO_ORDERS__?.[slug] || []
   const overrides = globalStore.__GASTRO_STATUS_OVERRIDES__ || {}
-  return list.map(o => (overrides[o.id] ? { ...o, status: overrides[o.id] } : o))
+  return list
+    .filter(o => o.order_items && o.order_items.length > 0)
+    .map(o => (overrides[o.id] ? { ...o, status: overrides[o.id] } : o))
 }
 
 export function addServerOrder(slug: string, order: Order): Order {

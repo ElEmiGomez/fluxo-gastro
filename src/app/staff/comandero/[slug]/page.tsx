@@ -74,6 +74,8 @@ export default function WaiterComanderoPage() {
             return parsed.filter(
               (o: Order) =>
                 o.status !== 'cancelled' &&
+                o.order_items &&
+                o.order_items.length > 0 &&
                 now - new Date(o.created_at).getTime() < 12 * 60 * 60 * 1000
             )
           }
@@ -183,18 +185,19 @@ export default function WaiterComanderoPage() {
     }
   }
 
-  // Marcar todos los platos listos de la mesa como entregados
+  // Marcar todos los platos listos/en curso de la mesa como entregados
   const handleMarkDelivered = async (tableNum: string | number) => {
     if (readyOrderAlert?.toString() === tableNum.toString()) {
       setReadyOrderAlert(null)
     }
 
     try {
-      const readyOrders = serverOrders.filter(
-        o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString()) && o.status === 'ready'
+      const activeOrders = serverOrders.filter(
+        o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString()) &&
+             (o.status === 'ready' || o.status === 'preparing' || o.status === 'pending')
       )
 
-      for (const ord of readyOrders) {
+      for (const ord of activeOrders) {
         await handleDeliverSingleOrder(ord.id, tableNum)
       }
     } catch (e) {
@@ -212,7 +215,20 @@ export default function WaiterComanderoPage() {
         body: JSON.stringify({ slug, table_number: tableNum, action: 'free' }),
       })
 
-      // 2. Limpiar llamadas
+      // 2. Limpiar carritos y estado local de la mesa
+      setTableCarts(prev => {
+        const next = { ...prev }
+        delete next[tableNum]
+        return next
+      })
+
+      setShowFreeConfirmTable(null)
+      setSelectedTable(null)
+
+      // 3. Emitir evento local para cerrar modales abiertos
+      window.dispatchEvent(new CustomEvent('fluxo_table_freed', { detail: { tableNumber: tableNum } }))
+
+      // 4. Limpiar llamadas
       const tableCalls = pendingCalls.filter(c => c.table_number.toString() === tableNum.toString())
       for (const c of tableCalls) {
         await handleAttendCall(c.id)
@@ -281,7 +297,9 @@ export default function WaiterComanderoPage() {
           fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
         ])
 
-        const incomingOrders: Order[] = ordersRes.orders || []
+        const incomingOrders: Order[] = (ordersRes.orders || []).filter(
+          (o: Order) => o.order_items && o.order_items.length > 0
+        )
         const incomingCalls: any[] = callsRes.calls || []
 
         // 1. Reconciliación de Órdenes con State Lock

@@ -31,6 +31,8 @@ export default function KitchenKDSPage() {
               (o: Order) =>
                 o.status !== 'delivered' &&
                 o.status !== 'cancelled' &&
+                o.order_items &&
+                o.order_items.length > 0 &&
                 now - new Date(o.created_at).getTime() < 12 * 60 * 60 * 1000
             )
           }
@@ -128,8 +130,10 @@ export default function KitchenKDSPage() {
         if (res.ok) {
           const data = await res.json()
           if (data.orders) {
-            // La cocina solo recibe comandas ya validadas por el mozo (Cero pedidos falsos)
-            const incomingOrders: Order[] = data.orders.filter((o: Order) => o.status !== 'pending_validation')
+            // La cocina solo recibe comandas ya validadas por el mozo y con platos reales (Cero pedidos falsos)
+            const incomingOrders: Order[] = data.orders.filter(
+              (o: Order) => o.status !== 'pending_validation' && o.order_items && o.order_items.length > 0
+            )
 
             // Detectar nueva orden entrante real para sonar campana
             let hasNewUnseenOrder = false
