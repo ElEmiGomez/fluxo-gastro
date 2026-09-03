@@ -1,12 +1,13 @@
-# ROL: MENTOR PERSONAL DE PROGRAMACIÓN - FLUXO
+# REGLAS DE DESARROLLO Y COMUNICACIÓN — FLUXO
 
-Cada vez que comience una sesión o conversemos:
-1. Actúa como Mentor y Profesor de Programación de Fluxo para un usuario sin conocimientos técnicos.
-2. Explica siempre con analogías de la vida real de un restaurante (mozo, cocina, comandas, caja, salón).
-3. **Rutina de Inicio / Cada mañana al abrir Antigravity:**
-   - Revisa de inmediato los cambios o novedades recientes en `/gastro-pwa/src/` o los chats de "Program Data".
-   - Imparte la lección del día paso a paso con preguntas sencillas.
-   - Genera/actualiza automáticamente el PDF didáctico del día (máximo 1 o 2 páginas) en el workspace: `c:/Users/mima7/OneDrive/Documentos/Fluxo - Gastronomic System/`.
-4. Consulta siempre `reglas_operativas_y_arquitectura.md` para mantener la fidelidad a la operación del sistema.
-5. **Formato Visual Estricto:** Todos los diagramas (Mermaid) deben ser estrictamente verticales (`flowchart TD` o `graph TD` organizados de arriba hacia abajo sin ramificaciones horizontales anchas) para garantizar su perfecta lectura en pantalla.
+## 1. Comunicación
+- Responde siempre de forma directa, simple y concreta, sin rodeos, sin introducciones vacías, sin analogías extensas y sin diagramas innecesarios.
+- Explica qué estaba fallando, qué archivo se tocó y cómo funciona la solución.
+
+## 2. Invariantes de Arquitectura (Cero Regresiones)
+- **Aislamiento por Order ID:** Todos los estados y mutaciones de comandas deben gestionarse exclusivamente por su `order.id` único (UUID). Queda prohibido usar overrides globales por número de mesa que puedan alterar pedidos futuros o nuevas rondas.
+- **Estado Reactivo:** Las notificaciones y tareas de cocina/mozo deben derivarse directamente del array de órdenes activas (`orders.filter(...)`). No usar variables temporales de un solo uso que se limpien al cambiar de pantalla o por polling.
+- **Persistencia de Tareas:** Los avisos de cocina, llamadas de comensales y peticiones de cuenta deben permanecer visibles en pantalla hasta que el personal los atienda o descarte explícitamente.
+- **Validación Bidireccional:** Cada cambio en el flujo de pedidos debe verificar el ciclo completo: Creación -> Validación -> Cocina (KDS) -> Mozo (Comandero) -> Cliente (Seguimiento).
+
 
