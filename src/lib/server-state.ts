@@ -160,6 +160,14 @@ export function addServerOrder(slug: string, order: Order): Order {
   if (!globalStore.__GASTRO_STATUS_OVERRIDES__) {
     globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
   }
+
+  // Limpiar cualquier override previo de esta orden para que la nueva comanda nazca limpia con su estado real
+  delete globalStore.__GASTRO_STATUS_OVERRIDES__[order.id]
+  const tableNum = order.table_number || (order.table ? order.table.table_number : null)
+  if (tableNum) {
+    delete globalStore.__GASTRO_STATUS_OVERRIDES__[`${slug}_table_${tableNum}`]
+  }
+
   const existingIdx = globalStore.__GASTRO_ORDERS__[slug].findIndex(o => o.id === order.id)
   if (existingIdx >= 0) {
     globalStore.__GASTRO_ORDERS__[slug][existingIdx] = {
@@ -189,11 +197,8 @@ export function updateServerOrderStatus(
     globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
   }
 
-  // 1. Guardar override persistente del estado de esta orden por ID y por Mesa
+  // 1. Guardar override persistente del estado de esta orden específica
   globalStore.__GASTRO_STATUS_OVERRIDES__[orderId] = status
-  if (tableNumber) {
-    globalStore.__GASTRO_STATUS_OVERRIDES__[`${slug}_table_${tableNumber}`] = status
-  }
 
   // 2. Actualizar en todas las listas de memoria activas
   let found = false
@@ -207,9 +212,6 @@ export function updateServerOrderStatus(
         ...existing,
         status,
         table_number: parsedTbl,
-      }
-      if (parsedTbl) {
-        globalStore.__GASTRO_STATUS_OVERRIDES__[`${s}_table_${parsedTbl}`] = status
       }
       found = true
     }
