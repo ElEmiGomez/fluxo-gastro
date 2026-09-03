@@ -63,6 +63,7 @@ export default function WaiterComanderoPage() {
   const [tableStatuses, setTableStatuses] = useState<Record<string | number, TableStatusType>>({})
   const [tableDwellMinutes, setTableDwellMinutes] = useState<Record<string | number, number>>({})
   const [readyOrderAlert, setReadyOrderAlert] = useState<string | number | null>(null)
+  const [dismissedReadyBannerOrderIds, setDismissedReadyBannerOrderIds] = useState<Set<string>>(new Set())
   const [serverOrders, setServerOrders] = useState<Order[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -158,9 +159,6 @@ export default function WaiterComanderoPage() {
   // Al seleccionar una mesa, cambiar la selección
   const handleSelectTableAndClearAlerts = (table: Table) => {
     setSelectedTable(table)
-    if (readyOrderAlert?.toString() === table.table_number.toString()) {
-      setReadyOrderAlert(null)
-    }
   }
 
   const [showFreeConfirmTable, setShowFreeConfirmTable] = useState<number | string | null>(null)
@@ -966,35 +964,70 @@ export default function WaiterComanderoPage() {
           </div>
         )}
 
-        {/* Alerta de Plato Listo para Servir en Salón */}
-        {readyOrderAlert && (
-          <div
-            onClick={() => {
-              const target = tables.find(t => t.table_number.toString() === readyOrderAlert.toString())
-              if (target) setSelectedTable(target)
-              setReadyOrderAlert(null)
-            }}
-            className="fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-4 rounded-2xl bg-emerald-600 text-white font-black shadow-2xl flex items-center justify-between animate-bounce border border-emerald-500 cursor-pointer active:scale-98 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <BellRing className="w-7 h-7 text-white stroke-[2.5]" />
-              <div>
-                <div className="text-sm font-black uppercase">¡Comanda Lista en Cocina!</div>
-                <div className="text-xs text-emerald-100">Toca para ir a Mesa #{readyOrderAlert} y servir</div>
+        {/* Alertas Flotantes Permanentes de Comandas Listas para Servir */}
+        {readyOrdersList.filter(ord => !dismissedReadyBannerOrderIds.has(ord.id)).map(ord => {
+          const tblNum = ord.table_number || ord.table?.table_number || '?'
+          const itemsCount = (ord.order_items || []).reduce((acc, it) => acc + (it.quantity || 1), 0)
+          const itemsSummary = (ord.order_items || []).map(it => `${it.quantity}x ${it.product?.name || 'Plato'}`).join(', ')
+
+          return (
+            <div
+              key={`float-ready-${ord.id}`}
+              className="fixed top-16 inset-x-3 z-50 max-w-lg mx-auto p-3.5 sm:p-4 rounded-2xl bg-emerald-600 text-white font-black shadow-2xl flex items-center justify-between gap-3 border-2 border-emerald-400 animate-in slide-in-from-top duration-300"
+            >
+              <div
+                onClick={() => {
+                  const target = tables.find(t => t.table_number.toString() === tblNum.toString())
+                  if (target) setSelectedTable(target)
+                }}
+                className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                title="Toca para ir a la mesa"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white text-emerald-900 flex items-center justify-center flex-shrink-0 font-black shadow-xs animate-bounce">
+                  <Sparkles className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] uppercase font-black tracking-wider bg-emerald-700/90 text-white px-2 py-0.5 rounded-md">
+                      Mesa #{tblNum}
+                    </span>
+                    <span className="text-[10px] text-emerald-100 font-extrabold">
+                      {itemsCount} {itemsCount === 1 ? 'plato listo' : 'platos listos'}
+                    </span>
+                  </div>
+                  <div className="text-xs sm:text-sm font-black uppercase text-white truncate mt-0.5">
+                    ¡Comanda Lista en Cocina!
+                  </div>
+                  <div className="text-[10px] text-emerald-100 truncate font-semibold">
+                    {itemsSummary}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleDeliverSingleOrder(ord.id, tblNum)}
+                  className="px-3 py-2 rounded-xl bg-white hover:bg-emerald-50 text-emerald-950 font-black text-xs shadow-md active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  title="Marcar como servido"
+                >
+                  <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
+                  <span>Servir</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDismissedReadyBannerOrderIds(prev => new Set(prev).add(ord.id))
+                  }}
+                  className="p-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-800 text-white transition-colors cursor-pointer"
+                  title="Ocultar aviso flotante"
+                >
+                  <X size={16} />
+                </button>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                setReadyOrderAlert(null)
-              }}
-              className="p-1.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-800 text-white flex-shrink-0"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
+          )
+        })}
 
         {orderSentToast && (
           <div className="fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-4 rounded-2xl bg-blue-900 text-white font-black shadow-2xl flex items-center justify-between animate-in slide-in-from-top duration-300 border border-blue-800">
