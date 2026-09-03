@@ -352,13 +352,13 @@ function DinerMenuContent() {
         const serverOrdersList: any[] = (ordersRes.orders || []).filter(
           (o: any) => o.order_items && o.order_items.length > 0
         )
-        // Filtrar órdenes de esta mesa creadas en las últimas 6 horas
+        // Filtrar órdenes de esta mesa creadas en la sesión actual
         const tableOrders = serverOrdersList
           .filter(
             o => (o.table_number?.toString() === tableNumber?.toString() ||
                   o.table?.table_number?.toString() === tableNumber?.toString() ||
                   o.table_id === `table-${tableNumber}`) &&
-                 ['pending', 'preparing', 'ready', 'delivered'].includes(o.status)
+                 ['pending_validation', 'pending', 'preparing', 'ready', 'delivered'].includes(o.status)
           )
           .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
 
@@ -366,9 +366,27 @@ function DinerMenuContent() {
           const total = tableOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
           setTableTotalAmount(total)
 
-          // El estado de la mesa sigue la comanda activa más reciente
-          const latestOrder = tableOrders[0]
-          setTableOrderStatus(latestOrder.status)
+          // Evaluar jerarquía de estados activos de la mesa
+          const activeOrders = tableOrders.filter(o => ['pending_validation', 'pending', 'preparing', 'ready'].includes(o.status))
+
+          if (activeOrders.length > 0) {
+            if (activeOrders.some(o => o.status === 'ready')) {
+              setTableOrderStatus('ready')
+            } else if (activeOrders.some(o => o.status === 'preparing')) {
+              setTableOrderStatus('preparing')
+            } else if (activeOrders.some(o => o.status === 'pending')) {
+              setTableOrderStatus('pending')
+            } else {
+              setTableOrderStatus('pending_validation')
+            }
+          } else if (tableOrders.some(o => o.status === 'delivered')) {
+            // Todas las comandas activas fueron entregadas -> Sobremesa (Café/Postre y Cuenta)
+            setTableOrderStatus('delivered')
+          } else {
+            setTableOrderStatus(null)
+          }
+        } else {
+          setTableOrderStatus(null)
         }
       } catch (e) {
         console.log('Error checking order status for diner:', e)
@@ -759,6 +777,22 @@ function DinerMenuContent() {
                   </div>
                 </div>
                 <div className="px-2.5 py-1 rounded-xl bg-white border border-emerald-300 text-[11px] font-black text-emerald-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
+                  <span>{t('viewPhases')}</span>
+                  <ChevronRight size={12} />
+                </div>
+              </div>
+            )}
+
+            {tableOrderStatus === 'pending_validation' && (
+              <div
+                onClick={() => setShowTimelineModal(true)}
+                className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs font-semibold flex items-center justify-between gap-2 shadow-xs cursor-pointer hover:bg-amber-100/70 transition-all animate-in fade-in"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                  <span className="text-[11px]">Comanda enviada &middot; Pendiente de validación en mesa</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-[10px] font-bold text-amber-800">
                   <span>{t('viewPhases')}</span>
                   <ChevronRight size={12} />
                 </div>
