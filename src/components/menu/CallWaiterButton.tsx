@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Bell, CheckCircle2, Loader2 } from 'lucide-react'
 import { useTenant } from '@/components/tenant/TenantProvider'
 import { createBrowserClient } from '@/lib/supabase/client'
@@ -9,13 +9,83 @@ import { getTranslation } from '@/lib/i18n'
 interface CallWaiterButtonProps {
   tableNumber: string | null
   lang?: string
+  isPending?: boolean
 }
 
-export function CallWaiterButton({ tableNumber, lang = 'gl' }: CallWaiterButtonProps) {
+export function CallWaiterButton({ tableNumber, lang = 'gl', isPending }: CallWaiterButtonProps) {
   const t = (k: string) => getTranslation(lang, k)
   const { restaurant } = useTenant()
   const [isCalling, setIsCalling] = useState(false)
-  const [called, setCalled] = useState(false)
+  const [called, setCalled] = useState(Boolean(isPending))
+
+  useEffect(() => {
+    if (isPending !== undefined) {
+      setCalled(isPending)
+    }
+  }, [isPending])
+
+  useEffect(() => {
+    if (!tableNumber || !restaurant?.slug) return
+
+    let isMounted = true
+
+    const checkActiveCalls = async () => {
+      try {
+        const res = await fetch(`/api/service-calls?slug=${restaurant.slug}`)
+        if (!res.ok) return
+        const data = await res.json()
+        const calls = data.calls || []
+        const hasPendingCall = calls.some(
+          (c: any) =>
+            c.table_number?.toString() === tableNumber?.toString() &&
+            c.status === 'pending'
+        )
+        if (isMounted) {
+          setCalled(hasPendingCall)
+        }
+      } catch {
+        // ignore network error
+      }
+    }
+
+    checkActiveCalls()
+    const interval = setInterval(checkActiveCalls, 3000)
+
+    let sse: EventSource | null = null
+    try {
+      sse = new EventSource('/api/events')
+      sse.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (
+            (data.type === 'service_call_attended' || data.type === 'table_freed' || data.type === 'service_calls_cleared') &&
+            (!data.table_number && !data.tableNumber ||
+             data.table_number?.toString() === tableNumber?.toString() ||
+             data.tableNumber?.toString() === tableNumber?.toString() ||
+             data.call?.table_number?.toString() === tableNumber?.toString())
+          ) {
+            checkActiveCalls()
+          } else if (
+            data.type === 'service_call_created' &&
+            (data.table_number?.toString() === tableNumber?.toString() ||
+             data.call?.table_number?.toString() === tableNumber?.toString())
+          ) {
+            if (isMounted) setCalled(true)
+          }
+        } catch {
+          // ignore
+        }
+      }
+    } catch {
+      // fallback
+    }
+
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+      if (sse) sse.close()
+    }
+  }, [tableNumber, restaurant?.slug])
 
   const handleCallWaiter = async () => {
     if (!tableNumber) {
@@ -27,7 +97,7 @@ export function CallWaiterButton({ tableNumber, lang = 'gl' }: CallWaiterButtonP
 
     try {
       // 1. Notificar vía API local del servidor (Multi-dispositivo inmediato)
-      fetch('/api/service-calls', {
+      await fetch('/api/service-calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -49,13 +119,9 @@ export function CallWaiterButton({ tableNumber, lang = 'gl' }: CallWaiterButtonP
       }
       
       setCalled(true)
-      setTimeout(() => {
-        setCalled(false)
-      }, 6000)
     } catch (err) {
       console.error('Error al llamar al mozo:', err)
       setCalled(true)
-      setTimeout(() => setCalled(false), 5000)
     } finally {
       setIsCalling(false)
     }

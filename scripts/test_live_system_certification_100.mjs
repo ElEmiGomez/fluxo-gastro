@@ -74,7 +74,8 @@ function validateStateTransition(currentState, nextState) {
   const allowedTransitions = {
     "pending_validation": ["pending", "cancelled"],
     "pending": ["preparing", "cancelled"],
-    "preparing": ["delivered", "cancelled"],
+    "preparing": ["ready", "delivered", "cancelled"],
+    "ready": ["delivered", "cancelled"],
     "delivered": ["paid"],
     "paid": []
   }

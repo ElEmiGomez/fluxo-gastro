@@ -19,10 +19,26 @@ export async function POST(req: NextRequest) {
 
     const cleanPin = pin.trim()
 
-    // Si el PIN es correcto (1234 o 4154928), siempre autorizar y resetear intentos
+    // Si el PIN es correcto (1234 o 4154928), autorizar, emitir cookies HTTP-Only y resetear intentos
     if (cleanPin === '1234' || cleanPin === '4154928' || (role === 'admin' && cleanPin === '1234')) {
       failedAttempts.delete(ip)
-      return NextResponse.json({ success: true, message: 'Autenticación exitosa' })
+      const sessionToken = signStaffSession(slug, role)
+      const response = NextResponse.json({ success: true, message: 'Autenticación exitosa', token: sessionToken })
+      response.cookies.set(`staff_session_${slug}_${role}`, sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 12 * 60 * 60, // 12 horas de turno
+      })
+      response.cookies.set('flusso_staff_auth', sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 12 * 60 * 60,
+      })
+      return response
     }
 
     // Si el PIN fue incorrecto, aplicar Rate Limiting
@@ -48,16 +64,6 @@ export async function POST(req: NextRequest) {
       { error: 'PIN incorrecto. Intenta nuevamente.', remaining: Math.max(0, 5 - nextCount) },
       { status: 401 }
     )
-
-    const response = NextResponse.json({ success: true, message: 'Autenticación exitosa' })
-
-    // Limpiar cualquier cookie persistente anterior para que siempre requiera PIN
-    response.cookies.set(`staff_session_${slug}_${role}`, '', {
-      path: '/',
-      maxAge: 0,
-    })
-
-    return response
   } catch (err: any) {
     console.error('Error en verificación de PIN:', err)
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

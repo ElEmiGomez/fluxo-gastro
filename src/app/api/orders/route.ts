@@ -6,6 +6,10 @@ import {
   recordAnalyticsEvent,
   getIdempotentOrder,
   saveIdempotentOrder,
+  acquireIdempotencyLock,
+  completeIdempotencyLock,
+  releaseIdempotencyLock,
+  isValidOrderTransition,
 } from '@/lib/server-state'
 import {
   getRestaurantBySlug,
@@ -15,7 +19,7 @@ import {
   updateOrderStatus,
 } from '@/lib/supabase/repository'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
-import { Order, OrderItem } from '@/types/database.types'
+import { Order, OrderItem, OrderStatus } from '@/types/database.types'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +37,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  let idempotencyKeyStr: string | null = null
+  let idempotencyLocked = false
+
   try {
     const body = await req.json()
     const {
@@ -48,17 +55,26 @@ export async function POST(req: NextRequest) {
       created_by = 'diner',
     } = body
 
-    // 0. Control de Idempotencia (Previene comandas duplicadas por mala conexión o doble clic)
-    if (idempotency_key && typeof idempotency_key === 'string') {
-      const cached = getIdempotentOrder(idempotency_key)
-      if (cached) {
-        return NextResponse.json({
-          success: true,
-          order: cached,
-          idempotent: true,
-          message: 'Comanda ya procesada previamente (Idempotency Key)',
-        })
+    // 0. Control de Idempotencia Atómica y Cero TOCTOU
+    if (idempotency_key && typeof idempotency_key === 'string' && idempotency_key.trim()) {
+      idempotencyKeyStr = idempotency_key.trim()
+      const lock = await acquireIdempotencyLock(idempotencyKeyStr)
+      if (!lock.isOwner) {
+        if (lock.order) {
+          return NextResponse.json({
+            success: true,
+            order: lock.order,
+            idempotent: true,
+            message: 'Comanda ya procesada previamente (Idempotency Key)',
+          })
+        } else {
+          return NextResponse.json(
+            { error: lock.error || 'Error procesando comanda concurrente' },
+            { status: 500 }
+          )
+        }
       }
+      idempotencyLocked = true
     }
 
     const tokenToValidate = session_token || session_id
@@ -67,6 +83,7 @@ export async function POST(req: NextRequest) {
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local-client'
     const rateLimitKey = `order_${slug}_${clientIp}_${table_number}`
     if (!checkRateLimit(rateLimitKey, 20, 60000)) {
+      if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'Rate limited')
       return NextResponse.json(
         { error: 'Demasiadas solicitudes. Por favor espera unos momentos.' },
         { status: 429 }
@@ -74,6 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!Array.isArray(items) || items.length === 0) {
+      if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'Items inválidos')
       return NextResponse.json(
         { error: 'La comanda debe contener al menos 1 producto válido' },
         { status: 400 }
@@ -88,13 +106,14 @@ export async function POST(req: NextRequest) {
     if (tokenToValidate) {
       const sessionCheck = await validateSessionToken(restaurantId, slug, parsedTableNum, tokenToValidate)
       if (!sessionCheck.valid) {
+        if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'SESSION_EXPIRED')
         return NextResponse.json(
           {
             error: 'SESSION_EXPIRED',
             message: 'La sesión de esta mesa ha finalizado. Por favor escanea el código QR de nuevo.',
             reason: sessionCheck.reason,
           },
-          { status: 403 }
+          { status: sessionCheck.status || 403 }
         )
       }
     }
@@ -145,6 +164,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (validItems.length === 0) {
+      if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'No valid items')
       return NextResponse.json(
         { error: 'No se encontraron productos válidos en la comanda' },
         { status: 400 }
@@ -162,13 +182,18 @@ export async function POST(req: NextRequest) {
       items: validItems,
     })
 
-    if (idempotency_key && typeof idempotency_key === 'string') {
+    if (idempotencyKeyStr && idempotencyLocked) {
+      completeIdempotencyLock(idempotencyKeyStr, saved)
+    } else if (idempotency_key && typeof idempotency_key === 'string') {
       saveIdempotentOrder(idempotency_key, saved)
     }
 
     recordAnalyticsEvent(slug, { slug, type: 'order_placed', table_number: assignedTableNum })
     return NextResponse.json({ success: true, order: saved })
   } catch (err: any) {
+    if (idempotencyKeyStr && idempotencyLocked) {
+      releaseIdempotencyLock(idempotencyKeyStr, err.message)
+    }
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
@@ -181,15 +206,68 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Faltan parámetros orderId o status' }, { status: 400 })
     }
 
-    const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
+    const validStatuses: OrderStatus[] = [
+      'pending_validation',
+      'pending',
+      'confirmed',
+      'preparing',
+      'ready',
+      'delivered',
+      'paid',
+      'cancelled',
+    ]
     if (!validStatuses.includes(status)) {
       return NextResponse.json({ error: `Estado inválido: ${status}` }, { status: 400 })
+    }
+
+    // Buscar comanda existente estrictamente por UUID orderId
+    const restaurant = await getRestaurantBySlug(slug)
+    const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+    const orders = await getRestaurantOrders(restaurantId, slug)
+    const existingOrder = orders.find(o => o.id === orderId)
+
+    if (!existingOrder) {
+      return NextResponse.json(
+        { error: 'ORDER_NOT_FOUND', message: `Comanda con ID ${orderId} no encontrada` },
+        { status: 404 }
+      )
+    }
+
+    const currentStatus = existingOrder.status
+
+    // Idempotencia: Si el estado solicitado es idéntico al actual, retornar HTTP 200
+    if (currentStatus === status) {
+      return NextResponse.json({
+        success: true,
+        message: `Orden ${orderId} ya se encuentra en estado ${status}`,
+        order: existingOrder,
+      })
+    }
+
+    // Validar transición legal en la máquina de estados formal
+    if (!isValidOrderTransition(currentStatus, status)) {
+      const errorMsg = `Transición inválida de ${currentStatus} a ${status}`
+      return NextResponse.json(
+        {
+          error: errorMsg,
+          code: 'TRANSITION_INVALID',
+          message: errorMsg,
+        },
+        { status: 400 }
+      )
     }
 
     const effectiveTableNum = table_number ?? tableNumber
     const result = await updateOrderStatus(slug, orderId, status, effectiveTableNum)
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: result.error || 'Error al actualizar orden',
+          code: 'TRANSITION_INVALID',
+          message: result.error || 'Error al actualizar orden',
+        },
+        { status: 400 }
+      )
     }
 
     return NextResponse.json({ success: true, message: `Orden ${orderId} actualizada a ${status}` })

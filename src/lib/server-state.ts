@@ -23,6 +23,15 @@ export interface TableSession {
   last_updated_at: string
 }
 
+interface IdempotencyLockEntry {
+  status: 'pending' | 'completed' | 'failed'
+  order?: Order
+  error?: string
+  waiters: Array<(result: { order?: Order; error?: string }) => void>
+  createdAt: number
+  expiresAt: number
+}
+
 // Estado global en memoria de Node.js (persiste durante la ejecución del servidor)
 interface GlobalStoreState {
   __GASTRO_ORDERS__: Record<string, Order[]>
@@ -33,6 +42,7 @@ interface GlobalStoreState {
   __GASTRO_CATEGORIES__: Record<string, Category[]>
   __GASTRO_PRODUCTS__: Record<string, Product[]>
   __GASTRO_SSE_CLIENTS__: Array<(data: string) => void>
+  __GASTRO_IDEMPOTENCY_LOCKS__: Map<string, IdempotencyLockEntry>
 }
 
 const g = (globalThis as unknown as Partial<GlobalStoreState>)
@@ -95,14 +105,128 @@ if (!g.__GASTRO_SSE_CLIENTS__) {
   g.__GASTRO_SSE_CLIENTS__ = []
 }
 
+if (!g.__GASTRO_IDEMPOTENCY_LOCKS__) {
+  g.__GASTRO_IDEMPOTENCY_LOCKS__ = new Map<string, IdempotencyLockEntry>()
+}
+
 const globalStore = g as GlobalStoreState
 
 // ==============================================================================
-// GESTOR DE IDEMPOTENCIA (Anti-Duplicación de Comandas por Doble Clic o Mala Conexión)
+// GESTOR DE IDEMPOTENCIA ATÓMICA Y CERO TOCTOU (Anti-Duplicación en Concurrencia)
 // ==============================================================================
 const idempotencyStore = new Map<string, { order: Order; expiresAt: number }>()
 
+export interface IdempotencyLockResult {
+  isOwner: boolean
+  order?: Order
+  error?: string
+}
+
+export async function acquireIdempotencyLock(
+  key: string,
+  timeoutMs: number = 10000
+): Promise<IdempotencyLockResult> {
+  const map = globalStore.__GASTRO_IDEMPOTENCY_LOCKS__
+  const now = Date.now()
+  const existing = map.get(key)
+
+  if (existing) {
+    if (now > existing.expiresAt) {
+      map.delete(key)
+    } else if (existing.status === 'completed' && existing.order) {
+      return { isOwner: false, order: existing.order }
+    } else if (existing.status === 'failed') {
+      return { isOwner: false, error: existing.error }
+    } else if (existing.status === 'pending') {
+      // In-flight reservation: esperar a que la petición principal que adquirió el bloqueo finalice
+      return new Promise<IdempotencyLockResult>(resolve => {
+        let timer: NodeJS.Timeout | null = null
+        const waiter = (res: { order?: Order; error?: string }) => {
+          if (timer) clearTimeout(timer)
+          if (res.order) {
+            resolve({ isOwner: false, order: res.order })
+          } else {
+            resolve({ isOwner: false, error: res.error || 'Error en comanda concurrente' })
+          }
+        }
+        timer = setTimeout(() => {
+          const idx = existing.waiters.indexOf(waiter)
+          if (idx >= 0) existing.waiters.splice(idx, 1)
+          resolve({ isOwner: false, error: 'TIMEOUT_WAITING_IDEMPOTENCY_LOCK' })
+        }, timeoutMs)
+        existing.waiters.push(waiter)
+      })
+    }
+  }
+
+  // Nueva reserva exclusiva atómica
+  const newEntry: IdempotencyLockEntry = {
+    status: 'pending',
+    waiters: [],
+    createdAt: now,
+    expiresAt: now + 300000, // 5 minutos de TTL
+  }
+  map.set(key, newEntry)
+  return { isOwner: true }
+}
+
+export function completeIdempotencyLock(key: string, order: Order, ttlMs: number = 300000): void {
+  const map = globalStore.__GASTRO_IDEMPOTENCY_LOCKS__
+  const entry = map.get(key)
+  const now = Date.now()
+
+  saveIdempotentOrder(key, order, ttlMs)
+
+  if (entry) {
+    entry.status = 'completed'
+    entry.order = order
+    entry.expiresAt = now + ttlMs
+    const waiters = [...entry.waiters]
+    entry.waiters = []
+    waiters.forEach(w => {
+      try {
+        w({ order })
+      } catch (err) {
+        console.warn('Error notificando waiter de idempotencia:', err)
+      }
+    })
+  } else {
+    map.set(key, {
+      status: 'completed',
+      order,
+      waiters: [],
+      createdAt: now,
+      expiresAt: now + ttlMs,
+    })
+  }
+}
+
+export function releaseIdempotencyLock(key: string, error?: string): void {
+  const map = globalStore.__GASTRO_IDEMPOTENCY_LOCKS__
+  const entry = map.get(key)
+  if (entry) {
+    entry.status = 'failed'
+    entry.error = error || 'Operación cancelada'
+    const waiters = [...entry.waiters]
+    entry.waiters = []
+    waiters.forEach(w => {
+      try {
+        w({ error: entry.error })
+      } catch (err) {
+        console.warn('Error notificando fallo de idempotencia:', err)
+      }
+    })
+    map.delete(key)
+  }
+}
+
 export function getIdempotentOrder(key: string): Order | null {
+  const lockEntry = globalStore.__GASTRO_IDEMPOTENCY_LOCKS__?.get(key)
+  if (lockEntry && lockEntry.status === 'completed' && lockEntry.order) {
+    if (Date.now() <= lockEntry.expiresAt) {
+      return lockEntry.order
+    }
+  }
   const entry = idempotencyStore.get(key)
   if (!entry) return null
   if (Date.now() > entry.expiresAt) {
@@ -131,7 +255,8 @@ export const VALID_ORDER_TRANSITIONS: Record<string, string[]> = {
   confirmed: ['preparing', 'ready', 'delivered', 'cancelled'],
   preparing: ['ready', 'delivered', 'cancelled'],
   ready: ['delivered', 'cancelled'],
-  delivered: ['cancelled'],
+  delivered: ['paid', 'cancelled'],
+  paid: [],
   cancelled: [],
 }
 
@@ -197,45 +322,52 @@ export function updateServerOrderStatus(
     globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
   }
 
-  // 1. Guardar override persistente del estado de esta orden específica
+  // 1. Buscar la orden exclusivamente por su UUID orderId
+  let existingOrder: Order | undefined
+  for (const s of Object.keys(globalStore.__GASTRO_ORDERS__)) {
+    const list = globalStore.__GASTRO_ORDERS__[s] || []
+    const match = list.find(o => o.id === orderId)
+    if (match) {
+      existingOrder = match
+      break
+    }
+  }
+
+  if (!existingOrder) {
+    return { orders: getServerOrders(slug), error: 'ORDER_NOT_FOUND' }
+  }
+
+  // 2. Validar transición de estado legal
+  const currentStatus = globalStore.__GASTRO_STATUS_OVERRIDES__[orderId] || existingOrder.status
+  if (!isValidOrderTransition(currentStatus, status)) {
+    return {
+      orders: getServerOrders(slug),
+      error: `Transición inválida de ${currentStatus} a ${status}`,
+    }
+  }
+
+  // 3. Guardar override persistente del estado de esta orden específica por su UUID
   globalStore.__GASTRO_STATUS_OVERRIDES__[orderId] = status
 
-  // 2. Actualizar en todas las listas de memoria activas
-  let found = false
+  // 4. Actualizar en todas las listas de memoria activas exclusivamente por UUID orderId
+  let updatedTableNumber: number | string | undefined = tableNumber
   for (const s of Object.keys(globalStore.__GASTRO_ORDERS__)) {
     const list = globalStore.__GASTRO_ORDERS__[s] || []
     const idx = list.findIndex(o => o.id === orderId)
     if (idx >= 0) {
       const existing = list[idx]
       const parsedTbl = tableNumber ? parseInt(String(tableNumber), 10) : existing.table_number
+      updatedTableNumber = parsedTbl
       list[idx] = {
         ...existing,
         status,
         table_number: parsedTbl,
       }
-      found = true
     }
   }
 
-  // 3. Si no se encontró por ID pero se especificó número de mesa, actualizar la comanda activa de esa mesa
-  if (!found && tableNumber) {
-    const tblInt = parseInt(String(tableNumber), 10)
-    const list = globalStore.__GASTRO_ORDERS__[slug] || []
-    const tableOrderIdx = list.findIndex(
-      o => (o.table_number === tblInt || o.table?.table_number === tblInt) && o.status !== 'cancelled'
-    )
-    if (tableOrderIdx >= 0) {
-      list[tableOrderIdx] = {
-        ...list[tableOrderIdx],
-        status,
-      }
-      globalStore.__GASTRO_STATUS_OVERRIDES__[list[tableOrderIdx].id] = status
-      found = true
-    }
-  }
-
-  // 4. Emitir evento SSE para sincronización instantánea en Mozo y Cliente
-  broadcastEvent({ type: 'order_updated', slug, orderId, status, tableNumber })
+  // 5. Emitir evento SSE para sincronización instantánea en Mozo y Cliente
+  broadcastEvent({ type: 'order_updated', slug, orderId, status, tableNumber: updatedTableNumber })
   return { orders: getServerOrders(slug) }
 }
 
@@ -363,10 +495,10 @@ export function getOrCreateTableSession(slug: string, tableNumber: string | numb
   }
 
   let session = globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber]
-  if (!session) {
+  if (!session || session.status === 'free') {
     session = {
       table_number: tableNumber,
-      status: 'free',
+      status: 'busy',
       session_id: `sess-${tableNumber}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       last_updated_at: new Date().toISOString(),
     }
@@ -379,7 +511,7 @@ export function validateTableSession(
   slug: string,
   tableNumber: string | number,
   clientSessionId?: string
-): { valid: boolean; currentSessionId: string; reason?: string } {
+): { valid: boolean; currentSessionId: string; reason?: string; status?: number } {
   if (!globalStore.__GASTRO_TABLE_SESSIONS__) {
     globalStore.__GASTRO_TABLE_SESSIONS__ = {}
   }
@@ -387,24 +519,37 @@ export function validateTableSession(
     globalStore.__GASTRO_TABLE_SESSIONS__[slug] = {}
   }
 
-  let currentSession = globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber]
+  const currentSession = globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber]
 
-  // Si no hay sesión o la mesa estaba libre, adoptamos la sesión del comensal
-  if (!currentSession || currentSession.status === 'free') {
-    currentSession = {
-      table_number: tableNumber,
-      status: 'busy',
-      session_id: clientSessionId || `sess-${tableNumber}-${Date.now()}`,
-      last_updated_at: new Date().toISOString(),
-    }
-    globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber] = currentSession
+  // Si no se proporcionó token (por ejemplo creación directa por personal)
+  if (!clientSessionId) {
     return {
       valid: true,
-      currentSessionId: currentSession.session_id,
+      currentSessionId: currentSession?.session_id || '',
     }
   }
 
-  // Si la mesa ya tiene una sesión activa con comensales, permitimos agregar platos a la misma mesa
+  // Si no hay sesión o la mesa está libre, rechazar token forjado/expirado
+  if (!currentSession || currentSession.status === 'free') {
+    return {
+      valid: false,
+      currentSessionId: '',
+      reason: 'SESSION_EXPIRED',
+      status: 403,
+    }
+  }
+
+  // Si el token del cliente no coincide con la sesión activa de la mesa, rechazar
+  if (currentSession.session_id !== clientSessionId) {
+    return {
+      valid: false,
+      currentSessionId: currentSession.session_id,
+      reason: 'SESSION_EXPIRED',
+      status: 403,
+    }
+  }
+
+  // Token válido y coincide con la sesión activa
   return {
     valid: true,
     currentSessionId: currentSession.session_id,
@@ -428,16 +573,39 @@ export function setTableOccupied(slug: string, tableNumber: string | number): Ta
 }
 
 export function freeTableSession(slug: string, tableNumber: string | number): void {
-  // 1. Eliminar órdenes de esta mesa específica
+  const tableNumStr = tableNumber.toString()
+
+  // 1. Marcar órdenes activas/entregadas como 'paid' en lugar de eliminarlas para preservar historial
   const orders = globalStore.__GASTRO_ORDERS__?.[slug] || []
-  globalStore.__GASTRO_ORDERS__[slug] = orders.filter(
-    o => o.table_number?.toString() !== tableNumber.toString() && o.table?.table_number?.toString() !== tableNumber.toString()
-  )
+  orders.forEach(o => {
+    const isThisTable =
+      o.table_number?.toString() === tableNumStr ||
+      o.table?.table_number?.toString() === tableNumStr
+    if (isThisTable) {
+      if (o.status !== 'cancelled') {
+        o.status = 'paid'
+      }
+      if (globalStore.__GASTRO_STATUS_OVERRIDES__) {
+        delete globalStore.__GASTRO_STATUS_OVERRIDES__[o.id]
+      }
+    }
+  })
+
+  // Limpiar cualquier residuo de overrides de mesa
+  if (globalStore.__GASTRO_STATUS_OVERRIDES__) {
+    delete globalStore.__GASTRO_STATUS_OVERRIDES__[`${slug}_table_${tableNumStr}`]
+    delete globalStore.__GASTRO_STATUS_OVERRIDES__[`table_${tableNumStr}`]
+    for (const k of Object.keys(globalStore.__GASTRO_STATUS_OVERRIDES__)) {
+      if (k.endsWith(`_table_${tableNumStr}`) || k === `table_${tableNumStr}`) {
+        delete globalStore.__GASTRO_STATUS_OVERRIDES__[k]
+      }
+    }
+  }
 
   // 2. Eliminar llamadas de esta mesa específica
   const calls = globalStore.__GASTRO_SERVICE_CALLS__?.[slug] || []
   globalStore.__GASTRO_SERVICE_CALLS__[slug] = calls.filter(
-    c => c.table_number?.toString() !== tableNumber.toString()
+    c => c.table_number?.toString() !== tableNumStr
   )
 
   // 3. Generar nueva sesión limpia para el siguiente cliente

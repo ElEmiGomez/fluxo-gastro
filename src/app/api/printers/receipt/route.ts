@@ -174,8 +174,25 @@ export async function GET(req: NextRequest) {
 
     const base64Escpos = Buffer.from(escposBuffer, 'binary').toString('base64')
 
-    // Respuesta JSON si se solicita explícitamente
-    if (format === 'json' || req.headers.get('accept')?.includes('application/json')) {
+    // 1. Respuesta Texto Plano
+    if (format === 'text' || format === 'txt') {
+      return new NextResponse(plainText, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      })
+    }
+
+    // 2. Respuesta ESC/POS Binario
+    if (format === 'escpos' || format === 'bin') {
+      return new NextResponse(Buffer.from(escposBuffer, 'binary'), {
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Content-Disposition': `attachment; filename="ticket-${slug}-mesa${tableNum}.bin"`,
+        },
+      })
+    }
+
+    // 3. Por defecto, responder siempre en formato JSON a menos que se solicite HTML explícitamente
+    if (format !== 'html' && format !== 'preview' && format !== 'view') {
       return NextResponse.json({
         success: true,
         restaurant: restName,
@@ -190,24 +207,7 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // Respuesta Texto Plano
-    if (format === 'text' || format === 'txt') {
-      return new NextResponse(plainText, {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      })
-    }
-
-    // Respuesta ESC/POS Binario
-    if (format === 'escpos' || format === 'bin') {
-      return new NextResponse(Buffer.from(escposBuffer, 'binary'), {
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'Content-Disposition': `attachment; filename="ticket-${slug}-mesa${tableNum}.bin"`,
-        },
-      })
-    }
-
-    // 3. Visualizador HTML Interactivo (Para visitantes web desde la landing)
+    // 4. Visualizador HTML Interactivo (Solo cuando format === 'html' | 'preview' | 'view')
     const itemsHtml = (targetOrder.order_items || []).map((it: any) => `
       <div style="margin-bottom: 8px;">
         <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 14px;">
@@ -575,7 +575,7 @@ export async function GET(req: NextRequest) {
       <div class="selector-group">
         <label class="selector-label">Seleccionar Local de Demostración:</label>
         <div class="local-selector-grid">
-          <a href="/api/printers/receipt?slug=burger-gourmet" class="local-card ${slug === 'burger-gourmet' ? 'active' : ''}">
+          <a href="/api/printers/receipt?slug=burger-gourmet&format=html" class="local-card ${slug === 'burger-gourmet' ? 'active' : ''}">
             <span class="local-icon">🍔</span>
             <div class="local-info">
               <span class="local-name">Burger Gourmet Noia</span>
@@ -584,7 +584,7 @@ export async function GET(req: NextRequest) {
             ${slug === 'burger-gourmet' ? '<span class="check-dot">✓</span>' : ''}
           </a>
 
-          <a href="/api/printers/receipt?slug=taperia-casco-antigo" class="local-card ${slug === 'taperia-casco-antigo' ? 'active' : ''}">
+          <a href="/api/printers/receipt?slug=taperia-casco-antigo&format=html" class="local-card ${slug === 'taperia-casco-antigo' ? 'active' : ''}">
             <span class="local-icon">🐙</span>
             <div class="local-info">
               <span class="local-name">Tapería Casco Antigo</span>
@@ -593,7 +593,7 @@ export async function GET(req: NextRequest) {
             ${slug === 'taperia-casco-antigo' ? '<span class="check-dot">✓</span>' : ''}
           </a>
 
-          <a href="/api/printers/receipt?slug=terraza-malecon" class="local-card ${slug === 'terraza-malecon' ? 'active' : ''}">
+          <a href="/api/printers/receipt?slug=terraza-malecon&format=html" class="local-card ${slug === 'terraza-malecon' ? 'active' : ''}">
             <span class="local-icon">🍹</span>
             <div class="local-info">
               <span class="local-name">Terraza Malecón Bar</span>

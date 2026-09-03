@@ -360,6 +360,9 @@ export default function WaiterComanderoPage() {
 
         // 3. Mesas con órdenes creadas
         incomingOrders.forEach(ord => {
+          if (ord.status === 'cancelled' || ord.status === 'paid' || cancelledOrderIdsRef.current.has(ord.id)) {
+            return
+          }
           const tblNum = ord.table?.table_number || ord.table_number
           if (tblNum) {
             const isDelivered = deliveredOrderIdsRef.current.has(ord.id) || ord.status === 'delivered'
@@ -374,13 +377,13 @@ export default function WaiterComanderoPage() {
                 setReadyOrderAlert(tblNum)
                 playKitchenChime()
               }
-            } else if (!statusMap[tblNum] && !statusMap[numKey]) {
+            } else if (!isDelivered && ['pending_validation', 'pending', 'preparing'].includes(ord.status) && !statusMap[tblNum] && !statusMap[numKey]) {
               statusMap[tblNum] = 'busy'
               statusMap[numKey] = 'busy'
               statusMap[strKey] = 'busy'
             }
 
-            if (ord.created_at) {
+            if (ord.created_at && !isDelivered) {
               const mins = Math.max(1, Math.floor((Date.now() - new Date(ord.created_at).getTime()) / 60000))
               if (!dwellMap[tblNum] || mins > dwellMap[tblNum]) {
                 dwellMap[tblNum] = mins
@@ -504,7 +507,8 @@ export default function WaiterComanderoPage() {
     const tableOrders = serverOrders.filter(
       o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
     )
-    for (const ord of tableOrders) {
+    const fireableOrders = tableOrders.filter(o => o.status === 'pending' || o.status === 'ready')
+    for (const ord of fireableOrders) {
       await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -1470,7 +1474,7 @@ export default function WaiterComanderoPage() {
             paxCount={tablePax[selectedTable.table_number] || 2}
             discountPercentage={tableDiscounts[selectedTable.table_number] || 0}
             orders={serverOrders.filter(
-              o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && o.status !== 'delivered'
+              o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && ['preparing', 'ready', 'delivered'].includes(o.status)
             )}
             onProceedToCharge={() => {
               setShowFreeConfirmTable(selectedTable.table_number)

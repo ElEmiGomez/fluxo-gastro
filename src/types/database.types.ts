@@ -52,7 +52,7 @@ export interface Table {
   qr_code_url?: string | null
 }
 
-export type OrderStatus = 'pending_validation' | 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
+export type OrderStatus = 'pending_validation' | 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'paid' | 'cancelled'
 export type CourseType = 'first' | 'second' | 'dessert' | 'drink'
 
 export interface TableSession {

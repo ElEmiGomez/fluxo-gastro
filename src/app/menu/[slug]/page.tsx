@@ -312,6 +312,8 @@ function DinerMenuContent() {
           setSessionId(thisTableSession.session_id)
         }
 
+        const currentSessionId = thisTableSession?.session_id || sessionId
+
         // Si la mesa fue liberada por el mozo, limpiar comanda local y resetear
         if (thisTableSession && thisTableSession.status === 'free') {
           setTableOrderStatus(null)
@@ -331,7 +333,7 @@ function DinerMenuContent() {
           setHasRequestedBill(true)
         }
 
-        const isBillPaid = calls.some(
+        const isBillPaidCall = calls.some(
           (c: any) =>
             c.table_number?.toString() === tableNumber?.toString() &&
             c.status === 'attended' &&
@@ -339,6 +341,24 @@ function DinerMenuContent() {
             c.created_at &&
             Date.now() - new Date(c.created_at).getTime() < 15 * 60 * 1000
         )
+
+        const serverOrdersList: any[] = (ordersRes.orders || []).filter(
+          (o: any) => o.order_items && o.order_items.length > 0
+        )
+
+        // Evaluar todas las órdenes de la mesa bajo la sesión activa para detección de cobro
+        const allTableOrders = serverOrdersList.filter(
+          o => (o.table_number?.toString() === tableNumber?.toString() ||
+                o.table?.table_number?.toString() === tableNumber?.toString() ||
+                o.table_id === `table-${tableNumber}`) &&
+               (!o.session_token || (currentSessionId ? o.session_token === currentSessionId : true))
+        )
+
+        const hasPaidOrders = allTableOrders.length > 0 &&
+          allTableOrders.some(o => o.status === 'paid') &&
+          !allTableOrders.some(o => ['pending_validation', 'pending', 'preparing', 'ready', 'delivered'].includes(o.status))
+
+        const isBillPaid = isBillPaidCall || hasPaidOrders || thisTableSession?.status === 'closed'
 
         if (isBillPaid) {
           setIsTablePaid(true)
@@ -349,16 +369,10 @@ function DinerMenuContent() {
           setIsTablePaid(false)
         }
 
-        const serverOrdersList: any[] = (ordersRes.orders || []).filter(
-          (o: any) => o.order_items && o.order_items.length > 0
-        )
         // Filtrar órdenes de esta mesa creadas en la sesión actual
-        const tableOrders = serverOrdersList
+        const tableOrders = allTableOrders
           .filter(
-            o => (o.table_number?.toString() === tableNumber?.toString() ||
-                  o.table?.table_number?.toString() === tableNumber?.toString() ||
-                  o.table_id === `table-${tableNumber}`) &&
-                 ['pending_validation', 'pending', 'preparing', 'ready', 'delivered'].includes(o.status)
+            o => ['pending_validation', 'pending', 'preparing', 'ready', 'delivered'].includes(o.status)
           )
           .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
 
@@ -402,16 +416,31 @@ function DinerMenuContent() {
           const data = JSON.parse(event.data)
 
           // Si el mozo liberó esta mesa específica, limpiar estado y carrito residual
-          if (data.type === 'table_freed' && data.tableNumber?.toString() === tableNumber?.toString()) {
+          if (
+            data.type === 'table_freed' &&
+            (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
+          ) {
             setCart([])
             setTableOrderStatus(null)
             setIsTablePaid(false)
+            setHasRequestedBill(false)
             if (typeof window !== 'undefined') {
               localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
             }
             if (data.new_session_id) {
               setSessionId(data.new_session_id)
             }
+            return
+          }
+
+          // Notificación en vivo de cuenta pagada / mesa cobrada
+          if (
+            data.type === 'table_bill_paid' &&
+            (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
+          ) {
+            setIsTablePaid(true)
+            setTableOrderStatus(null)
+            setHasRequestedBill(false)
             return
           }
 
@@ -438,6 +467,30 @@ function DinerMenuContent() {
 
     pollInterval = setInterval(checkOrderStatus, 2000)
 
+    // Manejar eventos locales emitidos en el cliente para sincronización inmediata
+    const handleLocalTableFreed = (e: any) => {
+      if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
+        setCart([])
+        setTableOrderStatus(null)
+        setIsTablePaid(false)
+        setHasRequestedBill(false)
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
+        }
+      }
+    }
+
+    const handleLocalTableBillPaid = (e: any) => {
+      if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
+        setIsTablePaid(true)
+        setTableOrderStatus(null)
+        setHasRequestedBill(false)
+      }
+    }
+
+    window.addEventListener('fluxo_table_freed', handleLocalTableFreed)
+    window.addEventListener('fluxo_table_bill_paid', handleLocalTableBillPaid)
+
     // Manejar desbloqueo de móvil / retorno a pestaña
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -450,6 +503,8 @@ function DinerMenuContent() {
     return () => {
       if (sseEventSource) sseEventSource.close()
       if (pollInterval) clearInterval(pollInterval)
+      window.removeEventListener('fluxo_table_freed', handleLocalTableFreed)
+      window.removeEventListener('fluxo_table_bill_paid', handleLocalTableBillPaid)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleVisibilityChange)
     }
@@ -926,6 +981,40 @@ function DinerMenuContent() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* VISTA CUANDO LA MESA YA HA SIDO COBRADA */}
+        {isTablePaid && (
+          <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
+            <div className="space-y-3">
+              <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                  <Check className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                      Mesa #{tableNumber} &middot; Cuenta Pagada
+                    </span>
+                  </div>
+                  <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
+                    ¡Cuenta saldada! Muchas gracias por tu visita
+                  </h4>
+                  <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
+                    Esperamos que hayas disfrutado tu comida. ¡Hasta la próxima!
+                  </p>
+                </div>
+              </div>
+
+              <GoogleReviewBooster
+                restaurantName={restaurant.name}
+                restaurantSlug={restaurant.slug}
+                googleReviewUrl={restaurant.google_review_url}
+                googlePlaceId={restaurant.google_place_id}
+                variant="card"
+              />
+            </div>
           </div>
         )}
 

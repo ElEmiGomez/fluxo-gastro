@@ -119,7 +119,7 @@ export async function validateSessionToken(
   slug: string,
   tableNumber: number,
   sessionToken?: string
-): Promise<{ valid: boolean; session?: TableSession; reason?: string }> {
+): Promise<{ valid: boolean; session?: TableSession; reason?: string; status?: number }> {
   if (!sessionToken) {
     return { valid: true, session: { table_number: tableNumber, session_token: `sess-${tableNumber}-${Date.now()}`, status: 'active' } }
   }
@@ -137,26 +137,14 @@ export async function validateSessionToken(
 
       if (session) {
         if (session.status !== 'active') {
-          return { valid: false, reason: 'SESSION_EXPIRED' }
+          return { valid: false, reason: 'SESSION_EXPIRED', status: 403 }
         }
         return { valid: true, session: session as TableSession }
       }
 
-      // Si no existe sesión previa en la BD para este token, la inicializamos como activa
-      try {
-        const newSessionRecord = {
-          restaurant_id: restaurantId,
-          table_number: tableNumber,
-          session_token: sessionToken,
-          status: 'active',
-          created_at: new Date().toISOString(),
-        }
-        await supabase.from('table_sessions').insert(newSessionRecord)
-        return { valid: true, session: newSessionRecord as TableSession }
-      } catch (insertErr) {
-        // En caso de conflicto o restricción RLS, permitimos la sesión en memoria
-        console.warn('Fallback memory session on insert error:', insertErr)
-      }
+      // Si no existe sesión previa en la BD para este token, es un token forjado o revocado.
+      // Queda prohibido auto-insertar tokens desconocidos.
+      return { valid: false, reason: 'SESSION_EXPIRED', status: 403 }
     } catch (e) {
       console.warn('Error validating session in Supabase:', e)
     }
@@ -165,7 +153,7 @@ export async function validateSessionToken(
   // Validación en memoria
   const memCheck = memoryValidateSession(slug, tableNumber, sessionToken)
   if (!memCheck.valid) {
-    return { valid: false, reason: memCheck.reason }
+    return { valid: false, reason: memCheck.reason || 'SESSION_EXPIRED', status: memCheck.status || 403 }
   }
   return {
     valid: true,
@@ -391,12 +379,12 @@ export async function getActiveOrdersByTable(
   const allOrders = await getRestaurantOrders(restaurantId, slug)
   return allOrders.filter(
     o => o.table_number?.toString() === tableNumber.toString() &&
-         ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
+         ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
   )
 }
 
 /**
- * 6. COMANDAS: Actualizar estado (pending -> preparing -> ready -> delivered)
+ * 6. COMANDAS: Actualizar estado (pending -> preparing -> ready -> delivered -> paid)
  */
 export async function updateOrderStatus(
   slug: string,
@@ -404,6 +392,13 @@ export async function updateOrderStatus(
   status: OrderStatus,
   tableNumber?: number | string
 ): Promise<{ success: boolean; error?: string }> {
+  // 1. Validar y actualizar estado en memoria validando la transición y aislamiento UUID
+  const serverResult = updateServerOrderStatus(slug, orderId, status, tableNumber)
+  if (serverResult.error) {
+    return { success: false, error: serverResult.error }
+  }
+
+  // 2. Persistir en Supabase solo si la validación fue exitosa
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -416,7 +411,6 @@ export async function updateOrderStatus(
     }
   }
 
-  updateServerOrderStatus(slug, orderId, status, tableNumber)
   return { success: true }
 }
 
