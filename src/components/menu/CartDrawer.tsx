@@ -233,6 +233,47 @@ export function CartDrawer({
       if (!res.ok) {
         triggerHaptic(HAPTIC_PATTERNS.WARNING)
         if (res.status === 403 && data.error === 'SESSION_EXPIRED') {
+          // Auto-recuperación transparente: renovar sesión y reintentar comanda automáticamente
+          try {
+            const startRes = await fetch('/api/tables', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ slug: restaurant?.slug || 'burger-gourmet', table_number: tableNumber, action: 'start_session' }),
+            }).then(r => r.json())
+            if (startRes.session_token) {
+              if (typeof window !== 'undefined') {
+                localStorage.setItem(`gastro_session_${restaurant?.slug || 'burger-gourmet'}_${tableNumber}`, startRes.session_token)
+              }
+              const retryPayload = {
+                ...payload,
+                session_id: startRes.session_token,
+                session_token: startRes.session_token,
+              }
+              const retryRes = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(retryPayload),
+              })
+              if (retryRes.ok) {
+                const retryData = await retryRes.json().catch(() => ({}))
+                createMockOrder(restaurant?.slug || 'burger-gourmet', {
+                  ...retryPayload,
+                  id: retryData.order?.id || retryData.id,
+                })
+                triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+                idempotencyKeyRef.current = ''
+                setOrderSuccess(true)
+                setTimeout(() => {
+                  setOrderSuccess(false)
+                  onClearCart()
+                  onClose()
+                }, 2000)
+                return
+              }
+            }
+          } catch {
+            // fallback
+          }
           alert('⚠️ La sesión de esta mesa ha finalizado o fue liberada por el personal.\nSe ha reiniciado la comanda para el siguiente servicio.')
           onClearCart()
           onClose()
@@ -243,6 +284,10 @@ export function CartDrawer({
           return
         }
         throw new Error(data.message || data.error || 'Error al enviar la comanda al servidor')
+      }
+
+      if (data.session_token && typeof window !== 'undefined') {
+        localStorage.setItem(`gastro_session_${restaurant?.slug || 'burger-gourmet'}_${tableNumber}`, data.session_token)
       }
 
       createMockOrder(restaurant?.slug || 'burger-gourmet', {

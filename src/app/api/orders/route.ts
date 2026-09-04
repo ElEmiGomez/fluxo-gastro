@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
     const restaurantId = restaurant_id || restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
 
     // 2. Validación de Sesión de Mesa con UUID (Fase 1: Protección Anti-Solapamiento)
+    let finalSessionToken = tokenToValidate
     if (tokenToValidate) {
       const sessionCheck = await validateSessionToken(restaurantId, slug, parsedTableNum, tokenToValidate)
       if (!sessionCheck.valid) {
@@ -116,6 +117,11 @@ export async function POST(req: NextRequest) {
           { status: sessionCheck.status || 403 }
         )
       }
+    } else {
+      // Si no se proporcionó token (por ejemplo creación directa por personal en comandero), inicializar sesión activa
+      const { createOrGetActiveSession } = await import('@/lib/supabase/repository')
+      const newSession = await createOrGetActiveSession(restaurantId, slug, parsedTableNum)
+      finalSessionToken = newSession.session_token
     }
 
     // Asegurar que la mesa pase a estado ocupado con su sesión activa
@@ -175,7 +181,7 @@ export async function POST(req: NextRequest) {
 
     const saved = await createOrder(restaurantId, slug, {
       table_number: assignedTableNum,
-      session_token: tokenToValidate,
+      session_token: finalSessionToken,
       idempotency_key,
       status: initialStatus,
       total_amount: computedTotal,
@@ -189,7 +195,15 @@ export async function POST(req: NextRequest) {
     }
 
     recordAnalyticsEvent(slug, { slug, type: 'order_placed', table_number: assignedTableNum })
-    return NextResponse.json({ success: true, order: saved })
+    const response = NextResponse.json({ success: true, order: saved, session_token: finalSessionToken })
+    response.cookies.set(`gastro_session_${slug}_${assignedTableNum}`, finalSessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 24 * 60 * 60,
+    })
+    return response
   } catch (err: any) {
     if (idempotencyKeyStr && idempotencyLocked) {
       releaseIdempotencyLock(idempotencyKeyStr, err.message)

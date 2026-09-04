@@ -130,16 +130,41 @@ function DinerMenuContent() {
       }
 
       // Inicializar o recuperar sesión temporal UUID (Resiliente a Safari iOS ITP)
+      // SIEMPRE validamos/creamos sesión contra el servidor para evitar tokens stale
+      // que causan SESSION_EXPIRED al enviar comanda (ej: servidor reiniciado, mesa liberada).
       const urlSession = searchParams?.get('session')
       const localStoredSession = typeof window !== 'undefined' ? localStorage.getItem(`gastro_session_${slug}_${tableNumber}`) : null
+
+      // Helper: iniciar o recuperar sesión activa en el servidor (idempotente)
+      const ensureServerSession = () => {
+        fetch('/api/tables', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, table_number: tableNumber, action: 'start_session' }),
+        })
+          .then(r => r.json())
+          .then(startData => {
+            if (startData.session_token) {
+              setSessionId(startData.session_token)
+              localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, startData.session_token)
+            }
+          })
+          .catch(() => {})
+      }
 
       if (urlSession) {
         setSessionId(urlSession)
         localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, urlSession)
+        // Aún así asegurar que el servidor conozca esta sesión
+        ensureServerSession()
       } else if (localStoredSession) {
+        // Temporalmente usar el token de localStorage mientras validamos con el servidor
         setSessionId(localStoredSession)
+        // Validar contra el servidor: si el token de localStorage ya no es válido,
+        // start_session creará uno nuevo y lo actualizará
+        ensureServerSession()
       } else {
-        // Si Safari ITP purgó localStorage, restaurar desde la cookie HTTP-Only persistente
+        // Sin token en URL ni localStorage: intentar cookie HTTP-Only (Safari ITP), luego start_session
         fetch(`/api/session/restore?slug=${slug}&table=${tableNumber}`)
           .then(r => r.json())
           .then(data => {
@@ -151,41 +176,11 @@ function DinerMenuContent() {
                 setTableTotalAmount(total)
               }
             } else {
-              // Si no había cookie activa o la mesa fue liberada, iniciar sesión limpia
-              fetch('/api/tables', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  slug,
-                  table_number: tableNumber,
-                  action: 'start_session',
-                }),
-              })
-                .then(r => r.json())
-                .then(startData => {
-                  if (startData.session_token) {
-                    setSessionId(startData.session_token)
-                    localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, startData.session_token)
-                  }
-                })
-                .catch(() => {})
+              ensureServerSession()
             }
           })
           .catch(() => {
-            // Fallback de inicio directo
-            fetch('/api/tables', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ slug, table_number: tableNumber, action: 'start_session' }),
-            })
-              .then(r => r.json())
-              .then(startData => {
-                if (startData.session_token) {
-                  setSessionId(startData.session_token)
-                  localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, startData.session_token)
-                }
-              })
-              .catch(() => {})
+            ensureServerSession()
           })
       }
 
@@ -314,8 +309,24 @@ function DinerMenuContent() {
 
         const currentSessionId = thisTableSession?.session_id || sessionId
 
-        // Si la mesa fue liberada por el mozo, limpiar comanda local y resetear
-        if (thisTableSession && thisTableSession.status === 'free') {
+        const serverOrdersList: any[] = (ordersRes.orders || []).filter(
+          (o: any) => o.order_items && o.order_items.length > 0
+        )
+
+        // Evaluar todas las órdenes de la mesa bajo la sesión activa para sincronización reactiva con Cocina y Mozo.
+        const allTableOrders = serverOrdersList.filter(
+          o => (o.table_number?.toString() === tableNumber?.toString() ||
+                o.table?.table_number?.toString() === tableNumber?.toString() ||
+                o.table_id === `table-${tableNumber}`) &&
+               (!o.session_token || (currentSessionId ? o.session_token === currentSessionId : true))
+        )
+
+        const activeTableOrders = allTableOrders.filter(
+          o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
+        )
+
+        // Si la mesa fue liberada por el mozo y no quedan pedidos activos pendientes
+        if (thisTableSession && thisTableSession.status === 'free' && activeTableOrders.length === 0) {
           setTableOrderStatus(null)
           setIsTablePaid(false)
           setHasRequestedBill(false)
@@ -342,21 +353,9 @@ function DinerMenuContent() {
             Date.now() - new Date(c.created_at).getTime() < 15 * 60 * 1000
         )
 
-        const serverOrdersList: any[] = (ordersRes.orders || []).filter(
-          (o: any) => o.order_items && o.order_items.length > 0
-        )
-
-        // Evaluar todas las órdenes de la mesa bajo la sesión activa para detección de cobro
-        const allTableOrders = serverOrdersList.filter(
-          o => (o.table_number?.toString() === tableNumber?.toString() ||
-                o.table?.table_number?.toString() === tableNumber?.toString() ||
-                o.table_id === `table-${tableNumber}`) &&
-               (!o.session_token || (currentSessionId ? o.session_token === currentSessionId : true))
-        )
-
         const hasPaidOrders = allTableOrders.length > 0 &&
           allTableOrders.some(o => o.status === 'paid') &&
-          !allTableOrders.some(o => ['pending_validation', 'pending', 'preparing', 'ready', 'delivered'].includes(o.status))
+          activeTableOrders.length === 0
 
         const isBillPaid = isBillPaidCall || hasPaidOrders || thisTableSession?.status === 'closed'
 
@@ -369,26 +368,26 @@ function DinerMenuContent() {
           setIsTablePaid(false)
         }
 
-        // Filtrar órdenes de esta mesa creadas en la sesión actual
-        const tableOrders = allTableOrders
-          .filter(
-            o => ['pending_validation', 'pending', 'preparing', 'ready', 'delivered'].includes(o.status)
-          )
-          .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+        // Ordenar comandas activas de la mesa por fecha descendente
+        const tableOrders = [...activeTableOrders].sort(
+          (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+        )
 
         if (tableOrders.length > 0) {
           const total = tableOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
           setTableTotalAmount(total)
 
-          // Evaluar jerarquía de estados activos de la mesa
-          const activeOrders = tableOrders.filter(o => ['pending_validation', 'pending', 'preparing', 'ready'].includes(o.status))
+          // Evaluar jerarquía reactiva de estados activos de la mesa
+          const activeOrders = tableOrders.filter(o =>
+            ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
+          )
 
           if (activeOrders.length > 0) {
             if (activeOrders.some(o => o.status === 'ready')) {
               setTableOrderStatus('ready')
             } else if (activeOrders.some(o => o.status === 'preparing')) {
               setTableOrderStatus('preparing')
-            } else if (activeOrders.some(o => o.status === 'pending')) {
+            } else if (activeOrders.some(o => o.status === 'confirmed' || o.status === 'pending')) {
               setTableOrderStatus('pending')
             } else {
               setTableOrderStatus('pending_validation')
@@ -451,9 +450,12 @@ function DinerMenuContent() {
 
           if (
             data.slug === slug ||
+            data.tableNumber?.toString() === tableNumber?.toString() ||
+            data.table_number?.toString() === tableNumber?.toString() ||
             data.type?.startsWith('order_') ||
             data.type?.startsWith('service_') ||
-            data.type?.startsWith('table_')
+            data.type?.startsWith('table_') ||
+            data.type === 'connected'
           ) {
             checkOrderStatus()
           }
