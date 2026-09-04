@@ -287,7 +287,7 @@ export function KitchenTicket({
 
       {/* Botones de Transición Táctil Industrial (Mínimo 64px - 72px de altura, utilizable con guantes) */}
       <div className="p-3.5 bg-white border-t border-slate-200 flex items-center gap-2">
-        {order.status === 'pending' && (
+        {(order.status === 'pending' || order.status === 'confirmed') && (
           <button
             onClick={() => onUpdateStatus(order.id, 'preparing')}
             className="w-full h-16 py-4 px-4 rounded-2xl font-black text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center gap-3 shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all uppercase tracking-wide border-2 border-amber-600/30"

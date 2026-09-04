@@ -366,8 +366,13 @@ export function updateServerOrderStatus(
     }
   }
 
-  // 5. Emitir evento SSE para sincronización instantánea en Mozo y Cliente
-  broadcastEvent({ type: 'order_updated', slug, orderId, status, tableNumber: updatedTableNumber })
+  // 5. Emitir evento SSE para sincronización instantánea en Mozo, Cocina y Cliente
+  const updatedOrder = existingOrder ? {
+    ...existingOrder,
+    status,
+    table_number: updatedTableNumber ? parseInt(String(updatedTableNumber), 10) : existingOrder.table_number,
+  } : undefined
+  broadcastEvent({ type: 'order_updated', slug, orderId, status, tableNumber: updatedTableNumber, order: updatedOrder })
   return { orders: getServerOrders(slug) }
 }
 

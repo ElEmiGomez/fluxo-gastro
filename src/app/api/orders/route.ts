@@ -271,7 +271,7 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    const effectiveTableNum = table_number ?? tableNumber
+    const effectiveTableNum = table_number ?? tableNumber ?? existingOrder.table_number ?? (existingOrder.table ? existingOrder.table.table_number : 1)
     const result = await updateOrderStatus(slug, orderId, status, effectiveTableNum)
     if (!result.success) {
       return NextResponse.json(
@@ -284,7 +284,11 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    return NextResponse.json({ success: true, message: `Orden ${orderId} actualizada a ${status}` })
+    return NextResponse.json({
+      success: true,
+      message: `Orden ${orderId} actualizada a ${status}`,
+      order: { ...existingOrder, status, table_number: effectiveTableNum }
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

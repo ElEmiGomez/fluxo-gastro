@@ -14,7 +14,7 @@ import { CartDrawer } from '@/components/menu/CartDrawer'
 import { Product, Category, Table, CartItem, Restaurant, Order, CourseType } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
-import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
+import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES, updateMockOrderStatus } from '@/lib/supabase/mock-fallback'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 
@@ -200,6 +200,55 @@ export default function WaiterComanderoPage() {
       }
     } catch (e) {
       console.error('Error marking all delivered:', e)
+    }
+  }
+
+  // Validar comanda de cliente y enviarla a cocina
+  const handleValidateOrder = async (orderId: string, tableNum?: number | string) => {
+    validatedOrderIdsRef.current.add(orderId)
+    setServerOrders(prev =>
+      prev.map(o => o.id === orderId ? { ...o, status: 'pending' } : o)
+    )
+    updateMockOrderStatus(slug, orderId, 'pending')
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          orderId,
+          status: 'pending',
+          table_number: tableNum,
+        }),
+      })
+      if (!res.ok) {
+        console.warn('Error en respuesta de validación comanda en servidor:', res.status)
+      }
+    } catch (e) {
+      console.error('Error al validar comanda hacia cocina:', e)
+    }
+  }
+
+  // Descartar/cancelar comanda de cliente
+  const handleCancelValidationOrder = async (orderId: string, tableNum?: number | string) => {
+    cancelledOrderIdsRef.current.add(orderId)
+    setServerOrders(prev => prev.filter(o => o.id !== orderId))
+    updateMockOrderStatus(slug, orderId, 'cancelled')
+
+    try {
+      await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          orderId,
+          status: 'cancelled',
+          table_number: tableNum,
+        }),
+      })
+    } catch (e) {
+      console.error('Error al cancelar comanda:', e)
     }
   }
 
@@ -831,26 +880,7 @@ export default function WaiterComanderoPage() {
                           <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={async () => {
-                                validatedOrderIdsRef.current.add(valOrder.id)
-                                setServerOrders(prev =>
-                                  prev.map(o => o.id === valOrder.id ? { ...o, status: 'pending' } : o)
-                                )
-                                try {
-                                  await fetch('/api/orders', {
-                                    method: 'PATCH',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      slug,
-                                      orderId: valOrder.id,
-                                      status: 'pending',
-                                      table_number: tblNum,
-                                    }),
-                                  })
-                                } catch (e) {
-                                  console.error('Error al validar comanda:', e)
-                                }
-                              }}
+                              onClick={() => handleValidateOrder(valOrder.id, tblNum)}
                               className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer"
                               title="Enviar a cocina tras verificar verbalmente en mesa"
                             >
@@ -859,24 +889,9 @@ export default function WaiterComanderoPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={async () => {
+                              onClick={() => {
                                 if (confirm(`¿Descartar comanda de Mesa #${tblNum}?`)) {
-                                  cancelledOrderIdsRef.current.add(valOrder.id)
-                                  setServerOrders(prev => prev.filter(o => o.id !== valOrder.id))
-                                  try {
-                                    await fetch('/api/orders', {
-                                      method: 'PATCH',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({
-                                        slug,
-                                        orderId: valOrder.id,
-                                        status: 'cancelled',
-                                        table_number: tblNum,
-                                      }),
-                                    })
-                                  } catch (e) {
-                                    console.error('Error al cancelar comanda:', e)
-                                  }
+                                  handleCancelValidationOrder(valOrder.id, tblNum)
                                 }
                               }}
                               className="p-2.5 rounded-xl bg-red-950/60 hover:bg-red-900 text-red-300 font-black text-xs border border-red-800/80 transition-colors cursor-pointer"
@@ -1164,6 +1179,91 @@ export default function WaiterComanderoPage() {
                             title="Anular plato marchado"
                           >
                             🗑️
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* B.2. Comandas Pendientes de Validación en esta Mesa */}
+            {serverOrders.filter(
+              o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+                   o.status === 'pending_validation' &&
+                   !validatedOrderIdsRef.current.has(o.id) &&
+                   !cancelledOrderIdsRef.current.has(o.id)
+            ).length > 0 && (
+              <div className="bg-blue-950/80 border-2 border-blue-400 rounded-2xl p-3.5 space-y-2.5 shadow-md">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-blue-400 animate-pulse" />
+                    <h4 className="font-black text-xs sm:text-sm text-blue-200 uppercase tracking-wider">
+                      Comandas Pendientes de Validación (Mesa #{selectedTable.table_number})
+                    </h4>
+                  </div>
+                  <span className="text-[11px] font-bold text-blue-300">
+                    {serverOrders.filter(
+                      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+                           o.status === 'pending_validation' &&
+                           !validatedOrderIdsRef.current.has(o.id) &&
+                           !cancelledOrderIdsRef.current.has(o.id)
+                    ).length} comanda(s)
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {serverOrders
+                    .filter(
+                      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+                           o.status === 'pending_validation' &&
+                           !validatedOrderIdsRef.current.has(o.id) &&
+                           !cancelledOrderIdsRef.current.has(o.id)
+                    )
+                    .map((valOrder, idx) => (
+                      <div
+                        key={valOrder.id}
+                        className="bg-slate-900 p-3 rounded-xl border border-blue-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs"
+                      >
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase text-blue-400 block">
+                              Comanda #{idx + 1}
+                            </span>
+                            <span className="text-xs font-black text-white tabular-nums">
+                              {formatCurrency(valOrder.total_amount)}
+                            </span>
+                          </div>
+                          <div className="text-xs font-bold text-slate-200">
+                            {valOrder.order_items?.map(it => `${it.quantity}x ${it.product?.name || 'Plato'}`).join(' + ')}
+                          </div>
+                          {valOrder.order_items?.some(it => it.notes) && (
+                            <p className="text-[11px] text-amber-300 font-semibold">
+                              Nota: {valOrder.order_items.map(it => it.notes).filter(Boolean).join(' | ')}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <button
+                            type="button"
+                            onClick={() => handleValidateOrder(valOrder.id, selectedTable.table_number)}
+                            className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                            <span>Confirmar a Cocina</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`¿Descartar comanda de Mesa #${selectedTable.table_number}?`)) {
+                                handleCancelValidationOrder(valOrder.id, selectedTable.table_number)
+                              }
+                            }}
+                            className="p-2 rounded-xl bg-red-950/60 hover:bg-red-900 text-red-300 font-black text-xs border border-red-800/80 transition-colors cursor-pointer"
+                            title="Descartar comanda"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -1474,7 +1574,7 @@ export default function WaiterComanderoPage() {
             paxCount={tablePax[selectedTable.table_number] || 2}
             discountPercentage={tableDiscounts[selectedTable.table_number] || 0}
             orders={serverOrders.filter(
-              o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && ['preparing', 'ready', 'delivered'].includes(o.status)
+              o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && ['pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
             )}
             onProceedToCharge={() => {
               setShowFreeConfirmTable(selectedTable.table_number)

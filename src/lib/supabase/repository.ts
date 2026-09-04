@@ -253,8 +253,13 @@ export async function createOrder(
         })
 
         if (!rpcErr && atomicResult && atomicResult.order) {
+          if (initialStatus && atomicResult.order.status !== initialStatus) {
+            await supabase.from('orders').update({ status: initialStatus }).eq('id', atomicResult.order.id)
+            atomicResult.order.status = initialStatus
+          }
           const fullOrder: Order = {
             ...atomicResult.order,
+            status: initialStatus || atomicResult.order.status,
             session_token: effectiveSessionToken || (atomicResult.order as any).session_token,
             order_items: orderData.items as any,
             table_number: orderData.table_number,
@@ -365,18 +370,35 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
       if (!error && data && data.length > 0) {
         const map = new Map<string, Order>()
         const overrides = (globalThis as any).__GASTRO_STATUS_OVERRIDES__ || {}
+        if (!(globalThis as any).__GASTRO_ORDERS__) {
+          ;(globalThis as any).__GASTRO_ORDERS__ = {}
+        }
+        if (!(globalThis as any).__GASTRO_ORDERS__[slug]) {
+          ;(globalThis as any).__GASTRO_ORDERS__[slug] = []
+        }
+        const memList = (globalThis as any).__GASTRO_ORDERS__[slug] as Order[]
+
         // 1. Cargar órdenes de Supabase con overrides de estado aplicados por ID
         ;(data as unknown as Order[]).forEach(o => {
           const tableNum = o.table_number || (o.table ? o.table.table_number : 1)
           const effStatus = overrides[o.id] || o.status
           const memOrd = memOrders.find(m => m.id === o.id)
           const token = o.session_token || (o as any).table_session_id || memOrd?.session_token
-          map.set(o.id, {
+          const mappedOrder: Order = {
             ...o,
             status: effStatus,
             table_number: tableNum,
             session_token: token,
-          })
+          }
+          map.set(o.id, mappedOrder)
+
+          // Hidratar en memoria del proceso si no está presente
+          const idx = memList.findIndex(m => m.id === o.id)
+          if (idx >= 0) {
+            memList[idx] = { ...memList[idx], ...mappedOrder }
+          } else {
+            memList.push(mappedOrder)
+          }
         })
         // 2. Superponer memoria (estado fresco en tiempo real)
         memOrders.forEach(ord => {
@@ -417,7 +439,7 @@ export async function getActiveOrdersByTable(
 }
 
 /**
- * 6. COMANDAS: Actualizar estado (pending -> preparing -> ready -> delivered -> paid)
+ * 6. COMANDAS: Actualizar estado (pending_validation -> pending -> preparing -> ready -> delivered -> paid)
  */
 export async function updateOrderStatus(
   slug: string,
@@ -425,15 +447,93 @@ export async function updateOrderStatus(
   status: OrderStatus,
   tableNumber?: number | string
 ): Promise<{ success: boolean; error?: string }> {
-  // 1. Validar y actualizar estado en memoria validando la transición y aislamiento UUID
-  const serverResult = updateServerOrderStatus(slug, orderId, status, tableNumber)
+  const supabase = createServerClient()
+  const hasSupabase = supabase && isSupabaseConfigured()
+
+  // 1. Validar y actualizar estado en memoria
+  let serverResult = updateServerOrderStatus(slug, orderId, status, tableNumber)
+
+  // 2. Si no se encontró en memoria pero Supabase está configurado, recuperar comanda de PostgreSQL
+  if (serverResult.error === 'ORDER_NOT_FOUND' && hasSupabase) {
+    try {
+      const { data: supaOrder, error: fetchErr } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            quantity,
+            notes,
+            course,
+            products (*)
+          )
+        `)
+        .eq('id', orderId)
+        .single()
+
+      if (!fetchErr && supaOrder) {
+        const currentStatus = (globalThis as any).__GASTRO_STATUS_OVERRIDES__?.[orderId] || supaOrder.status
+        if (!isValidOrderTransition(currentStatus, status)) {
+          return { success: false, error: `Transición inválida de ${currentStatus} a ${status}` }
+        }
+
+        const effectiveTable = supaOrder.table_number || (supaOrder.table ? supaOrder.table.table_number : Number(tableNumber) || 1)
+        const hydratedOrder: Order = {
+          ...supaOrder,
+          status,
+          table_number: effectiveTable,
+        }
+
+        // Hidratar en memoria global
+        if (!(globalThis as any).__GASTRO_ORDERS__) {
+          ;(globalThis as any).__GASTRO_ORDERS__ = {}
+        }
+        if (!(globalThis as any).__GASTRO_ORDERS__[slug]) {
+          ;(globalThis as any).__GASTRO_ORDERS__[slug] = []
+        }
+        const memList = (globalThis as any).__GASTRO_ORDERS__[slug] as Order[]
+        const idx = memList.findIndex(o => o.id === orderId)
+        if (idx >= 0) {
+          memList[idx] = hydratedOrder
+        } else {
+          memList.unshift(hydratedOrder)
+        }
+
+        if (!(globalThis as any).__GASTRO_STATUS_OVERRIDES__) {
+          ;(globalThis as any).__GASTRO_STATUS_OVERRIDES__ = {}
+        }
+        ;(globalThis as any).__GASTRO_STATUS_OVERRIDES__[orderId] = status
+
+        // Persistir en Supabase
+        await supabase
+          .from('orders')
+          .update({ status })
+          .eq('id', orderId)
+
+        // Difundir evento SSE para actualización reactiva instantánea
+        broadcastEvent({
+          type: 'order_updated',
+          slug,
+          orderId,
+          status,
+          tableNumber: effectiveTable,
+          order: hydratedOrder,
+        })
+
+        return { success: true }
+      }
+    } catch (e) {
+      console.warn('Error recovering and updating order in Supabase:', e)
+    }
+  }
+
   if (serverResult.error) {
     return { success: false, error: serverResult.error }
   }
 
-  // 2. Persistir en Supabase solo si la validación fue exitosa
-  const supabase = createServerClient()
-  if (supabase && isSupabaseConfigured()) {
+  // 3. Persistir en Supabase si la actualización en memoria fue exitosa
+  if (hasSupabase) {
     try {
       await supabase
         .from('orders')

@@ -31,6 +31,7 @@ export default function KitchenKDSPage() {
               (o: Order) =>
                 o.status !== 'delivered' &&
                 o.status !== 'cancelled' &&
+                o.status !== 'pending_validation' &&
                 o.order_items &&
                 o.order_items.length > 0 &&
                 now - new Date(o.created_at).getTime() < 12 * 60 * 60 * 1000
@@ -59,7 +60,7 @@ export default function KitchenKDSPage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const active = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled')
+        const active = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled' && o.status !== 'pending_validation')
         localStorage.setItem(`fluxo_kds_orders_${slug}`, JSON.stringify(active))
       } catch {}
     }
@@ -88,7 +89,7 @@ export default function KitchenKDSPage() {
   useEffect(() => {
     const checkDelayedOrders = () => {
       const hasDelayed = orders.some(o => {
-        if (o.status !== 'pending' && o.status !== 'preparing') return false
+        if (o.status !== 'pending' && o.status !== 'confirmed' && o.status !== 'preparing') return false
         const mins = Math.floor((Date.now() - new Date(o.created_at).getTime()) / 60000)
         return mins >= 20
       })
@@ -154,13 +155,19 @@ export default function KitchenKDSPage() {
             setOrders(prev => {
               const map = new Map<string, Order>()
               prev.forEach(ord => {
-                if (!dispatchedOrderIdsRef.current.has(ord.id) && ord.status !== 'delivered' && ord.status !== 'cancelled') {
+                if (
+                  !dispatchedOrderIdsRef.current.has(ord.id) &&
+                  ord.status !== 'delivered' &&
+                  ord.status !== 'cancelled' &&
+                  ord.status !== 'pending_validation'
+                ) {
                   map.set(ord.id, ord)
                 }
               })
               const STATUS_RANK: Record<string, number> = {
                 pending_validation: 0,
                 pending: 1,
+                confirmed: 1,
                 preparing: 2,
                 ready: 3,
                 delivered: 4,
@@ -172,7 +179,7 @@ export default function KitchenKDSPage() {
                 const incomingRank = STATUS_RANK[ord.status] ?? 0
                 const effectiveStatus = overrideRank > incomingRank ? override!.status : ord.status
 
-                if (effectiveStatus === 'delivered' || effectiveStatus === 'cancelled' || dispatchedOrderIdsRef.current.has(ord.id)) {
+                if (effectiveStatus === 'delivered' || effectiveStatus === 'cancelled' || effectiveStatus === 'pending_validation' || dispatchedOrderIdsRef.current.has(ord.id)) {
                   map.delete(ord.id)
                 } else {
                   map.set(ord.id, { ...ord, status: effectiveStatus })
@@ -201,6 +208,18 @@ export default function KitchenKDSPage() {
           try {
             const data = JSON.parse(event.data)
             if (data.slug === slug || data.type === 'order_created' || data.type === 'order_updated' || data.type === 'connected') {
+              // Reactividad instantánea en cocina al recibir validación del mozo
+              if (data.type === 'order_updated' && data.order && (data.status === 'pending' || data.status === 'confirmed')) {
+                setOrders(prev => {
+                  const existingIdx = prev.findIndex(o => o.id === data.order.id)
+                  if (existingIdx >= 0) {
+                    const next = [...prev]
+                    next[existingIdx] = { ...next[existingIdx], ...data.order, status: data.status }
+                    return next
+                  }
+                  return [data.order, ...prev]
+                })
+              }
               fetchServerOrders()
             }
           } catch {
@@ -279,7 +298,7 @@ export default function KitchenKDSPage() {
   }
 
   // Filtrado de comandas por estado
-  const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'preparing')
+  const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'preparing')
   const readyOrders = orders.filter(o => o.status === 'ready')
 
   // Resumen acumulado de platos en línea (para saber cuánta carne tirar a la plancha de golpe)
@@ -298,7 +317,7 @@ export default function KitchenKDSPage() {
     ? activeOrders
     : filterStatus === 'ready'
     ? readyOrders
-    : orders.filter(o => o.status !== 'delivered' && o.status !== 'pending_validation')
+    : orders.filter(o => o.status !== 'delivered' && o.status !== 'pending_validation' && o.status !== 'cancelled')
 
   // Filtrado por Estación (Cocina vs Barra)
   if (stationFilter !== 'all') {
