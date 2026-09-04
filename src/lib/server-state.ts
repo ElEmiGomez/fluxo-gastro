@@ -311,7 +311,7 @@ export function updateServerOrderStatus(
   orderId: string,
   status: OrderStatus,
   tableNumber?: number | string
-): { orders: Order[]; error?: string } {
+): { orders: Order[]; error?: string; order?: Order } {
   if (!globalStore.__GASTRO_ORDERS__) {
     globalStore.__GASTRO_ORDERS__ = {}
   }
@@ -373,7 +373,7 @@ export function updateServerOrderStatus(
     table_number: updatedTableNumber ? parseInt(String(updatedTableNumber), 10) : existingOrder.table_number,
   } : undefined
   broadcastEvent({ type: 'order_updated', slug, orderId, status, tableNumber: updatedTableNumber, order: updatedOrder })
-  return { orders: getServerOrders(slug) }
+  return { orders: getServerOrders(slug), order: updatedOrder }
 }
 
 export function clearServerOrders(slug: string): void {
@@ -601,9 +601,10 @@ export function freeTableSession(slug: string, tableNumber: string | number): vo
     if (isThisTable) {
       if (o.status !== 'cancelled') {
         o.status = 'paid'
-      }
-      if (globalStore.__GASTRO_STATUS_OVERRIDES__) {
-        delete globalStore.__GASTRO_STATUS_OVERRIDES__[o.id]
+        if (!globalStore.__GASTRO_STATUS_OVERRIDES__) {
+          globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
+        }
+        globalStore.__GASTRO_STATUS_OVERRIDES__[o.id] = 'paid'
       }
     }
   })

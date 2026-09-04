@@ -4,6 +4,7 @@ import {
   createOrGetActiveSession,
   closeTableSession,
   getRestaurantBySlug,
+  getTargetRestaurantId,
 } from '@/lib/supabase/repository'
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
     if (supabase && isSupabaseConfigured()) {
       try {
         const restaurant = await getRestaurantBySlug(slug)
-        const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+        const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
         const { data: dbSessions } = await supabase
           .from('table_sessions')
           .select('*')
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     const restaurant = await getRestaurantBySlug(slug)
-    const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+    const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
     const parsedTableNum = parseInt(String(table_number), 10)
 
     if (action === 'start_session') {

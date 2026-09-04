@@ -220,12 +220,23 @@ export default function WaiterComanderoPage() {
           orderId,
           status: 'pending',
           table_number: tableNum,
+          tableNumber: tableNum,
         }),
       })
       if (!res.ok) {
+        validatedOrderIdsRef.current.delete(orderId)
+        setServerOrders(prev =>
+          prev.map(o => o.id === orderId ? { ...o, status: 'pending_validation' } : o)
+        )
+        updateMockOrderStatus(slug, orderId, 'pending_validation')
         console.warn('Error en respuesta de validación comanda en servidor:', res.status)
       }
     } catch (e) {
+      validatedOrderIdsRef.current.delete(orderId)
+      setServerOrders(prev =>
+        prev.map(o => o.id === orderId ? { ...o, status: 'pending_validation' } : o)
+      )
+      updateMockOrderStatus(slug, orderId, 'pending_validation')
       console.error('Error al validar comanda hacia cocina:', e)
     }
   }

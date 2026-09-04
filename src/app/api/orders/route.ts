@@ -17,6 +17,7 @@ import {
   createOrder,
   getRestaurantOrders,
   updateOrderStatus,
+  getTargetRestaurantId,
 } from '@/lib/supabase/repository'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { Order, OrderItem, OrderStatus } from '@/types/database.types'
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
     const restaurant = await getRestaurantBySlug(slug)
-    const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+    const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
     const orders = await getRestaurantOrders(restaurantId, slug)
     return NextResponse.json({ orders })
   } catch (err: any) {
@@ -100,10 +101,12 @@ export async function POST(req: NextRequest) {
 
     const parsedTableNum = Math.max(1, parseInt(String(table_number || '1'), 10) || 1)
     const restaurant = await getRestaurantBySlug(slug)
-    const restaurantId = restaurant_id || restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+    const restaurantId = getTargetRestaurantId(restaurant?.id || restaurant_id, slug)
 
     // 2. Validación de Sesión de Mesa con UUID (Fase 1: Protección Anti-Solapamiento)
     let finalSessionToken = tokenToValidate
+    let tableSessionPk: string | undefined = undefined
+
     if (tokenToValidate) {
       const sessionCheck = await validateSessionToken(restaurantId, slug, parsedTableNum, tokenToValidate)
       if (!sessionCheck.valid) {
@@ -117,11 +120,13 @@ export async function POST(req: NextRequest) {
           { status: sessionCheck.status || 403 }
         )
       }
+      tableSessionPk = sessionCheck.session?.id
     } else {
       // Si no se proporcionó token (por ejemplo creación directa por personal en comandero), inicializar sesión activa
       const { createOrGetActiveSession } = await import('@/lib/supabase/repository')
       const newSession = await createOrGetActiveSession(restaurantId, slug, parsedTableNum)
       finalSessionToken = newSession.session_token
+      tableSessionPk = newSession.id
     }
 
     // Asegurar que la mesa pase a estado ocupado con su sesión activa
@@ -157,7 +162,7 @@ export async function POST(req: NextRequest) {
         notes: sanitizedNotes || null,
         product: product || {
           id: productId,
-          restaurant_id: restaurant_id || 'a1111111-1111-1111-1111-111111111111',
+          restaurant_id: restaurantId,
           category_id: 'cat-1',
           name: sanitizeText(String(item.name || 'Plato Gourmet'), 100),
           description: '',
@@ -182,6 +187,7 @@ export async function POST(req: NextRequest) {
     const saved = await createOrder(restaurantId, slug, {
       table_number: assignedTableNum,
       session_token: finalSessionToken,
+      table_session_id: tableSessionPk,
       idempotency_key,
       status: initialStatus,
       total_amount: computedTotal,
@@ -236,9 +242,59 @@ export async function PATCH(req: NextRequest) {
 
     // Buscar comanda existente estrictamente por UUID orderId
     const restaurant = await getRestaurantBySlug(slug)
-    const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+    const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
     const orders = await getRestaurantOrders(restaurantId, slug)
-    const existingOrder = orders.find(o => o.id === orderId)
+    let existingOrder = orders.find(o => o.id === orderId)
+
+    // Fallback de búsqueda en memoria viva en todos los namespaces
+    if (!existingOrder) {
+      const { getServerOrders } = await import('@/lib/server-state')
+      existingOrder = getServerOrders(slug).find(o => o.id === orderId)
+    }
+    if (!existingOrder) {
+      const globalStore = (globalThis as any).__GASTRO_ORDERS__ || {}
+      for (const s of Object.keys(globalStore)) {
+        const found = (globalStore[s] || []).find((o: any) => o.id === orderId)
+        if (found) {
+          existingOrder = found
+          break
+        }
+      }
+    }
+    // Fallback de búsqueda directa en Supabase por UUID
+    if (!existingOrder) {
+      const { createServerClient } = await import('@/lib/supabase/server')
+      const { isSupabaseConfigured } = await import('@/lib/supabase/client')
+      const supabase = createServerClient()
+      if (supabase && isSupabaseConfigured()) {
+        try {
+          const { data: supaOrder } = await supabase
+            .from('orders')
+            .select(`
+              *,
+              order_items (
+                id,
+                product_id,
+                quantity,
+                notes,
+                products (*)
+              )
+            `)
+            .eq('id', orderId)
+            .maybeSingle()
+          if (supaOrder) {
+            existingOrder = {
+              ...supaOrder,
+              order_items: (supaOrder.order_items || []).map((it: any) => ({
+                ...it,
+                product: it.product || it.products,
+                course: it.course || 'first',
+              })),
+            }
+          }
+        } catch {}
+      }
+    }
 
     if (!existingOrder) {
       return NextResponse.json(
@@ -247,7 +303,7 @@ export async function PATCH(req: NextRequest) {
       )
     }
 
-    const currentStatus = existingOrder.status
+    const currentStatus = (globalThis as any).__GASTRO_STATUS_OVERRIDES__?.[orderId] || existingOrder.status
 
     // Idempotencia: Si el estado solicitado es idéntico al actual, retornar HTTP 200
     if (currentStatus === status) {
@@ -287,7 +343,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `Orden ${orderId} actualizada a ${status}`,
-      order: { ...existingOrder, status, table_number: effectiveTableNum }
+      order: result.order || { ...existingOrder, status, table_number: effectiveTableNum }
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

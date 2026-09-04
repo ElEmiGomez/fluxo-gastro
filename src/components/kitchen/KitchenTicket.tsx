@@ -172,8 +172,9 @@ export function KitchenTicket({
 
         {order.order_items && order.order_items.length > 0 ? (
           order.order_items.map((item, idx) => {
-            const productName = item.product?.name || `Plato #${item.product_id.substring(0, 6)}`
-            const imageUrl = item.product?.image_url
+            const prod = item.product || (item as any).products
+            const productName = prod?.name || `Plato #${item.product_id?.substring?.(0, 6) || idx + 1}`
+            const imageUrl = prod?.image_url
             const itemKey = item.id || `${item.product_id}-${idx}`
             const isDone = Boolean(completedItemIds[itemKey])
             const canClick = order.status !== 'pending'

@@ -132,9 +132,16 @@ export default function KitchenKDSPage() {
           const data = await res.json()
           if (data.orders) {
             // La cocina solo recibe comandas ya validadas por el mozo y con platos reales (Cero pedidos falsos)
-            const incomingOrders: Order[] = data.orders.filter(
-              (o: Order) => o.status !== 'pending_validation' && o.order_items && o.order_items.length > 0
-            )
+            const incomingOrders: Order[] = data.orders
+              .filter((o: Order) => o.status !== 'pending_validation' && o.order_items && o.order_items.length > 0)
+              .map((o: Order) => ({
+                ...o,
+                order_items: (o.order_items || []).map((it: any) => ({
+                  ...it,
+                  product: it.product || it.products,
+                  course: it.course || 'first',
+                })),
+              }))
 
             // Detectar nueva orden entrante real para sonar campana
             let hasNewUnseenOrder = false
@@ -207,18 +214,33 @@ export default function KitchenKDSPage() {
         sseEventSource.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data)
-            if (data.slug === slug || data.type === 'order_created' || data.type === 'order_updated' || data.type === 'connected') {
+            if (!data.slug || data.slug === slug || data.type === 'connected') {
               // Reactividad instantánea en cocina al recibir validación del mozo
               if (data.type === 'order_updated' && data.order && (data.status === 'pending' || data.status === 'confirmed')) {
+                const normOrder: Order = {
+                  ...data.order,
+                  status: data.status,
+                  order_items: (data.order.order_items || []).map((it: any) => ({
+                    ...it,
+                    product: it.product || it.products,
+                    course: it.course || 'first',
+                  })),
+                }
                 setOrders(prev => {
                   const existingIdx = prev.findIndex(o => o.id === data.order.id)
                   if (existingIdx >= 0) {
                     const next = [...prev]
-                    next[existingIdx] = { ...next[existingIdx], ...data.order, status: data.status }
+                    next[existingIdx] = { ...next[existingIdx], ...normOrder }
                     return next
                   }
-                  return [data.order, ...prev]
+                  return [normOrder, ...prev]
                 })
+
+                if (!seenOrderIdsRef.current.has(data.order.id)) {
+                  seenOrderIdsRef.current.add(data.order.id)
+                  if (soundEnabled) playKitchenChime()
+                  setNewOrderAlert(true)
+                }
               }
               fetchServerOrders()
             }
@@ -324,8 +346,9 @@ export default function KitchenKDSPage() {
     displayedOrders = displayedOrders.filter(order => {
       if (!order.order_items || order.order_items.length === 0) return true
       const hasBarItems = order.order_items.some(item => {
-        const catId = (item.product?.category_id || '').toLowerCase()
-        const name = (item.product?.name || '').toLowerCase()
+        const prod = item.product || (item as any).products
+        const catId = (prod?.category_id || '').toLowerCase()
+        const name = (prod?.name || '').toLowerCase()
         return (
           catId.includes('bebida') || catId.includes('trago') || catId.includes('gin') ||
           catId === 'cat-12' || catId === 'cat-13' || catId === 'cat-14' || catId === 'cat-15' ||

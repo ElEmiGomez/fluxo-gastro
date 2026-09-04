@@ -52,6 +52,15 @@ export async function getRestaurantBySlug(slug: string): Promise<Restaurant | nu
   return MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'] || null
 }
 
+export function getTargetRestaurantId(restaurantId?: string, slug?: string): string {
+  if (!restaurantId || restaurantId === 'a1111111-1111-1111-1111-111111111111') {
+    if (!slug || slug === 'burger-gourmet') {
+      return 'a0000000-0000-0000-0000-000000000001'
+    }
+  }
+  return restaurantId || 'a0000000-0000-0000-0000-000000000001'
+}
+
 /**
  * 1. SEGURIDAD DE SESIÓN: Iniciar u obtener sesión activa con UUID por visita
  */
@@ -60,6 +69,7 @@ export async function createOrGetActiveSession(
   slug: string,
   tableNumber: number
 ): Promise<TableSession> {
+  const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -67,7 +77,7 @@ export async function createOrGetActiveSession(
       const { data: existing, error: searchErr } = await supabase
         .from('table_sessions')
         .select('*')
-        .eq('restaurant_id', restaurantId)
+        .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', tableNumber)
         .eq('status', 'active')
         .maybeSingle()
@@ -81,7 +91,7 @@ export async function createOrGetActiveSession(
       const { data: newSession, error: createErr } = await supabase
         .from('table_sessions')
         .insert({
-          restaurant_id: restaurantId,
+          restaurant_id: targetRestaurantId,
           table_number: tableNumber,
           status: 'active',
         })
@@ -126,13 +136,14 @@ export async function validateSessionToken(
     return { valid: true, session: { table_number: tableNumber, session_token: `sess-${tableNumber}-${Date.now()}`, status: 'active' } }
   }
 
+  const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
       const { data: session, error } = await supabase
         .from('table_sessions')
         .select('*')
-        .eq('restaurant_id', restaurantId)
+        .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', tableNumber)
         .eq('session_token', sessionToken)
         .maybeSingle()
@@ -187,6 +198,7 @@ export async function closeTableSession(
   slug: string,
   tableNumber: number
 ): Promise<void> {
+  const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -194,15 +206,23 @@ export async function closeTableSession(
       await supabase
         .from('table_sessions')
         .update({ status: 'closed', closed_at: new Date().toISOString() })
-        .eq('restaurant_id', restaurantId)
+        .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', tableNumber)
         .eq('status', 'active')
+
+      // Marcar órdenes no canceladas de esta mesa como paid en Supabase para preservar el historial
+      await supabase
+        .from('orders')
+        .update({ status: 'paid' })
+        .eq('restaurant_id', targetRestaurantId)
+        .eq('table_number', tableNumber)
+        .neq('status', 'cancelled')
 
       // Marcar llamadas pendientes como atendidas
       await supabase
         .from('service_calls')
         .update({ status: 'attended' })
-        .eq('restaurant_id', restaurantId)
+        .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', tableNumber)
         .eq('status', 'pending')
     } catch (e) {
@@ -235,17 +255,40 @@ export async function createOrder(
     }>
   }
 ): Promise<Order> {
+  const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
   const initialStatus: OrderStatus = orderData.status || 'pending_validation'
   const supabase = createServerClient()
   const effectiveSessionToken = orderData.session_token || orderData.table_session_id || null
 
   if (supabase && isSupabaseConfigured()) {
     try {
+      // Resolver id primario de table_sessions para no violar orders_table_session_id_fkey
+      let resolvedTableSessionId: string | null = null
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+      if (orderData.table_session_id && uuidRegex.test(orderData.table_session_id)) {
+        const { data: directCheck } = await supabase
+          .from('table_sessions')
+          .select('id')
+          .eq('id', orderData.table_session_id)
+          .maybeSingle()
+        if (directCheck) resolvedTableSessionId = directCheck.id
+      }
+
+      if (!resolvedTableSessionId && effectiveSessionToken && uuidRegex.test(effectiveSessionToken)) {
+        const { data: sessRow } = await supabase
+          .from('table_sessions')
+          .select('id')
+          .eq('session_token', effectiveSessionToken)
+          .maybeSingle()
+        if (sessRow) resolvedTableSessionId = sessRow.id
+      }
+
       // 1. Invocación atómica en PostgreSQL (Arbitraje a nivel de cerrojo de fila, cero TOCTOU)
       if (orderData.idempotency_key) {
         const { data: atomicResult, error: rpcErr } = await supabase.rpc('create_order_atomic', {
-          p_restaurant_id: restaurantId,
-          p_table_session_id: effectiveSessionToken,
+          p_restaurant_id: targetRestaurantId,
+          p_table_session_id: resolvedTableSessionId,
           p_table_number: orderData.table_number,
           p_total_amount: orderData.total_amount,
           p_idempotency_key: orderData.idempotency_key,
@@ -261,7 +304,11 @@ export async function createOrder(
             ...atomicResult.order,
             status: initialStatus || atomicResult.order.status,
             session_token: effectiveSessionToken || (atomicResult.order as any).session_token,
-            order_items: orderData.items as any,
+            order_items: (orderData.items || []).map((it: any) => ({
+              ...it,
+              product: it.product || it.products,
+              course: it.course || 'first',
+            })) as any,
             table_number: orderData.table_number,
           }
           addServerOrder(slug, fullOrder)
@@ -273,8 +320,8 @@ export async function createOrder(
       const insertQuery = orderData.idempotency_key
         ? supabase.from('orders').upsert(
             {
-              restaurant_id: restaurantId,
-              table_session_id: effectiveSessionToken,
+              restaurant_id: targetRestaurantId,
+              table_session_id: resolvedTableSessionId,
               table_number: orderData.table_number,
               total_amount: orderData.total_amount,
               status: initialStatus,
@@ -283,8 +330,8 @@ export async function createOrder(
             { onConflict: 'idempotency_key', ignoreDuplicates: true }
           )
         : supabase.from('orders').insert({
-            restaurant_id: restaurantId,
-            table_session_id: effectiveSessionToken,
+            restaurant_id: targetRestaurantId,
+            table_session_id: resolvedTableSessionId,
             table_number: orderData.table_number,
             total_amount: orderData.total_amount,
             status: initialStatus,
@@ -293,20 +340,28 @@ export async function createOrder(
       const { data: newOrder, error: orderErr } = await insertQuery.select('*').single()
 
       if (!orderErr && newOrder) {
-        // Insertar items solo si es una orden nueva
-        const itemsToInsert = orderData.items.map(it => ({
-          order_id: newOrder.id,
-          product_id: it.product_id,
-          quantity: it.quantity,
-          notes: it.notes || null,
-        }))
+        // Insertar items solo si es una orden nueva y product_id es UUID válido
+        const itemsToInsert = orderData.items
+          .filter(it => uuidRegex.test(it.product_id))
+          .map(it => ({
+            order_id: newOrder.id,
+            product_id: it.product_id,
+            quantity: it.quantity,
+            notes: it.notes || null,
+          }))
 
-        await supabase.from('order_items').insert(itemsToInsert)
+        if (itemsToInsert.length > 0) {
+          await supabase.from('order_items').insert(itemsToInsert)
+        }
 
         const fullOrder: Order = {
           ...newOrder,
           session_token: effectiveSessionToken || (newOrder as any).session_token,
-          order_items: orderData.items as any,
+          order_items: (orderData.items || []).map((it: any) => ({
+            ...it,
+            product: it.product || it.products,
+            course: it.course || 'first',
+          })) as any,
           table_number: orderData.table_number,
         }
 
@@ -351,6 +406,8 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
+      const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
+
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -360,60 +417,62 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
             product_id,
             quantity,
             notes,
-            course,
             products (*)
           )
         `)
-        .eq('restaurant_id', restaurantId)
+        .eq('restaurant_id', targetRestaurantId)
         .order('created_at', { ascending: false })
 
       if (!error && data && data.length > 0) {
         const map = new Map<string, Order>()
         const overrides = (globalThis as any).__GASTRO_STATUS_OVERRIDES__ || {}
-        if (!(globalThis as any).__GASTRO_ORDERS__) {
-          ;(globalThis as any).__GASTRO_ORDERS__ = {}
-        }
-        if (!(globalThis as any).__GASTRO_ORDERS__[slug]) {
-          ;(globalThis as any).__GASTRO_ORDERS__[slug] = []
-        }
-        const memList = (globalThis as any).__GASTRO_ORDERS__[slug] as Order[]
 
-        // 1. Cargar órdenes de Supabase con overrides de estado aplicados por ID
-        ;(data as unknown as Order[]).forEach(o => {
+        // 1. Cargar órdenes de Supabase con overrides de estado aplicados por ID y productos normalizados
+        ;(data as unknown as any[]).forEach(o => {
           const tableNum = o.table_number || (o.table ? o.table.table_number : 1)
-          const effStatus = overrides[o.id] || o.status
           const memOrd = memOrders.find(m => m.id === o.id)
-          const token = o.session_token || (o as any).table_session_id || memOrd?.session_token
+          const effStatus = overrides[o.id] || (memOrd && (memOrd.status === 'paid' || memOrd.status === 'delivered') && o.status !== 'paid' ? memOrd.status : o.status)
+          const token = o.session_token || o.table_session_id || memOrd?.session_token
+          const normalizedItems = (o.order_items || []).map((it: any) => ({
+            ...it,
+            product: it.product || it.products,
+            course: it.course || 'first',
+          }))
           const mappedOrder: Order = {
             ...o,
+            order_items: normalizedItems,
             status: effStatus,
             table_number: tableNum,
             session_token: token,
           }
           map.set(o.id, mappedOrder)
-
-          // Hidratar en memoria del proceso si no está presente
-          const idx = memList.findIndex(m => m.id === o.id)
-          if (idx >= 0) {
-            memList[idx] = { ...memList[idx], ...mappedOrder }
-          } else {
-            memList.push(mappedOrder)
-          }
         })
+
         // 2. Superponer memoria (estado fresco en tiempo real)
         memOrders.forEach(ord => {
           const effStatus = overrides[ord.id] || ord.status
           const existing = map.get(ord.id)
+          const finalItems = (ord.order_items && ord.order_items.length > 0) ? ord.order_items : existing?.order_items
           map.set(ord.id, {
             ...existing,
             ...ord,
-            order_items: (ord.order_items && ord.order_items.length > 0) ? ord.order_items : existing?.order_items,
+            order_items: (finalItems || []).map((it: any) => ({
+              ...it,
+              product: it.product || it.products,
+              course: it.course || 'first',
+            })),
             status: effStatus,
             session_token: ord.session_token || existing?.session_token,
             table_number: ord.table_number || existing?.table_number || (existing?.table ? existing.table.table_number : 1),
           })
         })
-        return Array.from(map.values())
+
+        const combined = Array.from(map.values())
+        if (!(globalThis as any).__GASTRO_ORDERS__) {
+          ;(globalThis as any).__GASTRO_ORDERS__ = {}
+        }
+        ;(globalThis as any).__GASTRO_ORDERS__[slug] = combined
+        return combined
       }
     } catch (e) {
       console.warn('Error fetching orders from Supabase:', e)
@@ -446,7 +505,7 @@ export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
   tableNumber?: number | string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; order?: Order }> {
   const supabase = createServerClient()
   const hasSupabase = supabase && isSupabaseConfigured()
 
@@ -465,7 +524,6 @@ export async function updateOrderStatus(
             product_id,
             quantity,
             notes,
-            course,
             products (*)
           )
         `)
@@ -483,6 +541,11 @@ export async function updateOrderStatus(
           ...supaOrder,
           status,
           table_number: effectiveTable,
+          order_items: (supaOrder.order_items || []).map((it: any) => ({
+            ...it,
+            product: it.product || it.products,
+            course: it.course || 'first',
+          })),
         }
 
         // Hidratar en memoria global
@@ -521,7 +584,7 @@ export async function updateOrderStatus(
           order: hydratedOrder,
         })
 
-        return { success: true }
+        return { success: true, order: hydratedOrder }
       }
     } catch (e) {
       console.warn('Error recovering and updating order in Supabase:', e)
@@ -544,7 +607,8 @@ export async function updateOrderStatus(
     }
   }
 
-  return { success: true }
+  const updatedOrder = getServerOrders(slug).find(o => o.id === orderId)
+  return { success: true, order: updatedOrder }
 }
 
 /**
