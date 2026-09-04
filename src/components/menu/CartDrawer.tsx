@@ -30,6 +30,7 @@ interface CartDrawerProps {
   canRequestBill?: boolean
   isWaiter?: boolean
   onSendWaiterOrder?: () => void
+  onSessionUpdate?: (newSessionId: string) => void
 }
 
 export function CartDrawer({
@@ -50,6 +51,7 @@ export function CartDrawer({
   canRequestBill = false,
   isWaiter = false,
   onSendWaiterOrder,
+  onSessionUpdate,
 }: CartDrawerProps) {
   const activeLang = isWaiter ? 'es' : lang
   const t = (k: string) => getTranslation(activeLang, k)
@@ -204,11 +206,14 @@ export function CartDrawer({
     setIsSubmitting(true)
 
     try {
+      const currentSlug = restaurant?.slug || (typeof window !== 'undefined' && window.location.pathname.startsWith('/menu/') ? window.location.pathname.split('/')[2] : null) || 'burger-gourmet'
+      const parsedTableNum = parseInt(String(tableNumber), 10) || 1
+
       const payload = {
-        slug: restaurant?.slug || 'burger-gourmet',
+        slug: currentSlug,
         restaurant_id: restaurant?.id || '',
-        table_id: `table-${tableNumber}`,
-        table_number: parseInt(tableNumber, 10),
+        table_id: `table-${parsedTableNum}`,
+        table_number: parsedTableNum,
         session_id: sessionId || undefined,
         session_token: sessionId || undefined,
         idempotency_key: idempotencyKeyRef.current,
@@ -238,16 +243,19 @@ export function CartDrawer({
             const startRes = await fetch('/api/tables', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ slug: restaurant?.slug || 'burger-gourmet', table_number: tableNumber, action: 'start_session' }),
+              body: JSON.stringify({ slug: currentSlug, table_number: parsedTableNum, action: 'start_session' }),
             }).then(r => r.json())
             if (startRes.session_token) {
               if (typeof window !== 'undefined') {
-                localStorage.setItem(`gastro_session_${restaurant?.slug || 'burger-gourmet'}_${tableNumber}`, startRes.session_token)
+                localStorage.setItem(`gastro_session_${currentSlug}_${parsedTableNum}`, startRes.session_token)
               }
+              onSessionUpdate?.(startRes.session_token)
+              idempotencyKeyRef.current = `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
               const retryPayload = {
                 ...payload,
                 session_id: startRes.session_token,
                 session_token: startRes.session_token,
+                idempotency_key: idempotencyKeyRef.current,
               }
               const retryRes = await fetch('/api/orders', {
                 method: 'POST',
@@ -256,7 +264,7 @@ export function CartDrawer({
               })
               if (retryRes.ok) {
                 const retryData = await retryRes.json().catch(() => ({}))
-                createMockOrder(restaurant?.slug || 'burger-gourmet', {
+                createMockOrder(currentSlug, {
                   ...retryPayload,
                   id: retryData.order?.id || retryData.id,
                 })
@@ -286,11 +294,14 @@ export function CartDrawer({
         throw new Error(data.message || data.error || 'Error al enviar la comanda al servidor')
       }
 
-      if (data.session_token && typeof window !== 'undefined') {
-        localStorage.setItem(`gastro_session_${restaurant?.slug || 'burger-gourmet'}_${tableNumber}`, data.session_token)
+      if (data.session_token) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`gastro_session_${currentSlug}_${parsedTableNum}`, data.session_token)
+        }
+        onSessionUpdate?.(data.session_token)
       }
 
-      createMockOrder(restaurant?.slug || 'burger-gourmet', {
+      createMockOrder(currentSlug, {
         ...payload,
         id: data.order?.id || data.id,
       })

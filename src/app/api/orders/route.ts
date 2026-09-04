@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Asegurar que la mesa pase a estado ocupado con su sesión activa
-    setTableOccupied(slug, parsedTableNum)
+    setTableOccupied(slug, parsedTableNum, finalSessionToken)
 
     const orderId = `ord-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
     const now = new Date().toISOString()

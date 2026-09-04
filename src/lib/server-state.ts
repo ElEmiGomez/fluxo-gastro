@@ -556,15 +556,27 @@ export function validateTableSession(
   }
 }
 
-export function setTableOccupied(slug: string, tableNumber: string | number): TableSession {
+export function setTableOccupied(
+  slug: string,
+  tableNumber: string | number,
+  sessionId?: string
+): TableSession {
+  if (!globalStore.__GASTRO_TABLE_SESSIONS__) {
+    globalStore.__GASTRO_TABLE_SESSIONS__ = {}
+  }
   if (!globalStore.__GASTRO_TABLE_SESSIONS__[slug]) {
     globalStore.__GASTRO_TABLE_SESSIONS__[slug] = {}
   }
   const current = globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber]
+  const finalSessionId =
+    sessionId ||
+    (current?.status === 'busy' && current?.session_id ? current.session_id : '') ||
+    `sess-${tableNumber}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+
   const session: TableSession = {
     table_number: tableNumber,
     status: 'busy',
-    session_id: current?.session_id || `sess-${tableNumber}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    session_id: finalSessionId,
     last_updated_at: new Date().toISOString(),
   }
   globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber] = session

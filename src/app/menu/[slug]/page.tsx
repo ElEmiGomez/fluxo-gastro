@@ -1570,6 +1570,7 @@ function DinerMenuContent() {
           onClearCart={() => setCart([])}
           tableNumber={tableNumber}
           sessionId={sessionId}
+          onSessionUpdate={(newSession) => setSessionId(newSession)}
           lang={currentLang}
           products={products}
           onAddProduct={(product) => {

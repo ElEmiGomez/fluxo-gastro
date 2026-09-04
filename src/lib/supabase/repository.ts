@@ -73,6 +73,7 @@ export async function createOrGetActiveSession(
         .maybeSingle()
 
       if (!searchErr && existing) {
+        setTableOccupied(slug, tableNumber, existing.session_token)
         return existing as TableSession
       }
 
@@ -88,6 +89,7 @@ export async function createOrGetActiveSession(
         .single()
 
       if (!createErr && newSession) {
+        setTableOccupied(slug, tableNumber, newSession.session_token)
         broadcastEvent({
           type: 'table_session_updated',
           slug,
@@ -139,11 +141,23 @@ export async function validateSessionToken(
         if (session.status !== 'active') {
           return { valid: false, reason: 'SESSION_EXPIRED', status: 403 }
         }
+        setTableOccupied(slug, tableNumber, session.session_token)
         return { valid: true, session: session as TableSession }
       }
 
-      // Si no existe sesión previa en la BD para este token, es un token forjado o revocado.
-      // Queda prohibido auto-insertar tokens desconocidos.
+      // Si no se encontró en Supabase pero existe en memoria activa
+      const memCheck = memoryValidateSession(slug, tableNumber, sessionToken)
+      if (memCheck.valid) {
+        return {
+          valid: true,
+          session: {
+            table_number: tableNumber,
+            session_token: memCheck.currentSessionId,
+            status: 'active',
+          },
+        }
+      }
+
       return { valid: false, reason: 'SESSION_EXPIRED', status: 403 }
     } catch (e) {
       console.warn('Error validating session in Supabase:', e)
@@ -223,13 +237,15 @@ export async function createOrder(
 ): Promise<Order> {
   const initialStatus: OrderStatus = orderData.status || 'pending_validation'
   const supabase = createServerClient()
+  const effectiveSessionToken = orderData.session_token || orderData.table_session_id || null
+
   if (supabase && isSupabaseConfigured()) {
     try {
       // 1. Invocación atómica en PostgreSQL (Arbitraje a nivel de cerrojo de fila, cero TOCTOU)
       if (orderData.idempotency_key) {
         const { data: atomicResult, error: rpcErr } = await supabase.rpc('create_order_atomic', {
           p_restaurant_id: restaurantId,
-          p_table_session_id: orderData.table_session_id || null,
+          p_table_session_id: effectiveSessionToken,
           p_table_number: orderData.table_number,
           p_total_amount: orderData.total_amount,
           p_idempotency_key: orderData.idempotency_key,
@@ -239,6 +255,7 @@ export async function createOrder(
         if (!rpcErr && atomicResult && atomicResult.order) {
           const fullOrder: Order = {
             ...atomicResult.order,
+            session_token: effectiveSessionToken || (atomicResult.order as any).session_token,
             order_items: orderData.items as any,
             table_number: orderData.table_number,
           }
@@ -252,7 +269,7 @@ export async function createOrder(
         ? supabase.from('orders').upsert(
             {
               restaurant_id: restaurantId,
-              table_session_id: orderData.table_session_id || null,
+              table_session_id: effectiveSessionToken,
               table_number: orderData.table_number,
               total_amount: orderData.total_amount,
               status: initialStatus,
@@ -262,7 +279,7 @@ export async function createOrder(
           )
         : supabase.from('orders').insert({
             restaurant_id: restaurantId,
-            table_session_id: orderData.table_session_id || null,
+            table_session_id: effectiveSessionToken,
             table_number: orderData.table_number,
             total_amount: orderData.total_amount,
             status: initialStatus,
@@ -283,6 +300,7 @@ export async function createOrder(
 
         const fullOrder: Order = {
           ...newOrder,
+          session_token: effectiveSessionToken || (newOrder as any).session_token,
           order_items: orderData.items as any,
           table_number: orderData.table_number,
         }
@@ -351,12 +369,27 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
         ;(data as unknown as Order[]).forEach(o => {
           const tableNum = o.table_number || (o.table ? o.table.table_number : 1)
           const effStatus = overrides[o.id] || o.status
-          map.set(o.id, { ...o, status: effStatus, table_number: tableNum })
+          const memOrd = memOrders.find(m => m.id === o.id)
+          const token = o.session_token || (o as any).table_session_id || memOrd?.session_token
+          map.set(o.id, {
+            ...o,
+            status: effStatus,
+            table_number: tableNum,
+            session_token: token,
+          })
         })
         // 2. Superponer memoria (estado fresco en tiempo real)
         memOrders.forEach(ord => {
           const effStatus = overrides[ord.id] || ord.status
-          map.set(ord.id, { ...ord, status: effStatus })
+          const existing = map.get(ord.id)
+          map.set(ord.id, {
+            ...existing,
+            ...ord,
+            order_items: (ord.order_items && ord.order_items.length > 0) ? ord.order_items : existing?.order_items,
+            status: effStatus,
+            session_token: ord.session_token || existing?.session_token,
+            table_number: ord.table_number || existing?.table_number || (existing?.table ? existing.table.table_number : 1),
+          })
         })
         return Array.from(map.values())
       }

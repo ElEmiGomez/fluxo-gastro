@@ -12,7 +12,37 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
-    const sessions = getTableSessions(slug)
+    const sessions = { ...getTableSessions(slug) }
+
+    const { createServerClient } = await import('@/lib/supabase/server')
+    const { isSupabaseConfigured } = await import('@/lib/supabase/client')
+    const supabase = createServerClient()
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        const restaurant = await getRestaurantBySlug(slug)
+        const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+        const { data: dbSessions } = await supabase
+          .from('table_sessions')
+          .select('*')
+          .eq('restaurant_id', restaurantId)
+          .eq('status', 'active')
+
+        if (dbSessions) {
+          for (const s of dbSessions) {
+            sessions[s.table_number] = {
+              table_number: s.table_number,
+              status: 'busy',
+              session_id: s.session_token,
+              last_updated_at: s.created_at || new Date().toISOString(),
+            }
+            setTableOccupied(slug, s.table_number, s.session_token)
+          }
+        }
+      } catch {
+        // Fallback a memoria pura
+      }
+    }
+
     return NextResponse.json({ sessions })
   } catch (err: any) {
     return NextResponse.json({ error: err.message, sessions: {} }, { status: 500 })
