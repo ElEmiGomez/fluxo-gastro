@@ -87,9 +87,23 @@ export interface Order {
   status: OrderStatus
   total_amount: number
   created_at: string
+  updated_at?: string
+  version?: number
   table?: Table
   order_items?: OrderItem[]
   discount_percentage?: number
+}
+
+export interface OrderEvent {
+  id: string
+  order_id: string
+  restaurant_id: string
+  from_status: OrderStatus | null
+  to_status: OrderStatus
+  version: number
+  actor_type: string
+  actor_id?: string | null
+  created_at: string
 }
 
 export interface OrderItem {

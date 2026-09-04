@@ -35,7 +35,6 @@ interface IdempotencyLockEntry {
 // Estado global en memoria de Node.js (persiste durante la ejecución del servidor)
 interface GlobalStoreState {
   __GASTRO_ORDERS__: Record<string, Order[]>
-  __GASTRO_STATUS_OVERRIDES__: Record<string, OrderStatus>
   __GASTRO_SERVICE_CALLS__: Record<string, ServiceCall[]>
   __GASTRO_TABLE_SESSIONS__: Record<string, Record<string | number, TableSession>>
   __GASTRO_ANALYTICS__: Record<string, AnalyticsEvent[]>
@@ -269,10 +268,7 @@ export function isValidOrderTransition(currentStatus: string, nextStatus: string
 // Helpers de Órdenes
 export function getServerOrders(slug: string): Order[] {
   const list = globalStore.__GASTRO_ORDERS__?.[slug] || []
-  const overrides = globalStore.__GASTRO_STATUS_OVERRIDES__ || {}
-  return list
-    .filter(o => o.order_items && o.order_items.length > 0)
-    .map(o => (overrides[o.id] ? { ...o, status: overrides[o.id] } : o))
+  return list.filter(o => o.order_items && o.order_items.length > 0)
 }
 
 export function addServerOrder(slug: string, order: Order): Order {
@@ -282,15 +278,10 @@ export function addServerOrder(slug: string, order: Order): Order {
   if (!globalStore.__GASTRO_ORDERS__[slug]) {
     globalStore.__GASTRO_ORDERS__[slug] = []
   }
-  if (!globalStore.__GASTRO_STATUS_OVERRIDES__) {
-    globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
-  }
 
-  // Limpiar cualquier override previo de esta orden para que la nueva comanda nazca limpia con su estado real
-  delete globalStore.__GASTRO_STATUS_OVERRIDES__[order.id]
-  const tableNum = order.table_number || (order.table ? order.table.table_number : null)
-  if (tableNum) {
-    delete globalStore.__GASTRO_STATUS_OVERRIDES__[`${slug}_table_${tableNum}`]
+  // Versionado: Inicializar versión en 1 por defecto si no viene definida
+  if (order.version === undefined || order.version === null) {
+    order.version = 1
   }
 
   const existingIdx = globalStore.__GASTRO_ORDERS__[slug].findIndex(o => o.id === order.id)
@@ -310,16 +301,22 @@ export function updateServerOrderStatus(
   slug: string,
   orderId: string,
   status: OrderStatus,
-  tableNumber?: number | string
-): { orders: Order[]; error?: string; order?: Order } {
+  tableNumber?: number | string,
+  expectedVersion?: number
+): {
+  orders: Order[]
+  error?: string
+  code?: 'ORDER_NOT_FOUND' | 'VERSION_CONFLICT' | 'ALREADY_IN_STATE' | 'TRANSITION_INVALID' | 'TRANSITION_APPLIED'
+  order?: Order
+  version?: number
+  current_version?: number
+  current_status?: OrderStatus
+} {
   if (!globalStore.__GASTRO_ORDERS__) {
     globalStore.__GASTRO_ORDERS__ = {}
   }
   if (!globalStore.__GASTRO_ORDERS__[slug]) {
     globalStore.__GASTRO_ORDERS__[slug] = []
-  }
-  if (!globalStore.__GASTRO_STATUS_OVERRIDES__) {
-    globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
   }
 
   // 1. Buscar la orden exclusivamente por su UUID orderId
@@ -334,23 +331,48 @@ export function updateServerOrderStatus(
   }
 
   if (!existingOrder) {
-    return { orders: getServerOrders(slug), error: 'ORDER_NOT_FOUND' }
+    return { orders: getServerOrders(slug), error: 'ORDER_NOT_FOUND', code: 'ORDER_NOT_FOUND' }
   }
 
-  // 2. Validar transición de estado legal
-  const currentStatus = globalStore.__GASTRO_STATUS_OVERRIDES__[orderId] || existingOrder.status
-  if (!isValidOrderTransition(currentStatus, status)) {
+  const currentVersion = existingOrder.version || 1
+  existingOrder.version = currentVersion
+
+  // 2. Control de Concurrencia Optimista (OCC): Validar versión esperada
+  if (expectedVersion !== undefined && expectedVersion !== null && currentVersion !== expectedVersion) {
     return {
       orders: getServerOrders(slug),
-      error: `Transición inválida de ${currentStatus} a ${status}`,
+      error: 'Conflicto de concurrencia: la orden ya fue modificada por otro usuario',
+      code: 'VERSION_CONFLICT',
+      current_version: currentVersion,
+      current_status: existingOrder.status,
     }
   }
 
-  // 3. Guardar override persistente del estado de esta orden específica por su UUID
-  globalStore.__GASTRO_STATUS_OVERRIDES__[orderId] = status
+  // 3. Si el estado ya es el solicitado (idempotencia)
+  if (existingOrder.status === status) {
+    return {
+      orders: getServerOrders(slug),
+      order: existingOrder,
+      version: currentVersion,
+      code: 'ALREADY_IN_STATE',
+    }
+  }
 
-  // 4. Actualizar en todas las listas de memoria activas exclusivamente por UUID orderId
+  // 4. Validar transición de estado legal
+  if (!isValidOrderTransition(existingOrder.status, status)) {
+    return {
+      orders: getServerOrders(slug),
+      error: `Transición inválida de ${existingOrder.status} a ${status}`,
+      code: 'TRANSITION_INVALID',
+      current_status: existingOrder.status,
+    }
+  }
+
+  // 5. Incrementar versión y actualizar atómicamente el estado en memoria
+  const nextVersion = currentVersion + 1
+  const updatedAt = new Date().toISOString()
   let updatedTableNumber: number | string | undefined = tableNumber
+
   for (const s of Object.keys(globalStore.__GASTRO_ORDERS__)) {
     const list = globalStore.__GASTRO_ORDERS__[s] || []
     const idx = list.findIndex(o => o.id === orderId)
@@ -361,19 +383,24 @@ export function updateServerOrderStatus(
       list[idx] = {
         ...existing,
         status,
+        version: nextVersion,
+        updated_at: updatedAt,
         table_number: parsedTbl,
       }
     }
   }
 
-  // 5. Emitir evento SSE para sincronización instantánea en Mozo, Cocina y Cliente
-  const updatedOrder = existingOrder ? {
+  const updatedOrder: Order = {
     ...existingOrder,
     status,
+    version: nextVersion,
+    updated_at: updatedAt,
     table_number: updatedTableNumber ? parseInt(String(updatedTableNumber), 10) : existingOrder.table_number,
-  } : undefined
+  }
+
+  // 6. Emitir evento SSE para sincronización instantánea en Mozo, Cocina y Cliente
   broadcastEvent({ type: 'order_updated', slug, orderId, status, tableNumber: updatedTableNumber, order: updatedOrder })
-  return { orders: getServerOrders(slug), order: updatedOrder }
+  return { orders: getServerOrders(slug), order: updatedOrder, version: nextVersion, code: 'TRANSITION_APPLIED' }
 }
 
 export function clearServerOrders(slug: string): void {
@@ -601,24 +628,11 @@ export function freeTableSession(slug: string, tableNumber: string | number): vo
     if (isThisTable) {
       if (o.status !== 'cancelled') {
         o.status = 'paid'
-        if (!globalStore.__GASTRO_STATUS_OVERRIDES__) {
-          globalStore.__GASTRO_STATUS_OVERRIDES__ = {}
-        }
-        globalStore.__GASTRO_STATUS_OVERRIDES__[o.id] = 'paid'
+        o.version = (o.version || 1) + 1
+        o.updated_at = new Date().toISOString()
       }
     }
   })
-
-  // Limpiar cualquier residuo de overrides de mesa
-  if (globalStore.__GASTRO_STATUS_OVERRIDES__) {
-    delete globalStore.__GASTRO_STATUS_OVERRIDES__[`${slug}_table_${tableNumStr}`]
-    delete globalStore.__GASTRO_STATUS_OVERRIDES__[`table_${tableNumStr}`]
-    for (const k of Object.keys(globalStore.__GASTRO_STATUS_OVERRIDES__)) {
-      if (k.endsWith(`_table_${tableNumStr}`) || k === `table_${tableNumStr}`) {
-        delete globalStore.__GASTRO_STATUS_OVERRIDES__[k]
-      }
-    }
-  }
 
   // 2. Eliminar llamadas de esta mesa específica
   const calls = globalStore.__GASTRO_SERVICE_CALLS__?.[slug] || []

@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { ChefHat, Volume2, VolumeX, RefreshCw, Layers, Sparkles, Utensils, Wine, Flame, Maximize2, Minimize2, Undo2, Check, X } from 'lucide-react'
+import { ChefHat, Volume2, VolumeX, Sparkles, Wine, Flame, Maximize2, Minimize2, Check } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { KitchenTicket } from '@/components/kitchen/KitchenTicket'
@@ -10,7 +10,7 @@ import { Order, OrderStatus, Restaurant } from '@/types/database.types'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
 import { createBrowserClient } from '@/lib/supabase/client'
-import { MOCK_RESTAURANTS, getMockOrders, saveMockOrders, updateMockOrderStatus } from '@/lib/supabase/mock-fallback'
+import { MOCK_RESTAURANTS } from '@/lib/supabase/mock-fallback'
 
 type StationFilterType = 'all' | 'kitchen' | 'bar'
 
@@ -19,52 +19,18 @@ export default function KitchenKDSPage() {
   const slug = (params?.slug as string) || 'burger-gourmet'
 
   const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
-  const [orders, setOrders] = useState<Order[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(`fluxo_kds_orders_${slug}`)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed)) {
-            const now = Date.now()
-            return parsed.filter(
-              (o: Order) =>
-                o.status !== 'delivered' &&
-                o.status !== 'cancelled' &&
-                o.status !== 'pending_validation' &&
-                o.order_items &&
-                o.order_items.length > 0 &&
-                now - new Date(o.created_at).getTime() < 12 * 60 * 60 * 1000
-            )
-          }
-        }
-      } catch {}
-    }
-    return []
-  })
+  const [orders, setOrders] = useState<Order[]>([])
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [newOrderAlert, setNewOrderAlert] = useState(false)
   const [filterStatus, setFilterStatus] = useState<'active' | 'all' | 'ready'>('all')
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [recentDispatchedOrders, setRecentDispatchedOrders] = useState<Order[]>([])
+  const [updatingOrderIds, setUpdatingOrderIds] = useState<Set<string>>(new Set())
   
   // Filtro de Estación: Cocina vs. Barra
   const [stationFilter, setStationFilter] = useState<StationFilterType>('all')
 
   const previousOrdersCountRef = useRef<number>(0)
   const seenOrderIdsRef = useRef<Set<string>>(new Set())
-  const dispatchedOrderIdsRef = useRef<Set<string>>(new Set())
-  const localStatusOverridesRef = useRef<Map<string, { status: OrderStatus; timestamp: number }>>(new Map())
-
-  // Persistir comandas activas en localStorage para blindaje total contra bloqueo de pantalla o suspensión en móvil
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const active = orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled' && o.status !== 'pending_validation')
-        localStorage.setItem(`fluxo_kds_orders_${slug}`, JSON.stringify(active))
-      } catch {}
-    }
-  }, [orders, slug])
 
   // Toggle de Pantalla Completa con 1 Toque
   const toggleFullscreen = () => {
@@ -74,15 +40,6 @@ export default function KitchenKDSPage() {
     } else {
       document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {})
     }
-  }
-
-  // Deshacer el último ticket despachado
-  const handleUndoLastDispatch = () => {
-    if (recentDispatchedOrders.length === 0) return
-    const last = recentDispatchedOrders[0]
-    dispatchedOrderIdsRef.current.delete(last.id)
-    handleUpdateStatus(last.id, 'preparing')
-    setRecentDispatchedOrders(prev => prev.slice(1))
   }
 
   // Recordatorio sonoro cada 2 minutos si hay pedidos demorados (> 20 min)
@@ -120,145 +77,119 @@ export default function KitchenKDSPage() {
     }
   }, [])
 
-  // 2. Carga inicial, sincronización en tiempo real con la API del servidor y SSE
+  // 2. Sincronización con el servidor (Single Source of Truth - PostgreSQL)
+  const fetchServerOrders = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/orders?slug=${slug}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data.orders)) {
+          // La cocina solo recibe comandas activas ya validadas por el mozo y con platos reales
+          const incomingOrders: Order[] = data.orders
+            .filter((o: Order) =>
+              o.status !== 'pending_validation' &&
+              o.status !== 'delivered' &&
+              o.status !== 'cancelled' &&
+              o.order_items &&
+              o.order_items.length > 0
+            )
+            .map((o: Order) => ({
+              ...o,
+              order_items: (o.order_items || []).map((it: any) => ({
+                ...it,
+                product: it.product || it.products,
+                course: it.course || 'first',
+              })),
+            }))
+
+          // Detectar nueva orden entrante real para sonar campana
+          let hasNewUnseenOrder = false
+          incomingOrders.forEach(ord => {
+            if (!seenOrderIdsRef.current.has(ord.id)) {
+              seenOrderIdsRef.current.add(ord.id)
+              hasNewUnseenOrder = true
+            }
+          })
+
+          if (hasNewUnseenOrder && previousOrdersCountRef.current > 0) {
+            if (soundEnabled) playKitchenChime()
+            setNewOrderAlert(true)
+          }
+          previousOrdersCountRef.current = incomingOrders.length
+
+          // Ordenación FIFO (más antiguo primero) para atención por orden de llegada
+          const sorted = [...incomingOrders].sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          )
+          setOrders(sorted)
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching server orders in KDS:', err)
+    }
+  }, [slug, soundEnabled])
+
+  // 3. Estrategia Dual Realtime (Supabase Realtime + Soft Polling 4.5s + SSE Fallback)
   useEffect(() => {
     let sseEventSource: EventSource | null = null
     let pollInterval: any = null
+    const supabase = createBrowserClient()
+    let realtimeChannel: any = null
 
-    const fetchServerOrders = async () => {
-      try {
-        const res = await fetch(`/api/orders?slug=${slug}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.orders) {
-            // La cocina solo recibe comandas ya validadas por el mozo y con platos reales (Cero pedidos falsos)
-            const incomingOrders: Order[] = data.orders
-              .filter((o: Order) => o.status !== 'pending_validation' && o.order_items && o.order_items.length > 0)
-              .map((o: Order) => ({
-                ...o,
-                order_items: (o.order_items || []).map((it: any) => ({
-                  ...it,
-                  product: it.product || it.products,
-                  course: it.course || 'first',
-                })),
-              }))
-
-            // Detectar nueva orden entrante real para sonar campana
-            let hasNewUnseenOrder = false
-            incomingOrders.forEach(ord => {
-              if (!seenOrderIdsRef.current.has(ord.id) && ord.status !== 'delivered' && ord.status !== 'cancelled') {
-                seenOrderIdsRef.current.add(ord.id)
-                hasNewUnseenOrder = true
-              }
-            })
-
-            if (hasNewUnseenOrder && previousOrdersCountRef.current > 0) {
-              if (soundEnabled) playKitchenChime()
-              setNewOrderAlert(true)
-            }
-            previousOrdersCountRef.current = incomingOrders.length
-
-            // Reconciliación con Jerarquía de Estados (Monótona Creciente - Cero Parpadeos)
-            setOrders(prev => {
-              const map = new Map<string, Order>()
-              prev.forEach(ord => {
-                if (
-                  !dispatchedOrderIdsRef.current.has(ord.id) &&
-                  ord.status !== 'delivered' &&
-                  ord.status !== 'cancelled' &&
-                  ord.status !== 'pending_validation'
-                ) {
-                  map.set(ord.id, ord)
-                }
-              })
-              const STATUS_RANK: Record<string, number> = {
-                pending_validation: 0,
-                pending: 1,
-                confirmed: 1,
-                preparing: 2,
-                ready: 3,
-                delivered: 4,
-                cancelled: 5,
-              }
-              incomingOrders.forEach(ord => {
-                const override = localStatusOverridesRef.current.get(ord.id)
-                const overrideRank = override ? (STATUS_RANK[override.status] ?? 0) : 0
-                const incomingRank = STATUS_RANK[ord.status] ?? 0
-                const effectiveStatus = overrideRank > incomingRank ? override!.status : ord.status
-
-                if (effectiveStatus === 'delivered' || effectiveStatus === 'cancelled' || effectiveStatus === 'pending_validation' || dispatchedOrderIdsRef.current.has(ord.id)) {
-                  map.delete(ord.id)
-                } else {
-                  map.set(ord.id, { ...ord, status: effectiveStatus })
-                }
-              })
-              return Array.from(map.values())
-            })
-          }
-        }
-      } catch (err) {
-        console.log('Error fetching server orders in KDS:', err)
-      }
+    if (MOCK_RESTAURANTS[slug]) {
+      setRestaurant(MOCK_RESTAURANTS[slug])
     }
 
-    async function initKDS() {
-      if (MOCK_RESTAURANTS[slug]) {
-        setRestaurant(MOCK_RESTAURANTS[slug])
-      }
+    fetchServerOrders()
 
-      await fetchServerOrders()
-
-      // SSE en tiempo real
-      try {
-        sseEventSource = new EventSource('/api/events')
-        sseEventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
-            if (!data.slug || data.slug === slug || data.type === 'connected') {
-              // Reactividad instantánea en cocina al recibir validación del mozo
-              if (data.type === 'order_updated' && data.order && (data.status === 'pending' || data.status === 'confirmed')) {
-                const normOrder: Order = {
-                  ...data.order,
-                  status: data.status,
-                  order_items: (data.order.order_items || []).map((it: any) => ({
-                    ...it,
-                    product: it.product || it.products,
-                    course: it.course || 'first',
-                  })),
-                }
-                setOrders(prev => {
-                  const existingIdx = prev.findIndex(o => o.id === data.order.id)
-                  if (existingIdx >= 0) {
-                    const next = [...prev]
-                    next[existingIdx] = { ...next[existingIdx], ...normOrder }
-                    return next
-                  }
-                  return [normOrder, ...prev]
-                })
-
-                if (!seenOrderIdsRef.current.has(data.order.id)) {
-                  seenOrderIdsRef.current.add(data.order.id)
-                  if (soundEnabled) playKitchenChime()
-                  setNewOrderAlert(true)
-                }
-              }
-              fetchServerOrders()
-            }
-          } catch {
-            // ignore
+    // A. Canal Nativo Supabase Realtime (postgres_changes en orders y order_events)
+    if (supabase) {
+      realtimeChannel = supabase
+        .channel(`kds-orders-${slug}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+          },
+          () => {
+            fetchServerOrders()
           }
-        }
-      } catch (err) {
-        console.log('SSE not supported, using fast polling:', err)
-      }
-
-      // Polling de respaldo cada 1.5s
-      pollInterval = setInterval(fetchServerOrders, 1500)
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'order_events',
+          },
+          () => {
+            fetchServerOrders()
+          }
+        )
+        .subscribe()
     }
 
-    initKDS()
+    // B. SSE de respaldo para modo offline/local
+    try {
+      sseEventSource = new EventSource('/api/events')
+      sseEventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (!data.slug || data.slug === slug || data.type === 'connected') {
+            fetchServerOrders()
+          }
+        } catch {}
+      }
+    } catch (err) {
+      console.log('SSE fallback not active:', err)
+    }
 
-    // Manejar desbloqueo de móvil / cambio de pestaña de vuelta a la app
+    // C. Soft Polling de Respaldo cada 4.5 segundos (R4 de Interface Contracts)
+    pollInterval = setInterval(fetchServerOrders, 4500)
+
+    // D. Reconciliación inmediata en visibilitychange y window.focus
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchServerOrders()
@@ -268,54 +199,64 @@ export default function KitchenKDSPage() {
     window.addEventListener('focus', handleVisibilityChange)
 
     return () => {
+      if (realtimeChannel && supabase) {
+        supabase.removeChannel(realtimeChannel)
+      }
       if (sseEventSource) sseEventSource.close()
       if (pollInterval) clearInterval(pollInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleVisibilityChange)
     }
-  }, [slug, soundEnabled])
+  }, [slug, fetchServerOrders])
 
-  // Actualizar estado de comanda
+  // Actualizar estado de comanda (No-optimista con OCC)
   const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
-    // 0. Registrar override optimista para blindar contra rebotes en polling
-    localStatusOverridesRef.current.set(orderId, { status: newStatus, timestamp: Date.now() })
-
-    // 1. Tracking para deshacer último despacho
     const targetOrd = orders.find(o => o.id === orderId)
+    if (!targetOrd || updatingOrderIds.has(orderId)) return
+
     const tableNum = targetOrd?.table?.table_number ?? targetOrd?.table_number ?? 1
 
-    if (targetOrd && (newStatus === 'ready' || newStatus === 'delivered')) {
-      setRecentDispatchedOrders(prev => [targetOrd, ...prev.slice(0, 4)])
-    }
+    setUpdatingOrderIds(prev => new Set(prev).add(orderId))
 
-    if (newStatus === 'delivered' || newStatus === 'cancelled') {
-      dispatchedOrderIdsRef.current.add(orderId)
-    }
-
-    // 2. Actualizar estado local inmediatamente
-    if (newStatus === 'delivered' || newStatus === 'cancelled') {
-      setOrders(prev => prev.filter(o => o.id !== orderId))
-    } else {
-      setOrders(prev =>
-        prev.map(o => (o.id === orderId ? { ...o, status: newStatus } : o))
-      )
-    }
-    updateMockOrderStatus(slug, orderId, newStatus)
-
-    // 3. Notificar a la API del servidor con la mesa exacta (await para sincronización garantizada)
     try {
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           slug,
           orderId,
           status: newStatus,
+          expected_version: targetOrd.version,
+          actor_type: 'kitchen',
           table_number: tableNum,
         }),
       })
+
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.success) {
+        if (newStatus === 'delivered' || newStatus === 'cancelled') {
+          setOrders(prev => prev.filter(o => o.id !== orderId))
+        } else {
+          setOrders(prev =>
+            prev.map(o => (o.id === orderId ? { ...o, status: newStatus, version: data.version ?? (o.version ? o.version + 1 : 1) } : o))
+          )
+        }
+      } else if (res.status === 409) {
+        console.warn(`[KDS] Concurrencia detectada en orden ${orderId}, re-sincronizando...`)
+        await fetchServerOrders()
+      } else {
+        console.error('[KDS] Error en transición de orden:', data.error)
+        await fetchServerOrders()
+      }
     } catch (err) {
       console.error('Error updating order status from kitchen:', err)
+      await fetchServerOrders()
+    } finally {
+      setUpdatingOrderIds(prev => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
     }
   }
 
@@ -443,20 +384,8 @@ export default function KitchenKDSPage() {
               </div>
             </div>
 
-            {/* Filtros de Estado, Deshacer, Pantalla Completa y Audio Toggle */}
+            {/* Filtros de Estado, Pantalla Completa y Audio Toggle */}
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Botón Deshacer Último Despacho */}
-              {recentDispatchedOrders.length > 0 && (
-                <button
-                  onClick={handleUndoLastDispatch}
-                  className="px-3 py-1.5 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 text-xs font-black transition-all flex items-center gap-1.5 shadow-xs active:scale-95"
-                  title="Recuperar la última comanda despachada"
-                >
-                  <Undo2 size={13} className="text-amber-800" />
-                  <span>Deshacer Despacho</span>
-                </button>
-              )}
-
               <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold">
                 <button
                   onClick={() => setFilterStatus('all')}
@@ -558,6 +487,7 @@ export default function KitchenKDSPage() {
                 <KitchenTicket
                   key={order.id}
                   order={order}
+                  isUpdating={updatingOrderIds.has(order.id)}
                   onUpdateStatus={handleUpdateStatus}
                 />
               ))}

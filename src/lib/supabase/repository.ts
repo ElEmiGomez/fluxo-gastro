@@ -322,6 +322,7 @@ export async function createOrder(
             {
               restaurant_id: targetRestaurantId,
               table_session_id: resolvedTableSessionId,
+              session_token: effectiveSessionToken,
               table_number: orderData.table_number,
               total_amount: orderData.total_amount,
               status: initialStatus,
@@ -332,6 +333,7 @@ export async function createOrder(
         : supabase.from('orders').insert({
             restaurant_id: targetRestaurantId,
             table_session_id: resolvedTableSessionId,
+            session_token: effectiveSessionToken,
             table_number: orderData.table_number,
             total_amount: orderData.total_amount,
             status: initialStatus,
@@ -399,10 +401,9 @@ export async function createOrder(
 }
 
 /**
- * 5. COMANDAS: Obtener órdenes del restaurante
+ * 5. COMANDAS: Obtener órdenes del restaurante (SSOT PostgreSQL)
  */
 export async function getRestaurantOrders(restaurantId: string, slug: string): Promise<Order[]> {
-  const memOrders = getServerOrders(slug)
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -423,63 +424,37 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
         .eq('restaurant_id', targetRestaurantId)
         .order('created_at', { ascending: false })
 
-      if (!error && data && data.length > 0) {
-        const map = new Map<string, Order>()
-        const overrides = (globalThis as any).__GASTRO_STATUS_OVERRIDES__ || {}
-
-        // 1. Cargar órdenes de Supabase con overrides de estado aplicados por ID y productos normalizados
-        ;(data as unknown as any[]).forEach(o => {
+      if (!error && data) {
+        const memOrders = getServerOrders(slug)
+        return (data as unknown as any[]).map(o => {
           const tableNum = o.table_number || (o.table ? o.table.table_number : 1)
-          const memOrd = memOrders.find(m => m.id === o.id)
-          const effStatus = overrides[o.id] || (memOrd && (memOrd.status === 'paid' || memOrd.status === 'delivered') && o.status !== 'paid' ? memOrd.status : o.status)
-          const token = o.session_token || o.table_session_id || memOrd?.session_token
+          const token = o.session_token || o.table_session_id
           const normalizedItems = (o.order_items || []).map((it: any) => ({
             ...it,
             product: it.product || it.products,
             course: it.course || 'first',
           }))
-          const mappedOrder: Order = {
+          const mem = memOrders.find(m => m.id === o.id)
+          const resolvedVersion = (o.version !== undefined && o.version !== null)
+            ? o.version
+            : (mem?.version ?? 1)
+
+          return {
             ...o,
+            version: resolvedVersion,
             order_items: normalizedItems,
-            status: effStatus,
+            status: o.status,
             table_number: tableNum,
             session_token: token,
-          }
-          map.set(o.id, mappedOrder)
+          } as Order
         })
-
-        // 2. Superponer memoria (estado fresco en tiempo real)
-        memOrders.forEach(ord => {
-          const effStatus = overrides[ord.id] || ord.status
-          const existing = map.get(ord.id)
-          const finalItems = (ord.order_items && ord.order_items.length > 0) ? ord.order_items : existing?.order_items
-          map.set(ord.id, {
-            ...existing,
-            ...ord,
-            order_items: (finalItems || []).map((it: any) => ({
-              ...it,
-              product: it.product || it.products,
-              course: it.course || 'first',
-            })),
-            status: effStatus,
-            session_token: ord.session_token || existing?.session_token,
-            table_number: ord.table_number || existing?.table_number || (existing?.table ? existing.table.table_number : 1),
-          })
-        })
-
-        const combined = Array.from(map.values())
-        if (!(globalThis as any).__GASTRO_ORDERS__) {
-          ;(globalThis as any).__GASTRO_ORDERS__ = {}
-        }
-        ;(globalThis as any).__GASTRO_ORDERS__[slug] = combined
-        return combined
       }
     } catch (e) {
       console.warn('Error fetching orders from Supabase:', e)
     }
   }
 
-  return memOrders
+  return getServerOrders(slug)
 }
 
 /**
@@ -497,25 +472,121 @@ export async function getActiveOrdersByTable(
   )
 }
 
-/**
- * 6. COMANDAS: Actualizar estado (pending_validation -> pending -> preparing -> ready -> delivered -> paid)
- */
-export async function updateOrderStatus(
-  slug: string,
-  orderId: string,
-  status: OrderStatus,
+export interface TransitionOrderParams {
+  orderId: string
+  restaurantId?: string
+  slug: string
+  nextStatus: OrderStatus
+  expectedVersion?: number
+  actorType?: string
+  actorId?: string
   tableNumber?: number | string
-): Promise<{ success: boolean; error?: string; order?: Order }> {
+}
+
+export interface TransitionOrderResult {
+  success: boolean
+  code: string
+  message?: string
+  order?: Order
+  version?: number
+  current_version?: number
+  current_status?: OrderStatus
+  previous_status?: OrderStatus
+  new_status?: OrderStatus
+  error?: string
+}
+
+/**
+ * 6. COMANDAS: Transición atómica de estado con OCC vía transition_order RPC (Milestone 1)
+ */
+export async function transitionOrderStatus(
+  params: TransitionOrderParams
+): Promise<TransitionOrderResult> {
+  const {
+    orderId,
+    restaurantId,
+    slug,
+    nextStatus,
+    expectedVersion,
+    actorType = 'waiter',
+    actorId,
+    tableNumber,
+  } = params
+
   const supabase = createServerClient()
   const hasSupabase = supabase && isSupabaseConfigured()
 
-  // 1. Validar y actualizar estado en memoria
-  let serverResult = updateServerOrderStatus(slug, orderId, status, tableNumber)
-
-  // 2. Si no se encontró en memoria pero Supabase está configurado, recuperar comanda de PostgreSQL
-  if (serverResult.error === 'ORDER_NOT_FOUND' && hasSupabase) {
+  if (hasSupabase) {
     try {
-      const { data: supaOrder, error: fetchErr } = await supabase
+      const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
+
+      const { data, error } = await supabase.rpc('transition_order', {
+        p_order_id: orderId,
+        p_restaurant_id: targetRestaurantId,
+        p_next_status: nextStatus,
+        p_expected_version: expectedVersion ?? null,
+        p_actor_type: actorType,
+        p_actor_id: actorId ?? null,
+      })
+
+      if (!error && data) {
+        if (data.success) {
+          const parsedOrder: Order | undefined = data.order ? {
+            ...data.order,
+            order_items: (data.order.order_items || []).map((it: any) => ({
+              ...it,
+              product: it.product || it.products,
+              course: it.course || 'first',
+            })),
+          } : undefined
+
+          broadcastEvent({
+            type: 'order_updated',
+            slug,
+            orderId,
+            status: nextStatus,
+            tableNumber: parsedOrder?.table_number || tableNumber,
+            order: parsedOrder,
+          })
+
+          return {
+            success: true,
+            code: data.code || 'TRANSITION_APPLIED',
+            message: data.message || `Orden ${orderId} actualizada a ${nextStatus}`,
+            order: parsedOrder,
+            version: data.version,
+            previous_status: data.previous_status,
+            new_status: data.new_status,
+          }
+        } else {
+          return {
+            success: false,
+            code: data.code || 'TRANSITION_INVALID',
+            message: data.message,
+            error: data.message,
+            current_version: data.current_version,
+            current_status: data.current_status,
+          }
+        }
+      }
+
+      if (error && error.code === 'PGRST202') {
+        console.warn('[transitionOrderStatus] transition_order RPC not found in schema cache. Falling back to offline/memory state machine with Supabase sync.')
+      } else if (error) {
+        console.warn('[transitionOrderStatus] Supabase RPC error:', error)
+      }
+    } catch (e: any) {
+      console.warn('[transitionOrderStatus] Exception calling transition_order RPC:', e?.message || e)
+    }
+  }
+
+  // 2. Fallback de máquina de estados en servidor (memoria + persistencia directa en Supabase)
+  let memResult = updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, expectedVersion)
+
+  // Si no se encontró en memoria pero Supabase está configurado, intentar buscar en Supabase
+  if (memResult.error === 'ORDER_NOT_FOUND' && hasSupabase) {
+    try {
+      const { data: supaOrder, error: supaErr } = await supabase
         .from('orders')
         .select(`
           *,
@@ -528,87 +599,93 @@ export async function updateOrderStatus(
           )
         `)
         .eq('id', orderId)
-        .single()
+        .maybeSingle()
 
-      if (!fetchErr && supaOrder) {
-        const currentStatus = (globalThis as any).__GASTRO_STATUS_OVERRIDES__?.[orderId] || supaOrder.status
-        if (!isValidOrderTransition(currentStatus, status)) {
-          return { success: false, error: `Transición inválida de ${currentStatus} a ${status}` }
-        }
-
-        const effectiveTable = supaOrder.table_number || (supaOrder.table ? supaOrder.table.table_number : Number(tableNumber) || 1)
-        const hydratedOrder: Order = {
+      if (!supaErr && supaOrder) {
+        const orderToHydrate: Order = {
           ...supaOrder,
-          status,
-          table_number: effectiveTable,
+          version: supaOrder.version || 1,
           order_items: (supaOrder.order_items || []).map((it: any) => ({
             ...it,
             product: it.product || it.products,
             course: it.course || 'first',
           })),
         }
-
-        // Hidratar en memoria global
-        if (!(globalThis as any).__GASTRO_ORDERS__) {
-          ;(globalThis as any).__GASTRO_ORDERS__ = {}
-        }
-        if (!(globalThis as any).__GASTRO_ORDERS__[slug]) {
-          ;(globalThis as any).__GASTRO_ORDERS__[slug] = []
-        }
-        const memList = (globalThis as any).__GASTRO_ORDERS__[slug] as Order[]
-        const idx = memList.findIndex(o => o.id === orderId)
-        if (idx >= 0) {
-          memList[idx] = hydratedOrder
-        } else {
-          memList.unshift(hydratedOrder)
-        }
-
-        if (!(globalThis as any).__GASTRO_STATUS_OVERRIDES__) {
-          ;(globalThis as any).__GASTRO_STATUS_OVERRIDES__ = {}
-        }
-        ;(globalThis as any).__GASTRO_STATUS_OVERRIDES__[orderId] = status
-
-        // Persistir en Supabase
-        await supabase
-          .from('orders')
-          .update({ status })
-          .eq('id', orderId)
-
-        // Difundir evento SSE para actualización reactiva instantánea
-        broadcastEvent({
-          type: 'order_updated',
-          slug,
-          orderId,
-          status,
-          tableNumber: effectiveTable,
-          order: hydratedOrder,
-        })
-
-        return { success: true, order: hydratedOrder }
+        addServerOrder(slug, orderToHydrate)
+        memResult = updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, expectedVersion)
       }
-    } catch (e) {
-      console.warn('Error recovering and updating order in Supabase:', e)
+    } catch (fetchErr) {
+      console.warn('[transitionOrderStatus] Error recovering order from Supabase:', fetchErr)
     }
   }
 
-  if (serverResult.error) {
-    return { success: false, error: serverResult.error }
+  if (memResult.error) {
+    return {
+      success: false,
+      code: memResult.code || (memResult.error === 'ORDER_NOT_FOUND' ? 'ORDER_NOT_FOUND' : 'TRANSITION_INVALID'),
+      message: memResult.error,
+      error: memResult.error,
+      current_version: memResult.current_version,
+      current_status: memResult.current_status,
+    }
   }
 
-  // 3. Persistir en Supabase si la actualización en memoria fue exitosa
+  // Si la transición fue válida y Supabase está configurado, persistir en PostgreSQL
   if (hasSupabase) {
     try {
-      await supabase
+      const { error: updErr } = await supabase
         .from('orders')
-        .update({ status })
+        .update({
+          status: nextStatus,
+          version: memResult.version,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', orderId)
-    } catch (e) {
-      console.warn('Error updating order status in Supabase:', e)
+
+      if (updErr && updErr.code === 'PGRST204') {
+        // En caso de que version y/o updated_at aún no existan en Supabase remoto
+        await supabase
+          .from('orders')
+          .update({ status: nextStatus })
+          .eq('id', orderId)
+      }
+    } catch (syncErr) {
+      console.warn('[transitionOrderStatus] Error persisting fallback transition to Supabase:', syncErr)
     }
   }
 
-  const updatedOrder = getServerOrders(slug).find(o => o.id === orderId)
-  return { success: true, order: updatedOrder }
+  return {
+    success: true,
+    code: memResult.code || 'TRANSITION_APPLIED',
+    message: `Orden ${orderId} actualizada a ${nextStatus}`,
+    order: memResult.order,
+    version: memResult.version || memResult.order?.version || 1,
+    current_status: memResult.order?.status,
+  }
+}
+
+/**
+ * 6.1 Wrapper de compatibilidad hacia atrás para updateOrderStatus
+ */
+export async function updateOrderStatus(
+  slug: string,
+  orderId: string,
+  status: OrderStatus,
+  tableNumber?: number | string
+): Promise<{ success: boolean; error?: string; order?: Order; code?: string; version?: number }> {
+  const res = await transitionOrderStatus({
+    slug,
+    orderId,
+    nextStatus: status,
+    tableNumber,
+  })
+  return {
+    success: res.success,
+    error: res.error || res.message,
+    order: res.order,
+    code: res.code,
+    version: res.version,
+  }
 }
 
 /**

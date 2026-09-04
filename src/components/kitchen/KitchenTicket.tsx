@@ -2,19 +2,21 @@
 
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Clock, CheckCircle2, ChefHat, AlertTriangle, UserCheck, Utensils, Sparkles } from 'lucide-react'
+import { Clock, CheckCircle2, ChefHat, AlertTriangle, UserCheck, Utensils, Sparkles, Loader2 } from 'lucide-react'
 import { Order, OrderStatus } from '@/types/database.types'
 import { getWaitingMinutes } from '@/lib/utils'
 
 interface KitchenTicketProps {
   order: Order
   isNew?: boolean
+  isUpdating?: boolean
   onUpdateStatus: (orderId: string, status: OrderStatus) => void
 }
 
 export function KitchenTicket({
   order,
   isNew = false,
+  isUpdating = false,
   onUpdateStatus,
 }: KitchenTicketProps) {
   const [waitingMinutes, setWaitingMinutes] = useState(() => getWaitingMinutes(order.created_at))
@@ -291,30 +293,60 @@ export function KitchenTicket({
         {(order.status === 'pending' || order.status === 'confirmed') && (
           <button
             onClick={() => onUpdateStatus(order.id, 'preparing')}
-            className="w-full h-16 py-4 px-4 rounded-2xl font-black text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center gap-3 shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all uppercase tracking-wide border-2 border-amber-600/30"
+            disabled={isUpdating}
+            className="w-full h-16 py-4 px-4 rounded-2xl font-black text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 flex items-center justify-center gap-3 shadow-lg hover:shadow-amber-500/20 active:scale-95 transition-all uppercase tracking-wide border-2 border-amber-600/30"
           >
-            <ChefHat className="w-6 h-6 stroke-[2.5]" />
-            <span>INICIAR PREPARACIÓN</span>
+            {isUpdating ? (
+              <>
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>INICIANDO...</span>
+              </>
+            ) : (
+              <>
+                <ChefHat className="w-6 h-6 stroke-[2.5]" />
+                <span>INICIAR PREPARACIÓN</span>
+              </>
+            )}
           </button>
         )}
 
         {order.status === 'preparing' && (
           <button
             onClick={() => onUpdateStatus(order.id, 'ready')}
-            className="w-full h-16 py-4 px-4 rounded-2xl font-black text-sm bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-3 shadow-lg hover:shadow-emerald-600/20 active:scale-95 transition-all uppercase tracking-wide border-2 border-emerald-700/30"
+            disabled={isUpdating}
+            className="w-full h-16 py-4 px-4 rounded-2xl font-black text-sm bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-3 shadow-lg hover:shadow-emerald-600/20 active:scale-95 transition-all uppercase tracking-wide border-2 border-emerald-700/30"
           >
-            <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
-            <span>MARCAR LISTO PARA SERVIR</span>
+            {isUpdating ? (
+              <>
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>MARCANDO LISTO...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+                <span>MARCAR LISTO PARA SERVIR</span>
+              </>
+            )}
           </button>
         )}
 
         {order.status === 'ready' && (
           <button
             onClick={() => onUpdateStatus(order.id, 'delivered')}
-            className="w-full h-16 py-4 px-4 rounded-2xl font-black text-sm bg-blue-900 hover:bg-blue-800 text-white flex items-center justify-center gap-3 shadow-lg hover:shadow-blue-900/20 active:scale-95 transition-all uppercase tracking-wide border-2 border-blue-950/30"
+            disabled={isUpdating}
+            className="w-full h-16 py-4 px-4 rounded-2xl font-black text-sm bg-blue-900 hover:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-3 shadow-lg hover:shadow-blue-900/20 active:scale-95 transition-all uppercase tracking-wide border-2 border-blue-950/30"
           >
-            <Sparkles className="w-6 h-6" />
-            <span>MARCAR SERVIDO Y ENTREGADO</span>
+            {isUpdating ? (
+              <>
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span>DESPACHANDO...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-6 h-6" />
+                <span>MARCAR SERVIDO Y ENTREGADO</span>
+              </>
+            )}
           </button>
         )}
       </div>

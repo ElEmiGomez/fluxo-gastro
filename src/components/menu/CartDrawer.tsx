@@ -6,7 +6,6 @@ import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, S
 import { CartItem, Product, OrderStatus } from '@/types/database.types'
 import { useTenant } from '@/components/tenant/TenantProvider'
 import { formatCurrency } from '@/lib/utils'
-import { createMockOrder } from '@/lib/supabase/mock-fallback'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { BillModal } from '@/components/menu/BillModal'
 import { getTranslation, translateProductName } from '@/lib/i18n'
@@ -263,11 +262,6 @@ export function CartDrawer({
                 body: JSON.stringify(retryPayload),
               })
               if (retryRes.ok) {
-                const retryData = await retryRes.json().catch(() => ({}))
-                createMockOrder(currentSlug, {
-                  ...retryPayload,
-                  id: retryData.order?.id || retryData.id,
-                })
                 triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
                 idempotencyKeyRef.current = ''
                 setOrderSuccess(true)
@@ -300,11 +294,6 @@ export function CartDrawer({
         }
         onSessionUpdate?.(data.session_token)
       }
-
-      createMockOrder(currentSlug, {
-        ...payload,
-        id: data.order?.id || data.id,
-      })
 
       triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
       idempotencyKeyRef.current = ''

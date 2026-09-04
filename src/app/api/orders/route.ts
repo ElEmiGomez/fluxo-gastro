@@ -17,6 +17,7 @@ import {
   createOrder,
   getRestaurantOrders,
   updateOrderStatus,
+  transitionOrderStatus,
   getTargetRestaurantId,
 } from '@/lib/supabase/repository'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
@@ -221,7 +222,21 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
-    const { slug = 'burger-gourmet', orderId, status, table_number, tableNumber } = body
+    const {
+      slug = 'burger-gourmet',
+      orderId,
+      status,
+      table_number,
+      tableNumber,
+      expected_version,
+      expectedVersion,
+      version,
+      actor_type,
+      actorType,
+      actor_id,
+      actorId,
+    } = body
+
     if (!orderId || !status) {
       return NextResponse.json({ error: 'Faltan parámetros orderId o status' }, { status: 400 })
     }
@@ -240,110 +255,71 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: `Estado inválido: ${status}` }, { status: 400 })
     }
 
-    // Buscar comanda existente estrictamente por UUID orderId
     const restaurant = await getRestaurantBySlug(slug)
     const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
-    const orders = await getRestaurantOrders(restaurantId, slug)
-    let existingOrder = orders.find(o => o.id === orderId)
 
-    // Fallback de búsqueda en memoria viva en todos los namespaces
-    if (!existingOrder) {
-      const { getServerOrders } = await import('@/lib/server-state')
-      existingOrder = getServerOrders(slug).find(o => o.id === orderId)
-    }
-    if (!existingOrder) {
-      const globalStore = (globalThis as any).__GASTRO_ORDERS__ || {}
-      for (const s of Object.keys(globalStore)) {
-        const found = (globalStore[s] || []).find((o: any) => o.id === orderId)
-        if (found) {
-          existingOrder = found
-          break
-        }
-      }
-    }
-    // Fallback de búsqueda directa en Supabase por UUID
-    if (!existingOrder) {
-      const { createServerClient } = await import('@/lib/supabase/server')
-      const { isSupabaseConfigured } = await import('@/lib/supabase/client')
-      const supabase = createServerClient()
-      if (supabase && isSupabaseConfigured()) {
-        try {
-          const { data: supaOrder } = await supabase
-            .from('orders')
-            .select(`
-              *,
-              order_items (
-                id,
-                product_id,
-                quantity,
-                notes,
-                products (*)
-              )
-            `)
-            .eq('id', orderId)
-            .maybeSingle()
-          if (supaOrder) {
-            existingOrder = {
-              ...supaOrder,
-              order_items: (supaOrder.order_items || []).map((it: any) => ({
-                ...it,
-                product: it.product || it.products,
-                course: it.course || 'first',
-              })),
-            }
-          }
-        } catch {}
-      }
-    }
+    const parsedExpectedVersion = (expected_version !== undefined && expected_version !== null)
+      ? Number(expected_version)
+      : ((expectedVersion !== undefined && expectedVersion !== null)
+        ? Number(expectedVersion)
+        : ((version !== undefined && version !== null) ? Number(version) : undefined))
 
-    if (!existingOrder) {
+    const effectiveTableNum = table_number ?? tableNumber
+
+    const result = await transitionOrderStatus({
+      orderId,
+      restaurantId,
+      slug,
+      nextStatus: status,
+      expectedVersion: parsedExpectedVersion,
+      actorType: actor_type ?? actorType ?? 'waiter',
+      actorId: actor_id ?? actorId,
+      tableNumber: effectiveTableNum,
+    })
+
+    // Caso 1: Comanda no encontrada
+    if (result.code === 'ORDER_NOT_FOUND' || result.error === 'ORDER_NOT_FOUND') {
       return NextResponse.json(
-        { error: 'ORDER_NOT_FOUND', message: `Comanda con ID ${orderId} no encontrada` },
+        { error: 'ORDER_NOT_FOUND', code: 'ORDER_NOT_FOUND', message: result.message || `Comanda con ID ${orderId} no encontrada` },
         { status: 404 }
       )
     }
 
-    const currentStatus = (globalThis as any).__GASTRO_STATUS_OVERRIDES__?.[orderId] || existingOrder.status
-
-    // Idempotencia: Si el estado solicitado es idéntico al actual, retornar HTTP 200
-    if (currentStatus === status) {
-      return NextResponse.json({
-        success: true,
-        message: `Orden ${orderId} ya se encuentra en estado ${status}`,
-        order: existingOrder,
-      })
+    // Caso 2: Conflicto de Concurrencia Optimista (OCC 409)
+    if (result.code === 'VERSION_CONFLICT') {
+      return NextResponse.json(
+        {
+          error: 'VERSION_CONFLICT',
+          code: 'VERSION_CONFLICT',
+          message: result.message || 'Conflicto de concurrencia: la orden ya fue modificada por otro usuario',
+          current_version: result.current_version,
+          current_status: result.current_status,
+        },
+        { status: 409 }
+      )
     }
 
-    // Validar transición legal en la máquina de estados formal
-    if (!isValidOrderTransition(currentStatus, status)) {
-      const errorMsg = `Transición inválida de ${currentStatus} a ${status}`
+    // Caso 3: Transición ilegal
+    if (!result.success) {
+      const errorMsg = result.message || result.error || `Transición inválida a ${status}`
       return NextResponse.json(
         {
           error: errorMsg,
-          code: 'TRANSITION_INVALID',
+          code: result.code || 'TRANSITION_INVALID',
           message: errorMsg,
+          current_status: result.current_status,
         },
         { status: 400 }
       )
     }
 
-    const effectiveTableNum = table_number ?? tableNumber ?? existingOrder.table_number ?? (existingOrder.table ? existingOrder.table.table_number : 1)
-    const result = await updateOrderStatus(slug, orderId, status, effectiveTableNum)
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          error: result.error || 'Error al actualizar orden',
-          code: 'TRANSITION_INVALID',
-          message: result.error || 'Error al actualizar orden',
-        },
-        { status: 400 }
-      )
-    }
-
+    // Caso 4: Transición exitosa o idempotente
     return NextResponse.json({
       success: true,
-      message: `Orden ${orderId} actualizada a ${status}`,
-      order: result.order || { ...existingOrder, status, table_number: effectiveTableNum }
+      message: result.message || `Orden ${orderId} actualizada a ${status}`,
+      order: result.order,
+      version: result.version ?? result.order?.version,
+      code: result.code,
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

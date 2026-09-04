@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
-import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard } from 'lucide-react'
+import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard, Loader2 } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector, TableStatusType } from '@/components/comandero/TableSelector'
@@ -14,7 +14,8 @@ import { CartDrawer } from '@/components/menu/CartDrawer'
 import { Product, Category, Table, CartItem, Restaurant, Order, CourseType } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
-import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES, updateMockOrderStatus } from '@/lib/supabase/mock-fallback'
+import { createBrowserClient } from '@/lib/supabase/client'
+import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 
@@ -64,27 +65,7 @@ export default function WaiterComanderoPage() {
   const [tableDwellMinutes, setTableDwellMinutes] = useState<Record<string | number, number>>({})
   const [readyOrderAlert, setReadyOrderAlert] = useState<string | number | null>(null)
   const [dismissedReadyBannerOrderIds, setDismissedReadyBannerOrderIds] = useState<Set<string>>(new Set())
-  const [serverOrders, setServerOrders] = useState<Order[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(`fluxo_comandero_orders_${slug}`)
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed)) {
-            const now = Date.now()
-            return parsed.filter(
-              (o: Order) =>
-                o.status !== 'cancelled' &&
-                o.order_items &&
-                o.order_items.length > 0 &&
-                now - new Date(o.created_at).getTime() < 12 * 60 * 60 * 1000
-            )
-          }
-        }
-      } catch {}
-    }
-    return []
-  })
+  const [serverOrders, setServerOrders] = useState<Order[]>([])
 
   // Sistema de Avisos: Estado Reconciliado Persistente (Anti-Flicker / Anti-Desaparición)
   const [popupAlert, setPopupAlert] = useState<PendingServiceCall | null>(null)
@@ -92,21 +73,13 @@ export default function WaiterComanderoPage() {
   
   // Set de IDs ya atendidos o procesados para State Lock infalible
   const attendedCallIdsRef = useRef<Set<string>>(new Set())
-  const validatedOrderIdsRef = useRef<Set<string>>(new Set())
-  const deliveredOrderIdsRef = useRef<Set<string>>(new Set())
-  const cancelledOrderIdsRef = useRef<Set<string>>(new Set())
   const seenCallIdsRef = useRef<Set<string>>(new Set())
   const seenReadyOrderIdsRef = useRef<Set<string>>(new Set())
   const popupTimerRef = useRef<any>(null)
 
-  // Persistir comandas en localStorage para blindaje contra suspensión de pestañas en móvil
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(`fluxo_comandero_orders_${slug}`, JSON.stringify(serverOrders))
-      } catch {}
-    }
-  }, [serverOrders, slug])
+  // Estados no-optimistas con spinner de carga durante transiciones en vuelo
+  const [validatingOrderIds, setValidatingOrderIds] = useState<Set<string>>(new Set())
+  const [deliveringOrderIds, setDeliveringOrderIds] = useState<Set<string>>(new Set())
 
   // Helper para modificar el carrito de la mesa activa
   const updateCartForCurrentTable = (updater: (prev: CartItem[]) => CartItem[]) => {
@@ -163,23 +136,191 @@ export default function WaiterComanderoPage() {
 
   const [showFreeConfirmTable, setShowFreeConfirmTable] = useState<number | string | null>(null)
 
-  // Entregar un ticket o comanda individual específica
-  const handleDeliverSingleOrder = async (orderId: string, tableNum?: number | string) => {
-    deliveredOrderIdsRef.current.add(orderId)
-    setServerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'delivered' } : o))
-    
-    if (tableNum && readyOrderAlert?.toString() === tableNum.toString()) {
-      setReadyOrderAlert(null)
+  // Sincronización reactiva de datos desde el servidor (SSOT)
+  const syncServerData = useCallback(async () => {
+    try {
+      const [ordersRes, callsRes, tablesRes] = await Promise.all([
+        fetch(`/api/orders?slug=${slug}`).then(r => r.json()).catch(() => ({ orders: [] })),
+        fetch(`/api/service-calls?slug=${slug}`).then(r => r.json()).catch(() => ({ calls: [] })),
+        fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
+      ])
+
+      const incomingOrders: Order[] = (ordersRes.orders || []).filter(
+        (o: Order) => o.order_items && o.order_items.length > 0
+      )
+      const incomingCalls: any[] = callsRes.calls || []
+
+      // 1. Reconciliación de Órdenes (SSOT sin overrides locales)
+      setServerOrders(prev => {
+        const map = new Map<string, Order>()
+        incomingOrders.forEach(ord => {
+          if (ord.status !== 'cancelled') {
+            map.set(ord.id, ord)
+          }
+        })
+        return Array.from(map.values())
+      })
+
+      // 2. Reconciliación de Avisos de Servicio
+      const serverPendingCalls = incomingCalls.filter((c: any) => c.status === 'pending')
+
+      const formattedPendingCalls: PendingServiceCall[] = serverPendingCalls.map((c: any) => {
+        let desc = 'Solicita atención del mozo'
+        if (c.call_type === 'order_dictate') desc = 'Comanda lista para dictar al mozo'
+        else if (c.call_type.startsWith('bill_')) desc = `Pide la cuenta (${c.call_type.replace('bill_', '')})`
+        else if (c.call_type.startsWith('service_')) desc = `Solicita: ${c.call_type.replace('service_', '')}`
+
+        return {
+          id: c.id,
+          table_number: c.table_number,
+          call_type: c.call_type,
+          text: desc,
+        }
+      })
+
+      setPendingCalls(formattedPendingCalls)
+
+      const statusMap: Record<string | number, TableStatusType> = {}
+      const dwellMap: Record<string | number, number> = {}
+
+      // 3. Mesas con órdenes creadas
+      incomingOrders.forEach(ord => {
+        if (ord.status === 'cancelled' || ord.status === 'paid') {
+          return
+        }
+        const tblNum = ord.table?.table_number || ord.table_number
+        if (tblNum) {
+          const isDelivered = ord.status === 'delivered'
+          const numKey = Number(tblNum)
+          const strKey = String(tblNum)
+          if (ord.status === 'ready' && !isDelivered) {
+            statusMap[tblNum] = 'ready'
+            statusMap[numKey] = 'ready'
+            statusMap[strKey] = 'ready'
+            if (!seenReadyOrderIdsRef.current.has(ord.id)) {
+              seenReadyOrderIdsRef.current.add(ord.id)
+              setReadyOrderAlert(tblNum)
+              playKitchenChime()
+            }
+          } else if (!isDelivered && ['pending_validation', 'pending', 'preparing'].includes(ord.status) && !statusMap[tblNum] && !statusMap[numKey]) {
+            statusMap[tblNum] = 'busy'
+            statusMap[numKey] = 'busy'
+            statusMap[strKey] = 'busy'
+          } else if (!statusMap[tblNum] && !statusMap[numKey]) {
+            statusMap[tblNum] = 'busy'
+            statusMap[numKey] = 'busy'
+            statusMap[strKey] = 'busy'
+          }
+
+          const createdMs = new Date(ord.created_at).getTime()
+          if (!dwellMap[tblNum] || createdMs < dwellMap[tblNum]) {
+            dwellMap[tblNum] = createdMs
+            dwellMap[numKey] = createdMs
+            dwellMap[strKey] = createdMs
+          }
+        }
+      })
+
+      // 4. Mesas con llamadas de servicio
+      incomingCalls.forEach((call: any) => {
+        if (call.status === 'pending' && !attendedCallIdsRef.current.has(call.id)) {
+          const tblNum = call.table_number
+          if (tblNum) {
+            statusMap[tblNum] = 'calling'
+            statusMap[Number(tblNum)] = 'calling'
+            statusMap[String(tblNum)] = 'calling'
+          }
+        }
+      })
+
+      // 5. Mesas con sesión iniciada desde el QR móvil
+      const sessions = tablesRes.sessions || {}
+      Object.entries(sessions).forEach(([tblNum, sessionData]: [string, any]) => {
+        if (sessionData && sessionData.status === 'active') {
+          if (!statusMap[tblNum] && !statusMap[Number(tblNum)]) {
+            statusMap[tblNum] = 'busy'
+            statusMap[Number(tblNum)] = 'busy'
+            statusMap[String(tblNum)] = 'busy'
+          }
+          if (sessionData.started_at) {
+            const sessionMs = new Date(sessionData.started_at).getTime()
+            if (!dwellMap[tblNum] || sessionMs < dwellMap[tblNum]) {
+              dwellMap[tblNum] = sessionMs
+              dwellMap[Number(tblNum)] = sessionMs
+              dwellMap[String(tblNum)] = sessionMs
+            }
+          }
+        }
+      })
+
+      setTableStatuses(statusMap)
+
+      const finalDwellMins: Record<string | number, number> = {}
+      const now = Date.now()
+      Object.entries(dwellMap).forEach(([tNum, ms]) => {
+        finalDwellMins[tNum] = Math.max(0, Math.floor((now - ms) / 60000))
+      })
+      setTableDwellMinutes(finalDwellMins)
+
+    } catch (err) {
+      console.log('Error syncing server orders/calls:', err)
     }
+  }, [slug])
+
+  // Entregar un ticket o comanda individual específica (No-optimista con OCC)
+  const handleDeliverSingleOrder = async (orderId: string, tableNum?: number | string) => {
+    if (deliveringOrderIds.has(orderId)) return
+
+    setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+
+    const targetOrder = serverOrders.find(o => o.id === orderId)
+    const expectedVersion = targetOrder?.version
 
     try {
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, orderId, status: 'delivered', table_number: tableNum }),
+        body: JSON.stringify({
+          slug,
+          orderId,
+          status: 'delivered',
+          table_number: tableNum,
+          expected_version: expectedVersion,
+          actor_type: 'waiter',
+        }),
       })
+
+      if (res.ok) {
+        const data = await res.json()
+        setServerOrders(prev =>
+          prev.map(o => {
+            if (o.id === orderId) {
+              return data.order
+                ? { ...data.order, table_number: tableNum || data.order.table_number }
+                : { ...o, status: 'delivered', version: data.version ?? (o.version ? o.version + 1 : 1) }
+            }
+            return o
+          })
+        )
+        if (tableNum && readyOrderAlert?.toString() === tableNum.toString()) {
+          setReadyOrderAlert(null)
+        }
+      } else if (res.status === 409) {
+        console.warn(`[handleDeliverSingleOrder] Conflicto OCC 409 en orden ${orderId}. Reconciliando...`)
+        await syncServerData()
+      } else {
+        console.error(`[handleDeliverSingleOrder] Error entregando orden ${orderId}:`, res.status)
+        await syncServerData()
+      }
     } catch (e) {
-      console.error('Error delivering single order:', e)
+      console.error('Error de red al entregar orden:', e)
+      await syncServerData()
+    } finally {
+      setDeliveringOrderIds(prev => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
     }
   }
 
@@ -203,13 +344,15 @@ export default function WaiterComanderoPage() {
     }
   }
 
-  // Validar comanda de cliente y enviarla a cocina
+  // Validar comanda de cliente y enviarla a cocina (No-optimista con OCC)
   const handleValidateOrder = async (orderId: string, tableNum?: number | string) => {
-    validatedOrderIdsRef.current.add(orderId)
-    setServerOrders(prev =>
-      prev.map(o => o.id === orderId ? { ...o, status: 'pending' } : o)
-    )
-    updateMockOrderStatus(slug, orderId, 'pending')
+    if (validatingOrderIds.has(orderId)) return
+
+    // 1. Activar estado de carga (sin mutación optimista de serverOrders)
+    setValidatingOrderIds(prev => new Set(prev).add(orderId))
+
+    const targetOrder = serverOrders.find(o => o.id === orderId)
+    const expectedVersion = targetOrder?.version
 
     try {
       const res = await fetch('/api/orders', {
@@ -221,34 +364,50 @@ export default function WaiterComanderoPage() {
           status: 'pending',
           table_number: tableNum,
           tableNumber: tableNum,
+          expected_version: expectedVersion,
+          actor_type: 'waiter',
         }),
       })
-      if (!res.ok) {
-        validatedOrderIdsRef.current.delete(orderId)
+
+      if (res.ok) {
+        const data = await res.json()
+        // 2. Actualizar estado exclusivamente tras confirmación del servidor
         setServerOrders(prev =>
-          prev.map(o => o.id === orderId ? { ...o, status: 'pending_validation' } : o)
+          prev.map(o => {
+            if (o.id === orderId) {
+              return data.order
+                ? { ...data.order, table_number: tableNum || data.order.table_number }
+                : { ...o, status: 'pending', version: data.version ?? (o.version ? o.version + 1 : 1) }
+            }
+            return o
+          })
         )
-        updateMockOrderStatus(slug, orderId, 'pending_validation')
-        console.warn('Error en respuesta de validación comanda en servidor:', res.status)
+      } else if (res.status === 409) {
+        console.warn(`[handleValidateOrder] Conflicto OCC 409 en orden ${orderId}. Reconciliando con servidor...`)
+        await syncServerData()
+      } else {
+        console.error(`[handleValidateOrder] Error en validación de orden ${orderId}:`, res.status)
+        await syncServerData()
       }
     } catch (e) {
-      validatedOrderIdsRef.current.delete(orderId)
-      setServerOrders(prev =>
-        prev.map(o => o.id === orderId ? { ...o, status: 'pending_validation' } : o)
-      )
-      updateMockOrderStatus(slug, orderId, 'pending_validation')
-      console.error('Error al validar comanda hacia cocina:', e)
+      console.error('Error de red al validar comanda hacia cocina:', e)
+      await syncServerData()
+    } finally {
+      setValidatingOrderIds(prev => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
     }
   }
 
   // Descartar/cancelar comanda de cliente
   const handleCancelValidationOrder = async (orderId: string, tableNum?: number | string) => {
-    cancelledOrderIdsRef.current.add(orderId)
-    setServerOrders(prev => prev.filter(o => o.id !== orderId))
-    updateMockOrderStatus(slug, orderId, 'cancelled')
+    const targetOrder = serverOrders.find(o => o.id === orderId)
+    const expectedVersion = targetOrder?.version
 
     try {
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -256,10 +415,18 @@ export default function WaiterComanderoPage() {
           orderId,
           status: 'cancelled',
           table_number: tableNum,
+          expected_version: expectedVersion,
+          actor_type: 'waiter',
         }),
       })
+      if (res.ok) {
+        setServerOrders(prev => prev.filter(o => o.id !== orderId))
+      } else {
+        await syncServerData()
+      }
     } catch (e) {
       console.error('Error al cancelar comanda:', e)
+      await syncServerData()
     }
   }
 
@@ -346,145 +513,12 @@ export default function WaiterComanderoPage() {
   useEffect(() => {
     let sseEventSource: EventSource | null = null
     let pollInterval: any = null
-
-    const syncServerData = async () => {
-      try {
-        const [ordersRes, callsRes, tablesRes] = await Promise.all([
-          fetch(`/api/orders?slug=${slug}`).then(r => r.json()).catch(() => ({ orders: [] })),
-          fetch(`/api/service-calls?slug=${slug}`).then(r => r.json()).catch(() => ({ calls: [] })),
-          fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
-        ])
-
-        const incomingOrders: Order[] = (ordersRes.orders || []).filter(
-          (o: Order) => o.order_items && o.order_items.length > 0
-        )
-        const incomingCalls: any[] = callsRes.calls || []
-
-        // 1. Reconciliación de Órdenes con State Lock
-        setServerOrders(prev => {
-          const map = new Map<string, Order>()
-          prev.forEach(ord => {
-            if (!cancelledOrderIdsRef.current.has(ord.id)) {
-              map.set(ord.id, ord)
-            }
-          })
-          incomingOrders.forEach(ord => {
-            if (!cancelledOrderIdsRef.current.has(ord.id)) {
-              if (deliveredOrderIdsRef.current.has(ord.id)) {
-                map.set(ord.id, { ...ord, status: 'delivered' })
-              } else if (validatedOrderIdsRef.current.has(ord.id) && ord.status === 'pending_validation') {
-                map.set(ord.id, { ...ord, status: 'pending' })
-              } else {
-                map.set(ord.id, ord)
-              }
-            }
-          })
-          return Array.from(map.values())
-        })
-
-        // 2. Reconciliación de Avisos de Servicio con State Lock (Anti-Flicker)
-        const serverPendingCalls = incomingCalls.filter((c: any) => c.status === 'pending' && !attendedCallIdsRef.current.has(c.id))
-
-        const formattedPendingCalls: PendingServiceCall[] = serverPendingCalls.map((c: any) => {
-          let desc = 'Solicita atención del mozo'
-          if (c.call_type === 'order_dictate') desc = 'Comanda lista para dictar al mozo'
-          else if (c.call_type.startsWith('bill_')) desc = `Pide la cuenta (${c.call_type.replace('bill_', '')})`
-          else if (c.call_type.startsWith('service_')) desc = `Solicita: ${c.call_type.replace('service_', '')}`
-
-          return {
-            id: c.id,
-            table_number: c.table_number,
-            call_type: c.call_type,
-            text: desc,
-          }
-        })
-
-        // Actualizar lista persistente fusionando con las previas
-        setPendingCalls(prev => {
-          const map = new Map<string, PendingServiceCall>()
-          prev.forEach(call => {
-            if (!attendedCallIdsRef.current.has(call.id)) {
-              map.set(call.id, call)
-            }
-          })
-          formattedPendingCalls.forEach(call => {
-            if (!attendedCallIdsRef.current.has(call.id)) {
-              map.set(call.id, call)
-            }
-          })
-          return Array.from(map.values())
-        })
-
-        const statusMap: Record<string | number, TableStatusType> = {}
-        const dwellMap: Record<string | number, number> = {}
-
-        // 3. Mesas con órdenes creadas
-        incomingOrders.forEach(ord => {
-          if (ord.status === 'cancelled' || ord.status === 'paid' || cancelledOrderIdsRef.current.has(ord.id)) {
-            return
-          }
-          const tblNum = ord.table?.table_number || ord.table_number
-          if (tblNum) {
-            const isDelivered = deliveredOrderIdsRef.current.has(ord.id) || ord.status === 'delivered'
-            const numKey = Number(tblNum)
-            const strKey = String(tblNum)
-            if (ord.status === 'ready' && !isDelivered) {
-              statusMap[tblNum] = 'ready'
-              statusMap[numKey] = 'ready'
-              statusMap[strKey] = 'ready'
-              if (!seenReadyOrderIdsRef.current.has(ord.id)) {
-                seenReadyOrderIdsRef.current.add(ord.id)
-                setReadyOrderAlert(tblNum)
-                playKitchenChime()
-              }
-            } else if (!isDelivered && ['pending_validation', 'pending', 'preparing'].includes(ord.status) && !statusMap[tblNum] && !statusMap[numKey]) {
-              statusMap[tblNum] = 'busy'
-              statusMap[numKey] = 'busy'
-              statusMap[strKey] = 'busy'
-            }
-
-            if (ord.created_at && !isDelivered) {
-              const mins = Math.max(1, Math.floor((Date.now() - new Date(ord.created_at).getTime()) / 60000))
-              if (!dwellMap[tblNum] || mins > dwellMap[tblNum]) {
-                dwellMap[tblNum] = mins
-                dwellMap[numKey] = mins
-                dwellMap[strKey] = mins
-              }
-            }
-          }
-        })
-
-        // Si la mesa de la alerta ya no tiene platos pendientes en ready, silenciar banner
-        if (readyOrderAlert && statusMap[readyOrderAlert] !== 'ready') {
-          setReadyOrderAlert(null)
-        }
-
-        setTableDwellMinutes(dwellMap)
-
-        // 4. Mesas con carritos locales
-        Object.entries(tableCarts).forEach(([tblNum, items]) => {
-          if (items && items.length > 0 && !statusMap[tblNum]) {
-            statusMap[tblNum] = 'busy'
-          }
-        })
-
-        // Semáforo amarillo para mesas con llamada pendiente
-        formattedPendingCalls.forEach(call => {
-          const tblNum = call.table_number
-          if (tblNum && statusMap[tblNum] !== 'ready') {
-            statusMap[tblNum] = 'calling'
-          }
-        })
-
-        setTableStatuses(statusMap)
-      } catch (e) {
-        console.log('Error syncing server data in comandero:', e)
-      }
-    }
+    const supabase = createBrowserClient()
+    let realtimeChannel: any = null
 
     async function loadInitialData() {
-      const rest = MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet']
-      if (rest) {
+      if (typeof window !== 'undefined') {
+        const rest = MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet']
         setRestaurant(rest)
         const cats = MOCK_CATEGORIES[slug] || MOCK_CATEGORIES['burger-gourmet'] || []
         setCategories(cats)
@@ -499,7 +533,35 @@ export default function WaiterComanderoPage() {
 
       await syncServerData()
 
-      // SSE (Server-Sent Events)
+      // 1. Canal Nativo Supabase Realtime (postgres_changes en orders, order_events, service_calls)
+      if (supabase) {
+        realtimeChannel = supabase
+          .channel(`comandero-orders-${slug}`)
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'orders' },
+            () => {
+              syncServerData()
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'order_events' },
+            () => {
+              syncServerData()
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'service_calls' },
+            () => {
+              syncServerData()
+            }
+          )
+          .subscribe()
+      }
+
+      // 2. SSE (Server-Sent Events) de respaldo para testing local sin Supabase
       try {
         sseEventSource = new EventSource('/api/events')
         sseEventSource.onmessage = (event) => {
@@ -516,8 +578,8 @@ export default function WaiterComanderoPage() {
         console.log('SSE fallback to polling:', err)
       }
 
-      // Polling cada 1.5s
-      pollInterval = setInterval(syncServerData, 1500)
+      // 3. Soft Polling de respaldo cada 4.5s
+      pollInterval = setInterval(syncServerData, 4500)
     }
 
     loadInitialData()
@@ -532,6 +594,9 @@ export default function WaiterComanderoPage() {
     window.addEventListener('focus', handleVisibilityChange)
 
     return () => {
+      if (realtimeChannel && supabase) {
+        supabase.removeChannel(realtimeChannel)
+      }
       if (sseEventSource) sseEventSource.close()
       if (pollInterval) clearInterval(pollInterval)
       if (popupTimerRef.current) clearTimeout(popupTimerRef.current)
@@ -696,11 +761,10 @@ export default function WaiterComanderoPage() {
     })
     return Object.values(drinksMap)
   }, [selectedTable, serverOrders, products])
-  // Listas de Tareas y Avisos Pendientes para el Mozo
+  // Listas de Tareas y Avisos Pendientes para el Mozo (Reactivo SSOT)
   const readyOrdersList = React.useMemo(() => {
     return serverOrders.filter(
       o => o.status === 'ready' &&
-           !deliveredOrderIdsRef.current.has(o.id) &&
            o.order_items && o.order_items.length > 0
     )
   }, [serverOrders])
@@ -708,8 +772,6 @@ export default function WaiterComanderoPage() {
   const validationOrdersList = React.useMemo(() => {
     return serverOrders.filter(
       o => o.status === 'pending_validation' &&
-           !validatedOrderIdsRef.current.has(o.id) &&
-           !cancelledOrderIdsRef.current.has(o.id) &&
            o.order_items && o.order_items.length > 0
     )
   }, [serverOrders])
@@ -817,12 +879,22 @@ export default function WaiterComanderoPage() {
                           <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
                             <button
                               type="button"
+                              disabled={deliveringOrderIds.has(ord.id)}
                               onClick={() => handleDeliverSingleOrder(ord.id, tblNum)}
-                              className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer"
+                              className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-700 disabled:opacity-70 text-slate-950 disabled:text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
                               title="Marcar como servido en mesa"
                             >
-                              <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                              <span>Marcar Servido</span>
+                              {deliveringOrderIds.has(ord.id) ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                  <span>Entregando...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                                  <span>Marcar Servido</span>
+                                </>
+                              )}
                             </button>
                             <button
                               type="button"
@@ -891,12 +963,22 @@ export default function WaiterComanderoPage() {
                           <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
                             <button
                               type="button"
+                              disabled={validatingOrderIds.has(valOrder.id)}
                               onClick={() => handleValidateOrder(valOrder.id, tblNum)}
-                              className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer"
+                              className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-70 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
                               title="Enviar a cocina tras verificar verbalmente en mesa"
                             >
-                              <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                              <span>Confirmar a Cocina</span>
+                              {validatingOrderIds.has(valOrder.id) ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                  <span>Confirmando...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                                  <span>Confirmar a Cocina</span>
+                                </>
+                              )}
                             </button>
                             <button
                               type="button"
@@ -1037,12 +1119,22 @@ export default function WaiterComanderoPage() {
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button
                   type="button"
+                  disabled={deliveringOrderIds.has(ord.id)}
                   onClick={() => handleDeliverSingleOrder(ord.id, tblNum)}
-                  className="px-3 py-2 rounded-xl bg-white hover:bg-emerald-50 text-emerald-950 font-black text-xs shadow-md active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-3 py-2 rounded-xl bg-white hover:bg-emerald-50 disabled:opacity-70 text-emerald-950 font-black text-xs shadow-md active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
                   title="Marcar como servido"
                 >
-                  <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
-                  <span>Servir</span>
+                  {deliveringOrderIds.has(ord.id) ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-emerald-700" />
+                      <span>Entregando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
+                      <span>Servir</span>
+                    </>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -1174,11 +1266,21 @@ export default function WaiterComanderoPage() {
 
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                           <button
+                            disabled={deliveringOrderIds.has(ord.id)}
                             onClick={() => handleDeliverSingleOrder(ord.id)}
-                            className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95 flex-shrink-0"
+                            className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-70 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95 flex-shrink-0 disabled:cursor-not-allowed"
                           >
-                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                            <span>Entregado</span>
+                            {deliveringOrderIds.has(ord.id) ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Entregando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                <span>Entregado</span>
+                              </>
+                            )}
                           </button>
 
                           <button
@@ -1201,9 +1303,7 @@ export default function WaiterComanderoPage() {
             {/* B.2. Comandas Pendientes de Validación en esta Mesa */}
             {serverOrders.filter(
               o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
-                   o.status === 'pending_validation' &&
-                   !validatedOrderIdsRef.current.has(o.id) &&
-                   !cancelledOrderIdsRef.current.has(o.id)
+                   o.status === 'pending_validation'
             ).length > 0 && (
               <div className="bg-blue-950/80 border-2 border-blue-400 rounded-2xl p-3.5 space-y-2.5 shadow-md">
                 <div className="flex items-center justify-between">
@@ -1216,9 +1316,7 @@ export default function WaiterComanderoPage() {
                   <span className="text-[11px] font-bold text-blue-300">
                     {serverOrders.filter(
                       o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
-                           o.status === 'pending_validation' &&
-                           !validatedOrderIdsRef.current.has(o.id) &&
-                           !cancelledOrderIdsRef.current.has(o.id)
+                           o.status === 'pending_validation'
                     ).length} comanda(s)
                   </span>
                 </div>
@@ -1227,9 +1325,7 @@ export default function WaiterComanderoPage() {
                   {serverOrders
                     .filter(
                       o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
-                           o.status === 'pending_validation' &&
-                           !validatedOrderIdsRef.current.has(o.id) &&
-                           !cancelledOrderIdsRef.current.has(o.id)
+                           o.status === 'pending_validation'
                     )
                     .map((valOrder, idx) => (
                       <div
@@ -1258,11 +1354,21 @@ export default function WaiterComanderoPage() {
                         <div className="flex items-center gap-2 w-full sm:w-auto">
                           <button
                             type="button"
+                            disabled={validatingOrderIds.has(valOrder.id)}
                             onClick={() => handleValidateOrder(valOrder.id, selectedTable.table_number)}
-                            className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer"
+                            className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-70 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
                           >
-                            <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                            <span>Confirmar a Cocina</span>
+                            {validatingOrderIds.has(valOrder.id) ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                <span>Confirmando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                                <span>Confirmar a Cocina</span>
+                              </>
+                            )}
                           </button>
                           <button
                             type="button"

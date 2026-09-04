@@ -38,7 +38,7 @@ import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
 import { Product, Category, CartItem, Restaurant, Table, OrderStatus } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { createBrowserClient } from '@/lib/supabase/client'
-import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES, getMockOrders } from '@/lib/supabase/mock-fallback'
+import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { TOP_LANGUAGES, getTranslation, translateCategoryName, translateProductName, translateProductDescription } from '@/lib/i18n'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
@@ -408,6 +408,44 @@ function DinerMenuContent() {
 
     checkOrderStatus()
 
+    const supabase = createBrowserClient()
+    let realtimeChannel: any = null
+
+    // Canal Nativo Supabase Realtime (postgres_changes en orders, order_events, service_calls, table_sessions)
+    if (supabase) {
+      realtimeChannel = supabase
+        .channel(`diner-orders-${slug}-${tableNumber}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders' },
+          () => {
+            checkOrderStatus()
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'order_events' },
+          () => {
+            checkOrderStatus()
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'service_calls' },
+          () => {
+            checkOrderStatus()
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'table_sessions' },
+          () => {
+            checkOrderStatus()
+          }
+        )
+        .subscribe()
+    }
+
     try {
       sseEventSource = new EventSource('/api/events')
       sseEventSource.onmessage = (event) => {
@@ -467,7 +505,8 @@ function DinerMenuContent() {
       // fallback
     }
 
-    pollInterval = setInterval(checkOrderStatus, 2000)
+    // Soft Polling de respaldo cada 4.5s
+    pollInterval = setInterval(checkOrderStatus, 4500)
 
     // Manejar eventos locales emitidos en el cliente para sincronización inmediata
     const handleLocalTableFreed = (e: any) => {
@@ -503,6 +542,9 @@ function DinerMenuContent() {
     window.addEventListener('focus', handleVisibilityChange)
 
     return () => {
+      if (realtimeChannel && supabase) {
+        supabase.removeChannel(realtimeChannel)
+      }
       if (sseEventSource) sseEventSource.close()
       if (pollInterval) clearInterval(pollInterval)
       window.removeEventListener('fluxo_table_freed', handleLocalTableFreed)
