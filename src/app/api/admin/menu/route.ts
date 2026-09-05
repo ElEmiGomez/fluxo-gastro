@@ -13,6 +13,7 @@ import {
 } from '@/lib/server-state'
 import { MOCK_RESTAURANTS } from '@/lib/supabase/mock-fallback'
 import { Category, Product } from '@/types/database.types'
+import { verifyStaffRequest } from '@/lib/auth/pin-security'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +40,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { slug = 'burger-gourmet', type, data } = body
+
+    // Blindaje de Seguridad: Requiere sesión de administración autorizada
+    if (!verifyStaffRequest(req, slug, ['admin'])) {
+      return NextResponse.json(
+        { success: false, error: 'No autorizado. Se requiere sesión o PIN de administración.' },
+        { status: 401 }
+      )
+    }
 
     if (!data) {
       return NextResponse.json({ success: false, error: 'Datos no proporcionados' }, { status: 400 })
@@ -92,6 +101,14 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json()
     const { slug = 'burger-gourmet', product_id, is_available } = body
 
+    // Blindaje de Seguridad: Requiere sesión de staff autorizada (admin, cocina o mozo)
+    if (!verifyStaffRequest(req, slug, ['admin', 'kitchen', 'comandero'])) {
+      return NextResponse.json(
+        { success: false, error: 'No autorizado. Se requiere sesión de personal autorizada.' },
+        { status: 401 }
+      )
+    }
+
     if (!product_id) {
       return NextResponse.json({ success: false, error: 'product_id requerido' }, { status: 400 })
     }
@@ -118,6 +135,14 @@ export async function DELETE(req: NextRequest) {
     const slug = searchParams.get('slug') || 'burger-gourmet'
     const type = searchParams.get('type') || 'product'
     const id = searchParams.get('id')
+
+    // Blindaje de Seguridad: Requiere sesión de administración
+    if (!verifyStaffRequest(req, slug, ['admin'])) {
+      return NextResponse.json(
+        { success: false, error: 'No autorizado. Se requiere sesión o PIN de administración.' },
+        { status: 401 }
+      )
+    }
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID requerido' }, { status: 400 })

@@ -246,7 +246,7 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
       idempotency_key: idempotencyKey,
       items: [
         {
-          product_id: 'prod-burger-classic',
+          product_id: 'p-bur-1',
           quantity: 2,
           notes: 'Doble queso, sin cebolla',
         },
@@ -269,5 +269,70 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
 
     // Debe retornar exactamente la misma comanda por su UUID, sin duplicar
     expect(data2.order.id).toBe(firstOrderId)
+  })
+
+  test('Security Invariant: Client cannot tamper with dish prices in orders', async ({ request }) => {
+    // Intento de manipulación maliciosa de precios por un comensal
+    const tamperedPayload = {
+      slug: SLUG,
+      table_number: 3,
+      items: [
+        {
+          product_id: 'p-bur-1',
+          quantity: 2,
+          price: 0.01, // Precio manipulado en payload
+          product: {
+            id: 'p-bur-1',
+            name: 'Burger Clásica Hackeada',
+            price: 0.01, // Objeto de producto manipulado
+          },
+        },
+      ],
+      created_by: 'diner',
+    }
+
+    const res = await request.post('/api/orders', { data: tamperedPayload })
+    expect(res.ok()).toBeTruthy()
+    const data = await res.json()
+    expect(data.success).toBe(true)
+
+    // El servidor debe forzar el precio real de catálogo (13.90€ x 2 = 27.80€), rechazando el 0.01€
+    expect(data.order.total_amount).toBeGreaterThanOrEqual(25)
+    const items = data.order.order_items || data.order.items
+    expect(items[0].product.price).toBe(13.90)
+    expect(items[0].product.price).not.toBe(0.01)
+  })
+
+  test('Security & RBAC Invariant: Admin menu mutations require staff authentication', async ({ request }) => {
+    // 1. Intento no autenticado de crear producto en la carta
+    const unauthRes = await request.post('/api/admin/menu', {
+      data: {
+        slug: SLUG,
+        type: 'product',
+        data: { name: 'Plato No Autorizado', price: 99.0 },
+      },
+    })
+    // Debe ser rechazado con 401 Unauthorized
+    expect(unauthRes.status()).toBe(401)
+
+    // 2. Intento autenticado con cabecera de PIN de administración
+    const authRes = await request.post('/api/admin/menu', {
+      headers: {
+        'x-staff-pin': '1234',
+      },
+      data: {
+        slug: SLUG,
+        type: 'product',
+        data: { name: 'Plato Autorizado', price: 15.5 },
+      },
+    })
+    expect(authRes.status()).toBe(200)
+    const authData = await authRes.json()
+    expect(authData.success).toBe(true)
+    expect(authData.product.name).toBe('Plato Autorizado')
+
+    // 3. Intento no autorizado de borrado masivo de avisos de servicio
+    const unauthDelete = await request.delete(`/api/service-calls?slug=${SLUG}`)
+    expect(unauthDelete.status()).toBe(401)
   })
 })

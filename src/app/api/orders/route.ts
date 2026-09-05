@@ -10,6 +10,7 @@ import {
   completeIdempotencyLock,
   releaseIdempotencyLock,
   isValidOrderTransition,
+  getServerProducts,
 } from '@/lib/server-state'
 import {
   getRestaurantBySlug,
@@ -142,15 +143,18 @@ export async function POST(req: NextRequest) {
     let computedTotal = 0
 
     const validItems: OrderItem[] = []
-    const products = MOCK_PRODUCTS[slug] || []
+    const catalogProducts = [...(getServerProducts(slug) || []), ...(MOCK_PRODUCTS[slug] || [])]
 
     items.forEach((item: any, idx: number) => {
       const quantity = Math.max(1, parseInt(String(item.quantity || '1'), 10) || 1)
       const productId = String(item.product_id || '').trim()
       if (!productId) return
 
-      const product = item.product || products.find(p => p.id === productId || p.id.replace('promo', 'prom') === productId)
-      const itemPrice = product ? Number(product.price) || 0 : Number(item.price) || 0
+      // Búsqueda estricta en catálogo autorizado (Previene Client Price Tampering)
+      const catalogProduct = catalogProducts.find(p => p.id === productId || p.id.replace('promo', 'prom') === productId)
+      if (!catalogProduct) return
+
+      const itemPrice = Number(catalogProduct.price) || 0
       computedTotal += itemPrice * quantity
 
       const sanitizedNotes = item.notes ? sanitizeText(item.notes, 200) : null
@@ -158,20 +162,10 @@ export async function POST(req: NextRequest) {
       validItems.push({
         id: `oi-${Date.now()}-${idx}`,
         order_id: orderId,
-        product_id: productId,
+        product_id: catalogProduct.id,
         quantity,
         notes: sanitizedNotes || null,
-        product: product || {
-          id: productId,
-          restaurant_id: restaurantId,
-          category_id: 'cat-1',
-          name: sanitizeText(String(item.name || 'Plato Gourmet'), 100),
-          description: '',
-          price: itemPrice,
-          image_url: item.image_url || null,
-          model_3d_url: null,
-          is_available: true,
-        },
+        product: catalogProduct,
       })
     })
 

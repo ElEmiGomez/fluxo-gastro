@@ -7,6 +7,7 @@ import {
   sanitizeText,
 } from '@/lib/server-state'
 import { Category, Product } from '@/types/database.types'
+import { verifyStaffRequest } from '@/lib/auth/pin-security'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,6 +55,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { slug = 'burger-gourmet', raw_text = '', save_to_menu = false } = body
+
+    if (save_to_menu && !verifyStaffRequest(req, slug, ['admin'])) {
+      return NextResponse.json(
+        { success: false, error: 'No autorizado. Se requiere sesión o PIN de administración para guardar cambios en la carta.' },
+        { status: 401 }
+      )
+    }
 
     if (!raw_text || typeof raw_text !== 'string' || raw_text.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'Texto de la carta no proporcionado' }, { status: 400 })

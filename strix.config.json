@@ -25,6 +25,9 @@
     "enforce_pin_rate_limiting": true,
     "enforce_rls_tenant_isolation": true,
     "enforce_idempotency": true,
-    "prevent_arbitrary_order_mutation": true
+    "prevent_arbitrary_order_mutation": true,
+    "enforce_price_integrity": true,
+    "enforce_admin_auth": true,
+    "enforce_service_call_auth": true
   }
 }

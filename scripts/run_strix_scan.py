@@ -97,6 +97,32 @@ def run_security_invariant_checks(root_dir, config):
             has_sanitizer = "sanitizeText" in c or "sanitize" in c
     assert_rule("sanitize_user_input", has_sanitizer, "Sanitización de notas libres y entradas de comensal contra XSS")
 
+    # 6. enforce_price_integrity (Anti-Price Tampering)
+    has_price_integrity = False
+    if os.path.exists(orders_route):
+        with open(orders_route, "r", encoding="utf-8") as f:
+            c = f.read()
+            has_price_integrity = "catalogProduct" in c and "catalogProduct.price" in c
+    assert_rule("enforce_price_integrity", has_price_integrity, "Integridad de precios: Servidor ignora precios manipulados por cliente y fuerza catálogo")
+
+    # 7. enforce_admin_auth (Broken Object Level Authorization)
+    admin_menu_route = os.path.join(root_dir, "src", "app", "api", "admin", "menu", "route.ts")
+    has_admin_auth = False
+    if os.path.exists(admin_menu_route):
+        with open(admin_menu_route, "r", encoding="utf-8") as f:
+            c = f.read()
+            has_admin_auth = "verifyStaffRequest" in c and "401" in c
+    assert_rule("enforce_admin_auth", has_admin_auth, "Protección RBAC: Endpoints administrativos de carta exigen sesión o PIN staff")
+
+    # 8. enforce_service_call_auth
+    sc_route = os.path.join(root_dir, "src", "app", "api", "service-calls", "route.ts")
+    has_sc_auth = False
+    if os.path.exists(sc_route):
+        with open(sc_route, "r", encoding="utf-8") as f:
+            c = f.read()
+            has_sc_auth = "verifyStaffRequest" in c
+    assert_rule("enforce_service_call_auth", has_sc_auth, "Protección de avisos: Borrado masivo y atención de llamadas restringido a personal")
+
     return passed, failed
 
 def main():

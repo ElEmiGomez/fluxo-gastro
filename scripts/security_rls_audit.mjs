@@ -218,6 +218,32 @@ if (fs.existsSync(pilotsRoutePath)) {
   )
 }
 
+// E. Verificación Anti-Tampering de Precios en Creación de Comandas (/api/orders)
+assert(
+  ordersRouteContent.includes('catalogProduct') && ordersRouteContent.includes('catalogProduct.price'),
+  'Integridad de Precios: Servidor fuerza precios desde el catálogo e ignora manipulaciones del cliente'
+)
+
+// F. Verificación de Autorización RBAC en Endpoints Administrativos y de Carta (/api/admin/menu)
+const adminMenuRoutePath = path.join(rootDir, 'src', 'app', 'api', 'admin', 'menu', 'route.ts')
+if (fs.existsSync(adminMenuRoutePath)) {
+  const adminMenuContent = fs.readFileSync(adminMenuRoutePath, 'utf8')
+  assert(
+    adminMenuContent.includes('verifyStaffRequest') && adminMenuContent.includes('401'),
+    'Protección RBAC: Endpoints POST/PATCH/DELETE de carta requieren sesión de staff autorizada'
+  )
+}
+
+// G. Verificación de Protección en Avisos de Servicio (/api/service-calls)
+const serviceCallsRoutePath = path.join(rootDir, 'src', 'app', 'api', 'service-calls', 'route.ts')
+if (fs.existsSync(serviceCallsRoutePath)) {
+  const scContent = fs.readFileSync(serviceCallsRoutePath, 'utf8')
+  assert(
+    scContent.includes('verifyStaffRequest'),
+    'Protección de Avisos: Eliminación y atención de llamadas restringidas a personal'
+  )
+}
+
 console.log('='.repeat(80))
 if (failed === 0) {
   console.log(` 🏆 AUDITORÍA DE SEGURIDAD & RLS: ${passed}/${passed} PRUEBAS SUPERADAS (100% PASS)`)

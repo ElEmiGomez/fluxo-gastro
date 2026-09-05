@@ -10,6 +10,7 @@ import {
   createServiceCall,
   attendServiceCall,
 } from '@/lib/supabase/repository'
+import { verifyStaffRequest } from '@/lib/auth/pin-security'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +63,14 @@ export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json()
     const { slug = 'burger-gourmet', callId } = body
+
+    if (!verifyStaffRequest(req, slug, ['comandero', 'admin', 'kitchen'])) {
+      return NextResponse.json(
+        { error: 'No autorizado. Se requiere sesión de personal para atender avisos.' },
+        { status: 401 }
+      )
+    }
+
     if (!callId) {
       return NextResponse.json({ error: 'callId es obligatorio' }, { status: 400 })
     }
@@ -77,6 +86,14 @@ export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
+
+    if (!verifyStaffRequest(req, slug, ['admin', 'comandero'])) {
+      return NextResponse.json(
+        { error: 'No autorizado. Se requiere sesión de administración o mozo.' },
+        { status: 401 }
+      )
+    }
+
     const { clearServerServiceCalls } = await import('@/lib/server-state')
     clearServerServiceCalls(slug)
     return NextResponse.json({ success: true, message: `Avisos eliminados para ${slug}` })
