@@ -1,0 +1,44 @@
+{
+  "$schema": "https://context7.com/schema/config.json",
+  "project": "fluxo-gastro",
+  "version": "1.0.0",
+  "documentation": {
+    "frameworks": [
+      {
+        "name": "next",
+        "version": "14.2.23",
+        "features": ["app-router", "server-actions", "route-handlers", "middleware"]
+      },
+      {
+        "name": "react",
+        "version": "18.3.1",
+        "features": ["client-components", "server-components", "hooks"]
+      },
+      {
+        "name": "supabase",
+        "version": "2.116.0",
+        "features": ["postgres", "rls", "realtime", "auth", "cli"]
+      },
+      {
+        "name": "tailwindcss",
+        "version": "3.4.17",
+        "features": ["responsive", "theme-colors", "plugins"]
+      },
+      {
+        "name": "@playwright/test",
+        "version": "1.63.0",
+        "features": ["e2e", "headless-chromium", "web-server"]
+      }
+    ],
+    "mcp": {
+      "server": "@upstash/context7-mcp",
+      "version": "4.0.5",
+      "stdio": true
+    }
+  },
+  "rules": [
+    "Always fetch up-to-date Next.js 14 App Router specifications",
+    "Adhere to Supabase RLS and multi-tenant isolation patterns",
+    "Maintain AGENTS.md architectural invariants: UUID isolation, reactive state, persistent tasks"
+  ]
+}

@@ -38,3 +38,5 @@ En/
 *.tmp
 *.log
 fluxo_codebase_for_ai.txt
+test-results/
+playwright-report/

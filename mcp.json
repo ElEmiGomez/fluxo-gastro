@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/mcp-settings.json",
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "description": "Context7 Live Documentation MCP Server for Next.js, Supabase, Tailwind, and React"
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "supabase"],
+      "description": "Supabase Local CLI and Database Management MCP Server"
+    }
+  }
+}

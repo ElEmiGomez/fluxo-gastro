@@ -1,0 +1,30 @@
+{
+  "$schema": "https://strix.ai/schema/config.json",
+  "project": "fluxo-gastro",
+  "targets": [
+    "http://127.0.0.1:3000"
+  ],
+  "scan_mode": "quick",
+  "instructions": "Audit Next.js App Router endpoints, Supabase RLS isolation, staff PIN authorization, and order status transitions. Ensure diner orders cannot bypass pending_validation without waiter authorization.",
+  "scope": {
+    "include": [
+      "/api/orders",
+      "/api/staff/verify-pin",
+      "/api/admin/menu",
+      "/api/admin/ai-menu-import",
+      "/api/analytics/monthly-report",
+      "/api/pilots/request"
+    ],
+    "exclude": [
+      "/_next/*",
+      "/favicon.ico",
+      "/icon.svg"
+    ]
+  },
+  "rules": {
+    "enforce_pin_rate_limiting": true,
+    "enforce_rls_tenant_isolation": true,
+    "enforce_idempotency": true,
+    "prevent_arbitrary_order_mutation": true
+  }
+}

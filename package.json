@@ -7,6 +7,17 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0",
     "lint": "next lint",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "db:status": "supabase status",
+    "db:lint": "supabase db lint",
+    "db:diff": "supabase db diff",
+    "db:push": "supabase db push",
+    "db:pull": "supabase db pull",
+    "db:reset": "supabase db reset",
+    "audit:security": "node scripts/security_rls_audit.mjs",
+    "scan:strix": "python scripts/run_strix_scan.py",
+    "context7:verify": "node scripts/verify_context7_mcp.mjs",
     "surveillance:design": "node scripts/daily_design_surveillance.mjs",
     "surveillance:market": "node scripts/daily_market_intelligence.mjs",
     "morning:check": "node scripts/daily_design_surveillance.mjs && node scripts/daily_market_intelligence.mjs"
@@ -25,12 +36,15 @@
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.17.19",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@upstash/context7-mcp": "^4.0.5",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.2",
+    "supabase": "^2.116.0",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"
   }

@@ -426,7 +426,7 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
 
       if (!error && data) {
         const memOrders = getServerOrders(slug)
-        return (data as unknown as any[]).map(o => {
+        const mappedOrders = (data as unknown as any[]).map(o => {
           const tableNum = o.table_number || (o.table ? o.table.table_number : 1)
           const token = o.session_token || o.table_session_id
           const normalizedItems = (o.order_items || []).map((it: any) => ({
@@ -439,15 +439,35 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
             ? o.version
             : (mem?.version ?? 1)
 
+          // PostgreSQL SSOT: preferir el estado de Supabase salvo que la memoria tenga una versión o timestamp estrictamente más reciente
+          let resolvedStatus = o.status
+          if (mem) {
+            const memVersion = Number(mem.version || 0)
+            const supaVersion = Number(o.version || 0)
+            const memTime = mem.updated_at ? new Date(mem.updated_at).getTime() : 0
+            const supaTime = o.updated_at ? new Date(o.updated_at).getTime() : 0
+
+            if (memVersion > supaVersion && supaVersion > 0) {
+              resolvedStatus = mem.status
+            } else if (memTime > 0 && supaTime > 0 && memTime > supaTime) {
+              resolvedStatus = mem.status
+            } else if (!o.status && mem.status) {
+              resolvedStatus = mem.status
+            }
+          }
+
           return {
             ...o,
             version: resolvedVersion,
-            order_items: normalizedItems,
-            status: o.status,
+            order_items: normalizedItems.length > 0 ? normalizedItems : (mem?.order_items || []),
+            status: resolvedStatus,
             table_number: tableNum,
             session_token: token,
           } as Order
         })
+        const supaOrderIds = new Set((data as any[]).map(o => o.id))
+        const pendingMemOnlyOrders = memOrders.filter(m => !supaOrderIds.has(m.id))
+        return [...mappedOrders, ...pendingMemOnlyOrders]
       }
     } catch (e) {
       console.warn('Error fetching orders from Supabase:', e)
