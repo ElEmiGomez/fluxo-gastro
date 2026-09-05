@@ -16,6 +16,7 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
     // --------------------------------------------------------------------------
     // FASE 0: Sanear o consultar estado inicial vía API
     // --------------------------------------------------------------------------
+    await request.delete(`/api/orders?slug=${SLUG}`)
     const initialOrdersRes = await request.get(`/api/orders?slug=${SLUG}`)
     expect(initialOrdersRes.ok()).toBeTruthy()
     const initialData = await initialOrdersRes.json()

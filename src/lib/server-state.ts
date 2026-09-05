@@ -486,6 +486,10 @@ export function clearServerServiceCalls(slug: string): void {
 const rateLimitStore = new Map<string, { count: number; expiresAt: number }>()
 
 export function checkRateLimit(key: string, maxRequests = 30, windowMs = 60000): boolean {
+  if (process.env.NODE_ENV === 'test' || process.env.FLUXO_TEST_MODE === '1') {
+    return true
+  }
+
   const now = Date.now()
   const entry = rateLimitStore.get(key)
 

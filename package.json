@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:matrix:5000": "node scripts/run_5000_scenarios_matrix.mjs",
     "db:status": "supabase status",
     "db:lint": "supabase db lint",
     "db:diff": "supabase db diff",
