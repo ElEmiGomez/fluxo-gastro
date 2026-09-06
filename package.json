@@ -24,6 +24,7 @@
     "morning:check": "node scripts/daily_design_surveillance.mjs && node scripts/daily_market_intelligence.mjs"
   },
   "dependencies": {
+    "@marsidev/react-turnstile": "^1.6.1",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
     "@types/nodemailer": "^8.0.1",

@@ -16,6 +16,7 @@ import {
   ArrowRight,
   MessageSquare
 } from 'lucide-react'
+import CloudflareTurnstile from '@/components/common/CloudflareTurnstile'
 
 const ROLE_OPTIONS = [
   'Dueño / Propietario',
@@ -117,6 +118,7 @@ export function PilotRequestModal({
   const [location, setLocation] = useState('Noia / Barbanza (A Coruña)')
   const [selectedPlan, setSelectedPlan] = useState(initialPlan)
   const [notes, setNotes] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -178,7 +180,8 @@ export function PilotRequestModal({
           phone,
           location,
           selectedPlan,
-          notes
+          notes,
+          turnstileToken
         })
       })
 
@@ -460,6 +463,15 @@ export function PilotRequestModal({
                   <span className="whitespace-nowrap">Setup incluido</span>
                 </div>
               </div>
+
+              {/* Protección de Seguridad Cloudflare Turnstile */}
+              <CloudflareTurnstile
+                onSuccess={(token) => setTurnstileToken(token)}
+                onError={() => setTurnstileToken(null)}
+                onExpire={() => setTurnstileToken(null)}
+                theme="dark"
+                size="flexible"
+              />
 
               {/* Botón de Envío Principal */}
               <button

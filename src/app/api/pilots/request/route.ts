@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { sendPilotLeadNotification } from '@/lib/email'
+import { verifyTurnstileToken } from '@/lib/cloudflare'
 
 interface PilotRequestBody {
   restaurantName: string
@@ -10,6 +11,7 @@ interface PilotRequestBody {
   location?: string
   selectedPlan: string
   notes?: string
+  turnstileToken?: string
 }
 
 export async function POST(req: NextRequest) {
@@ -21,6 +23,18 @@ export async function POST(req: NextRequest) {
         { error: 'Por favor completa el nombre del restaurante, tu nombre y teléfono de contacto.' },
         { status: 400 }
       )
+    }
+
+    // Validación de seguridad con Cloudflare Turnstile (Anti-Bot)
+    if (body.turnstileToken || process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY) {
+      const remoteIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      const turnstileCheck = await verifyTurnstileToken(body.turnstileToken, remoteIp)
+      if (!turnstileCheck.success) {
+        return NextResponse.json(
+          { error: turnstileCheck.error || 'Verificación de seguridad fallida. Por favor recarga e intenta de nuevo.' },
+          { status: 403 }
+        )
+      }
     }
 
     // Registro en logs del servidor
