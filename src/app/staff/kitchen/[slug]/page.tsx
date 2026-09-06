@@ -173,12 +173,21 @@ export default function KitchenKDSPage() {
 
     // B. SSE de respaldo para modo offline/local
     try {
+      let sseDebounceTimer: any = null
+      const triggerDebouncedFetch = () => {
+        if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
+        sseDebounceTimer = setTimeout(() => {
+          fetchServerOrders()
+        }, 300)
+      }
+
       sseEventSource = new EventSource('/api/events')
       sseEventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
-          if (!data.slug || data.slug === slug || data.type === 'connected') {
-            fetchServerOrders()
+          if (data.type === 'connected') return
+          if (!data.slug || data.slug === slug) {
+            triggerDebouncedFetch()
           }
         } catch {}
       }

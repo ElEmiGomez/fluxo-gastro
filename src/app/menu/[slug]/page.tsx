@@ -292,7 +292,18 @@ function DinerMenuContent() {
     let sseEventSource: EventSource | null = null
     let pollInterval: any = null
 
+    let isChecking = false
+    let debounceTimer: any = null
+    const triggerDebouncedCheck = () => {
+      if (debounceTimer) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => {
+        checkOrderStatus()
+      }, 300)
+    }
+
     const checkOrderStatus = async () => {
+      if (isChecking) return
+      isChecking = true
       try {
         const [ordersRes, callsRes, tablesRes] = await Promise.all([
           fetch(`/api/orders?slug=${slug}`).then(r => r.json()).catch(() => ({ orders: [] })),
@@ -403,6 +414,8 @@ function DinerMenuContent() {
         }
       } catch (e) {
         console.log('Error checking order status for diner:', e)
+      } finally {
+        isChecking = false
       }
     }
 
@@ -486,16 +499,15 @@ function DinerMenuContent() {
             return
           }
 
+          if (data.type === 'connected') return
+
           if (
-            data.slug === slug ||
             data.tableNumber?.toString() === tableNumber?.toString() ||
             data.table_number?.toString() === tableNumber?.toString() ||
             data.type?.startsWith('order_') ||
-            data.type?.startsWith('service_') ||
-            data.type?.startsWith('table_') ||
-            data.type === 'connected'
+            data.type?.startsWith('service_')
           ) {
-            checkOrderStatus()
+            triggerDebouncedCheck()
           }
         } catch {
           // ignore

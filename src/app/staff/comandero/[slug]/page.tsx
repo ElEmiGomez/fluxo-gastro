@@ -563,12 +563,21 @@ export default function WaiterComanderoPage() {
 
       // 2. SSE (Server-Sent Events) de respaldo para testing local sin Supabase
       try {
+        let sseDebounceTimer: any = null
+        const triggerDebouncedSync = () => {
+          if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
+          sseDebounceTimer = setTimeout(() => {
+            syncServerData()
+          }, 300)
+        }
+
         sseEventSource = new EventSource('/api/events')
         sseEventSource.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data)
-            if (data.slug === slug || data.type === 'connected') {
-              syncServerData()
+            if (data.type === 'connected') return
+            if (!data.slug || data.slug === slug) {
+              triggerDebouncedSync()
             }
           } catch {
             // ignore

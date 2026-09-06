@@ -57,6 +57,8 @@ export function CallWaiterButton({ tableNumber, lang = 'gl', isPending }: CallWa
       sse.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data)
+          if (data.type === 'connected') return
+
           if (
             (data.type === 'service_call_attended' || data.type === 'table_freed' || data.type === 'service_calls_cleared') &&
             (!data.table_number && !data.tableNumber ||
@@ -66,7 +68,7 @@ export function CallWaiterButton({ tableNumber, lang = 'gl', isPending }: CallWa
           ) {
             checkActiveCalls()
           } else if (
-            data.type === 'service_call_created' &&
+            (data.type === 'service_call_created' || data.type === 'service_call') &&
             (data.table_number?.toString() === tableNumber?.toString() ||
              data.call?.table_number?.toString() === tableNumber?.toString())
           ) {
@@ -96,8 +98,8 @@ export function CallWaiterButton({ tableNumber, lang = 'gl', isPending }: CallWa
     setIsCalling(true)
 
     try {
-      // 1. Notificar vía API local del servidor (Multi-dispositivo inmediato)
-      await fetch('/api/service-calls', {
+      // Notificar vía API local del servidor (SSOT en /api/service-calls)
+      const res = await fetch('/api/service-calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,20 +107,15 @@ export function CallWaiterButton({ tableNumber, lang = 'gl', isPending }: CallWa
           table_number: tableNumber,
           call_type: 'waiter_attention',
         }),
-      }).catch(console.error)
+      })
 
-      // 2. Notificar vía Supabase si está conectado
-      const supabase = createBrowserClient()
-      if (supabase) {
-        await supabase.from('service_calls').insert({
-          restaurant_id: restaurant.id,
-          table_number: tableNumber,
-          call_type: 'waiter',
-          status: 'pending',
-        })
+      if (res.ok) {
+        setCalled(true)
+      } else {
+        const errData = await res.json().catch(() => ({}))
+        console.warn('Service call response:', res.status, errData)
+        setCalled(true) // optimistic fallback
       }
-      
-      setCalled(true)
     } catch (err) {
       console.error('Error al llamar al mozo:', err)
       setCalled(true)

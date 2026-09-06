@@ -595,7 +595,8 @@ export function validateTableSession(
 export function setTableOccupied(
   slug: string,
   tableNumber: string | number,
-  sessionId?: string
+  sessionId?: string,
+  silent: boolean = false
 ): TableSession {
   if (!globalStore.__GASTRO_TABLE_SESSIONS__) {
     globalStore.__GASTRO_TABLE_SESSIONS__ = {}
@@ -616,7 +617,9 @@ export function setTableOccupied(
     last_updated_at: new Date().toISOString(),
   }
   globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber] = session
-  broadcastEvent({ type: 'table_session_updated', slug, tableNumber, session })
+  if (!silent) {
+    broadcastEvent({ type: 'table_session_updated', slug, tableNumber, session })
+  }
   return session
 }
 

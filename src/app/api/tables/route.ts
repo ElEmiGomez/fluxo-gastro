@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
               session_id: s.session_token,
               last_updated_at: s.created_at || new Date().toISOString(),
             }
-            setTableOccupied(slug, s.table_number, s.session_token)
+            setTableOccupied(slug, s.table_number, s.session_token, true)
           }
         }
       } catch {
