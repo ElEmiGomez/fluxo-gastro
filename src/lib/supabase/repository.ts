@@ -423,6 +423,7 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
         `)
         .eq('restaurant_id', targetRestaurantId)
         .order('created_at', { ascending: false })
+        .limit(60)
 
       if (!error && data) {
         const memOrders = getServerOrders(slug)
@@ -485,7 +486,52 @@ export async function getActiveOrdersByTable(
   slug: string,
   tableNumber: number
 ): Promise<Order[]> {
-  const allOrders = await getRestaurantOrders(restaurantId, slug)
+  const supabase = createServerClient()
+  if (supabase && isSupabaseConfigured()) {
+    try {
+      const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            quantity,
+            notes,
+            products (*)
+          )
+        `)
+        .eq('restaurant_id', targetRestaurantId)
+        .eq('table_number', tableNumber)
+        .in('status', ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'])
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (!error && data && data.length > 0) {
+        return (data as unknown as any[]).map(o => {
+          const tableNum = o.table_number || (o.table ? o.table.table_number : tableNumber)
+          const token = o.session_token || o.table_session_id
+          const normalizedItems = (o.order_items || []).map((it: any) => ({
+            ...it,
+            product: it.product || it.products,
+            course: it.course || 'first',
+          }))
+          return {
+            ...o,
+            table_number: tableNum,
+            session_token: token,
+            order_items: normalizedItems,
+          } as Order
+        })
+      }
+    } catch (e) {
+      console.warn('Error fetching active table orders from Supabase:', e)
+    }
+  }
+
+  // Fallback a memoria
+  const allOrders = getServerOrders(slug)
   return allOrders.filter(
     o => o.table_number?.toString() === tableNumber.toString() &&
          ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
