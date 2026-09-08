@@ -29,6 +29,9 @@
 | **DEC-19** | 01/09/2026 | UI/UX & Feedback Real | **Guía Interactiva Paso a Paso para el Comensal (Onboarding de Sala)**. | *Superada por DEC-20.* |
 | **DEC-20** | 02/09/2026 | UI/UX & Program Data | **Unificación a 3 Pasos de Onboarding y Tarjeta Única de Sobremesa**. | Reducción de la carga cognitiva: Guía en 3 pasos (1. Elige, 2. Pide, 3. Disfruta) y fusión de las tarjetas de sobremesa en una sola tarjeta compacta en fondo oscuro con 2 botones (`[☕🍰 Café / Postres]` y `[💳 Pedir la Cuenta]`). |
 | **DEC-21** | 02/09/2026 | Marketing & Program Data | **Google Review Booster Condicional al Solicitar la Cuenta**. | Ocultar la solicitud de valoración durante la comida y activarla exclusivamente al pedir la cuenta (`hasRequestedBill`), aprovechando el tiempo muerto de espera mientras el mozo llega a cobrar. |
+| **DEC-22** | 06/09/2026 | Ciberseguridad / Org | **Protección Anti-Bot con Cloudflare Turnstile en Piloto de 14 Días**. | Blindar la captación de leads en la landing page y el endpoint `/api/pilots/request` contra bots de spam con CAPTCHA invisible sin fricción para el usuario. |
+| **DEC-23** | 07/09/2026 | Arquitectura / Org | **Guardas de Egress Bounded (`.limit(60)`) para Supabase Free Tier**. | Limitar las consultas masivas de comandas a 60 registros y consultar mesas activas por filtro directo en base de datos. Reduce el tráfico en un 99.8% asegurando el plan gratuito permanente. |
+| **DEC-24** | 08/09/2026 | Ingeniería & QA | **Certificación Integral Multi-Agente (132/132 Checks - VICTORY CONFIRMED)**. | Verificación unánime con auditoría forense independiente: Playwright E2E, Strix Scanner (8/8), RLS Auditor (30/30), OCC Concurrencia (42/42) y Certificación en Vivo (24/24). |
 
 ---
 

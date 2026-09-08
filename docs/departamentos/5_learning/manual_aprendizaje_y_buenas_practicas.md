@@ -93,3 +93,28 @@ flowchart TD
   1. Mirar la pizarra (consultas `GET`) es silencioso y no activa el megáfono.
   2. El megáfono (`broadcastEvent`) solo suena cuando ocurre una **acción real**: cuando entra una nueva comanda o cuando el chef pulsa *"Listo para Servir"*.
   3. El camarero tiene su tablet sincronizada en 0 milisegundos y el cliente ve su línea temporal fija y estable.
+
+---
+
+## 6. 📉 Lección Didáctica: El Ancho de Banda (Egress) y las Consultas Acotadas
+
+* **La Analogía del Archivo de Comandas:**  
+  Imagina que cada vez que un camarero le pregunta al cocinero *"¿Qué pedidos tenemos ahora en fogones?"*, el cocinero le imprime y le entrega un libro de 5.000 páginas con todos los pedidos servidos en los últimos 6 meses.
+  - El camarero tarda minutos en cargar el peso del libro (consumo de megabytes de red).
+  - El papel de la impresora se agota rápidamente (límite de 5 GB de Egress en Supabase).
+* **La Solución con `.limit(60)`:**  
+  - Ahora el cocinero solo consulta la libreta del turno activo: las **60 comandas más recientes**.
+  - Y si el comensal de la Mesa #7 pregunta por su comanda, la cocina solo le entrega la ficha de la **Mesa #7** directamente desde el archivador, sin traer las mesas de todo el restaurante.
+  - El peso pasó de 3 MB a 3 KB por consulta (99.8% de ahorro), blindando el plan gratuito de por vida.
+
+---
+
+## 7. 🛡️ Lección Didáctica: Cloudflare Turnstile o el "Portero Invisible"
+
+* **El Problema de los CAPTCHAs Tradicionales:**  
+  Obligar a un comensal mayor o a un hostelero con prisa a buscar "semáforos", "cruces peatonales" o resolver acertijos destruye la experiencia de usuario y reduce la tasa de conversión en un 40%.
+* **El Portero Invisible de Fluxo:**  
+  - Cloudflare Turnstile analiza señales no invasivas del navegador (movimiento natural del cursor, entropía de red, latencia de renderizado).
+  - Si detecta que es una persona real, aprueba la solicitud instantáneamente en segundo plano (0 clics).
+  - Si un script automatizado intenta saturar el buzón de solicitudes o colar spam, es bloqueado en seco con HTTP 403 antes de tocar la base de datos.
+

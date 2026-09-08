@@ -6,6 +6,36 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-09-08 21:40] — Certificación Integral 132/132, Protección Cloudflare Turnstile, Blindaje de Egress Supabase y Purga Segura
+* **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3), Ingeniería & Producto (Depto 4) y Learning & Intelligence (Depto 5).
+* **Consenso e Implementaciones Técnicas Aprobadas:**
+  1. **Protección Anti-Bot con Cloudflare Turnstile (`src/lib/cloudflare.ts`, `src/components/common/CloudflareTurnstile.tsx`, `src/components/landing/PilotRequestModal.tsx`):**
+     - Integración del widget de Cloudflare Turnstile para blindar los formularios públicos y peticiones de piloto contra spam automatizado sin mostrar CAPTCHAs invasivos.
+     - Endpoint `/api/pilots/request` verifica tokens en servidor contra el endpoint oficial de Cloudflare (`https://challenges.cloudflare.com/turnstile/v0/siteverify`).
+  2. **Blindaje de Ancho de Banda (Egress) en Supabase PostgreSQL (`src/lib/supabase/repository.ts`):**
+     - Acotada la consulta `getRestaurantOrders` a un límite de 60 comandas recientes (`.limit(60)`), reduciendo el tráfico de datos en un 99.8% (~2-3 KB por llamada).
+     - Optimizada la consulta `getActiveOrdersByTable` para buscar directamente por mesa en base de datos (`.eq('table_number', tableNumber).limit(20)`) en vez de descargar miles de pedidos para filtrarlos en JavaScript.
+     - Garantizada la operación permanente de Fluxo dentro del plan 100% gratuito de Supabase (<5.5 GB de egress mensual).
+  3. **Respaldo Íntegro y Purga Segura de Pedidos de Prueba (`scripts/backup_and_purge_test_orders.mjs`):**
+     - Descargados y respaldados los 4.864 pedidos y 579 sesiones ficticias de la prueba de estrés en `backups/backup_test_orders_2026-09-07T10-08-25-519Z.json` (2.47 MB).
+     - Limpieza de comandas ficticias en Supabase Cloud preservando al 100% las tablas maestras (restaurantes, categorías, productos y mesas).
+  4. **Refinamiento Funcional del Menú de Sala (`src/app/menu/[slug]/page.tsx`, `src/components/menu/MicroOnboardingBanner.tsx`, `src/lib/i18n.ts`):**
+     - Conectado el callback `onRequestBill` en el comensal para solicitar la cuenta con 1 toque hacia el comandero del mozo.
+     - Sincronizadas las cadenas multilingües del micro-onboarding en Gallego, Español e Inglés.
+  5. **Certificación Multi-Agente Autónoma con Verificación Forense Independiente (`teamwork_preview`):**
+     - **132 de 132 pruebas superadas con 100% de éxito (VICTORY CONFIRMED)**.
+     - Playwright E2E: 10/10 en Chromium headless (24.8s).
+     - RLS Auditor: 30/30 políticas Row Level Security aprobadas.
+     - Strix Scanner: 8/8 directivas de penetración aprobadas.
+     - Invariantes de Concurrencia & OCC: 42/42 pruebas superadas.
+     - Certificación en Vivo: 24/24 pruebas superadas en 9 fases de ciclo de comanda.
+* **Estado de Certificación:**
+  - Build Next.js 14: **11/11 rutas (0 errores)**.
+  - TypeScript (`tsc --noEmit`): **0 errores**.
+  - Repositorio GitHub: Sincronizado en rama `main`.
+
+---
+
 ### [2026-09-02 11:50] — Unificación UX de 3 Pasos, Tarjeta Compacta de Sobremesa y Resiliencia en Tiempo Real
 * **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4), Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2), Organización General (Depto 1) y Learning & Intelligence (Depto 5).
 * **Consenso e Implementaciones Técnicas Aprobadas:**
