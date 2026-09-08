@@ -118,8 +118,8 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
     }
 
     // El mozo ve la comanda en pending_validation de la mesa del test
-    const waiterCard = waiterPage.locator('div', { has: waiterPage.locator(`text=Mesa #${selectedTableNum}`) }).filter({ hasText: 'Confirmar a Cocina' }).first()
-    const validateButton = waiterCard.locator('button:has-text("Confirmar a Cocina")')
+    const waiterCard = waiterPage.locator('div.rounded-2xl', { has: waiterPage.locator(`text=Mesa #${selectedTableNum}`) }).filter({ hasText: 'Confirmar a Cocina' }).first()
+    const validateButton = waiterCard.locator('button:has-text("Confirmar a Cocina")').first()
     await expect(validateButton).toBeVisible({ timeout: 15000 })
 
     // El mozo pulsa "Confirmar a Cocina"

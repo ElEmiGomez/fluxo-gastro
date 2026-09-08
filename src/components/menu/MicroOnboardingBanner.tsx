@@ -5,11 +5,11 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  BookmarkCheck,
   Send,
-  UtensilsCrossed,
+  Utensils,
   CheckCircle2,
-  ChevronRight
+  ChevronRight,
+  CreditCard
 } from 'lucide-react'
 import { getTranslation } from '@/lib/i18n'
 import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
@@ -20,6 +20,7 @@ interface MicroOnboardingBannerProps {
   onScrollToMenu?: () => void
   onOpenCart?: () => void
   onOpenCallWaiter?: () => void
+  onRequestBill?: () => void
 }
 
 const STORAGE_KEY = 'gastro_onboarding_collapsed_v2'
@@ -29,7 +30,8 @@ export function MicroOnboardingBanner({
   tableNumber = '4',
   onScrollToMenu,
   onOpenCart,
-  onOpenCallWaiter
+  onOpenCallWaiter,
+  onRequestBill
 }: MicroOnboardingBannerProps) {
   const t = (k: string) => getTranslation(lang, k)
   // Por default: cerrado/colapsado para no saturar la pantalla del comensal
@@ -78,6 +80,12 @@ export function MicroOnboardingBanner({
       if (onOpenCart) onOpenCart()
     } else if (stepNum === '3') {
       if (onOpenCallWaiter) onOpenCallWaiter()
+    } else if (stepNum === '4') {
+      if (onRequestBill) {
+        onRequestBill()
+      } else if (onOpenCallWaiter) {
+        onOpenCallWaiter()
+      }
     }
   }
 
@@ -97,7 +105,7 @@ export function MicroOnboardingBanner({
             <span className="font-extrabold text-blue-900">{t('onboardingShow') || '¿Cómo pedir desde tu mesa?'}</span>
           </div>
           <div className="flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-white px-2.5 py-0.5 rounded-full border border-blue-200 shadow-2xs">
-            <span>Ver 3 pasos</span>
+            <span>Ver 4 pasos</span>
             <ChevronDown size={13} className="stroke-[2.5]" />
           </div>
         </button>
@@ -108,8 +116,8 @@ export function MicroOnboardingBanner({
   const steps = [
     {
       num: '1',
-      emoji: '📌',
-      icon: BookmarkCheck,
+      emoji: '🍽️',
+      icon: Utensils,
       title: t('onboardingStep1Title') || '1. Elige',
       desc: t('onboardingStep1Desc') || 'Toca cualquier plato para ver foto y personalizarlo.',
       actionLabel: 'Ver platos 👇',
@@ -128,13 +136,23 @@ export function MicroOnboardingBanner({
     },
     {
       num: '3',
-      emoji: '🍽️',
-      icon: UtensilsCrossed,
+      emoji: '✨',
+      icon: Sparkles,
       title: t('onboardingStep3Title') || '3. Disfruta',
       desc: t('onboardingStep3Desc') || 'Pide más rondas de bebidas o llama al mozo.',
       actionLabel: 'Servicios 🛎️',
       border: 'border-amber-200/80 hover:border-amber-400',
       badgeBg: 'bg-amber-600 text-white',
+    },
+    {
+      num: '4',
+      emoji: '💳',
+      icon: CreditCard,
+      title: t('onboardingStep4Title') || '4. Paga',
+      desc: t('onboardingStep4Desc') || 'Toca "Pedir la Cuenta" para cobrar en mesa.',
+      actionLabel: 'Pedir cuenta 🧾',
+      border: 'border-emerald-200/80 hover:border-emerald-400',
+      badgeBg: 'bg-emerald-600 text-white',
     }
   ]
 
@@ -153,7 +171,7 @@ export function MicroOnboardingBanner({
                 {t('onboardingTitle') || 'Guía Rápida de Pedido'}
               </h3>
               <p className="text-[10px] sm:text-[11px] text-blue-900 font-semibold mt-0.5">
-                3 pasos sencillos para pedir cómodo desde tu mesa #{tableNumber}
+                4 pasos sencillos para pedir cómodo desde tu mesa #{tableNumber}
               </p>
             </div>
           </div>
@@ -169,34 +187,35 @@ export function MicroOnboardingBanner({
           </button>
         </div>
 
-        {/* Cuadrícula de 3 Pasos Clickeables */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
+        {/* Cuadrícula de 4 Pasos Clickeables */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
           {steps.map((step) => {
+            const Icon = step.icon
             return (
               <div
                 key={step.num}
                 onClick={() => handleStepClick(step.num)}
-                className={`p-3 rounded-2xl bg-white border ${step.border} shadow-2xs flex flex-col justify-between space-y-2 hover:bg-slate-50 hover:shadow-xs transition-all cursor-pointer group active:scale-98`}
+                className={`p-2.5 sm:p-3 rounded-2xl bg-white border ${step.border} shadow-2xs flex flex-col justify-between space-y-2 hover:bg-slate-50 hover:shadow-xs transition-all cursor-pointer group active:scale-98`}
               >
                 <div>
-                  <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-slate-100">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-base leading-none">{step.emoji}</span>
-                      <span className="text-xs font-black text-slate-900">{step.title}</span>
+                  <div className="flex items-center justify-between gap-1 pb-1 border-b border-slate-100">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <Icon size={14} className="text-slate-700 flex-shrink-0" />
+                      <span className="text-xs font-black text-slate-900 truncate">{step.title}</span>
                     </div>
                     <span className={`w-4 h-4 rounded-full ${step.badgeBg} text-[10px] font-black flex items-center justify-center flex-shrink-0 shadow-2xs`}>
                       {step.num}
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-600 leading-snug font-medium mt-1.5">
+                  <p className="text-[10.5px] sm:text-[11px] text-slate-600 leading-snug font-medium mt-1.5">
                     {step.desc}
                   </p>
                 </div>
 
                 <div className="pt-1 flex items-center justify-between text-[10px] font-extrabold text-blue-900 group-hover:text-blue-700">
-                  <span>{step.actionLabel}</span>
-                  <ChevronRight size={12} className="transform group-hover:translate-x-0.5 transition-transform" />
+                  <span className="truncate">{step.actionLabel}</span>
+                  <ChevronRight size={12} className="transform group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                 </div>
               </div>
             )

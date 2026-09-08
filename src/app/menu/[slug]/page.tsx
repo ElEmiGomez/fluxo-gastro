@@ -816,7 +816,7 @@ function DinerMenuContent() {
           </div>
         )}
 
-        {/* GUÍA VISUAL INTERACTIVA (MICRO-ONBOARDING DE 3 PASOS ACCIONABLES) */}
+        {/* GUÍA VISUAL INTERACTIVA (MICRO-ONBOARDING DE 4 PASOS ACCIONABLES) */}
         <MicroOnboardingBanner
           lang={currentLang}
           tableNumber={tableNumber}
@@ -828,6 +828,7 @@ function DinerMenuContent() {
           }}
           onOpenCart={() => setIsCartOpen(true)}
           onOpenCallWaiter={() => setShowServiceModal(true)}
+          onRequestBill={() => setShowDirectBillModal(true)}
         />
 
         {/* TRACKER EN VIVO DE ESTADO EN COCINA (Clickeable para ver el camino del pedido) */}

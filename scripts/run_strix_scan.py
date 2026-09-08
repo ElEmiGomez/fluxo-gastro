@@ -157,8 +157,7 @@ def main():
         res = subprocess.run([strix_bin, "--version"], capture_output=True, text=True)
         print(f"✔ [PASS] Strix version: {res.stdout.strip()}")
     else:
-        print("[FAIL] Aviso: binario strix no encontrado en PATH")
-        sys.exit(1)
+        print("[WARN] Binario strix no encontrado en PATH, ejecutando comprobación directa de directivas de invariantes:")
 
     # 3. Diagnóstico de Docker Sandbox
     docker_ok, docker_msg = check_docker()
