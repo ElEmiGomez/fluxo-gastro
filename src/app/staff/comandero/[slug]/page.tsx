@@ -77,6 +77,11 @@ export default function WaiterComanderoPage() {
   const seenReadyOrderIdsRef = useRef<Set<string>>(new Set())
   const popupTimerRef = useRef<any>(null)
 
+  // Anti-flicker: fingerprints para evitar re-renders cuando los datos del servidor no cambiaron
+  const ordersFingerRef = useRef<string>('')
+  const callsFingerRef = useRef<string>('')
+  const tableStatusesFingerRef = useRef<string>('')
+
   // Estados no-optimistas con spinner de carga durante transiciones en vuelo
   const [validatingOrderIds, setValidatingOrderIds] = useState<Set<string>>(new Set())
   const [deliveringOrderIds, setDeliveringOrderIds] = useState<Set<string>>(new Set())
@@ -152,13 +157,24 @@ export default function WaiterComanderoPage() {
 
       // 1. Reconciliación de Órdenes (SSOT sin overrides locales)
       setServerOrders(prev => {
+        const prevMap = new Map(prev.map(o => [o.id, o]))
         const map = new Map<string, Order>()
         incomingOrders.forEach(ord => {
           if (ord.status !== 'cancelled') {
-            map.set(ord.id, ord)
+            const existing = prevMap.get(ord.id)
+            const effectiveItems = (ord.order_items && ord.order_items.length > 0)
+              ? ord.order_items
+              : (existing?.order_items || [])
+            map.set(ord.id, { ...ord, order_items: effectiveItems })
           }
         })
-        return Array.from(map.values())
+        const newOrders = Array.from(map.values())
+        const finger = newOrders.map(o => `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}`).join('|')
+        if (finger === ordersFingerRef.current) {
+          return prev
+        }
+        ordersFingerRef.current = finger
+        return newOrders
       })
 
       // 2. Reconciliación de Avisos de Servicio
@@ -178,7 +194,11 @@ export default function WaiterComanderoPage() {
         }
       })
 
-      setPendingCalls(formattedPendingCalls)
+      const callsFinger = formattedPendingCalls.map(c => `${c.id}:${c.table_number}:${c.call_type}`).join('|')
+      if (callsFinger !== callsFingerRef.current) {
+        callsFingerRef.current = callsFinger
+        setPendingCalls(formattedPendingCalls)
+      }
 
       const statusMap: Record<string | number, TableStatusType> = {}
       const dwellMap: Record<string | number, number> = {}
@@ -253,7 +273,11 @@ export default function WaiterComanderoPage() {
         }
       })
 
-      setTableStatuses(statusMap)
+      const statusFinger = JSON.stringify(statusMap)
+      if (statusFinger !== tableStatusesFingerRef.current) {
+        tableStatusesFingerRef.current = statusFinger
+        setTableStatuses(statusMap)
+      }
 
       const finalDwellMins: Record<string | number, number> = {}
       const now = Date.now()
@@ -796,7 +820,7 @@ export default function WaiterComanderoPage() {
 
         {/* 1. CENTRO DE TAREAS Y AVISOS PENDIENTES DEL MOZO (PERMANENTE Y DETALLADO) */}
         {totalPendingTasks > 0 && (
-          <div className="bg-gradient-to-b from-slate-900 to-slate-950 text-white border-b-4 border-amber-400 p-3.5 sm:p-4 shadow-xl animate-in slide-in-from-top duration-200 space-y-3.5">
+          <div className="bg-gradient-to-b from-slate-900 to-slate-950 text-white border-b-4 border-amber-400 p-3.5 sm:p-4 shadow-xl space-y-3.5">
             <div className="max-w-7xl mx-auto space-y-3">
               {/* Encabezado General */}
               <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">

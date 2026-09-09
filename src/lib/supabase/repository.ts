@@ -30,6 +30,8 @@ import {
   getOrCreateTableSession as memoryGetOrCreateSession,
   validateTableSession as memoryValidateSession,
   isValidOrderTransition,
+  saveCachedOrderItems,
+  getCachedOrderItems,
 } from '@/lib/server-state'
 
 /**
@@ -367,6 +369,7 @@ export async function createOrder(
           table_number: orderData.table_number,
         }
 
+        saveCachedOrderItems(newOrder.id, fullOrder.order_items)
         addServerOrder(slug, fullOrder)
         return fullOrder
       }
@@ -396,6 +399,7 @@ export async function createOrder(
     })),
   }
 
+  saveCachedOrderItems(orderId, fallbackOrder.order_items)
   addServerOrder(slug, fallbackOrder)
   return fallbackOrder
 }
@@ -457,10 +461,21 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
             }
           }
 
+          const cachedItems = getCachedOrderItems(o.id)
+          const resolvedOrderItems = normalizedItems.length > 0
+            ? normalizedItems
+            : ((mem?.order_items && mem.order_items.length > 0)
+                ? mem.order_items
+                : (cachedItems && cachedItems.length > 0 ? cachedItems : []))
+
+          if (resolvedOrderItems.length > 0) {
+            saveCachedOrderItems(o.id, resolvedOrderItems)
+          }
+
           return {
             ...o,
             version: resolvedVersion,
-            order_items: normalizedItems.length > 0 ? normalizedItems : (mem?.order_items || []),
+            order_items: resolvedOrderItems,
             status: resolvedStatus,
             table_number: tableNum,
             session_token: token,
@@ -668,14 +683,20 @@ export async function transitionOrderStatus(
         .maybeSingle()
 
       if (!supaErr && supaOrder) {
+        const supaItems = (supaOrder.order_items || []).map((it: any) => ({
+          ...it,
+          product: it.product || it.products,
+          course: it.course || 'first',
+        }))
+        const cached = getCachedOrderItems(orderId)
+        const effectiveItems = supaItems.length > 0
+          ? supaItems
+          : (cached && cached.length > 0 ? cached : [])
+
         const orderToHydrate: Order = {
           ...supaOrder,
           version: supaOrder.version || 1,
-          order_items: (supaOrder.order_items || []).map((it: any) => ({
-            ...it,
-            product: it.product || it.products,
-            course: it.course || 'first',
-          })),
+          order_items: effectiveItems,
         }
         addServerOrder(slug, orderToHydrate)
         memResult = updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, expectedVersion)

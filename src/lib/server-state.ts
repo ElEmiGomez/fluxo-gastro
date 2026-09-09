@@ -42,6 +42,7 @@ interface GlobalStoreState {
   __GASTRO_PRODUCTS__: Record<string, Product[]>
   __GASTRO_SSE_CLIENTS__: Array<(data: string) => void>
   __GASTRO_IDEMPOTENCY_LOCKS__: Map<string, IdempotencyLockEntry>
+  __GASTRO_ORDER_ITEMS_CACHE__: Map<string, any[]>
 }
 
 const g = (globalThis as unknown as Partial<GlobalStoreState>)
@@ -108,7 +109,22 @@ if (!g.__GASTRO_IDEMPOTENCY_LOCKS__) {
   g.__GASTRO_IDEMPOTENCY_LOCKS__ = new Map<string, IdempotencyLockEntry>()
 }
 
+if (!g.__GASTRO_ORDER_ITEMS_CACHE__) {
+  g.__GASTRO_ORDER_ITEMS_CACHE__ = new Map<string, any[]>()
+}
+
 const globalStore = g as GlobalStoreState
+
+export function saveCachedOrderItems(orderId: string, items?: any[]): void {
+  if (orderId && Array.isArray(items) && items.length > 0) {
+    globalStore.__GASTRO_ORDER_ITEMS_CACHE__?.set(orderId, items)
+  }
+}
+
+export function getCachedOrderItems(orderId: string): any[] | null {
+  if (!orderId) return null
+  return globalStore.__GASTRO_ORDER_ITEMS_CACHE__?.get(orderId) || null
+}
 
 // ==============================================================================
 // GESTOR DE IDEMPOTENCIA ATÓMICA Y CERO TOCTOU (Anti-Duplicación en Concurrencia)
@@ -268,7 +284,17 @@ export function isValidOrderTransition(currentStatus: string, nextStatus: string
 // Helpers de Órdenes
 export function getServerOrders(slug: string): Order[] {
   const list = globalStore.__GASTRO_ORDERS__?.[slug] || []
-  return list.filter(o => o.order_items && o.order_items.length > 0)
+  return list
+    .map(o => {
+      if (!o.order_items || o.order_items.length === 0) {
+        const cached = getCachedOrderItems(o.id)
+        if (cached && cached.length > 0) {
+          return { ...o, order_items: cached }
+        }
+      }
+      return o
+    })
+    .filter(o => o.order_items && o.order_items.length > 0)
 }
 
 export function addServerOrder(slug: string, order: Order): Order {
@@ -284,13 +310,26 @@ export function addServerOrder(slug: string, order: Order): Order {
     order.version = 1
   }
 
+  let effectiveItems = (order.order_items && order.order_items.length > 0)
+    ? order.order_items
+    : (getCachedOrderItems(order.id) || [])
+
+  if (effectiveItems.length > 0) {
+    saveCachedOrderItems(order.id, effectiveItems)
+  }
+
   const existingIdx = globalStore.__GASTRO_ORDERS__[slug].findIndex(o => o.id === order.id)
   if (existingIdx >= 0) {
+    const existing = globalStore.__GASTRO_ORDERS__[slug][existingIdx]
+    const finalItems = effectiveItems.length > 0 ? effectiveItems : (existing.order_items || [])
+    if (finalItems.length > 0) saveCachedOrderItems(order.id, finalItems)
     globalStore.__GASTRO_ORDERS__[slug][existingIdx] = {
-      ...globalStore.__GASTRO_ORDERS__[slug][existingIdx],
+      ...existing,
       ...order,
+      order_items: finalItems,
     }
   } else {
+    order.order_items = effectiveItems
     globalStore.__GASTRO_ORDERS__[slug].unshift(order)
     broadcastEvent({ type: 'order_created', slug, order })
   }

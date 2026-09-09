@@ -31,6 +31,7 @@ export default function KitchenKDSPage() {
 
   const previousOrdersCountRef = useRef<number>(0)
   const seenOrderIdsRef = useRef<Set<string>>(new Set())
+  const ordersFingerRef = useRef<string>('')
 
   // Toggle de Pantalla Completa con 1 Toque
   const toggleFullscreen = () => {
@@ -121,7 +122,24 @@ export default function KitchenKDSPage() {
           const sorted = [...incomingOrders].sort(
             (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           )
-          setOrders(sorted)
+
+          setOrders(prev => {
+            const prevMap = new Map(prev.map(o => [o.id, o]))
+            const reconciled = sorted.map(ord => {
+              const existing = prevMap.get(ord.id)
+              const effectiveItems = (ord.order_items && ord.order_items.length > 0)
+                ? ord.order_items
+                : (existing?.order_items || [])
+              return { ...ord, order_items: effectiveItems }
+            })
+
+            const finger = reconciled.map(o => `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}`).join('|')
+            if (finger === ordersFingerRef.current) {
+              return prev
+            }
+            ordersFingerRef.current = finger
+            return reconciled
+          })
         }
       }
     } catch (err) {
