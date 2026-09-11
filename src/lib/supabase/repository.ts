@@ -787,14 +787,14 @@ export async function createServiceCall(
     table_session_id?: string
   }
 ): Promise<ServiceCall> {
+  const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
       const { data, error } = await supabase
         .from('service_calls')
         .insert({
-          restaurant_id: restaurantId,
-          table_session_id: callData.table_session_id || null,
+          restaurant_id: targetRestaurantId,
           table_number: callData.table_number,
           call_type: callData.call_type,
           status: 'pending',
@@ -805,6 +805,9 @@ export async function createServiceCall(
       if (!error && data) {
         addServerServiceCall(slug, data)
         return data as ServiceCall
+      }
+      if (error) {
+        console.warn('Supabase service_calls insert error:', error)
       }
     } catch (e) {
       console.warn('Error creating service call in Supabase:', e)
@@ -822,6 +825,7 @@ export async function createServiceCall(
  * 7.1 LLAMADAS DE SERVICIO: Obtener llamadas activas del restaurante (Supabase + Memoria Reconciliada)
  */
 export async function getRestaurantServiceCalls(restaurantId: string, slug: string): Promise<ServiceCall[]> {
+  const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
   const memCalls = getServerServiceCalls(slug).filter(c => c.status === 'pending')
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
@@ -829,7 +833,7 @@ export async function getRestaurantServiceCalls(restaurantId: string, slug: stri
       const { data, error } = await supabase
         .from('service_calls')
         .select('*')
-        .eq('restaurant_id', restaurantId)
+        .eq('restaurant_id', targetRestaurantId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
 

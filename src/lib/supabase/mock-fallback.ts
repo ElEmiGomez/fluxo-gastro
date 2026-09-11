@@ -3,7 +3,7 @@ import { Restaurant, Category, Product, Table, Order, OrderItem, OrderStatus } f
 export const MOCK_RESTAURANTS: Record<string, Restaurant> = {
   // ── 1. PERFIL DEMO 1: BURGER GOURMET NOIA ──
   'burger-gourmet': {
-    id: 'a1111111-1111-1111-1111-111111111111',
+    id: 'a0000000-0000-0000-0000-000000000001',
     name: 'Burger Gourmet Noia',
     slug: 'burger-gourmet',
     logo_url: '/icon.svg',

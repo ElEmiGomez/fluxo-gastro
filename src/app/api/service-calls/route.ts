@@ -9,6 +9,7 @@ import {
   getRestaurantServiceCalls,
   createServiceCall,
   attendServiceCall,
+  getTargetRestaurantId,
 } from '@/lib/supabase/repository'
 import { verifyStaffRequest } from '@/lib/auth/pin-security'
 
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
     const restaurant = await getRestaurantBySlug(slug)
-    const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+    const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
     const calls = await getRestaurantServiceCalls(restaurantId, slug)
     return NextResponse.json({ calls })
   } catch (err: any) {
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     const parsedTableNum = Math.min(25, Math.max(1, parseInt(String(table_number || '1'), 10) || 1))
     const sanitizedCallType = sanitizeText(String(call_type || 'call_waiter'), 50)
     const restaurant = await getRestaurantBySlug(slug)
-    const restaurantId = restaurant?.id || 'a1111111-1111-1111-1111-111111111111'
+    const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
 
     const saved = await createServiceCall(restaurantId, slug, {
       table_number: parsedTableNum,

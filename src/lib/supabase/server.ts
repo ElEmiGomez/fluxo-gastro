@@ -1,8 +1,9 @@
 import { createServerClient as createSupabaseServerClient, type CookieOptions } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const getSupabaseUrl = () => process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ''
+const getSupabaseAnonKey = () => process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ''
 
 /**
  * Cliente de Supabase para Next.js Server Components y Route Handlers.
@@ -10,7 +11,10 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
  * y propaga las cookies de sesión con auth.uid() para garantizar que las
  * políticas de Row Level Security (RLS) se apliquen estrictamente en PostgreSQL.
  */
-export const createServerClient = () => {
+export const createServerClient = (): any => {
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseAnonKey = getSupabaseAnonKey()
+
   if (!supabaseUrl || !supabaseAnonKey || !supabaseUrl.startsWith('https://') || supabaseAnonKey === 'tu-anon-key-aqui') {
     return null
   }
@@ -19,8 +23,12 @@ export const createServerClient = () => {
   try {
     cookieStore = cookies()
   } catch {
-    // Si se invoca fuera de un request context
-    return null
+    // Si se invoca fuera de un request context con cookies, se retorna cliente estándar
+    return createClient(supabaseUrl, supabaseAnonKey)
+  }
+
+  if (!cookieStore) {
+    return createClient(supabaseUrl, supabaseAnonKey)
   }
 
   return createSupabaseServerClient(supabaseUrl, supabaseAnonKey, {

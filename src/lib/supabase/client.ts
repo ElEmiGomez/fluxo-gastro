@@ -1,14 +1,16 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const getSupabaseUrl = () => process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || ''
+const getSupabaseAnonKey = () => process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ''
 
 export const isSupabaseConfigured = () => {
+  const url = getSupabaseUrl()
+  const key = getSupabaseAnonKey()
   return Boolean(
-    supabaseUrl &&
-    supabaseAnonKey &&
-    supabaseUrl.startsWith('https://') &&
-    supabaseAnonKey !== 'tu-anon-key-aqui'
+    url &&
+    key &&
+    url.startsWith('https://') &&
+    key !== 'tu-anon-key-aqui'
   )
 }
 
@@ -20,7 +22,7 @@ export const createBrowserClient = (): SupabaseClient | null => {
     return null
   }
   if (!cachedBrowserClient) {
-    cachedBrowserClient = createClient(supabaseUrl, supabaseAnonKey, {
+    cachedBrowserClient = createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
       realtime: {
         params: {
           eventsPerSecond: 10,
