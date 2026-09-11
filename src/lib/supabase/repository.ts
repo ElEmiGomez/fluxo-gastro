@@ -54,13 +54,18 @@ export async function getRestaurantBySlug(slug: string): Promise<Restaurant | nu
   return MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'] || null
 }
 
+const MOCK_RESTAURANT_IDS = new Set([
+  'a1111111-1111-1111-1111-111111111111',
+  'b2222222-2222-2222-2222-222222222222',
+  'c3333333-3333-3333-3333-333333333333',
+  'd4444444-4444-4444-4444-444444444444',
+])
+
 export function getTargetRestaurantId(restaurantId?: string, slug?: string): string {
-  if (!restaurantId || restaurantId === 'a1111111-1111-1111-1111-111111111111') {
-    if (!slug || slug === 'burger-gourmet') {
-      return 'a0000000-0000-0000-0000-000000000001'
-    }
+  if (!restaurantId || MOCK_RESTAURANT_IDS.has(restaurantId)) {
+    return 'a0000000-0000-0000-0000-000000000001'
   }
-  return restaurantId || 'a0000000-0000-0000-0000-000000000001'
+  return restaurantId
 }
 
 /**
