@@ -677,7 +677,7 @@ function DinerMenuContent() {
   const handleRequestMicroService = async (serviceName: string) => {
     triggerHaptic(HAPTIC_PATTERNS.SERVICE_CALL)
     try {
-      fetch('/api/service-calls', {
+      const res = await fetch('/api/service-calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -685,7 +685,11 @@ function DinerMenuContent() {
           table_number: tableNumber,
           call_type: `service_${serviceName}`,
         }),
-      }).catch(console.error)
+      })
+
+      if (!res.ok) {
+        throw new Error('Error al solicitar servicio')
+      }
 
       setServiceRequestedToast(serviceName)
       setTimeout(() => {
@@ -693,11 +697,8 @@ function DinerMenuContent() {
         setShowServiceModal(false)
       }, 3000)
     } catch {
-      setServiceRequestedToast(serviceName)
-      setTimeout(() => {
-        setServiceRequestedToast(null)
-        setShowServiceModal(false)
-      }, 3000)
+      alert('Hubo un inconveniente al solicitar el servicio. Por favor avisa directamente al camarero o intenta nuevamente.')
+      setShowServiceModal(false)
     }
   }
 

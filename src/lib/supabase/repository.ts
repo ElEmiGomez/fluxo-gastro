@@ -21,9 +21,6 @@ import {
   getServerOrders,
   addServerOrder,
   updateServerOrderStatus,
-  getServerServiceCalls,
-  addServerServiceCall,
-  attendServerServiceCall,
   getTableSessions,
   setTableOccupied,
   freeTableSession as memoryFreeTableSession,
@@ -33,6 +30,7 @@ import {
   saveCachedOrderItems,
   getCachedOrderItems,
 } from '@/lib/server-state'
+import { logServiceCallError } from '@/lib/logger'
 
 /**
  * Obtiene los datos del restaurante a partir del slug
@@ -808,30 +806,44 @@ export async function createServiceCall(
         .single()
 
       if (!error && data) {
-        addServerServiceCall(slug, data)
+        broadcastEvent({ type: 'service_call', slug, call: data })
         return data as ServiceCall
       }
       if (error) {
-        console.warn('Supabase service_calls insert error:', error)
+        logServiceCallError(error, {
+          slug,
+          table_number: callData.table_number,
+          call_type: callData.call_type,
+          table_session_id: callData.table_session_id,
+        })
+        throw new Error(error.message || 'Error al insertar llamada de servicio en Supabase')
       }
-    } catch (e) {
-      console.warn('Error creating service call in Supabase:', e)
+    } catch (e: any) {
+      logServiceCallError(e, {
+        slug,
+        table_number: callData.table_number,
+        call_type: callData.call_type,
+        table_session_id: callData.table_session_id,
+      })
+      throw e
     }
   }
 
-  return addServerServiceCall(slug, {
-    restaurant_slug: slug,
+  const unconfiguredErr = new Error('Base de datos Supabase no configurada para registrar alertas de servicio')
+  logServiceCallError(unconfiguredErr, {
+    slug,
     table_number: callData.table_number,
     call_type: callData.call_type,
+    table_session_id: callData.table_session_id,
   })
+  throw unconfiguredErr
 }
 
 /**
- * 7.1 LLAMADAS DE SERVICIO: Obtener llamadas activas del restaurante (Supabase + Memoria Reconciliada)
+ * 7.1 LLAMADAS DE SERVICIO: Obtener llamadas activas del restaurante (Exclusivamente Supabase SSOT)
  */
 export async function getRestaurantServiceCalls(restaurantId: string, slug: string): Promise<ServiceCall[]> {
   const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
-  const memCalls = getServerServiceCalls(slug).filter(c => c.status === 'pending')
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -843,18 +855,17 @@ export async function getRestaurantServiceCalls(restaurantId: string, slug: stri
         .order('created_at', { ascending: false })
 
       if (!error && data) {
-        // Reconciliar con memoria para no perder llamadas recientes entre lambdas de Vercel
-        const map = new Map<string, ServiceCall>()
-        memCalls.forEach(c => map.set(c.id, c))
-        ;(data as ServiceCall[]).forEach(c => map.set(c.id, c))
-        return Array.from(map.values())
+        return data as ServiceCall[]
+      }
+      if (error) {
+        console.warn('Supabase service_calls select error:', error)
       }
     } catch (e) {
       console.warn('Error fetching service calls from Supabase:', e)
     }
   }
 
-  return memCalls
+  return []
 }
 
 /**
@@ -876,5 +887,9 @@ export async function attendServiceCall(
     }
   }
 
-  attendServerServiceCall(slug, callId)
+  broadcastEvent({
+    type: 'service_call_attended',
+    slug,
+    callId,
+  })
 }

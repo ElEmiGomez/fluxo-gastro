@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { X, Receipt, Banknote, CreditCard, QrCode, ArrowRight, CheckCircle2, Users } from 'lucide-react'
+import { X, Receipt, Banknote, CreditCard, QrCode, ArrowRight, CheckCircle2, Users, AlertCircle } from 'lucide-react'
 
 interface BillModalProps {
   isOpen: boolean
@@ -27,6 +27,7 @@ export function BillModal({
   totalAmount,
 }: BillModalProps) {
   const [billRequested, setBillRequested] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [splitCount, setSplitCount] = useState(1)
 
@@ -34,12 +35,11 @@ export function BillModal({
 
   const handleRequestBill = async (paymentMethod: string) => {
     setIsSubmitting(true)
-    onBillRequested?.()
+    setErrorMessage(null)
     const splitNote = splitCount > 1 && totalAmount ? ` (Dividida ÷${splitCount}: ${(totalAmount / splitCount).toFixed(2)} €/pers)` : ''
-    setBillRequested(`${paymentMethod}${splitNote}`)
 
     try {
-      await fetch('/api/service-calls', {
+      const res = await fetch('/api/service-calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -49,6 +49,13 @@ export function BillModal({
         }),
       })
 
+      if (!res.ok) {
+        throw new Error('Error al registrar la solicitud')
+      }
+
+      onBillRequested?.()
+      setBillRequested(`${paymentMethod}${splitNote}`)
+
       setTimeout(() => {
         setBillRequested(null)
         setIsSubmitting(false)
@@ -56,11 +63,8 @@ export function BillModal({
       }, 2500)
     } catch (e) {
       console.error('Error requesting bill:', e)
-      setTimeout(() => {
-        setBillRequested(null)
-        setIsSubmitting(false)
-        onClose()
-      }, 2500)
+      setIsSubmitting(false)
+      setErrorMessage('Hubo un inconveniente al pedir la cuenta. Por favor avisa directamente al camarero o intenta nuevamente.')
     }
   }
 
@@ -172,6 +176,13 @@ export function BillModal({
             <div className="p-3.5 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-900 text-xs font-bold text-center animate-in fade-in flex items-center justify-center gap-2">
               <CheckCircle2 size={16} className="text-emerald-600 flex-shrink-0" />
               <span>¡Aviso enviado! El mozo se acerca con la cuenta ({billRequested}).</span>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl text-amber-900 text-xs font-bold text-center animate-in fade-in flex items-center justify-center gap-2">
+              <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
         </div>

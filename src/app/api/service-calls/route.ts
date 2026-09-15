@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  getServerServiceCalls,
   checkRateLimit,
   sanitizeText,
 } from '@/lib/server-state'
@@ -56,7 +55,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, call: saved })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'DATABASE_ERROR',
+        message: err?.message || 'No se pudo registrar la alerta en la base de datos',
+      },
+      { status: 500 }
+    )
   }
 }
 
