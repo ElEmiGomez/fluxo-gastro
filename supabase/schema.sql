@@ -97,6 +97,32 @@ create table if not exists order_items (
   notes text
 );
 
+-- 9. Logs de Errores del Sistema (System Error Logs)
+create table if not exists system_error_logs (
+  id uuid default gen_random_uuid() primary key,
+  timestamp timestamp with time zone default timezone('utc'::text, now()) not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  restaurant_id uuid references restaurants(id) on delete set null,
+  restaurant_slug text,
+  slug text,
+  table_number integer,
+  service_type text default 'service_call',
+  call_type text,
+  error_code text,
+  message text,
+  error_message text,
+  stacktrace text,
+  stack_trace text,
+  metadata jsonb default '{}'::jsonb
+);
+
+create index if not exists idx_system_error_logs_created_at on system_error_logs (created_at desc);
+create index if not exists idx_system_error_logs_timestamp on system_error_logs (timestamp desc);
+create index if not exists idx_system_error_logs_restaurant_slug on system_error_logs (restaurant_slug);
+create index if not exists idx_system_error_logs_slug on system_error_logs (slug);
+create index if not exists idx_system_error_logs_error_code on system_error_logs (error_code);
+create index if not exists idx_system_error_logs_restaurant_id on system_error_logs (restaurant_id);
+
 -- REALTIME SUBSCRIPTIONS
 alter publication supabase_realtime add table orders;
 alter publication supabase_realtime add table order_items;
@@ -113,6 +139,7 @@ alter table table_sessions enable row level security;
 alter table service_calls enable row level security;
 alter table orders enable row level security;
 alter table order_items enable row level security;
+alter table system_error_logs enable row level security;
 
 create policy "Permitir lectura publica de restaurantes" on restaurants for select using (true);
 create policy "Permitir lectura publica de categorias" on categories for select using (true);
@@ -122,6 +149,9 @@ create policy "Permitir gestion completa de table_sessions" on table_sessions fo
 create policy "Permitir gestion completa de service_calls" on service_calls for all using (true);
 create policy "Permitir gestion completa de ordenes" on orders for all using (true);
 create policy "Permitir gestion completa de order_items" on order_items for all using (true);
+create policy "Permitir insercion de system_error_logs" on system_error_logs for insert with check (true);
+create policy "Permitir lectura de system_error_logs" on system_error_logs for select using (true);
+
 
 -- STORED PROCEDURE: CREATE_ORDER_ATOMIC
 create or replace function create_order_atomic(

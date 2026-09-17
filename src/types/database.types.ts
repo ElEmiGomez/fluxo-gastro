@@ -77,6 +77,24 @@ export interface ServiceCall {
   created_at: string
 }
 
+export interface SystemErrorLog {
+  id?: string
+  timestamp: string
+  created_at: string
+  restaurant_id?: string | null
+  restaurant_slug?: string | null
+  slug?: string | null
+  table_number?: number | null
+  service_type?: string
+  call_type?: string | null
+  error_code: string
+  message: string
+  error_message?: string
+  stacktrace?: string | null
+  stack_trace?: string | null
+  metadata?: Record<string, any>
+}
+
 export interface Order {
   id: string
   restaurant_id: string

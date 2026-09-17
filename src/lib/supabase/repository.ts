@@ -810,17 +810,16 @@ export async function createServiceCall(
         return data as ServiceCall
       }
       if (error) {
-        logServiceCallError(error, {
-          slug,
-          table_number: callData.table_number,
-          call_type: callData.call_type,
-          table_session_id: callData.table_session_id,
-        })
-        throw new Error(error.message || 'Error al insertar llamada de servicio en Supabase')
+        const dbErr: any = new Error(error.message || 'Error al insertar llamada de servicio en Supabase')
+        dbErr.code = error.code
+        dbErr.details = error.details
+        dbErr.hint = error.hint
+        throw dbErr
       }
     } catch (e: any) {
       logServiceCallError(e, {
         slug,
+        restaurant_id: targetRestaurantId,
         table_number: callData.table_number,
         call_type: callData.call_type,
         table_session_id: callData.table_session_id,
@@ -832,6 +831,7 @@ export async function createServiceCall(
   const unconfiguredErr = new Error('Base de datos Supabase no configurada para registrar alertas de servicio')
   logServiceCallError(unconfiguredErr, {
     slug,
+    restaurant_id: targetRestaurantId,
     table_number: callData.table_number,
     call_type: callData.call_type,
     table_session_id: callData.table_session_id,
@@ -893,3 +893,13 @@ export async function attendServiceCall(
     callId,
   })
 }
+
+/**
+ * 9. PERSISTENCIA EN NUBE: Helper de repositorio para system_error_logs
+ */
+export {
+  recordSystemErrorLog,
+  insertSystemErrorLog,
+  type RecordSystemErrorLogParams,
+} from './error-logs'
+

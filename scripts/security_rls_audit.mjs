@@ -60,6 +60,7 @@ const databaseTables = [
   'table_sessions',
   'service_calls',
   'order_events',
+  'system_error_logs',
 ]
 
 databaseTables.forEach(tableName => {
@@ -81,6 +82,8 @@ const requiredPolicies = [
   { table: 'order_items', action: 'SELECT' },
   { table: 'order_items', action: 'INSERT' },
   { table: 'service_calls', action: 'INSERT' },
+  { table: 'system_error_logs', action: 'INSERT' },
+  { table: 'system_error_logs', action: 'SELECT' },
 ]
 
 requiredPolicies.forEach(({ table, action }) => {
