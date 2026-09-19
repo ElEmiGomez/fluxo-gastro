@@ -25,51 +25,50 @@ flowchart TD
 
 ---
 
-## ☀️ Tablero Diario de Tareas (Standup de Aceleración Diaria — 01/09/2026)
+## ☀️ Tablero Diario de Tareas (Standup de Aceleración Diaria — 19/09/2026)
 > **Regla de Operación de la Startup:** Cada mañana se establece el despacho de tareas prioritarias por departamento. Todo lo correspondiente a desarrollo de software, base de datos, APIs, seguridad e infraestructura se ejecuta estrictamente dentro de **Program Data (Ingeniería y Producto)**.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 🌅 DESPACHO MATUTINO DIARIO — PRIORIDADES DEL DÍA (01/09/2026)          │
-│    Objetivo General: Fase 2 Activa — Kit de Piloto en Terrazas de Noia   │
+│ 🌅 DESPACHO MATUTINO DIARIO — PRIORIDADES DEL DÍA (19/09/2026)          │
+│    Objetivo General: Fase 2 Activa — Gobernanza y Delegación Operativa  │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🏛️ 1. ORGANIZACIÓN GENERAL (COO / Coordinación General)                 │
 │  ├─ [x] Sincronización y registro en el Libro Diario Interdepartamental │
-│  ├─ [x] Actualizar Roadmap con Fase 2 en ejecución activa               │
-│  ├─ [x] Registrar DEC-11 a DEC-13 (Estrategia Tri-Perfil, Onboarding)  │
-│  └─ [x] Plan de Trabajo en Equipo (prompt_draft.md) actualizado         │
+│  ├─ [x] Delegación oficial de tareas: Carta Fija (Mkt) / Reporte (Eng) │
+│  ├─ [x] Emisión de briefings departamentales de especificación          │
+│  └─ [x] Supervisión del Roadmap y control de dependencias               │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 📈 2. MARKETING & VENTAS (Captación & Go-to-Market)                     │
-│  ├─ [x] Acuerdo de Piloto de 14 Días a 0€ y sin permanencia redactado   │
-│  ├─ [x] Protocolo de Onboarding de 15 min en Hora Valle (17:00-18:30)   │
-│  ├─ [x] Plantilla de Informe Combinado de Impacto del Día 14            │
-│  └─ [ ] Visita y presentación presencial a los locales piloto de Noia   │
+│  ├─ [x] Briefing recibido: briefing_delegacion_carta_fija.md            │
+│  ├─ [x] Boceto conceptual de Carta Fija y psicología de precios         │
+│  ├─ [ ] Estructuración comercial del Menú del Día cerrado (12,50€)     │
+│  └─ [ ] Pulido final de carta para imprenta y coordinación con Diseño   │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🎨 3. DISEÑO DE MARCA & UI/UX (Identidad & Ergonomía Visual)            │
-│  ├─ [x] Cartel A5 de bienvenida a la terraza ("Pide sin esperar")       │
-│  ├─ [x] Guía rápida / Chuleta de barra para camareros con PIN 1234      │
-│  ├─ [x] Lote de peanas QR de mesas 1 a 10 listas para imprimir          │
-│  └─ [ ] Impresión física y montaje en metacrilato con cinta 3M          │
+│  ├─ [x] Plantilla base modular HTML/CSS Carta Fija (public/carta_fija)  │
+│  ├─ [x] Conmutador de 3 temas (Modern Slate / Tapería / Papel Claro)   │
+│  └─ [ ] Maquetación final de artes finales para imprenta física         │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ ⚙️ 4. INGENIERÍA & PRODUCTO — [PROGRAM DATA] (Desarrollo & Software)    │
-│  ├─ [x] 3 Perfiles Demo en Supabase Cloud (Burger, Tapería, Malecón)    │
-│  ├─ [x] Build de Producción Next.js 14 certificado (0 errores)          │
-│  ├─ [x] Sincronización CI/CD automática con GitHub y Vercel             │
-│  └─ [ ] Monitoreo de latencia y Realtime WebSockets en pruebas de campo │
+│  ├─ [x] Briefing recibido: briefing_delegacion_reporte_mensual.md      │
+│  ├─ [x] Pipeline de analítica y endpoint /api/analytics/monthly-report  │
+│  ├─ [x] Motor de renderizado PDF en 2 páginas exactas (Playwright)      │
+│  └─ [x] Suite de verificación automatizada superada (100% PASS)         │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🧠 5. LEARNING & INTELLIGENCE (Memoria Operativa & Buenas Prácticas)    │
-│  ├─ [x] Compilar PDF didáctico del día: Lecciones_Fluxo_01_09_2026.pdf  │
-│  ├─ [x] Registro de métricas de oro: Rotación de mesa y Ticket Medio    │
+│  ├─ [x] Análisis competitivo de soluciones QR y cartas digitales       │
+│  ├─ [x] Registro de invariantes de layout y cero errores de build       │
 │  └─ [x] Mantener repositorio de conocimiento interdepartamental al día  │
 └─────────────────────────────────────────────────────────────────────────┘
 ```

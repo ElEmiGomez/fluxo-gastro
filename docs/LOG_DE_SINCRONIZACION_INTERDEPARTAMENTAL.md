@@ -6,6 +6,15 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-09-19 12:35] — Delegación Oficial y Sincronización Interdepartamental: Carta Fija (Marketing) & Reporte Mensual (Program Data)
+* **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2) y Program Data / Ingeniería & Producto (Depto 4).
+* **Directiva Ejecutiva de la Dirección:**
+  1. **Marketing & Ventas (Depto 2):** Asignada la conceptualización, boceto, arquitectura de oferta comercial, psicología de precios y pulido de la **Carta Fija** (física y digital), con sinergia directa hacia el QR de Fluxo (`docs/departamentos/2_marketing/briefing_delegacion_carta_fija.md`).
+  2. **Program Data / Ingeniería (Depto 4):** Asignada la arquitectura analítica, cálculo de KPIs (rotación, BCG de rentabilidad, tiempos de pase), endpoint `/api/analytics/monthly-report` y motor de generación PDF de alta fidelidad para el **Reporte Mensual Ejecutivo** del Plan Full (`docs/departamentos/4_ingenieria_producto/briefing_delegacion_reporte_mensual.md`).
+  3. **Organización General / COO (Depto 1):** Establecida la matriz de gobernanza, actualización de tableros de control y supervisión del ciclo de vida de ambos entregables sin solapamientos.
+
+---
+
 ### [2026-09-18 20:38] — Benchmark Competitivo e Inteligencia de Producto: LaCarta! (lacartaa.com)
 * **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Organización General e Ingeniería de Producto.
 * **Acción Realizada:**
