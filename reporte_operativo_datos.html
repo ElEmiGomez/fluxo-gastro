@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluxo — Reporte Operativo de Datos & Auditoría de Cierre</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width='64' height='64' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='fluxoBlue' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563EB'/%3E%3Cstop offset='100%25' stop-color='%231D4ED8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%23FFFFFF' stroke='%23CBD5E1' stroke-width='1.5'/%3E%3Cg%3E%3Cpath d='M23 48V16H45 M23 31H38' stroke='url(%23fluxoBlue)' stroke-width='8.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='39' cy='46' r='4.2' fill='%230EA5E9'/%3E%3C/g%3E%3C/svg%3E">
+  <link rel="alternate icon" href="public/icon-inverted.svg" type="image/svg+xml">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Reglas de impresión y paginación exacta (4 Páginas) */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 8mm 10mm 8mm 10mm;
+      }
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+      html, body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-size: 11px !important;
+        line-height: 1.35 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .report-container {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .page-block {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        margin-bottom: 0 !important;
+        padding: 0.75rem 0.5rem !important;
+        border: none !important;
+        border-radius: 0 !important;
+      }
+      .page-break {
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      table {
+        font-size: 9.5px !important;
+        width: 100% !important;
+      }
+      th, td {
+        padding: 4px 4px !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen p-4 sm:p-6 lg:p-8">
+
+  <div class="report-container max-w-5xl mx-auto space-y-6">
+
+    <!-- ========================================================================= -->
+    <!-- BARRA SUPERIOR DE ACCIONES (WEB) -->
+    <!-- ========================================================================= -->
+    <div class="no-print flex items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-white">
+          Vía 2: Datos Operativos & Cierre de Mes
+        </span>
+        <span class="text-xs text-slate-500 font-medium">
+          Métricas objetivas sin interpretaciones &middot; Diseñado para Encargado, Chef y Auditoría (4 Páginas)
+        </span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="window.print()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+          Exportar a PDF (4 Págs)
+        </button>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PÁGINA 1: RESUMEN GENERAL & AUDITORÍA DE TURNOS Y FRANJAS HORARIAS        -->
+    <!-- ========================================================================= -->
+    <div class="page-block page-break bg-white rounded-2xl ring-1 ring-slate-200 p-5 sm:p-7 shadow-xs space-y-5">
+      
+      <!-- Header de Cierre -->
+      <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <div class="w-7 h-7 rounded-lg bg-white border border-slate-200 shadow-xs flex items-center justify-center p-1">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="22" height="22" fill="none">
+                <path d="M23 48V16H45 M23 31H38" stroke="#2563EB" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="39" cy="46" r="4.5" fill="#0EA5E9"/>
+              </svg>
+            </div>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200">
+              Auditoría Operativa &middot; Registro #AUD-2026-09-FLX
+            </span>
+            <span class="text-xs text-slate-500">
+              Periodo: <strong class="text-slate-700 font-mono">01 Sep - 30 Sep 2026</strong>
+            </span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-extrabold tracking-normal text-slate-900 mt-1">
+            Reporte Operativo Mensual de Datos &middot; <span class="text-slate-600 font-semibold">RestoBar Noia</span>
+          </h1>
+          <p class="text-xs text-slate-500 leading-normal">
+            Cierre numérico consolidado: facturación por franjas, auditoría de materia prima, rendimiento de cocina y matriz de platos.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold ring-1 ring-blue-200">
+            Cierre Definitivo
+          </div>
+        </div>
+      </header>
+
+      <!-- Panel de Métricas Generales de Cierre (6 KPIs Numéricos) -->
+      <section>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Facturación Total</span>
+            <div class="text-lg font-black text-slate-900 font-mono mt-0.5">31.350,00 €</div>
+            <span class="text-[10px] text-emerald-600 font-bold">+14.8% vs mes ant.</span>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Comandas Totales</span>
+            <div class="text-lg font-black text-slate-900 font-mono mt-0.5">542</div>
+            <span class="text-[10px] text-slate-500">18,1 pedidos/día</span>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Ticket Medio</span>
+            <div class="text-lg font-black text-slate-900 font-mono mt-0.5">32,45 €</div>
+            <span class="text-[10px] text-emerald-600 font-bold">+2,40 € por mesa</span>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Pase Medio Cocina</span>
+            <div class="text-lg font-black text-slate-900 font-mono mt-0.5">11,4 min</div>
+            <span class="text-[10px] text-emerald-600 font-bold">Objetivo &lt; 13 min</span>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Rotación Terraza</span>
+            <div class="text-lg font-black text-slate-900 font-mono mt-0.5">2,6x</div>
+            <span class="text-[10px] text-slate-500">+14 min liberados</span>
+          </div>
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <span class="text-[10px] font-bold uppercase text-slate-400 block">Canal QR vs Mozo</span>
+            <div class="text-lg font-black text-slate-900 font-mono mt-0.5">38% / 62%</div>
+            <span class="text-[10px] text-slate-500">206 QR / 336 Mozo</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN 1: AUDITORÍA DE TURNOS Y FRANJAS HORARIAS -->
+      <section class="space-y-3 pt-2">
+        <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
+          <h2 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+            <span class="w-5 h-5 rounded bg-blue-100 text-blue-700 flex items-center justify-center font-mono text-xs">1</span>
+            Facturación por Franjas Horarias y Turnos
+          </h2>
+          <span class="text-xs font-mono font-bold text-slate-500">Total Auditado: 31.350,00 €</span>
+        </div>
+
+        <!-- Tabla Detallada de Franjas Horarias -->
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] font-bold border-b border-slate-200">
+              <tr>
+                <th class="py-2.5 px-3">Franja / Turno</th>
+                <th class="py-2.5 px-3">Horario</th>
+                <th class="py-2.5 px-3 text-right">Facturación (€)</th>
+                <th class="py-2.5 px-3 text-right">% Facturación</th>
+                <th class="py-2.5 px-3 text-right">Comandas</th>
+                <th class="py-2.5 px-3 text-right">Ticket Medio</th>
+                <th class="py-2.5 px-3 text-right">Rotación</th>
+                <th class="py-2.5 px-3 text-right">Crecimiento</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 text-slate-700">
+              <tr class="hover:bg-slate-50/50">
+                <td class="py-2 px-3 font-bold text-slate-900 flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                  Comidas / Almuerzo
+                </td>
+                <td class="py-2 px-3 font-mono text-slate-500">13:00 - 16:30</td>
+                <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">14.420,00 €</td>
+                <td class="py-2 px-3 text-right font-mono">46,0%</td>
+                <td class="py-2 px-3 text-right font-mono">238 pedidos</td>
+                <td class="py-2 px-3 text-right font-mono">30,29 €</td>
+                <td class="py-2 px-3 text-right font-mono">1,8x</td>
+                <td class="py-2 px-3 text-right font-mono text-emerald-600 font-bold">+11,4%</td>
+              </tr>
+              <tr class="hover:bg-slate-50/50">
+                <td class="py-2 px-3 font-bold text-slate-900 flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                  Cenas & Cócteles
+                </td>
+                <td class="py-2 px-3 font-mono text-slate-500">20:30 - 23:30</td>
+                <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">12.010,00 €</td>
+                <td class="py-2 px-3 text-right font-mono">38,3%</td>
+                <td class="py-2 px-3 text-right font-mono">195 pedidos</td>
+                <td class="py-2 px-3 text-right font-mono">36,95 €</td>
+                <td class="py-2 px-3 text-right font-mono">1,4x</td>
+                <td class="py-2 px-3 text-right font-mono text-emerald-600 font-bold">+18,2%</td>
+              </tr>
+              <tr class="hover:bg-slate-50/50">
+                <td class="py-2 px-3 font-bold text-slate-900 flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+                  Turno de Tarde & Picoteo Terraza
+                </td>
+                <td class="py-2 px-3 font-mono text-slate-500">17:00 - 20:00</td>
+                <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">4.920,00 €</td>
+                <td class="py-2 px-3 text-right font-mono">15,7%</td>
+                <td class="py-2 px-3 text-right font-mono">109 pedidos</td>
+                <td class="py-2 px-3 text-right font-mono">22,56 €</td>
+                <td class="py-2 px-3 text-right font-mono">2,6x</td>
+                <td class="py-2 px-3 text-right font-mono text-emerald-600 font-bold">+26,5%</td>
+              </tr>
+              <tr class="bg-slate-50/80 font-bold border-t border-slate-200 text-slate-900">
+                <td class="py-2 px-3 uppercase text-[10px]">Total Mensual Consolidado</td>
+                <td class="py-2 px-3 font-mono text-slate-500">Auditoría 30 días</td>
+                <td class="py-2 px-3 text-right font-mono text-sm">31.350,00 €</td>
+                <td class="py-2 px-3 text-right font-mono">100,0%</td>
+                <td class="py-2 px-3 text-right font-mono">542 pedidos</td>
+                <td class="py-2 px-3 text-right font-mono">32,45 €</td>
+                <td class="py-2 px-3 text-right font-mono">1,7x</td>
+                <td class="py-2 px-3 text-right font-mono text-emerald-600">+14,8%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Desglose Semanal de la Facturación -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
+          <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+            <div class="text-[10px] font-bold text-slate-400 uppercase">Semana 1 (01-07 Sep)</div>
+            <div class="text-sm font-black font-mono text-slate-900 mt-0.5">6.910,00 €</div>
+            <div class="text-[9px] text-slate-500 mt-1 flex justify-between font-mono whitespace-nowrap gap-1">
+              <span>Alm: 3.240€</span>
+              <span>Cena: 2.680€</span>
+              <span>QR: 990€</span>
+            </div>
+          </div>
+          <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+            <div class="text-[10px] font-bold text-slate-400 uppercase">Semana 2 (08-14 Sep)</div>
+            <div class="text-sm font-black font-mono text-slate-900 mt-0.5">7.700,00 €</div>
+            <div class="text-[9px] text-slate-500 mt-1 flex justify-between font-mono whitespace-nowrap gap-1">
+              <span>Alm: 3.580€</span>
+              <span>Cena: 2.940€</span>
+              <span>QR: 1.180€</span>
+            </div>
+          </div>
+          <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+            <div class="text-[10px] font-bold text-slate-400 uppercase">Semana 3 (15-21 Sep)</div>
+            <div class="text-sm font-black font-mono text-slate-900 mt-0.5">8.210,00 €</div>
+            <div class="text-[9px] text-slate-500 mt-1 flex justify-between font-mono whitespace-nowrap gap-1">
+              <span>Alm: 3.750€</span>
+              <span>Cena: 3.120€</span>
+              <span>QR: 1.340€</span>
+            </div>
+          </div>
+          <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+            <div class="text-[10px] font-bold text-slate-400 uppercase">Semana 4 (22-30 Sep)</div>
+            <div class="text-sm font-black font-mono text-slate-900 mt-0.5">8.530,00 €</div>
+            <div class="text-[9px] text-slate-500 mt-1 flex justify-between font-mono whitespace-nowrap gap-1">
+              <span>Alm: 3.850€</span>
+              <span>Cena: 3.270€</span>
+              <span>QR: 1.410€</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráfico Técnico SVG de Evolución -->
+        <div class="border border-slate-200 rounded-xl p-3 bg-white">
+          <div class="flex items-center justify-between text-[11px] mb-2">
+            <span class="font-bold text-slate-700">Curvas de Evolución Semanal de Facturación por Canal</span>
+            <div class="flex items-center gap-3 text-[10px]">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-1 bg-blue-600 rounded"></span> Almuerzos</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-1 bg-indigo-600 rounded"></span> Cenas</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-1 bg-cyan-500 rounded"></span> Pedidos QR</span>
+            </div>
+          </div>
+          <div class="h-28 w-full">
+            <svg viewBox="0 0 500 130" class="w-full h-full" preserveAspectRatio="none">
+              <!-- Rejilla horizontal -->
+              <line x1="0" y1="20" x2="500" y2="20" stroke="#f1f5f9" stroke-dasharray="2 2" stroke-width="1"/>
+              <line x1="0" y1="55" x2="500" y2="55" stroke="#f1f5f9" stroke-dasharray="2 2" stroke-width="1"/>
+              <line x1="0" y1="90" x2="500" y2="90" stroke="#f1f5f9" stroke-dasharray="2 2" stroke-width="1"/>
+              
+              <!-- Curva Cenas (Indigo) -->
+              <path d="M30,95 Q170,75 320,60 T470,45" fill="none" stroke="#4f46e5" stroke-width="2.5"/>
+              <!-- Curva Almuerzos (Azul) -->
+              <path d="M30,80 Q170,68 320,62 T470,58" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+              <!-- Curva QR (Cyan) -->
+              <path d="M30,115 Q170,105 320,95 T470,88" fill="none" stroke="#06b6d4" stroke-width="2" stroke-dasharray="4 3"/>
+
+              <!-- Puntos de datos -->
+              <circle cx="30" cy="95" r="3" fill="#4f46e5"/>
+              <circle cx="170" cy="75" r="3" fill="#4f46e5"/>
+              <circle cx="320" cy="60" r="3" fill="#4f46e5"/>
+              <circle cx="470" cy="45" r="3" fill="#4f46e5"/>
+
+              <circle cx="30" cy="80" r="3" fill="#2563eb"/>
+              <circle cx="170" cy="68" r="3" fill="#2563eb"/>
+              <circle cx="320" cy="62" r="3" fill="#2563eb"/>
+              <circle cx="470" cy="58" r="3" fill="#2563eb"/>
+
+              <circle cx="30" cy="115" r="3" fill="#06b6d4"/>
+              <circle cx="170" cy="105" r="3" fill="#06b6d4"/>
+              <circle cx="320" cy="95" r="3" fill="#06b6d4"/>
+              <circle cx="470" cy="88" r="3" fill="#06b6d4"/>
+            </svg>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-400 font-mono pt-1">
+            <span>Semana 1 (01-07 Sep)</span>
+            <span>Semana 2 (08-14 Sep)</span>
+            <span>Semana 3 (15-21 Sep)</span>
+            <span>Semana 4 (22-30 Sep)</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Pie de Página 1 -->
+      <footer class="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+        <span>Fluxo Gastronomic OS &middot; Auditoría Operativa</span>
+        <span>Página 1 de 4</span>
+      </footer>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PÁGINA 2: AUDITORÍA DE FAMILIAS & COSTE DE MATERIA PRIMA (FOOD COST)     -->
+    <!-- ========================================================================= -->
+    <div class="page-block page-break bg-white rounded-2xl ring-1 ring-slate-200 p-5 sm:p-7 shadow-xs space-y-5">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+          <h2 class="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+            <span class="w-5 h-5 rounded bg-cyan-100 text-cyan-700 flex items-center justify-center font-mono text-xs">2</span>
+            Auditoría de Familias de Producto y Coste de Materia Prima
+          </h2>
+          <p class="text-xs text-slate-500">Desglose de facturación, coste de ingredientes (Food Cost) y margen bruto exacto por categoría.</p>
+        </div>
+        <span class="text-xs font-mono font-bold text-slate-500">Food Cost Global: 24,8%</span>
+      </div>
+
+      <!-- Gráfico Donut y Resumen por Familias -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center bg-slate-50/50 p-4 rounded-xl border border-slate-200">
+        
+        <!-- Donut SVG -->
+        <div class="md:col-span-4 flex items-center justify-center">
+          <div class="relative w-44 h-44 flex items-center justify-center">
+            <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+              <!-- Hamburguesas: 42% (dasharray: 42 58, dashoffset: 0) -->
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#3b82f6" stroke-width="11" stroke-dasharray="42 58" stroke-dashoffset="0"/>
+              <!-- Bebidas: 28% (dasharray: 28 72, dashoffset: -42) -->
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#06b6d4" stroke-width="11" stroke-dasharray="28 72" stroke-dashoffset="-42"/>
+              <!-- Entrantes: 16% (dasharray: 16 84, dashoffset: -70) -->
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#6366f1" stroke-width="11" stroke-dasharray="16 84" stroke-dashoffset="-70"/>
+              <!-- Postres: 10% (dasharray: 10 90, dashoffset: -86) -->
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#f59e0b" stroke-width="11" stroke-dasharray="10 90" stroke-dashoffset="-86"/>
+              <!-- Extras: 4% (dasharray: 4 96, dashoffset: -96) -->
+              <circle cx="50" cy="50" r="38" fill="none" stroke="#a855f7" stroke-width="11" stroke-dasharray="4 96" stroke-dashoffset="-96"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none p-3">
+              <span class="text-sm sm:text-base font-black text-slate-900 font-mono tracking-tight leading-none">31.350 €</span>
+              <span class="text-[9.5px] font-bold text-emerald-600 font-mono mt-1 leading-none">Margen 75,2%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leyenda Numérica Lateral -->
+        <div class="md:col-span-8 space-y-2 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded bg-blue-500"></span>
+                <span class="font-bold text-slate-800">Hamburguesas y Platos</span>
+              </div>
+              <div class="text-right font-mono">
+                <span class="font-bold text-slate-900">13.167 €</span>
+                <span class="text-[10px] text-slate-400 ml-1">(42%)</span>
+              </div>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded bg-cyan-500"></span>
+                <span class="font-bold text-slate-800">Bebidas y Cócteles</span>
+              </div>
+              <div class="text-right font-mono">
+                <span class="font-bold text-slate-900">8.778 €</span>
+                <span class="text-[10px] text-slate-400 ml-1">(28%)</span>
+              </div>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded bg-indigo-500"></span>
+                <span class="font-bold text-slate-800">Entrantes y Raciones</span>
+              </div>
+              <div class="text-right font-mono">
+                <span class="font-bold text-slate-900">5.016 €</span>
+                <span class="text-[10px] text-slate-400 ml-1">(16%)</span>
+              </div>
+            </div>
+            <div class="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded bg-amber-500"></span>
+                <span class="font-bold text-slate-800">Postres y Cafetería</span>
+              </div>
+              <div class="text-right font-mono">
+                <span class="font-bold text-slate-900">3.135 €</span>
+                <span class="text-[10px] text-slate-400 ml-1">(10%)</span>
+              </div>
+            </div>
+          </div>
+          <div class="p-2.5 bg-white rounded-lg border border-slate-200 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded bg-purple-500"></span>
+              <span class="font-bold text-slate-800">Extras, Salsas y Panadería</span>
+            </div>
+            <div class="text-right font-mono">
+              <span class="font-bold text-slate-900">1.254 €</span>
+              <span class="text-[10px] text-slate-400 ml-1">(4%)</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Tabla Completa de Costes de Materia Prima y Márgenes -->
+      <div class="overflow-x-auto border border-slate-200 rounded-xl">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-[10px] font-bold border-b border-slate-200">
+            <tr>
+              <th class="py-2.5 px-3">Familia de Producto</th>
+              <th class="py-2.5 px-3 text-right">Ventas Totales</th>
+              <th class="py-2.5 px-3 text-right">% Fact.</th>
+              <th class="py-2.5 px-3 text-right">Comandas</th>
+              <th class="py-2.5 px-3 text-right">Coste MP (€)</th>
+              <th class="py-2.5 px-3 text-right">Food Cost %</th>
+              <th class="py-2.5 px-3 text-right">Margen Bruto %</th>
+              <th class="py-2.5 px-3 text-right">Ganancia Bruta (€)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700">
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-2 px-3 font-bold text-slate-900">Hamburguesas y Platos Principales</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">13.167,00 €</td>
+              <td class="py-2 px-3 text-right font-mono">42,0%</td>
+              <td class="py-2 px-3 text-right font-mono">198</td>
+              <td class="py-2 px-3 text-right font-mono text-rose-700">4.213,44 €</td>
+              <td class="py-2 px-3 text-right font-mono text-slate-600">32,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-emerald-600">68,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">8.953,56 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-2 px-3 font-bold text-slate-900">Bebidas, Cervezas y Cócteles</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">8.778,00 €</td>
+              <td class="py-2 px-3 text-right font-mono">28,0%</td>
+              <td class="py-2 px-3 text-right font-mono">346</td>
+              <td class="py-2 px-3 text-right font-mono text-rose-700">1.580,04 €</td>
+              <td class="py-2 px-3 text-right font-mono text-slate-600">18,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-emerald-600">82,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">7.197,96 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-2 px-3 font-bold text-slate-900">Entrantes y Raciones para Compartir</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">5.016,00 €</td>
+              <td class="py-2 px-3 text-right font-mono">16,0%</td>
+              <td class="py-2 px-3 text-right font-mono">182</td>
+              <td class="py-2 px-3 text-right font-mono text-rose-700">1.103,52 €</td>
+              <td class="py-2 px-3 text-right font-mono text-slate-600">22,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-emerald-600">78,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">3.912,48 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-2 px-3 font-bold text-slate-900">Postres Caseros y Cafés</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">3.135,00 €</td>
+              <td class="py-2 px-3 text-right font-mono">10,0%</td>
+              <td class="py-2 px-3 text-right font-mono">165</td>
+              <td class="py-2 px-3 text-right font-mono text-rose-700">501,60 €</td>
+              <td class="py-2 px-3 text-right font-mono text-slate-600">16,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-emerald-600">84,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">2.633,40 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-2 px-3 font-bold text-slate-900">Extras, Pan y Servicios de Mesa</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">1.254,00 €</td>
+              <td class="py-2 px-3 text-right font-mono">4,0%</td>
+              <td class="py-2 px-3 text-right font-mono">98</td>
+              <td class="py-2 px-3 text-right font-mono text-rose-700">376,20 €</td>
+              <td class="py-2 px-3 text-right font-mono text-slate-600">30,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-emerald-600">70,0%</td>
+              <td class="py-2 px-3 text-right font-mono font-bold text-slate-900">877,80 €</td>
+            </tr>
+            <tr class="bg-slate-50/80 font-bold border-t border-slate-200 text-slate-900">
+              <td class="py-2 px-3 uppercase text-[10px]">Totales Consolidados de Carta</td>
+              <td class="py-2 px-3 text-right font-mono text-sm">31.350,00 €</td>
+              <td class="py-2 px-3 text-right font-mono">100,0%</td>
+              <td class="py-2 px-3 text-right font-mono">542 pedidos</td>
+              <td class="py-2 px-3 text-right font-mono text-rose-700 font-bold">7.774,80 €</td>
+              <td class="py-2 px-3 text-right font-mono">24,8%</td>
+              <td class="py-2 px-3 text-right font-mono text-emerald-600 font-bold">75,2%</td>
+              <td class="py-2 px-3 text-right font-mono text-sm text-slate-900">23.575,20 €</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pie de Página 2 -->
+      <footer class="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+        <span>Fluxo Gastronomic OS &middot; Auditoría Operativa</span>
+        <span>Página 2 de 4</span>
+      </footer>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PÁGINA 3: EFICIENCIA DE COCINA & REGISTRO DIARIO DE SERVICIO              -->
+    <!-- ========================================================================= -->
+    <div class="page-block page-break bg-white rounded-2xl ring-1 ring-slate-200 p-5 sm:p-7 shadow-xs space-y-4">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+          <h2 class="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+            <span class="w-5 h-5 rounded bg-emerald-100 text-emerald-700 flex items-center justify-center font-mono text-xs">3</span>
+            Eficiencia de Cocina y Registro Técnico Diario
+          </h2>
+          <p class="text-xs text-slate-500">Pase medio mensual: 11,4 min &middot; Registro de 30 días con incidencias técnicas y cuellos de botella.</p>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-mono">
+          <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">27 Días Óptimos (90%)</span>
+          <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-bold border border-amber-200">2 Picos (6,7%)</span>
+          <span class="px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-bold border border-rose-200">1 Demora (3,3%)</span>
+        </div>
+      </div>
+
+      <!-- Tabla de los 30 Días Auditados (Compacta en 2 Columnas o Tabla Completa) -->
+      <div class="overflow-x-auto border border-slate-200 rounded-xl">
+        <table class="w-full text-left text-[10.5px]">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-[9.5px] font-bold border-b border-slate-200">
+            <tr>
+              <th class="py-2 px-2.5">Día / Fecha</th>
+              <th class="py-2 px-2.5 text-center">Estado</th>
+              <th class="py-2 px-2.5 text-right">Comandas</th>
+              <th class="py-2 px-2.5 text-right">Pase Medio</th>
+              <th class="py-2 px-2.5">Registro Técnico de Servicio / Incidencia</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700">
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Lun 01 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">12 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">10,8 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Servicio ágil sin incidencias registradas.</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Mar 02 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">15 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">11,0 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Cocina ágil y rotación normal en salón y terraza.</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Mié 03 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">18 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">11,4 min</td>
+              <td class="py-1 px-2.5 text-slate-500">100% de tickets marchados en menos de 13 min.</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Jue 04 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">19 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">11,1 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Servicio mediodía y cenas dentro de tiempo objetivo.</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Vie 05 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">26 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">11,8 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Pico de cena absorbido con éxito por el equipo.</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Sáb 06 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">29 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">12,0 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Lleno en terraza gestionado fluidamente con QR.</td>
+            </tr>
+            <tr class="bg-amber-50/40 hover:bg-amber-50/70">
+              <td class="py-1 px-2.5 font-mono font-bold text-amber-900">Dom 07 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">Pico 14:40</span></td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold">28 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-amber-700">14,2 min</td>
+              <td class="py-1 px-2.5 text-amber-900 font-medium">Rotura puntual de stock de pan artesano para hamburguesas, resuelta en 15 min.</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Lun 08 Sep a Mié 10 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">47 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">11,1 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Excelente rendimiento de pase y comandero. Despacho ágil.</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Jue 11 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">18 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">11,0 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Preparación previa de cocina impecable. Coordinación mozo-cocina en 12 seg.</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Vie 12 y Sáb 13 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">55 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">12,0 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Servicio intensivo sin demoras reseñables. Gran rotación en terraza.</td>
+            </tr>
+            <tr class="bg-rose-50/40 hover:bg-rose-50/70">
+              <td class="py-1 px-2.5 font-mono font-bold text-rose-900">Dom 14 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800">Demora +6m</span></td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold">31 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-rose-700">17,4 min</td>
+              <td class="py-1 px-2.5 text-rose-900 font-medium">Demora de 6 min en pase por comanda múltiple (Mesa 12, 14 comensales simultánea con 8 mesas).</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Lun 15 Sep a Jue 19 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">75 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">11,2 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Cadencia rápida de platos principales. Despacho ágil en salón y barra.</td>
+            </tr>
+            <tr class="bg-amber-50/40 hover:bg-amber-50/70">
+              <td class="py-1 px-2.5 font-mono font-bold text-amber-900">Vie 20 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">Pico 22:15</span></td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold">28 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-amber-700">15,1 min</td>
+              <td class="py-1 px-2.5 text-amber-900 font-medium">Cuello de botella puntual en barra de cócteles durante pico de cena (22:15).</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Sáb 21 Sep a Mié 25 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">98 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">11,5 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Servicio fluido sin incidencias. Tiempos de pase de carnes dentro del objetivo.</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1 px-2.5 font-mono font-bold">Jue 26 Sep a Lun 30 Sep</td>
+              <td class="py-1 px-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700">Óptimo</span></td>
+              <td class="py-1 px-2.5 text-right font-mono">117 pedidos</td>
+              <td class="py-1 px-2.5 text-right font-mono font-bold text-slate-900">11,4 min</td>
+              <td class="py-1 px-2.5 text-slate-500">Cierre de mes con cadencia constante y rotación óptima en terraza y comedor.</td>
+            </tr>
+            <tr class="bg-slate-50/80 font-bold border-t border-slate-200 text-slate-900">
+              <td class="py-1.5 px-2.5 uppercase text-[9.5px]">Media Ponderada Mes</td>
+              <td class="py-1.5 px-2.5 text-center text-emerald-600 font-bold">90% Óptimo</td>
+              <td class="py-1.5 px-2.5 text-right font-mono">542 pedidos</td>
+              <td class="py-1.5 px-2.5 text-right font-mono text-emerald-700 text-xs">11,4 min</td>
+              <td class="py-1.5 px-2.5 text-slate-600">3 incidencias operativas resueltas en tiempo récord.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pie de Página 3 -->
+      <footer class="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+        <span>Fluxo Gastronomic OS &middot; Auditoría Operativa</span>
+        <span>Página 3 de 4</span>
+      </footer>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- PÁGINA 4: MATRIZ BCG & AUDITORÍA INDIVIDUAL DE PLATOS                     -->
+    <!-- ========================================================================= -->
+    <div class="page-block bg-white rounded-2xl ring-1 ring-slate-200 p-5 sm:p-7 shadow-xs space-y-4">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+          <h2 class="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+            <span class="w-5 h-5 rounded bg-purple-100 text-purple-700 flex items-center justify-center font-mono text-xs">4</span>
+            Ingeniería de Menú (Matriz BCG) & Auditoría Individual de Platos
+          </h2>
+          <p class="text-xs text-slate-500">Métricas unitarias de venta, PVP, coste de materia prima y margen bruto de los platos auditados.</p>
+        </div>
+        <span class="text-xs font-mono font-bold text-slate-500">8 Platos Clave Auditados</span>
+      </div>
+
+      <!-- Tabla Completa de Platos Auditados -->
+      <div class="overflow-x-auto border border-slate-200 rounded-xl">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-600 uppercase text-[9.5px] font-bold border-b border-slate-200">
+            <tr>
+              <th class="py-2 px-2.5">Plato, Categoría & Estado</th>
+              <th class="py-2 px-2 whitespace-nowrap">Clasif. BCG</th>
+              <th class="py-2 px-2 text-right whitespace-nowrap">Uds</th>
+              <th class="py-2 px-2 text-right whitespace-nowrap">PVP</th>
+              <th class="py-2 px-2 text-right whitespace-nowrap">Facturación</th>
+              <th class="py-2 px-2 text-right whitespace-nowrap">Coste MP</th>
+              <th class="py-2 px-2 text-right whitespace-nowrap">Margen</th>
+              <th class="py-2 px-2 text-right whitespace-nowrap">Beneficio Limpio</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-slate-700 text-[11px]">
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1.5 px-2.5 font-bold text-slate-900">
+                Smash Burger Doble Queso
+                <div class="text-[9.5px] font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                  <span>Hamburguesas</span>
+                  <span>&middot;</span>
+                  <span class="text-blue-700 font-semibold">Mantener Precio</span>
+                </div>
+              </td>
+              <td class="py-1.5 px-2 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-100 text-emerald-700">Estrella</span>
+              </td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold whitespace-nowrap">140 u.</td>
+              <td class="py-1.5 px-2 text-right font-mono whitespace-nowrap">13,50 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">1.890,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono text-rose-700 whitespace-nowrap">3,51 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">74,0%</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">1.398,60 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1.5 px-2.5 font-bold text-slate-900">
+                Pulpo a la Brasa Crujiente
+                <div class="text-[9.5px] font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                  <span>Pescados & Mariscos</span>
+                  <span>&middot;</span>
+                  <span class="text-emerald-700 font-semibold">Plato Insignia</span>
+                </div>
+              </td>
+              <td class="py-1.5 px-2 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-100 text-emerald-700">Estrella</span>
+              </td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold whitespace-nowrap">115 u.</td>
+              <td class="py-1.5 px-2 text-right font-mono whitespace-nowrap">19,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">2.185,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono text-rose-700 whitespace-nowrap">6,08 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">68,0%</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">1.485,80 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1.5 px-2.5 font-bold text-slate-900">
+                Caña Estrella Galicia
+                <div class="text-[9.5px] font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                  <span>Bebidas & Cervezas</span>
+                  <span>&middot;</span>
+                  <span class="text-cyan-700 font-semibold">Activar 2ª Ronda</span>
+                </div>
+              </td>
+              <td class="py-1.5 px-2 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded text-[9.5px] font-bold bg-blue-100 text-blue-700">Vaca Lechera</span>
+              </td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold whitespace-nowrap">340 u.</td>
+              <td class="py-1.5 px-2 text-right font-mono whitespace-nowrap">3,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">1.020,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono text-rose-700 whitespace-nowrap">0,54 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">82,0%</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">836,40 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1.5 px-2.5 font-bold text-slate-900">
+                Patatas Rústicas Trufadas
+                <div class="text-[9.5px] font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                  <span>Entrantes</span>
+                  <span>&middot;</span>
+                  <span class="text-blue-700 font-semibold">Ideal Picoteo</span>
+                </div>
+              </td>
+              <td class="py-1.5 px-2 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded text-[9.5px] font-bold bg-blue-100 text-blue-700">Vaca Lechera</span>
+              </td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold whitespace-nowrap">180 u.</td>
+              <td class="py-1.5 px-2 text-right font-mono whitespace-nowrap">5,50 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">990,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono text-rose-700 whitespace-nowrap">1,21 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">78,0%</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">772,20 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1.5 px-2.5 font-bold text-slate-900">
+                Tartar de Atún Rojo
+                <div class="text-[9.5px] font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                  <span>Sugerencias Chef</span>
+                  <span>&middot;</span>
+                  <span class="text-purple-700 font-semibold">Subir a Cabecera</span>
+                </div>
+              </td>
+              <td class="py-1.5 px-2 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded text-[9.5px] font-bold bg-purple-100 text-purple-700">Oportunidad</span>
+              </td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold whitespace-nowrap">22 u.</td>
+              <td class="py-1.5 px-2 text-right font-mono whitespace-nowrap">18,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">396,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono text-rose-700 whitespace-nowrap">3,42 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">81,0%</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">320,76 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1.5 px-2.5 font-bold text-slate-900">
+                Solomillo Ibérico al P.X.
+                <div class="text-[9.5px] font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                  <span>Carnes</span>
+                  <span>&middot;</span>
+                  <span class="text-purple-700 font-semibold">Sugerir Maridaje</span>
+                </div>
+              </td>
+              <td class="py-1.5 px-2 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded text-[9.5px] font-bold bg-purple-100 text-purple-700">Oportunidad</span>
+              </td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold whitespace-nowrap">28 u.</td>
+              <td class="py-1.5 px-2 text-right font-mono whitespace-nowrap">22,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">616,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono text-rose-700 whitespace-nowrap">5,20 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">76,0%</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">470,40 €</td>
+            </tr>
+            <tr class="bg-rose-50/30 hover:bg-rose-50/60">
+              <td class="py-1.5 px-2.5 font-bold text-rose-950">
+                Ensalada César con Pollo
+                <div class="text-[9.5px] font-medium text-rose-700 flex items-center gap-1 mt-0.5">
+                  <span>Entrantes</span>
+                  <span>&middot;</span>
+                  <span class="text-rose-800 font-semibold">Revisar Preparación</span>
+                </div>
+              </td>
+              <td class="py-1.5 px-2 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded text-[9.5px] font-bold bg-rose-100 text-rose-700">Alerta Baja Rot.</span>
+              </td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-900 whitespace-nowrap">14 u.</td>
+              <td class="py-1.5 px-2 text-right font-mono whitespace-nowrap">11,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-900 whitespace-nowrap">154,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono text-rose-700 whitespace-nowrap">6,38 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-600 whitespace-nowrap">42,0%</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-rose-900 whitespace-nowrap">64,68 €</td>
+            </tr>
+            <tr class="hover:bg-slate-50/50">
+              <td class="py-1.5 px-2.5 font-bold text-slate-900">
+                Tarta de Queso Fluida
+                <div class="text-[9.5px] font-medium text-slate-500 flex items-center gap-1 mt-0.5">
+                  <span>Postres Caseros</span>
+                  <span>&middot;</span>
+                  <span class="text-emerald-700 font-semibold">Venta Post-Cuenta</span>
+                </div>
+              </td>
+              <td class="py-1.5 px-2 whitespace-nowrap">
+                <span class="px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-100 text-emerald-700">Estrella</span>
+              </td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold whitespace-nowrap">92 u.</td>
+              <td class="py-1.5 px-2 text-right font-mono whitespace-nowrap">7,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">644,00 €</td>
+              <td class="py-1.5 px-2 text-right font-mono text-rose-700 whitespace-nowrap">1,12 €</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">84,0%</td>
+              <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-900 whitespace-nowrap">540,96 €</td>
+            </tr>
+            <tr class="bg-slate-50/80 font-bold border-t border-slate-200 text-slate-900">
+              <td class="py-2 px-2.5 uppercase text-[9.5px] whitespace-nowrap">Subtotal Muestra Auditada</td>
+              <td class="py-2 px-2 text-slate-500 font-mono text-[9.5px] whitespace-nowrap">8 Platos</td>
+              <td class="py-2 px-2 text-right font-mono whitespace-nowrap">931 u.</td>
+              <td class="py-2 px-2 text-right font-mono whitespace-nowrap">-</td>
+              <td class="py-2 px-2 text-right font-mono text-xs whitespace-nowrap">7.995,00 €</td>
+              <td class="py-2 px-2 text-right font-mono text-rose-700 whitespace-nowrap">2.108,60 €</td>
+              <td class="py-2 px-2 text-right font-mono text-emerald-600 whitespace-nowrap">73,6%</td>
+              <td class="py-2 px-2 text-right font-mono text-xs text-slate-900 whitespace-nowrap">5.886,40 €</td>
+            </tr>
+          </tbody>
+        </table>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Resumen Cuantitativo de Cartera BCG -->
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
+        <div class="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 text-xs">
+          <div class="text-[10px] font-bold text-emerald-800 uppercase">3 Platos Estrella</div>
+          <div class="text-sm font-black font-mono text-emerald-950 mt-0.5">4.719,00 € (59,0%)</div>
+          <div class="text-[10px] text-emerald-700 mt-0.5">Alta demanda + Alto margen</div>
+        </div>
+        <div class="p-2.5 bg-blue-50 rounded-lg border border-blue-200 text-xs">
+          <div class="text-[10px] font-bold text-blue-800 uppercase">2 Vacas Lecheras</div>
+          <div class="text-sm font-black font-mono text-blue-950 mt-0.5">2.010,00 € (25,1%)</div>
+          <div class="text-[10px] text-blue-700 mt-0.5">Alto volumen de apoyo</div>
+        </div>
+        <div class="p-2.5 bg-purple-50 rounded-lg border border-purple-200 text-xs">
+          <div class="text-[10px] font-bold text-purple-800 uppercase">2 Oportunidades</div>
+          <div class="text-sm font-black font-mono text-purple-950 mt-0.5">1.012,00 € (12,7%)</div>
+          <div class="text-[10px] text-purple-700 mt-0.5">Alto margen + Baja visibilidad</div>
+        </div>
+        <div class="p-2.5 bg-rose-50 rounded-lg border border-rose-200 text-xs">
+          <div class="text-[10px] font-bold text-rose-800 uppercase">1 Alerta / Merma</div>
+          <div class="text-sm font-black font-mono text-rose-950 mt-0.5">154,00 € (1,9%)</div>
+          <div class="text-[10px] text-rose-700 mt-0.5">Bajo margen + Riesgo merma</div>
+        </div>
+      </div>
+
+      <!-- Pie de Página 4 -->
+      <footer class="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+        <span>Datos auditados directamente desde Supabase Cloud &middot; Cifrado bancario RGPD</span>
+        <span>Página 4 de 4</span>
+      </footer>
+    </div>
+
+  </div>
+
+</body>
+</html>
