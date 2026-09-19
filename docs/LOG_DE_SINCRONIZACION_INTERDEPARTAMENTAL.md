@@ -6,6 +6,18 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-09-18 20:38] — Benchmark Competitivo e Inteligencia de Producto: LaCarta! (lacartaa.com)
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Organización General e Ingeniería de Producto.
+* **Acción Realizada:**
+  - **Documento Creado:** `docs/departamentos/2_marketing/analisis_competencia_lacartaa.md`.
+  - **Hallazgos y Referencias Registradas:**
+    1. *Formato TikTok/Vídeo-Menú:* Análisis del impacto del formato vídeo vertical en el ticket medio (+8% a +15% por deseo visual) para futuro backlog de la carta interactiva de Fluxo.
+    2. *Google Review Booster:* Ratificada la importancia de potenciar el enlace directo a Google Maps en el momento en que el comensal solicita la cuenta o tras el servicio.
+    3. *Diferenciación Competitiva Reforzada:* Confirmado que LaCarta! opera únicamente como catálogo visual / takeaway en Latam (sin comandero de sala, sin filtro Mozo Gatekeeper `pending_validation`, sin KDS de cocina ni tiqueteras térmicas ESC/POS).
+  - **Impacto Comercial:** Argumentario de ventas blindado para demostrar por qué una carta de solo vistas no resuelve la fatiga de camareros ni la rotación de mesas que sí soluciona Fluxo.
+
+---
+
 ### [2026-09-08 21:40] — Certificación Integral 132/132, Protección Cloudflare Turnstile, Blindaje de Egress Supabase y Purga Segura
 * **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3), Ingeniería & Producto (Depto 4) y Learning & Intelligence (Depto 5).
 * **Consenso e Implementaciones Técnicas Aprobadas:**
@@ -395,7 +407,37 @@
 - **Hito:** Especificación y Asentamiento de 4 Requerimientos Estratégicos de Producto:
 - **Resumen de Decisiones:**
   1. **DEC-16:** Dashboard de Administración de Carta + Asistente IA de Digitalización (`prompt to menu` desde foto/texto).
-  2. **DEC-17:** Módulo "Menú del Día" (Precio cerrado 1°+2)postre+bebida) y Banner de Promo Estrella.
+  2. **DEC-17:** Módulo "Menú del Día" (Precio cerrado 1°+2‡)postre+bebida) y Banner de Promo Estrella.
   3. **DEC-18:** Inclusión del Reporte Mensual de Eficiencia y Rentabilidad Gastronómica en el Plan Full (99€/139€).
   4. **DEC-19:** Guía Interactiva Paso a Paso en la Carta PWA para Comensales (Onboarding de Sala).
   5. **Entregables:** Prompts estructurados listos para ejecución en Program Data.
+
+---
+## [2026-09-19 00:15] RESOLUCIÓN DEFINITIVA DE PARPADEO EN COMANDAS (DEC-25)
+- **Departamento:** Ingeniería & Producto (Program Data)
+- **Hito:** Erradicación de la condición de carrera y descarte transitorio en la transmisión comanda cliente -> mozo (alineado con la estabilidad del módulo de servicios).
+- **Resumen Técnico:**
+  1. **Pre-hidratación Inmediata de Cache (`createOrder`):** Se hidrata la memoria (`addServerOrder`) y cache de items (`saveCachedOrderItems`) antes de que Realtime dispare eventos, eliminando la race condition donde `getRestaurantOrders` devolvía `order_items = []`.
+  2. **Persistencia de Tareas Activas en Comandero (`comandero/[slug]/page.tsx`):** Las órdenes activas (`pending_validation`, `ready`, etc.) se preservan frente a respuestas transitorias vacías hasta su confirmación o descarte explícito por el mozo.
+  3. **Estabilidad de Sesión en Menú Comensal (`menu/[slug]/page.tsx`):** Tolerancia a sincronización asíncrona de sesión y conexión inmediata de `onOrderSubmitted` desde `CartDrawer` para estado estático continuo.
+  4. **Certificación:** 10/10 Playwright E2E, 24/24 Certificación en vivo, 33/33 RLS Audit, 8/8 Strix Scanner y 0 errores TypeScript.
+
+---
+## [2026-09-19 01:25] PATRÓN ZERO-FLICKER (HERENCIA DE SERVICIOS) Y ECONOMÍA DE TESTING (DEC-26)
+- **Departamento:** Aprendizaje Continuo (Learning) & Ingeniería de Producto
+- **Hito:** Institucionalización definitiva del comportamiento anti-parpadeo y política de consumo eficiente de tokens/tiempo.
+- **Resumen Técnico y Directivas:**
+  1. **Patrón de Visibilidad por Estado (Zero-Flicker):** La UI de Comandero y Cocina determina la visibilidad de comandas estrictamente por su `status`, nunca por la presencia de `order_items`. Si los items están en tránsito, la tarjeta se renderiza estable con fallback vacío/loading sin desmontarse.
+  2. **Debounce en Realtime (300-400ms):** Los listeners de Supabase Realtime aplican debounce para sincronizar una vez que las tablas hijas (`order_items`) hayan finalizado su inserción en PostgreSQL.
+  3. **Eliminación de Broadcasts Fantasma:** El backend centraliza y emite un único evento ordenado tras confirmar persistencia en todas las capas.
+  4. **Economía de Tokens y Testing Pragmático:** Se prohíbe correr suites completas de 5 fases (Playwright, Strix, RLS) para iteraciones de UI. Se exige verificación focalizada (`npx.cmd tsc --noEmit`) para no agotar cuotas ni tiempo del usuario. La suite pesada queda reservada para pre-deploy a producción.
+
+
+---
+## [2026-09-19 12:35] DISENO DE CARTA FIJA MODULAR Y CERTIFICACION DE REPORTE MENSUAL EJECUTIVO (2 PAGINAS)
+- **Departamento:** Diseno de Marca & Organizacion (COO) / Program Data
+- **Hitos y Entregables Completados:**
+  1. Carta Fija Modular (HTML5/CSS3 @media print): public/carta_fija_modular.html con selector multi-estilo (Modern Slate, Taperia Rustica, Papel Claro) y QR integrado.
+  2. Generador de PDF de Carta Fija en Alta Resolucion: Carta_Fija_Fluxo.pdf (386 KB).
+  3. Reporte Mensual Ejecutivo Corregido y Estructurado en 2 Paginas Exactas: docs/Informe_Ejecutivo_RestoBar_Noia.pdf (227 KB).
+  4. Suite de Verificacion de Reporte Superada: 2 paginas, 0 caracteres huerfanos, matriz BCG, analisis de cuellos de botella y ROI > 26x certificados.

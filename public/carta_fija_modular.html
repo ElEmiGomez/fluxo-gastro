@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carta Fija Gastronómica Modular — Fluxo</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,400&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 6mm;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #0f172a;
+      --bg-card: #1e293b;
+      --bg-item: rgba(255, 255, 255, 0.03);
+      --border-color: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-gold: #f59e0b;
+      --font-title: 'Cinzel', serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body.theme-taperia {
+      --bg-primary: #1c1917;
+      --bg-card: #292524;
+      --bg-item: rgba(245, 158, 11, 0.04);
+      --border-color: rgba(217, 119, 6, 0.25);
+      --text-main: #fef3c7;
+      --text-muted: #d6d3d1;
+      --accent: #d97706;
+      --accent-gold: #f59e0b;
+      --font-title: 'Playfair Display', serif;
+    }
+
+    body.theme-light {
+      --bg-primary: #ffffff;
+      --bg-card: #f8fafc;
+      --bg-item: #f1f5f9;
+      --border-color: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --accent: #0284c7;
+      --accent-gold: #d97706;
+      --font-title: 'Cinzel', serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.35;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .toolbar {
+      width: 100%;
+      max-width: 820px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 12px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+    }
+    .toolbar h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .toolbar-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .btn-theme {
+      background: #334155;
+      color: #f8fafc;
+      border-color: #475569;
+    }
+    .btn-theme:hover {
+      background: #475569;
+    }
+    .btn-print {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .btn-print:hover {
+      background: #1d4ed8;
+    }
+
+    .menu-sheet {
+      width: 100%;
+      max-width: 800px;
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 16px;
+      padding: 26px 26px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .menu-header {
+      text-align: center;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+    }
+    .restaurant-title {
+      font-family: var(--font-title);
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: var(--text-main);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .restaurant-tagline {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-weight: 600;
+    }
+
+    .daily-banner {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(245, 158, 11, 0.15));
+      border: 1px dashed var(--accent-gold);
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .daily-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .daily-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .daily-price {
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--text-main);
+      background: rgba(0,0,0,0.3);
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      flex-grow: 1;
+    }
+
+    .category-block {
+      margin-bottom: 14px;
+    }
+    .category-title {
+      font-family: var(--font-title);
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 3px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dish-item {
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px dotted var(--border-color);
+    }
+    .dish-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .dish-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .dish-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .dish-badge {
+      font-size: 8px;
+      font-weight: 800;
+      background: var(--accent-gold);
+      color: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      margin-left: 4px;
+    }
+    .dish-price {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .dish-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 1px;
+      line-height: 1.25;
+    }
+    .dish-allergens {
+      font-size: 8px;
+      color: #64748b;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .menu-footer {
+      border-top: 2px solid var(--border-color);
+      padding-top: 12px;
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+    .footer-info {
+      flex: 1;
+    }
+    .footer-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-main);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    .footer-desc {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+    .qr-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-item);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+    .qr-image {
+      width: 46px;
+      height: 46px;
+      background: #ffffff;
+      padding: 2px;
+      border-radius: 4px;
+    }
+    .qr-text-top {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .qr-text-sub {
+      font-size: 8.5px;
+      color: var(--text-muted);
+    }
+
+    @media print {
+      body {
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .toolbar {
+        display: none !important;
+      }
+      .menu-sheet {
+        max-width: 100% !important;
+        border: 1.5px solid #334155 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 16px 16px !important;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body class="theme-default">
+
+  <div class="toolbar">
+    <h2>🎨 Diseñador de Carta Fija — Fluxo Studio</h2>
+    <div class="toolbar-actions">
+      <button class="btn btn-theme" onclick="setTheme('theme-default')">Modern Slate</button>
+      <button class="btn btn-theme" onclick="setTheme('theme-taperia')">Tapería / Rústico</button>
+      <button class="btn btn-theme" onclick="setTheme('theme-light')">Papel Claro / Imprenta</button>
+      <button class="btn btn-print" onclick="window.print()">🖨️ Imprimir Carta (A4)</button>
+    </div>
+  </div>
+
+  <div class="menu-sheet">
+    <div class="menu-header">
+      <h1 class="restaurant-title" id="rest-name">TABERNA DO CASCO ANTIGO</h1>
+      <p class="restaurant-tagline">Cocina Gallega Tradicional · Raciones & Tapas de Autor</p>
+    </div>
+
+    <div class="daily-banner">
+      <div>
+        <div class="daily-title">⭐ Menú del Día de Mercado</div>
+        <div class="daily-desc">1º Plato + 2º Plato + Postre casero o café + Bebida incluida</div>
+      </div>
+      <div class="daily-price">12,50 €</div>
+    </div>
+
+    <div class="menu-grid">
+      <div class="menu-col">
+        <div class="category-block">
+          <div class="category-title">
+            <span>Raciones de la Ría</span>
+            <span style="font-size:10px; opacity:0.7;">Especialidades</span>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Pulpo á Feira con Cachelos <span class="dish-badge">Top Venta</span></div>
+              <div class="dish-price">16,50 €</div>
+            </div>
+            <div class="dish-desc">Pulpo de la ría con pimentón de la Vera, sal gorda marina y AOVE virgen extra.</div>
+            <div class="dish-allergens">Alérgenos: Moluscos</div>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Zamburiñas a la Plancha</div>
+              <div class="dish-price">14,00 €</div>
+            </div>
+            <div class="dish-desc">6 unidades con sofrito tradicional de cebolla dulce, vino blanco y perejil fresco.</div>
+            <div class="dish-allergens">Alérgenos: Moluscos, Sulfitos</div>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Calamares de la Ría Fritos</div>
+              <div class="dish-price">11,50 €</div>
+            </div>
+            <div class="dish-desc">Rebozado crujiente ligero servido con alioli suave de ajo tostado y limón.</div>
+            <div class="dish-allergens">Alérgenos: Moluscos, Gluten, Huevo</div>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Pimientos de Padrón</div>
+              <div class="dish-price">7,00 €</div>
+            </div>
+            <div class="dish-desc">Unos pican y otros no. Fritos en aceite de oliva con escamas de sal.</div>
+            <div class="dish-allergens">Alérgenos: Ninguno</div>
+          </div>
+        </div>
+
+        <div class="category-block">
+          <div class="category-title">
+            <span>Carnes & Brasa</span>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Raxo Gallego Tradicional</div>
+              <div class="dish-price">10,50 €</div>
+            </div>
+            <div class="dish-desc">Lomo de cerdo adobado con orégano y ajo sobre cama de patatas fritas caseras.</div>
+            <div class="dish-allergens">Alérgenos: Ninguno</div>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Zorza con Patatas y Huevo</div>
+              <div class="dish-price">9,80 €</div>
+            </div>
+            <div class="dish-desc">Picadillo tradicional con pimentón dulce/picante y patatas de Coristanco.</div>
+            <div class="dish-allergens">Alérgenos: Huevo</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu-col">
+        <div class="category-block">
+          <div class="category-title">
+            <span>Burgers & Especiales</span>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Bacon Cheese Doble Monster <span class="dish-badge">Recomendado</span></div>
+              <div class="dish-price">14,20 €</div>
+            </div>
+            <div class="dish-desc">Doble medallón de 160g de blend de asado, cheddar fundido, panceta crujiente y BBQ.</div>
+            <div class="dish-allergens">Alérgenos: Gluten, Lácteos</div>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Croquetas Cremosas de Jamón (6u)</div>
+              <div class="dish-price">8,50 €</div>
+            </div>
+            <div class="dish-desc">Bechamel artesanal reposada 24h con jamón ibérico curado y rebozado panko.</div>
+            <div class="dish-allergens">Alérgenos: Gluten, Lácteos, Huevo</div>
+          </div>
+        </div>
+
+        <div class="category-block">
+          <div class="category-title">
+            <span>Postres de la Casa</span>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Tarta de Santiago Artesana</div>
+              <div class="dish-price">4,50 €</div>
+            </div>
+            <div class="dish-desc">Elaborada con 100% almendra seleccionada y azúcar glas con la cruz jacobea.</div>
+            <div class="dish-allergens">Alérgenos: Frutos de Cáscara, Huevo</div>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Cañas de Carballiño con Crema</div>
+              <div class="dish-price">4,80 €</div>
+            </div>
+            <div class="dish-desc">Masa crujiente frita rellena al momento de crema pastelera al aroma de canela.</div>
+            <div class="dish-allergens">Alérgenos: Gluten, Lácteos, Huevo</div>
+          </div>
+        </div>
+
+        <div class="category-block">
+          <div class="category-title">
+            <span>Vinos & Bebidas</span>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Albariño D.O. Rías Baixas</div>
+              <div class="dish-price">3,20 / 16 €</div>
+            </div>
+            <div class="dish-desc">Afrutado, fresco y equilibrado con notas florales cítricas.</div>
+            <div class="dish-allergens">Alérgenos: Sulfitos</div>
+          </div>
+
+          <div class="dish-item">
+            <div class="dish-header">
+              <div class="dish-name">Mencía D.O. Ribeira Sacra</div>
+              <div class="dish-price">3,20 / 16 €</div>
+            </div>
+            <div class="dish-desc">Tinto joven gallego con aroma a frutos rojos silvestres.</div>
+            <div class="dish-allergens">Alérgenos: Sulfitos</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="menu-footer">
+      <div class="footer-info">
+        <div class="footer-title">📱 Pide o Llama al Camarero desde tu Móvil</div>
+        <div class="footer-desc">Escanea el código QR de la mesa para ver fotos reales en alta definición, gestionar alérgenos y pedir la cuenta directamente sin esperas.</div>
+      </div>
+      <div class="qr-box">
+        <svg class="qr-image" viewBox="0 0 100 100" fill="#0f172a">
+          <path d="M0 0h35v35H0V0zm5 5v25h25V5H5zm5 5h15v15H10V10zM65 0h35v35H65V0zm5 5v25h25V5H70zm5 5h15v15H75V10zM0 65h35v35H0V65zm5 5v25h25V70H5zm5 5h15v15H10V75zM45 10h10v10H45V10zm0 25h10v10H45V35zm0 20h10v10H45V55zm0 25h10v10H45V80zm20-15h10v10H65V65zm20 0h15v10H85V65zm-20 20h10v15H65V85zm20 0h15v15H85V85z"/>
+        </svg>
+        <div class="qr-text">
+          <div class="qr-text-top">Carta Digital</div>
+          <div class="qr-text-sub">Escaneo Instantáneo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setTheme(themeName) {
+      document.body.className = themeName;
+    }
+  </script>
+</body>
+</html>
