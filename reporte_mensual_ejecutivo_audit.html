@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluxo — Reporte Mensual Ejecutivo (Paso a Paso Desplegable)</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width='64' height='64' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='fluxoBlue' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563EB'/%3E%3Cstop offset='100%25' stop-color='%231D4ED8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%23FFFFFF' stroke='%23CBD5E1' stroke-width='1.5'/%3E%3Cg%3E%3Cpath d='M23 48V16H45 M23 31H38' stroke='url(%23fluxoBlue)' stroke-width='8.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='39' cy='46' r='4.2' fill='%230EA5E9'/%3E%3C/g%3E%3C/svg%3E">
+  <link rel="alternate icon" href="public/icon-inverted.svg" type="image/svg+xml">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    details > summary {
+      list-style: none;
+    }
+    details > summary::-webkit-details-marker {
+      display: none;
+    }
+    
+    /* Animaciones suaves para acordeones */
+    .accordion-body {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms ease;
+      opacity: 0;
+    }
+    .accordion-body:not(.open) {
+      visibility: hidden;
+      transition: grid-template-rows 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms ease, visibility 0s 350ms;
+    }
+    .accordion-body.open {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      visibility: visible;
+      transition: grid-template-rows 350ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms ease, visibility 0s 0s;
+    }
+    .accordion-body-inner {
+      overflow: hidden;
+    }
+    
+    /* Animaciones suaves para chevrons */
+    .chevron-icon {
+      transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    /* Animación suave para guías de dueño */
+    .guide-body {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease;
+      opacity: 1;
+    }
+    .guide-body.collapsed {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      visibility: hidden;
+      transition: grid-template-rows 300ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease, visibility 0s 300ms;
+    }
+    .guide-body-inner {
+      overflow: hidden;
+    }
+
+    /* Animación para segmentos donut (anillo 100% uniforme sin cuñas deformadas) */
+    .donut-slice {
+      transition: opacity 200ms ease, filter 200ms ease;
+      transform-origin: center;
+    }
+    .group\/donut:hover .donut-slice,
+    .donut-has-active .donut-slice {
+      opacity: 0.4;
+    }
+    .donut-slice:hover, .donut-slice.active {
+      opacity: 1 !important;
+      filter: drop-shadow(0 0 5px rgba(0,0,0,0.22));
+    }
+
+    /* Tooltips e interacción fluida */
+    #chartTooltip {
+      will-change: left, top, opacity;
+    }
+
+    /* ========================================================================= */
+    /* REGLAS DE EXPORTACIÓN A PDF / IMPRESIÓN EJECUTIVA (A4)                    */
+    /* ========================================================================= */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm 12mm 10mm 12mm;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+
+      html, body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        min-height: auto !important;
+        height: auto !important;
+        font-size: 11px !important;
+        line-height: 1.35 !important;
+      }
+
+      /* Ocultar elementos interactivos y controles en PDF */
+      .no-print,
+      #btnPrint,
+      button[onclick*="window.print()"],
+      button[onclick*="exportPDF()"],
+      .chevron-icon,
+      #chevron-step1,
+      #chevron-step2,
+      #chevron-step3,
+      #chevron-step4,
+      #chartTooltip,
+      #hoverGuideLine,
+      #dotCenas,
+      #dotAlmuerzos,
+      #dotQR,
+      #granularitySelect,
+      label[for="granularitySelect"],
+      [onclick*="toggleGuide"],
+      select {
+        display: none !important;
+      }
+
+      /* Ajustar contenedor principal al ancho del papel sin márgenes forzados */
+      .max-w-6xl {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+      }
+
+      .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 0.85rem !important;
+      }
+
+      /* Desplegar todos los acordeones forzosamente en el documento impreso */
+      .accordion-body {
+        display: block !important;
+        grid-template-rows: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+
+      .accordion-body-inner {
+        overflow: visible !important;
+        height: auto !important;
+        padding-top: 0.25rem !important;
+      }
+
+      .guide-body {
+        display: block !important;
+        grid-template-rows: none !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        height: auto !important;
+      }
+
+      .guide-body-inner {
+        overflow: visible !important;
+      }
+
+      /* Header limpio de informe ejecutivo (sin enmarcar en caja ni bordes cerrados) */
+      header {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        border: none !important;
+        border-bottom: 1.5px solid #cbd5e1 !important;
+        border-radius: 0 !important;
+        padding: 0 0 0.65rem 0 !important;
+        margin-bottom: 0.75rem !important;
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+      header h1, header h2 {
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        letter-spacing: normal !important;
+        color: #0f172a !important;
+        line-height: 1.25 !important;
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.2rem !important;
+      }
+      header p {
+        font-size: 11px !important;
+        color: #475569 !important;
+        letter-spacing: normal !important;
+        line-height: 1.35 !important;
+      }
+
+      /* Control estricto de saltos de página en tarjetas de contenido */
+      section,
+      .accordion-item,
+      .print-card {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        margin-bottom: 0.65rem !important;
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+      }
+
+      /* Saltos de página dedicados por bloque temático (Exactamente 4 Páginas) */
+      #item-step1 {
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      #item-step2 {
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      #item-step3 {
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      #item-step4 {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+        break-inside: avoid !important;
+        margin-bottom: 0.35rem !important;
+      }
+      #certFooter {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        margin-top: 0.35rem !important;
+        padding-top: 0.35rem !important;
+      }
+
+      /* Hero Banner en azul oscuro nítido con tipografía blanca */
+      section.bg-gradient-to-r {
+        background: linear-gradient(135deg, #030712 0%, #1e3a8a 50%, #172554 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #1e3a8a !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+
+      /* Cuadrícula del Hero Banner: Beneficio Neto superior + 2 columnas inferiores */
+      section .grid.grid-cols-1 {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+      }
+      section .hero-top-card {
+        grid-column: 1 / -1 !important;
+      }
+
+      /* Cajas translúcidas del Hero con fondo suave para lectura */
+      section .bg-white\/10 {
+        background: rgba(255, 255, 255, 0.12) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #ffffff !important;
+      }
+
+      /* Caja blanca de Beneficio Neto destacada */
+      section .bg-white.text-slate-900 {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        box-shadow: none !important;
+      }
+
+      /* Gráfico de curvas Paso 1 ajustado para no solapar la tabla */
+      #chartContainer {
+        height: 125px !important;
+        padding-top: 0 !important;
+      }
+      #turnosSvg {
+        height: 125px !important;
+      }
+      #hoverGuideLine, #dotCenas, #dotAlmuerzos, #dotQR, #chartTooltip {
+        display: none !important;
+      }
+
+      /* Donut en Paso 2 proporcionado */
+      #donutContainer {
+        width: 170px !important;
+        height: 170px !important;
+      }
+
+      /* Desplegar detalles de Food Cost e Incidencias limpiamente */
+      details {
+        display: block !important;
+      }
+      details > div {
+        display: block !important;
+      }
+      details summary span:last-child {
+        display: none !important;
+      }
+
+      /* Compactar Paso 3 para que quepa 100% en Página 3 sin desbordes */
+      #item-step3 .p-4, #item-step3 .p-5 {
+        padding: 0.5rem 0.75rem !important;
+      }
+      #item-step3 .h-6 {
+        height: 16px !important;
+      }
+      #item-step3 .guide-body p {
+        font-size: 10px !important;
+        line-height: 1.25 !important;
+      }
+      #item-step3 .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 0.35rem !important;
+      }
+      #item-step3 .w-10.h-10 {
+        width: 28px !important;
+        height: 28px !important;
+      }
+      #item-step3 .w-10.h-10 svg {
+        width: 15px !important;
+        height: 15px !important;
+      }
+
+      /* Compactar Paso 4 para que quepa con el footer en Página 4 */
+      #item-step4 .p-4, #item-step4 .p-5 {
+        padding: 0.5rem 0.75rem !important;
+      }
+      #item-step4 .dish-row td {
+        padding: 0.35rem 0.5rem !important;
+      }
+      #item-step4 table th {
+        padding: 0.35rem 0.5rem !important;
+      }
+
+      /* Gráficos vectoriales SVG proporcionados */
+      svg {
+        max-width: 100% !important;
+        height: auto !important;
+      }
+
+      /* Reducir rellenos excesivos de padding para optimizar espacio */
+      .p-4, .p-5, .p-6, .p-8 {
+        padding: 0.65rem !important;
+      }
+      .sm\:p-8 {
+        padding: 0.65rem !important;
+      }
+      .gap-6 {
+        gap: 0.65rem !important;
+      }
+      .gap-4 {
+        gap: 0.5rem !important;
+      }
+
+      /* Tablas ordenadas sin cortes */
+      table {
+        width: 100% !important;
+      }
+      tr {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body class="text-slate-900 antialiased p-3 sm:p-8 min-h-screen" style="background: linear-gradient(90deg, #ffffff 0%, #e2e8f0 32%, #cbd5e1 50%, #e2e8f0 68%, #ffffff 100%); background-attachment: fixed;">
+
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- ========================================================================================= -->
+    <!-- HEADER AUDITORÍA & ACCIONES RÁPIDAS -->
+    <!-- ========================================================================================= -->
+    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+            Plan Full &middot; IA Analytics Suite
+          </span>
+          <span class="text-xs text-slate-500">
+            Periodo Auditado: <strong class="text-slate-700 font-mono">01 Sep - 30 Sep 2026</strong>
+          </span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-extrabold tracking-normal text-slate-900 mt-1">
+          Reporte Ejecutivo de Rendimiento <span class="text-slate-400 font-normal mx-1">&middot;</span> <span class="text-slate-600 font-semibold">RestoBar Noia</span>
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-500 leading-normal">
+          Resumen de balance económico, eficiencia por turnos y auditoría de rentabilidad de carta.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
+        <button id="btnPrint" onclick="exportPDF()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold ring-1 ring-slate-200 shadow-xs transition cursor-pointer">
+          <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+          Exportar PDF
+        </button>
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold ring-1 ring-emerald-200 shadow-xs">
+          <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          Auditoría Certificada
+        </div>
+      </div>
+    </header>
+
+    <!-- ========================================================================================= -->
+    <!-- 1. HERO BANNER: RETORNO NETO DE INVERSIÓN (Estilo Unificado en Azul) -->
+    <!-- ========================================================================================= -->
+    <section class="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white rounded-2xl p-4 sm:p-5 shadow-lg shadow-blue-950/20 border border-blue-800/60">
+      
+      <!-- Top Bar: Título con $ + Badge ROI Comprobado -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-white/20">
+        <div class="flex items-center gap-2.5 text-white font-extrabold text-xs sm:text-sm tracking-wide uppercase">
+          <span class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center font-black text-sm text-white flex-shrink-0">
+            $
+          </span>
+          <span>Retorno Neto de Inversión &middot; Cuota Plan Full 99 €/mes</span>
+        </div>
+        <div class="self-start sm:self-auto px-3.5 py-1 rounded-full text-xs font-black bg-cyan-300 text-blue-950 shadow-xs whitespace-nowrap tracking-tight">
+          ROI &gt; 26x &middot; Retorno Comprobado
+        </div>
+      </div>
+
+      <!-- Grid de Paneles de Retorno: Beneficio Neto Superior (Span 2) + 2 Columnas Inferiores -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+        
+        <!-- PANEL SUPERIOR: Beneficio Neto Mensual / Ganancia Neta (Ancho Completo) -->
+        <div class="hero-top-card col-span-1 sm:col-span-2 bg-white text-slate-900 rounded-xl p-3 sm:p-4 shadow-xl shadow-black/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ring-2 ring-cyan-300/80">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-200/80 flex items-center justify-center flex-shrink-0 shadow-xs">
+              <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div>
+              <span class="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-blue-700 block">
+                Beneficio Neto Mensual &middot; Ganancia Neta
+              </span>
+              <div class="text-2xl sm:text-3xl font-black text-blue-950 font-mono mt-0.5">
+                +2.501 €/mes
+              </div>
+            </div>
+          </div>
+          <div class="text-[11px] sm:text-xs text-slate-600 sm:text-right font-medium leading-relaxed">
+            <div>Ganancia bruta generada: <strong class="text-slate-900 font-mono">+2.600 €/mes</strong></div>
+            <div class="text-slate-500 text-[10px] sm:text-[11px]">Cuota fija de plataforma: <strong class="font-mono text-slate-700">99 €/mes</strong> (sin comisiones variables)</div>
+          </div>
+        </div>
+
+        <!-- CAJA 1: Ventas QR Incrementales -->
+        <div class="bg-white/10 hover:bg-white/[0.14] transition border border-white/15 rounded-xl p-3 sm:p-3.5 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-cyan-200 block">
+              Ventas QR Incrementales
+            </span>
+            <div class="text-xl sm:text-2xl font-black text-white font-mono mt-1">
+              +1.480 €/mes
+            </div>
+          </div>
+          <p class="text-[11px] text-blue-100/80 mt-1.5 leading-relaxed">
+            Segundas rondas de bebidas y venta sugerida de postres en carta digital
+          </p>
+        </div>
+
+        <!-- CAJA 2: Ganancia por Rotación -->
+        <div class="bg-white/10 hover:bg-white/[0.14] transition border border-white/15 rounded-xl p-3 sm:p-3.5 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-cyan-200 block">
+              Ganancia por Rotación
+            </span>
+            <div class="text-xl sm:text-2xl font-black text-white font-mono mt-1">
+              +1.120 €/mes
+            </div>
+          </div>
+          <p class="text-[11px] text-blue-100/80 mt-1.5 leading-relaxed">
+            +14 min de ahorro por mesa: mayor rotación para atender clientes en horas punta
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================================= -->
+    <!-- 2. ACORDEÓN PASO 1: RENDIMIENTO POR TURNOS (Chart Composition) -->
+    <!-- ========================================================================================= -->
+    <div id="item-step1" class="accordion-item bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs transition-all duration-200">
+      <button type="button" onclick="toggleAccordion('step1')" class="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-slate-50/70 transition cursor-pointer select-none">
+        <div class="flex items-start sm:items-center gap-3">
+          <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 font-mono font-bold text-xs flex items-center justify-center flex-shrink-0">
+            01
+          </span>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">
+                Evolución de Facturación y Turnos
+              </h3>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                Paso 1 &middot; Horarios y Picos
+              </span>
+            </div>
+            <p class="text-xs text-blue-600 font-semibold mt-0.5 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"></path></svg>
+              ¿Para qué sirve? Descubrir a qué horas entra más dinero en caja y qué turnos conviene potenciar o reforzar.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+          <div class="text-left sm:text-right">
+            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Conclusión Clave</span>
+            <div class="flex items-center gap-1.5 justify-end">
+              <span class="text-sm font-extrabold text-slate-900 font-mono">31.350 €</span>
+              <span class="text-slate-300 font-normal">&middot;</span>
+              <span class="text-xs font-bold text-emerald-600 font-sans tracking-tight whitespace-nowrap">Cenas (+18.2%)</span>
+            </div>
+          </div>
+          <span id="chevron-step1" class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center transition-transform duration-200">
+            ▾
+          </span>
+        </div>
+      </button>
+
+      <div id="content-step1" class="accordion-body border-t border-slate-100">
+        <div class="accordion-body-inner">
+          <div class="p-4 sm:p-5 space-y-4">
+            
+            <!-- GUÍA RÁPIDA PARA EL DUEÑO (Paso 1) -->
+            <div class="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5 font-extrabold text-blue-900 text-xs">
+                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                  Guía Rápida para el Dueño: ¿Qué mirar aquí y qué hacer?
+                </div>
+                <button type="button" onclick="toggleGuide('step1')" class="text-[11px] text-blue-700 hover:text-blue-900 font-bold underline cursor-pointer">
+                  <span id="guide-btn-text-step1">Ocultar resumen</span>
+                </button>
+              </div>
+
+              <div id="guide-cards-step1" class="guide-body pt-1">
+                <div class="guide-body-inner">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-slate-700">
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-blue-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-blue-800 tracking-wider block">1. Qué estás viendo</span>
+                      <p class="text-[11px] leading-relaxed">
+                        El dinero total que entró en caja durante el mes, dividido de forma sencilla entre comidas de mediodía, cenas de noche y lo que tus clientes pidieron desde la mesa con el móvil (código QR).
+                      </p>
+                    </div>
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-blue-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-emerald-700 tracking-wider block">2. Lo que pasó en tu local</span>
+                      <p class="text-[11px] leading-relaxed">
+                        Tus <strong>cenas son tu turno más potente y rentable</strong>, creciendo un <strong>+18.2%</strong> (12.010 €). Además, gracias al QR en mesa y terraza, los clientes pidieron <strong>4.920 € extra</strong> en bebidas y postres sin esperar a ser atendidos.
+                      </p>
+                    </div>
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-blue-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-blue-800 tracking-wider block">3. Qué te recomendamos hacer</span>
+                      <p class="text-[11px] leading-relaxed">
+                        Los fines de semana a partir de las 20:30 tienes lleno asegurado. Ten los preparativos de cocina listos antes de esa hora y mantén el código QR bien visible en terraza para impulsar las consumiciones de tarde.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <h4 id="chartHeaderRev" class="text-sm font-bold text-slate-900 font-mono">
+                  31.350,00 € <span class="text-xs font-bold text-emerald-600 font-sans ml-1">(+14.8% vs mes anterior)</span>
+                </h4>
+                <p id="chartHeaderDesc" class="text-xs text-slate-500">Mes Completo (4 Semanas Auditadas) &middot; Comparativa de turnos y facturación incremental.</p>
+              </div>
+
+              <!-- Selector de Granularidad Dinámico -->
+              <div class="flex items-center gap-2">
+                <label for="granularitySelect" class="text-xs font-bold text-slate-600 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                  Filtrar Vista:
+                </label>
+                <select id="granularitySelect" onchange="updateChartGranularity(this.value)" class="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition shadow-xs">
+                  <option value="month" selected>Mes Completo (4 Semanas)</option>
+                  <option value="weekends">Solo Fines de Semana (Vie-Dom)</option>
+                  <option value="lunch">Solo Turno Mediodía (13:00 - 16:30)</option>
+                  <option value="dinner">Solo Turno Cenas (20:30 - 23:30)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Gráfico Line / Area Chart con SVG y Hover Interactivo -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-xs font-medium flex-wrap gap-2">
+                <span class="text-[11px] text-slate-400 font-semibold italic flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                  Pasa el mouse sobre el gráfico para ver el detalle de cada semana
+                </span>
+                <div class="flex items-center gap-4 text-xs font-medium">
+                  <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-blue-600"></span> Almuerzos</span>
+                  <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-indigo-500"></span> Cenas</span>
+                  <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-cyan-500"></span> Re-pedidos QR</span>
+                </div>
+              </div>
+
+              <div id="chartContainer" onmousemove="handleChartHover(event)" onmouseleave="handleChartLeave()" class="h-60 w-full relative pt-2 select-none cursor-crosshair">
+                <svg id="turnosSvg" class="w-full h-full overflow-visible" viewBox="0 0 500 180" preserveAspectRatio="none">
+                  <line x1="0" y1="30" x2="500" y2="30" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4 4"/>
+                  <line x1="0" y1="80" x2="500" y2="80" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4 4"/>
+                  <line x1="0" y1="130" x2="500" y2="130" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="4 4"/>
+                  
+                  <path id="svgAreaCenas" d="M0,130 Q60,110 125,75 T250,55 T375,40 L500,25 L500,170 L0,170 Z" fill="rgba(99,102,241,0.08)"/>
+                  <path id="svgLineCenas" d="M0,130 Q60,110 125,75 T250,55 T375,40 L500,25" fill="none" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round"/>
+
+                  <path id="svgAreaAlmuerzos" d="M0,140 Q60,120 125,90 T250,70 T375,55 L500,45 L500,170 L0,170 Z" fill="rgba(37,99,235,0.06)"/>
+                  <path id="svgLineAlmuerzos" d="M0,140 Q60,120 125,90 T250,70 T375,55 L500,45" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round"/>
+
+                  <path id="svgLineQR" d="M0,165 Q60,155 125,140 T250,115 T375,95 L500,80" fill="none" stroke="#06b6d4" stroke-width="2" stroke-dasharray="3 3"/>
+                </svg>
+
+                <!-- Línea vertical interactiva y puntos en curvas (HTML inmune a deformaciones de aspect ratio) -->
+                <div id="hoverGuideLine" class="absolute top-2 bottom-6 w-[1.5px] border-l border-dashed border-slate-400/80 pointer-events-none opacity-0 transition-opacity duration-150 -translate-x-1/2"></div>
+                <div id="dotCenas" class="absolute w-3.5 h-3.5 rounded-full bg-indigo-600 ring-2 ring-white shadow-md pointer-events-none opacity-0 transition-all duration-150 -translate-x-1/2 -translate-y-1/2"></div>
+                <div id="dotAlmuerzos" class="absolute w-3.5 h-3.5 rounded-full bg-blue-600 ring-2 ring-white shadow-md pointer-events-none opacity-0 transition-all duration-150 -translate-x-1/2 -translate-y-1/2"></div>
+                <div id="dotQR" class="absolute w-3.5 h-3.5 rounded-full bg-cyan-500 ring-2 ring-white shadow-md pointer-events-none opacity-0 transition-all duration-150 -translate-x-1/2 -translate-y-1/2"></div>
+
+                <!-- Tooltip Flotante Interactivo Tremor-Style -->
+                <div id="chartTooltip" class="absolute pointer-events-none opacity-0 transition-opacity duration-150 ease-out z-20 bg-slate-900/95 text-white backdrop-blur-md shadow-2xl rounded-xl p-3 ring-1 ring-white/10 text-xs w-64 -translate-x-1/2 -translate-y-full mb-3" style="top: 0; left: 0;">
+                  <div class="flex items-center justify-between border-b border-slate-700/60 pb-1.5 mb-2">
+                    <span id="ttWeekName" class="font-extrabold text-white text-xs">Semana 1</span>
+                    <span id="ttTotal" class="font-mono font-bold text-emerald-400 text-xs">6.910 €</span>
+                  </div>
+                  <div class="space-y-1.5 text-[11px]">
+                    <div class="flex items-center justify-between">
+                      <span class="flex items-center gap-1.5 text-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Almuerzos
+                      </span>
+                      <span id="ttAlm" class="font-mono font-bold text-white">3.240 €</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="flex items-center gap-1.5 text-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                        Cenas
+                      </span>
+                      <span id="ttCenas" class="font-mono font-bold text-white">2.680 €</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="flex items-center gap-1.5 text-slate-300">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                        Re-pedidos QR
+                      </span>
+                      <span id="ttQR" class="font-mono font-bold text-white">990 €</span>
+                    </div>
+                  </div>
+                  <div class="mt-2 pt-1.5 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
+                    <span>Diagnóstico:</span>
+                    <span id="ttNote" class="text-indigo-300 font-semibold">Almuerzos líderes</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex justify-between text-[11px] text-slate-400 font-mono pt-1">
+                <span>Semana 1 (01-07 Sep)</span>
+                <span>Semana 2 (08-14 Sep)</span>
+                <span>Semana 3 (15-21 Sep)</span>
+                <span>Semana 4 (22-30 Sep)</span>
+              </div>
+            </div>
+
+            <!-- Tabla Resumen de Series Dinámica -->
+            <div class="overflow-x-auto pt-2">
+              <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-700 font-bold border-y border-slate-200 uppercase tracking-wider text-[10px]">
+                  <tr>
+                    <th class="py-2.5 px-3">Franja / Turno</th>
+                    <th class="py-2.5 px-3 text-right">Facturación</th>
+                    <th class="py-2.5 px-3 text-right">Comandas</th>
+                    <th class="py-2.5 px-3 text-right">Ticket Medio</th>
+                    <th class="py-2.5 px-3 text-right">Rotación</th>
+                    <th class="py-2.5 px-3 text-right">Crecimiento</th>
+                  </tr>
+                </thead>
+                <tbody id="chartTableBody" class="divide-y divide-slate-100">
+                  <tr class="hover:bg-slate-50 transition">
+                    <td class="py-2.5 px-3 flex items-center gap-2 font-bold text-slate-900">
+                      <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                      Comidas / Almuerzo (13:00 - 16:30)
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">14.420,00 €</td>
+                    <td class="py-2.5 px-3 text-right font-mono">238 pedidos</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">30,29 €</td>
+                    <td class="py-2.5 px-3 text-right font-mono text-blue-600 font-bold">1.8x / mesa</td>
+                    <td class="py-2.5 px-3 text-right font-mono text-emerald-600 font-bold">+11.4%</td>
+                  </tr>
+                  <tr class="hover:bg-slate-50 transition">
+                    <td class="py-2.5 px-3 flex items-center gap-2 font-bold text-slate-900">
+                      <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                      Cenas &amp; Cócteles (20:30 - 23:30)
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">12.010,00 €</td>
+                    <td class="py-2.5 px-3 text-right font-mono">195 pedidos</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">36,95 €</td>
+                    <td class="py-2.5 px-3 text-right font-mono text-blue-600 font-bold">1.4x / mesa</td>
+                    <td class="py-2.5 px-3 text-right font-mono text-emerald-600 font-bold">+18.2%</td>
+                  </tr>
+                  <tr class="hover:bg-slate-50 transition">
+                    <td class="py-2.5 px-3 flex items-center gap-2 font-bold text-slate-900">
+                      <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+                      Turno de Tarde &amp; Re-pedidos Terraza QR
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">4.920,00 €</td>
+                    <td class="py-2.5 px-3 text-right font-mono">109 pedidos</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">22,56 €</td>
+                    <td class="py-2.5 px-3 text-right font-mono text-cyan-600 font-bold">2.6x / mesa</td>
+                    <td class="py-2.5 px-3 text-right font-mono text-emerald-600 font-bold">+26.5%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================================= -->
+    <!-- 4. ACORDEÓN PASO 2: RENTABILIDAD DE CARTA & FAMILIAS (Donut Chart) -->
+    <!-- ========================================================================================= -->
+    <div id="item-step2" class="accordion-item bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs transition-all duration-200">
+      <button type="button" onclick="toggleAccordion('step2')" class="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-slate-50/70 transition cursor-pointer select-none">
+        <div class="flex items-start sm:items-center gap-3">
+          <span class="w-7 h-7 rounded-lg bg-cyan-100 text-cyan-700 font-mono font-bold text-xs flex items-center justify-center flex-shrink-0">
+            02
+          </span>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">
+                Reparto de Facturación y Costes por Familia
+              </h3>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">
+                Paso 2 &middot; Dónde se gana más
+              </span>
+            </div>
+            <p class="text-xs text-cyan-700 font-semibold mt-0.5 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"></path></svg>
+              ¿Para qué sirve? Conocer qué categorías te dejan ganancia limpia en el bolsillo y cuáles tienen costes altos en ingredientes.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+          <div class="text-left sm:text-right">
+            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Conclusión Clave</span>
+            <div class="flex items-center gap-1.5 justify-end">
+              <span class="text-xs font-bold text-slate-700 font-sans tracking-tight">Bebidas y Postres</span>
+              <span class="text-slate-300 font-normal">&middot;</span>
+              <span class="text-sm font-extrabold text-emerald-600 font-mono">82% - 84%</span>
+            </div>
+          </div>
+          <span id="chevron-step2" class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center transition-transform duration-200">
+            ▾
+          </span>
+        </div>
+      </button>
+
+      <div id="content-step2" class="accordion-body border-t border-slate-100">
+        <div class="accordion-body-inner">
+          <div class="p-4 sm:p-5 space-y-5">
+            
+            <!-- GUÍA RÁPIDA PARA EL DUEÑO (Paso 2) -->
+            <div class="p-3.5 rounded-xl bg-cyan-50/70 border border-cyan-200/80 space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5 font-extrabold text-cyan-950 text-xs">
+                  <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                  Guía Rápida para el Dueño: ¿Qué mirar aquí y qué hacer?
+                </div>
+                <button type="button" onclick="toggleGuide('step2')" class="text-[11px] text-cyan-800 hover:text-cyan-950 font-bold underline cursor-pointer">
+                  <span id="guide-btn-text-step2">Ocultar resumen</span>
+                </button>
+              </div>
+
+              <div id="guide-cards-step2" class="guide-body pt-1">
+                <div class="guide-body-inner">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-slate-700">
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-cyan-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-cyan-900 tracking-wider block">1. Qué estás viendo</span>
+                      <p class="text-[11px] leading-relaxed">
+                        De cada 100 € que cobras en el restaurante, cuánto dinero viene de comidas, de bebidas y de postres, y cuánto dinero se queda en tu bolsillo tras pagar a proveedores (margen bruto de beneficio).
+                      </p>
+                    </div>
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-cyan-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-emerald-700 tracking-wider block">2. Lo que pasó en tu local</span>
+                      <p class="text-[11px] leading-relaxed">
+                        Tus <strong>bebidas (82% de margen) y postres (84% de margen)</strong> son tus minas de oro: casi todo lo que cobras por ellos es beneficio neto. Las hamburguesas traen el 42% del dinero con un muy buen 68% de margen.
+                      </p>
+                    </div>
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-cyan-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-cyan-900 tracking-wider block">3. Qué te recomendamos hacer</span>
+                      <p class="text-[11px] leading-relaxed">
+                        Forma a tu equipo para ofrecer siempre postre casero o copa al retirar los platos principales; cada postre vendido añade dinero prácticamente limpio a tu cuenta a final de mes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center gap-6 pt-1">
+              <!-- Donut SVG Interactivo Ampliado y Proporcional -->
+              <div id="donutContainer" class="relative w-48 h-48 sm:w-56 sm:h-56 flex-shrink-0 flex items-center justify-center group/donut cursor-pointer">
+                <svg class="w-full h-full -rotate-90 overflow-visible" viewBox="0 0 44 44">
+                  <circle cx="22" cy="22" r="16.5" fill="none" stroke="#f1f5f9" stroke-width="3.8" pathLength="100"/>
+                  <circle id="donutSeg-burgers" onmouseenter="hoverDonut('burgers')" onmouseleave="leaveDonut()" cx="22" cy="22" r="16.5" fill="none" stroke="#2563eb" stroke-width="3.8" stroke-dasharray="42 100" stroke-dashoffset="0" pathLength="100" class="donut-slice cursor-pointer"/>
+                  <circle id="donutSeg-drinks" onmouseenter="hoverDonut('drinks')" onmouseleave="leaveDonut()" cx="22" cy="22" r="16.5" fill="none" stroke="#06b6d4" stroke-width="3.8" stroke-dasharray="28 100" stroke-dashoffset="-42" pathLength="100" class="donut-slice cursor-pointer"/>
+                  <circle id="donutSeg-starters" onmouseenter="hoverDonut('starters')" onmouseleave="leaveDonut()" cx="22" cy="22" r="16.5" fill="none" stroke="#6366f1" stroke-width="3.8" stroke-dasharray="16 100" stroke-dashoffset="-70" pathLength="100" class="donut-slice cursor-pointer"/>
+                  <circle id="donutSeg-desserts" onmouseenter="hoverDonut('desserts')" onmouseleave="leaveDonut()" cx="22" cy="22" r="16.5" fill="none" stroke="#f59e0b" stroke-width="3.8" stroke-dasharray="10 100" stroke-dashoffset="-86" pathLength="100" class="donut-slice cursor-pointer"/>
+                  <circle id="donutSeg-others" onmouseenter="hoverDonut('others')" onmouseleave="leaveDonut()" cx="22" cy="22" r="16.5" fill="none" stroke="#a855f7" stroke-width="3.8" stroke-dasharray="4 100" stroke-dashoffset="-96" pathLength="100" class="donut-slice cursor-pointer"/>
+                </svg>
+                <!-- Centro Dinámico del Donut con Amplio Margen Interior -->
+                <div id="donutCenter" class="absolute inset-0 flex flex-col items-center justify-center text-center p-3 pointer-events-none transition-all duration-200">
+                  <span id="donutCenterLabel" class="text-slate-400 font-extrabold uppercase text-[10px] sm:text-xs tracking-wider transition-colors max-w-[125px] truncate block leading-tight">Facturación</span>
+                  <span id="donutCenterValue" class="text-lg sm:text-2xl font-black text-slate-900 font-mono leading-tight my-0.5 transition-all">31.350 €</span>
+                  <span id="donutCenterSub" class="text-[10px] sm:text-[11px] text-emerald-600 font-bold tracking-tight transition-colors">100% &middot; Margen 74%</span>
+                </div>
+              </div>
+
+              <!-- Lista de Categorías con Hover Sincronizado -->
+              <div class="flex-1 w-full space-y-1.5 text-xs">
+                <div id="donutRow-burgers" onmouseenter="hoverDonut('burgers')" onmouseleave="leaveDonut()" class="flex items-center justify-between p-2 rounded-lg transition-all cursor-pointer hover:bg-blue-50/70 hover:ring-1 hover:ring-blue-200">
+                  <div class="flex items-center gap-2 truncate">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-blue-600 flex-shrink-0"></span>
+                    <span class="font-semibold text-slate-800 truncate">Hamburguesas y Platos</span>
+                  </div>
+                  <div class="flex items-center gap-2 font-mono flex-shrink-0">
+                    <span class="font-bold text-slate-900">13.167 €</span>
+                    <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">42.0%</span>
+                    <span class="text-[10px] text-emerald-600 font-bold hidden sm:inline">68% mg</span>
+                  </div>
+                </div>
+
+                <div id="donutRow-drinks" onmouseenter="hoverDonut('drinks')" onmouseleave="leaveDonut()" class="flex items-center justify-between p-2 rounded-lg transition-all cursor-pointer hover:bg-cyan-50/70 hover:ring-1 hover:ring-cyan-200">
+                  <div class="flex items-center gap-2 truncate">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-cyan-500 flex-shrink-0"></span>
+                    <span class="font-semibold text-slate-800 truncate">Bebidas y Cócteles</span>
+                  </div>
+                  <div class="flex items-center gap-2 font-mono flex-shrink-0">
+                    <span class="font-bold text-slate-900">8.778 €</span>
+                    <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">28.0%</span>
+                    <span class="text-[10px] text-emerald-600 font-bold hidden sm:inline">82% mg</span>
+                  </div>
+                </div>
+
+                <div id="donutRow-starters" onmouseenter="hoverDonut('starters')" onmouseleave="leaveDonut()" class="flex items-center justify-between p-2 rounded-lg transition-all cursor-pointer hover:bg-indigo-50/70 hover:ring-1 hover:ring-indigo-200">
+                  <div class="flex items-center gap-2 truncate">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-indigo-500 flex-shrink-0"></span>
+                    <span class="font-semibold text-slate-800 truncate">Entrantes y Raciones</span>
+                  </div>
+                  <div class="flex items-center gap-2 font-mono flex-shrink-0">
+                    <span class="font-bold text-slate-900">5.016 €</span>
+                    <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">16.0%</span>
+                    <span class="text-[10px] text-emerald-600 font-bold hidden sm:inline">78% mg</span>
+                  </div>
+                </div>
+
+                <div id="donutRow-desserts" onmouseenter="hoverDonut('desserts')" onmouseleave="leaveDonut()" class="flex items-center justify-between p-2 rounded-lg transition-all cursor-pointer hover:bg-amber-50/70 hover:ring-1 hover:ring-amber-200">
+                  <div class="flex items-center gap-2 truncate">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-amber-500 flex-shrink-0"></span>
+                    <span class="font-semibold text-slate-800 truncate">Postres y Cafés (QR)</span>
+                  </div>
+                  <div class="flex items-center gap-2 font-mono flex-shrink-0">
+                    <span class="font-bold text-slate-900">3.135 €</span>
+                    <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">10.0%</span>
+                    <span class="text-[10px] text-emerald-600 font-bold hidden sm:inline">84% mg</span>
+                  </div>
+                </div>
+
+                <div id="donutRow-others" onmouseenter="hoverDonut('others')" onmouseleave="leaveDonut()" class="flex items-center justify-between p-2 rounded-lg transition-all cursor-pointer hover:bg-purple-50/70 hover:ring-1 hover:ring-purple-200">
+                  <div class="flex items-center gap-2 truncate">
+                    <span class="w-2.5 h-2.5 rounded-sm bg-purple-500 flex-shrink-0"></span>
+                    <span class="font-semibold text-slate-800 truncate">Extras y Pan</span>
+                  </div>
+                  <div class="flex items-center gap-2 font-mono flex-shrink-0">
+                    <span class="font-bold text-slate-900">1.254 €</span>
+                    <span class="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-bold">4.0%</span>
+                    <span class="text-[10px] text-slate-600 font-bold hidden sm:inline">70% mg</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <details class="group pt-2 border-t border-slate-100 text-xs">
+              <summary class="flex items-center justify-between font-bold text-blue-600 hover:text-blue-700 cursor-pointer py-1 select-none">
+                <span class="flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                  Desplegar desglose de costes de producto y márgenes
+                </span>
+                <span class="transition group-open:rotate-180">▾</span>
+              </summary>
+              <div class="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-[11px] text-slate-600">
+                <div class="flex justify-between border-b border-slate-200 pb-1">
+                  <span class="font-semibold text-slate-700">Bebidas y Cafetería</span>
+                  <span class="font-mono font-bold text-emerald-600">82% Margen Bruto (Coste MP: 18%)</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-200 pb-1">
+                  <span class="font-semibold text-slate-700">Postres Caseros</span>
+                  <span class="font-mono font-bold text-emerald-600">84% Margen Bruto (Coste MP: 16%)</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-200 pb-1">
+                  <span class="font-semibold text-slate-700">Entrantes y Raciones</span>
+                  <span class="font-mono font-bold text-emerald-600">78% Margen Bruto (Coste MP: 22%)</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="font-semibold text-slate-700">Hamburguesas de Vaca Madurada</span>
+                  <span class="font-mono font-bold text-slate-800">68% Margen Bruto (Coste MP: 32%)</span>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================================= -->
+    <!-- 5. ACORDEÓN PASO 3: DIAGNÓSTICO OPERATIVO & ZONAS (Con Logos Elegantes Vectoriales) -->
+    <!-- ========================================================================================= -->
+    <div id="item-step3" class="accordion-item bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs transition-all duration-200">
+      <button type="button" onclick="toggleAccordion('step3')" class="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-slate-50/70 transition cursor-pointer select-none">
+        <div class="flex items-start sm:items-center gap-3">
+          <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-mono font-bold text-xs flex items-center justify-center flex-shrink-0">
+            03
+          </span>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">
+                Salud del Servicio y Rendimiento Operativo (Sala / Cocina)
+              </h3>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Paso 3 &middot; Ritmo del Equipo
+              </span>
+            </div>
+            <p class="text-xs text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"></path></svg>
+              ¿Para qué sirve? Controlar si hubo retrasos en comandas, atascos en cocina o si las mesas rotaron con agilidad.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+          <div class="text-left sm:text-right">
+            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Conclusión Clave</span>
+            <div class="flex items-center gap-1.5 justify-end">
+              <span class="text-sm font-extrabold text-emerald-600 font-mono">94.2%</span>
+              <span class="text-xs font-bold text-emerald-600 font-sans tracking-tight whitespace-nowrap">Fluido</span>
+              <span class="text-slate-300 font-normal">&middot;</span>
+              <span class="text-xs font-bold text-slate-600 font-mono whitespace-nowrap">11.4 min pase</span>
+            </div>
+          </div>
+          <span id="chevron-step3" class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center transition-transform duration-200">
+            ▾
+          </span>
+        </div>
+      </button>
+
+      <div id="content-step3" class="accordion-body border-t border-slate-100">
+        <div class="accordion-body-inner">
+          <div class="p-4 sm:p-5 space-y-5">
+            
+            <!-- GUÍA RÁPIDA PARA EL DUEÑO (Paso 3) -->
+            <div class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5 font-extrabold text-emerald-950 text-xs">
+                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                  Guía Rápida para el Dueño: ¿Qué mirar aquí y qué hacer?
+                </div>
+                <button type="button" onclick="toggleGuide('step3')" class="text-[11px] text-emerald-800 hover:text-emerald-950 font-bold underline cursor-pointer">
+                  <span id="guide-btn-text-step3">Ocultar resumen</span>
+                </button>
+              </div>
+
+              <div id="guide-cards-step3" class="guide-body pt-1">
+                <div class="guide-body-inner">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-slate-700">
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-emerald-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-emerald-900 tracking-wider block">1. Qué estás viendo</span>
+                      <p class="text-[11px] leading-relaxed">
+                        El semáforo diario de cocina (verde = servicio impecable, amarillo/rojo = demoras) y la velocidad real de atención en terraza, salón y pantallas de cocina (KDS).
+                      </p>
+                    </div>
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-emerald-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-emerald-700 tracking-wider block">2. Lo que pasó en tu local</span>
+                      <p class="text-[11px] leading-relaxed">
+                        Tu equipo funcionó de forma excelente: <strong>27 de los 30 días fueron totalmente fluidos (94.2%)</strong>. Los pedidos llegan a cocina en <strong>12 segundos</strong> y la comida sale en <strong>11.4 minutos</strong> de media.
+                      </p>
+                    </div>
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-emerald-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-emerald-900 tracking-wider block">3. Qué te recomendamos hacer</span>
+                      <p class="text-[11px] leading-relaxed">
+                        Solo hubo 3 demoras puntuales en todo el mes (dos viernes noche a las 22:00 y un sábado por comanda de 14). Tu ritmo es óptimo; solo mantén un refuerzo en barra los viernes noche.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tira Tracker de 30 bloques con Hover Interactivo -->
+            <div class="space-y-3 pb-4 border-b border-slate-100">
+              <div class="flex items-center justify-between text-xs flex-wrap gap-2">
+                <span class="font-semibold text-slate-700">Disponibilidad de cocina y fluidez de servicio (30 días auditados):</span>
+                <span class="font-mono font-bold text-emerald-600">27 días óptimos &middot; 3 demoras puntuales</span>
+              </div>
+
+              <!-- Tarjeta de Inspección Diaria Dinámica (Se actualiza al pasar el mouse por los días) -->
+              <div id="kitchenDayCard" class="bg-slate-50/90 rounded-xl p-3 border border-slate-200/90 shadow-xs transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div class="flex items-start sm:items-center gap-3">
+                  <span id="kitchenDayIcon" class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    ✓
+                  </span>
+                  <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span id="kitchenDayDate" class="font-extrabold text-slate-900">Resumen Mensual de Ritmo</span>
+                      <span id="kitchenDayBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        94.2% Fluidez
+                      </span>
+                    </div>
+                    <p id="kitchenDayDesc" class="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                      Pasa el ratón sobre cualquier día para auditar el pase medio, demoras o incidencias operativas.
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 text-[11px] font-mono sm:text-right flex-shrink-0 pl-11 sm:pl-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60">
+                  <div>
+                    <span class="text-[10px] text-slate-400 block uppercase font-sans font-semibold">Pase Medio</span>
+                    <span id="kitchenDayPase" class="font-bold text-slate-900">11.4 min</span>
+                  </div>
+                  <span class="text-slate-300 font-normal">&middot;</span>
+                  <div>
+                    <span class="text-[10px] text-slate-400 block uppercase font-sans font-semibold">Comandas</span>
+                    <span id="kitchenDayOrders" class="font-bold text-blue-600">542 total</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cuadrícula de 30 días interactivos -->
+              <div class="grid grid-cols-10 sm:grid-cols-15 gap-1.5 pt-1">
+                <div id="kday-1" onmouseenter="hoverKitchenDay(1)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-2" onmouseenter="hoverKitchenDay(2)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-3" onmouseenter="hoverKitchenDay(3)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-4" onmouseenter="hoverKitchenDay(4)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-5" onmouseenter="hoverKitchenDay(5)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-6" onmouseenter="hoverKitchenDay(6)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-7" onmouseenter="hoverKitchenDay(7)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-amber-400 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-8" onmouseenter="hoverKitchenDay(8)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-9" onmouseenter="hoverKitchenDay(9)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-10" onmouseenter="hoverKitchenDay(10)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-11" onmouseenter="hoverKitchenDay(11)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-12" onmouseenter="hoverKitchenDay(12)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-13" onmouseenter="hoverKitchenDay(13)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-14" onmouseenter="hoverKitchenDay(14)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-rose-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-15" onmouseenter="hoverKitchenDay(15)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-16" onmouseenter="hoverKitchenDay(16)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-17" onmouseenter="hoverKitchenDay(17)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-18" onmouseenter="hoverKitchenDay(18)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-19" onmouseenter="hoverKitchenDay(19)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-20" onmouseenter="hoverKitchenDay(20)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-amber-400 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-21" onmouseenter="hoverKitchenDay(21)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-22" onmouseenter="hoverKitchenDay(22)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-23" onmouseenter="hoverKitchenDay(23)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-24" onmouseenter="hoverKitchenDay(24)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-25" onmouseenter="hoverKitchenDay(25)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-26" onmouseenter="hoverKitchenDay(26)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-27" onmouseenter="hoverKitchenDay(27)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-28" onmouseenter="hoverKitchenDay(28)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-29" onmouseenter="hoverKitchenDay(29)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+                <div id="kday-30" onmouseenter="hoverKitchenDay(30)" onmouseleave="leaveKitchenDay()" class="h-6 rounded bg-emerald-500 hover:scale-125 hover:z-20 hover:shadow-md transition-all duration-150 cursor-pointer"></div>
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+                <span>01 Sep</span>
+                <div class="flex items-center gap-3">
+                  <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Fluido</span>
+                  <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Pico</span>
+                  <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Demora</span>
+                </div>
+                <span>30 Sep</span>
+              </div>
+
+              <!-- Incidencias Acordeón -->
+              <details class="group pt-2 text-xs">
+                <summary class="flex items-center justify-between font-bold text-slate-800 hover:text-blue-600 cursor-pointer py-1 select-none">
+              <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                Ver Detalle de Incidencias Operativas (3 eventos)
+              </span>
+              <span class="transition group-open:rotate-180">▾</span>
+            </summary>
+            <div class="mt-2 space-y-1.5 pt-1">
+              <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div class="space-y-0.5">
+                  <span class="font-bold text-slate-900">Sábado 14 Sep &middot; 15:10</span>
+                  <p class="text-[11px] text-slate-500">Demora de 6 min en pase de cocina por comanda múltiple (Mesa 12, 14 comensales).</p>
+                </div>
+                <span class="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 font-mono">+6 min</span>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div class="space-y-0.5">
+                  <span class="font-bold text-slate-900">Viernes 20 Sep &middot; 22:15</span>
+                  <p class="text-[11px] text-slate-500">Cuello de botella puntual en barra de cócteles durante pico de cena.</p>
+                </div>
+                <span class="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-mono">+4 min</span>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div class="space-y-0.5">
+                  <span class="font-bold text-slate-900">Domingo 07 Sep &middot; 14:40</span>
+                  <p class="text-[11px] text-slate-500">Rotura puntual de stock de pan artesano para hamburguesas, resuelta en 15 min.</p>
+                </div>
+                <span class="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-mono">Stock</span>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- SUB-BLOQUE: RENDIMIENTO POR ÁREAS CON LOGOS ELEGANTES VECTORIALES -->
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Rendimiento Desglosado por Áreas Operativas
+          </h4>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            
+            <!-- 1. Terraza Exterior (Logo Elegante Sun) -->
+            <div class="bg-slate-50/70 rounded-xl p-4 ring-1 ring-slate-200/80 hover:bg-white hover:shadow-xs transition space-y-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 ring-1 ring-sky-200/80 flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41m14.14-14.14l-1.41 1.41"></path></svg>
+                </div>
+                <div class="truncate">
+                  <h5 class="text-sm font-bold text-slate-900 truncate">Terraza Exterior</h5>
+                  <p class="text-xs text-slate-500">12 mesas &middot; 48 plazas</p>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 text-xs">
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold block">Ventas QR</span>
+                  <span class="font-bold text-slate-900 font-mono">+3.911,40 €</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold block">Rotación</span>
+                  <span class="font-bold text-sky-600 font-mono">2.6x / mesa</span>
+                </div>
+              </div>
+              <div class="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                <span class="text-slate-500">Ocupación media</span>
+                <span class="font-bold text-emerald-600">94.8% (Óptima)</span>
+              </div>
+            </div>
+
+            <!-- 2. Salón Principal (Logo Elegante Utensils) -->
+            <div class="bg-slate-50/70 rounded-xl p-4 ring-1 ring-slate-200/80 hover:bg-white hover:shadow-xs transition space-y-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200/80 flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 2v8a2 2 0 01-2 2h-1a2 2 0 01-2-2V2m4 10v10m-8-10H8a2 2 0 01-2-2V2m2 0v8m2-8v8m-3 2v10"></path></svg>
+                </div>
+                <div class="truncate">
+                  <h5 class="text-sm font-bold text-slate-900 truncate">Salón Principal</h5>
+                  <p class="text-xs text-slate-500">16 mesas &middot; 64 plazas</p>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 text-xs">
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold block">Ticket Medio</span>
+                  <span class="font-bold text-slate-900 font-mono">35,40 €</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold block">Tiempo Mesa</span>
+                  <span class="font-bold text-indigo-600 font-mono">48 min</span>
+                </div>
+              </div>
+              <div class="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                <span class="text-slate-500">Ocupación media</span>
+                <span class="font-bold text-emerald-600">82.1% (Estable)</span>
+              </div>
+            </div>
+
+            <!-- 3. Cocina & KDS (Logo Elegante Flame) -->
+            <div class="bg-slate-50/70 rounded-xl p-4 ring-1 ring-slate-200/80 hover:bg-white hover:shadow-xs transition space-y-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200/80 flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343a7.975 7.975 0 010 11.314z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </div>
+                <div class="truncate">
+                  <h5 class="text-sm font-bold text-slate-900 truncate">Cocina y Pantallas KDS</h5>
+                  <p class="text-xs text-slate-500">Pantallas táctiles &middot; 4 puestos</p>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 text-xs">
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold block">Llegada KDS</span>
+                  <span class="font-bold text-emerald-600 font-mono">12 seg</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 uppercase font-semibold block">Pase Medio</span>
+                  <span class="font-bold text-slate-900 font-mono">11.4 min</span>
+                </div>
+              </div>
+              <div class="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
+                <span class="text-slate-500">Eficiencia de pase</span>
+                <span class="font-bold text-emerald-600">96.0% (Excelente)</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================================= -->
+    <!-- 4. ACORDEÓN PASO 4: MATRIZ BCG & SUGERENCIAS IA -->
+    <!-- ========================================================================================= -->
+    <div id="item-step4" class="accordion-item bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs transition-all duration-200">
+      <button type="button" onclick="toggleAccordion('step4')" class="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-slate-50/70 transition cursor-pointer select-none">
+        <div class="flex items-start sm:items-center gap-3">
+          <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 font-mono font-bold text-xs flex items-center justify-center flex-shrink-0">
+            04
+          </span>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">
+                Ingeniería de Menú (Matriz BCG) y Recomendaciones de IA
+              </h3>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                Paso 4 &middot; Optimización de Carta
+              </span>
+            </div>
+            <p class="text-xs text-purple-700 font-semibold mt-0.5 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"></path></svg>
+              ¿Para qué sirve? Identificar qué platos aportan mayor rentabilidad, cuáles requieren ajuste y qué cambios aumentarán tu margen neto.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+          <div class="text-left sm:text-right">
+            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Conclusión Clave</span>
+            <div class="flex items-center gap-1.5 justify-end">
+              <span class="text-xs font-bold text-purple-700 font-sans tracking-tight whitespace-nowrap">6 ganadores</span>
+              <span class="text-slate-300 font-normal">&middot;</span>
+              <span class="text-sm font-extrabold text-purple-700 font-mono whitespace-nowrap">+2.510 € IA</span>
+            </div>
+          </div>
+          <span id="chevron-step4" class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center transition-transform duration-200">
+            ▾
+          </span>
+        </div>
+      </button>
+
+      <div id="content-step4" class="accordion-body border-t border-slate-100">
+        <div class="accordion-body-inner">
+          <div class="p-4 sm:p-5 space-y-6">
+            
+            <!-- GUÍA RÁPIDA PARA EL DUEÑO (Paso 4) -->
+            <div class="p-3.5 rounded-xl bg-purple-50/70 border border-purple-200/80 space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5 font-extrabold text-purple-950 text-xs">
+                  <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+                  Guía Rápida para el Dueño: ¿Qué mirar aquí y qué hacer?
+                </div>
+                <button type="button" onclick="toggleGuide('step4')" class="text-[11px] text-purple-800 hover:text-purple-950 font-bold underline cursor-pointer">
+                  <span id="guide-btn-text-step4">Ocultar resumen</span>
+                </button>
+              </div>
+
+              <div id="guide-cards-step4" class="guide-body pt-1">
+                <div class="guide-body-inner">
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-slate-700">
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-purple-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-purple-900 tracking-wider block">1. Qué estás viendo</span>
+                      <p class="text-[11px] leading-relaxed">
+                        Tus platos clasificados en 4 tipos: ⭐ Estrella (más ventas y más margen), 🐄 Vaca (clásicos), 💎 Oportunidad (rentables pero ocultos) y ⚠️ Alerta (poca rotación).
+                      </p>
+                    </div>
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-purple-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-emerald-700 tracking-wider block">2. Lo que pasó en tu local</span>
+                      <p class="text-[11px] leading-relaxed">
+                        Tienes <strong>4 platos estrella intocables</strong> (Pulpo, Smash Burger, Cerveza, Tarta). Pero el <strong>Tartar de Atún te deja un 81% de margen limpio</strong> y se pide poco por estar al final de la carta.
+                      </p>
+                    </div>
+                    <div class="bg-white/80 p-2.5 rounded-lg border border-purple-100 space-y-0.5">
+                      <span class="text-[10px] uppercase font-bold text-purple-900 tracking-wider block">3. Qué te recomendamos hacer</span>
+                      <p class="text-[11px] leading-relaxed">
+                        Destaca el Tartar en 'Recomendaciones del Chef' (<strong>+450 € netos/mes</strong>) y ajusta la Ensalada César para evitar mermas en producto fresco.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+        <!-- Matriz BCG -->
+        <div class="space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div>
+              <h4 class="text-sm font-bold text-slate-900">Auditoría Individual de Platos y Rentabilidad</h4>
+              <p class="text-xs text-slate-500">Haz clic en cualquier plato para ver el diagnóstico estratégico de la IA.</p>
+            </div>
+            
+            <!-- Selector BCG -->
+            <div class="flex items-center gap-2">
+              <label for="tableFilter" class="text-xs font-bold text-slate-600 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                Filtrar:
+              </label>
+              <select id="tableFilter" onchange="filterBcgTable(this.value)" class="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer hover:bg-slate-100 transition shadow-xs">
+                <option value="all" selected>Todos los platos (8)</option>
+                <option value="stars">Solo Platos Estrella ⭐</option>
+                <option value="cows">Solo Vacas Lecheras 🐄</option>
+                <option value="dogs">Alertas de Rotación ⚠️</option>
+                <option value="questions">Dilemas / Oportunidades 💎</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+              <thead class="bg-slate-50 text-slate-700 font-bold border-y border-slate-200 uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th class="py-2.5 px-3">Plato &amp; Categoría</th>
+                  <th class="py-2.5 px-3">Clasificación BCG</th>
+                  <th class="py-2.5 px-3 text-right">Uds. Vendidas</th>
+                  <th class="py-2.5 px-3 text-right">Facturación</th>
+                  <th class="py-2.5 px-3 text-right">Coste MP</th>
+                  <th class="py-2.5 px-3 text-right">Margen Bruto</th>
+                  <th class="py-2.5 px-3 text-right">Acción Recomendada</th>
+                  <th class="py-2.5 px-3 text-center">Detalle</th>
+                </tr>
+              </thead>
+              <tbody id="bcgTableBody" class="divide-y divide-slate-100 font-medium">
+                
+                <tr data-type="stars" onclick="toggleDishDetail('detail-1', this)" class="dish-row hover:bg-slate-50 transition cursor-pointer">
+                  <td class="py-2.5 px-3 font-bold text-slate-900">
+                    Smash Burger Doble Queso <span class="text-[10px] text-slate-400 block font-normal">Hamburguesas</span>
+                  </td>
+                  <td class="py-2.5 px-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">⭐ Estrella</span></td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">140 u.</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">1.890,00 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-slate-500">3,51 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-600">74%</td>
+                  <td class="py-2.5 px-3 text-right"><span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Mantener precio</span></td>
+                  <td class="py-2.5 px-3 text-center"><span class="chevron-icon inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600 transition">▾</span></td>
+                </tr>
+                <tr id="detail-1" class="hidden bg-slate-50/80">
+                  <td colspan="8" class="py-3 px-4 border-l-4 border-blue-500">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">✨ Diagnóstico &amp; Estrategia IA</span>
+                        <p class="text-slate-700 leading-relaxed max-w-2xl">Alta demanda y excelente margen. No tocar receta; optimizar velocidad de plancha en pase para picos de viernes noche.</p>
+                      </div>
+                      <div class="flex items-center gap-3 text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex-shrink-0">
+                        <span class="text-slate-500">Beneficio por ración:</span>
+                        <strong class="text-emerald-600 font-bold">9,99 €</strong>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr data-type="stars" onclick="toggleDishDetail('detail-2', this)" class="dish-row hover:bg-slate-50 transition cursor-pointer">
+                  <td class="py-2.5 px-3 font-bold text-slate-900">
+                    Pulpo a la Brasa Crujiente <span class="text-[10px] text-slate-400 block font-normal">Pescados &amp; Mariscos</span>
+                  </td>
+                  <td class="py-2.5 px-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">⭐ Estrella</span></td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">115 u.</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">2.185,00 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-slate-500">6,08 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-600">68%</td>
+                  <td class="py-2.5 px-3 text-right"><span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Plato insignia</span></td>
+                  <td class="py-2.5 px-3 text-center"><span class="chevron-icon inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600 transition">▾</span></td>
+                </tr>
+                <tr id="detail-2" class="hidden bg-slate-50/80">
+                  <td colspan="8" class="py-3 px-4 border-l-4 border-blue-500">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">✨ Diagnóstico &amp; Estrategia IA</span>
+                        <p class="text-slate-700 leading-relaxed max-w-2xl">Mayor generador de facturación bruta. Destacado en foto principal del menú digital con gran índice de conversión.</p>
+                      </div>
+                      <div class="flex items-center gap-3 text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex-shrink-0">
+                        <span class="text-slate-500">Beneficio por ración:</span>
+                        <strong class="text-emerald-600 font-bold">12,92 €</strong>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr data-type="cows" onclick="toggleDishDetail('detail-3', this)" class="dish-row hover:bg-slate-50 transition cursor-pointer">
+                  <td class="py-2.5 px-3 font-bold text-slate-900">
+                    Caña Estrella Galicia <span class="text-[10px] text-slate-400 block font-normal">Bebidas &amp; Cervezas</span>
+                  </td>
+                  <td class="py-2.5 px-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">🐄 Vaca Lechera</span></td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">340 u.</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">1.020,00 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-slate-500">0,54 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-600">82%</td>
+                  <td class="py-2.5 px-3 text-right"><span class="text-[10px] font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">Activar botón 2ª ronda</span></td>
+                  <td class="py-2.5 px-3 text-center"><span class="chevron-icon inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600 transition">▾</span></td>
+                </tr>
+                <tr id="detail-3" class="hidden bg-slate-50/80">
+                  <td colspan="8" class="py-3 px-4 border-l-4 border-blue-500">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">✨ Diagnóstico &amp; Estrategia IA</span>
+                        <p class="text-slate-700 leading-relaxed max-w-2xl">82% de margen bruto. El botón directo en el QR generó 86 rondas extra sin necesidad de llamar al camarero ni saturar la barra.</p>
+                      </div>
+                      <div class="flex items-center gap-3 text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex-shrink-0">
+                        <span class="text-slate-500">Beneficio por ración:</span>
+                        <strong class="text-emerald-600 font-bold">2,46 €</strong>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr data-type="cows" onclick="toggleDishDetail('detail-4', this)" class="dish-row hover:bg-slate-50 transition cursor-pointer">
+                  <td class="py-2.5 px-3 font-bold text-slate-900">
+                    Patatas Rústicas Trufadas <span class="text-[10px] text-slate-400 block font-normal">Entrantes</span>
+                  </td>
+                  <td class="py-2.5 px-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">🐄 Vaca Lechera</span></td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">180 u.</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">990,00 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-slate-500">1,21 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-600">78%</td>
+                  <td class="py-2.5 px-3 text-right"><span class="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Ideal picoteo</span></td>
+                  <td class="py-2.5 px-3 text-center"><span class="chevron-icon inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600 transition">▾</span></td>
+                </tr>
+                <tr id="detail-4" class="hidden bg-slate-50/80">
+                  <td colspan="8" class="py-3 px-4 border-l-4 border-blue-500">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">✨ Diagnóstico &amp; Estrategia IA</span>
+                        <p class="text-slate-700 leading-relaxed max-w-2xl">Alto margen con muy bajo coste de materia prima. Se consume como acompañamiento constante en el 64% de las mesas.</p>
+                      </div>
+                      <div class="flex items-center gap-3 text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex-shrink-0">
+                        <span class="text-slate-500">Beneficio por ración:</span>
+                        <strong class="text-emerald-600 font-bold">4,29 €</strong>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr data-type="questions" onclick="toggleDishDetail('detail-5', this)" class="dish-row hover:bg-slate-50 transition cursor-pointer">
+                  <td class="py-2.5 px-3 font-bold text-slate-900">
+                    Tartar de Atún Rojo <span class="text-[10px] text-slate-400 block font-normal">Sugerencias Chef</span>
+                  </td>
+                  <td class="py-2.5 px-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">💎 Oportunidad</span></td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">22 u.</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">396,00 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-slate-500">3,42 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-purple-600">81%</td>
+                  <td class="py-2.5 px-3 text-right"><span class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">Destacar en cabecera</span></td>
+                  <td class="py-2.5 px-3 text-center"><span class="chevron-icon inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600 transition">▾</span></td>
+                </tr>
+                <tr id="detail-5" class="hidden bg-slate-50/80">
+                  <td colspan="8" class="py-3 px-4 border-l-4 border-blue-500">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">✨ Diagnóstico &amp; Estrategia IA</span>
+                        <p class="text-slate-700 leading-relaxed max-w-2xl">Margen sobresaliente (81%) con baja visibilidad al final de la carta. Destacarlo en el carrusel de recomendaciones aportará +450 €/mes.</p>
+                      </div>
+                      <div class="flex items-center gap-3 text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex-shrink-0">
+                        <span class="text-slate-500">Beneficio por ración:</span>
+                        <strong class="text-emerald-600 font-bold">14,58 €</strong>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr data-type="dogs" onclick="toggleDishDetail('detail-6', this)" class="dish-row hover:bg-slate-50 transition cursor-pointer">
+                  <td class="py-2.5 px-3 font-bold text-slate-900">
+                    Ensalada César con Pollo <span class="text-[10px] text-slate-400 block font-normal">Entrantes</span>
+                  </td>
+                  <td class="py-2.5 px-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">⚠️ Alerta Baja Rot.</span></td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-rose-600">14 u.</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">154,00 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-slate-500">6,38 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-rose-600">42%</td>
+                  <td class="py-2.5 px-3 text-right"><span class="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">Revisar preparación</span></td>
+                  <td class="py-2.5 px-3 text-center"><span class="chevron-icon inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600 transition">▾</span></td>
+                </tr>
+                <tr id="detail-6" class="hidden bg-slate-50/80">
+                  <td colspan="8" class="py-3 px-4 border-l-4 border-blue-500">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">✨ Diagnóstico &amp; Estrategia IA</span>
+                        <p class="text-slate-700 leading-relaxed max-w-2xl">Baja rotación y margen reducido (42%). Sobrecarga el trabajo previo de cocina y ocasiona mermas de producto fresco.</p>
+                      </div>
+                      <div class="flex items-center gap-3 text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex-shrink-0">
+                        <span class="text-slate-500">Beneficio por ración:</span>
+                        <strong class="text-rose-600 font-bold">4,62 €</strong>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr data-type="stars" onclick="toggleDishDetail('detail-7', this)" class="dish-row hover:bg-slate-50 transition cursor-pointer">
+                  <td class="py-2.5 px-3 font-bold text-slate-900">
+                    Tarta de Queso Fluida <span class="text-[10px] text-slate-400 block font-normal">Postres Caseros</span>
+                  </td>
+                  <td class="py-2.5 px-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">⭐ Estrella</span></td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">92 u.</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">644,00 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-slate-500">1,12 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-600">84%</td>
+                  <td class="py-2.5 px-3 text-right"><span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Venta post-cuenta</span></td>
+                  <td class="py-2.5 px-3 text-center"><span class="chevron-icon inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600 transition">▾</span></td>
+                </tr>
+                <tr id="detail-7" class="hidden bg-slate-50/80">
+                  <td colspan="8" class="py-3 px-4 border-l-4 border-blue-500">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">✨ Diagnóstico &amp; Estrategia IA</span>
+                        <p class="text-slate-700 leading-relaxed max-w-2xl">84% de margen bruto. El banner sugerido de postres tras 30 min en mesa disparó los pedidos directos en un 38%.</p>
+                      </div>
+                      <div class="flex items-center gap-3 text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex-shrink-0">
+                        <span class="text-slate-500">Beneficio por ración:</span>
+                        <strong class="text-emerald-600 font-bold">5,88 €</strong>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr data-type="questions" onclick="toggleDishDetail('detail-8', this)" class="dish-row hover:bg-slate-50 transition cursor-pointer">
+                  <td class="py-2.5 px-3 font-bold text-slate-900">
+                    Solomillo Ibérico al Pedro Ximénez <span class="text-[10px] text-slate-400 block font-normal">Carnes</span>
+                  </td>
+                  <td class="py-2.5 px-3"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">💎 Oportunidad</span></td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">28 u.</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">616,00 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-slate-500">5,20 €</td>
+                  <td class="py-2.5 px-3 text-right font-mono font-bold text-purple-600">76%</td>
+                  <td class="py-2.5 px-3 text-right"><span class="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">Sugerir maridaje</span></td>
+                  <td class="py-2.5 px-3 text-center"><span class="chevron-icon inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600 transition">▾</span></td>
+                </tr>
+                <tr id="detail-8" class="hidden bg-slate-50/80">
+                  <td colspan="8" class="py-3 px-4 border-l-4 border-blue-500">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div class="space-y-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1">✨ Diagnóstico &amp; Estrategia IA</span>
+                        <p class="text-slate-700 leading-relaxed max-w-2xl">Margen del 76%. Emparejarlo con copa de Ribera del Duero en el menú digital eleva el ticket medio de la comanda en +4,50 €.</p>
+                      </div>
+                      <div class="flex items-center gap-3 text-xs font-mono bg-white px-3 py-1.5 rounded-lg border border-slate-200 flex-shrink-0">
+                        <span class="text-slate-500">Beneficio por ración:</span>
+                        <strong class="text-emerald-600 font-bold">16,80 €</strong>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sugerencias IA Banners -->
+        <div class="space-y-3 pt-3 border-t border-slate-100">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-blue-600"></div>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Sugerencias Accionables de la IA</h4>
+            </div>
+            <span class="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-md">
+              Impacto Potencial: +2.510 €/mes
+            </span>
+          </div>
+
+          <div class="space-y-2.5">
+            <div class="bg-slate-50/70 hover:bg-white rounded-xl p-4 ring-1 ring-slate-200 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-start gap-3.5 min-w-0">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 font-black">
+                  ⚡
+                </div>
+                <div class="space-y-0.5 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-sm font-bold text-slate-900">Activar 2ª Ronda Automática de Bebidas a los 18 Minutos</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-700">Alta Prioridad</span>
+                  </div>
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    El 72% de los comensales en terraza termina su primera consumición antes del plato principal. Un aviso sutil en el móvil del cliente genera +48 consumiciones semanales.
+                  </p>
+                </div>
+              </div>
+              <div class="sm:text-right flex-shrink-0 pl-12 sm:pl-0">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Impacto Mensual Est.</span>
+                <span class="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">+1.240 €/mes</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-50/70 hover:bg-white rounded-xl p-4 ring-1 ring-slate-200 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-start gap-3.5 min-w-0">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-blue-50 text-blue-600 ring-1 ring-blue-200 font-black">
+                  ⏱️
+                </div>
+                <div class="space-y-0.5 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-sm font-bold text-slate-900">Pre-elaboración de Guarniciones antes del Pico de las 21:00</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-blue-100 text-blue-700">Operaciones</span>
+                  </div>
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    El tiempo de pase en cocina sube de 11 a 19 minutos entre 21:15 y 22:30. Preparar raciones de patatas trufadas y ensaladas base a las 20:30 liberará un 35% de cuello de botella.
+                  </p>
+                </div>
+              </div>
+              <div class="sm:text-right flex-shrink-0 pl-12 sm:pl-0">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Impacto Mensual Est.</span>
+                <span class="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">+820 €/mes</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-50/70 hover:bg-white rounded-xl p-4 ring-1 ring-slate-200 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex items-start gap-3.5 min-w-0">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-amber-50 text-amber-600 ring-1 ring-amber-200 font-black">
+                  🏆
+                </div>
+                <div class="space-y-0.5 min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-sm font-bold text-slate-900">Reestructurar Posición del Tartar de Atún en Menú Digital</span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-amber-100 text-amber-700">Carta</span>
+                  </div>
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    El plato tiene un margen bruto del 81% pero solo recibe un 4% de los clics iniciales por ubicarse al final de la carta. Destacarlo en 'Recomendaciones del Chef' generará +18 pedidos/mes.
+                  </p>
+                </div>
+              </div>
+              <div class="sm:text-right flex-shrink-0 pl-12 sm:pl-0">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Impacto Mensual Est.</span>
+                <span class="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">+450 €/mes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer / Legal & Privacy -->
+    <footer id="certFooter" class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <span>Datos auditados directamente desde Supabase Cloud &middot; Cifrado RGPD</span>
+      </div>
+      <div>
+        <span>Fluxo Gastronomic OS &copy; 2026 &middot; Plan Full &amp; Suite</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- JAVASCRIPT DINÁMICO: ACORDEONES SUAVES, GRÁFICOS INTERACTIVOS EN HOVER Y FILTROS -->
+  <script>
+    // Control de Acordeones Suaves (Animación fluida por CSS Grid 0fr -> 1fr)
+    const accordionIds = ['step1', 'step2', 'step3', 'step4'];
+
+    function toggleAccordion(id) {
+      const content = document.getElementById('content-' + id);
+      const chevron = document.getElementById('chevron-' + id);
+      if (!content) return;
+
+      const isOpen = content.classList.contains('open');
+      if (isOpen) {
+        content.classList.remove('open');
+        if (chevron) {
+          chevron.style.transform = 'rotate(0deg)';
+          chevron.classList.remove('bg-blue-50', 'text-blue-600');
+          chevron.classList.add('bg-slate-100', 'text-slate-600');
+        }
+      } else {
+        content.classList.add('open');
+        if (chevron) {
+          chevron.style.transform = 'rotate(180deg)';
+          chevron.classList.remove('bg-slate-100', 'text-slate-600');
+          chevron.classList.add('bg-blue-50', 'text-blue-600');
+        }
+      }
+    }
+
+    // Alternar Guía Rápida para el Dueño
+    function toggleGuide(stepId) {
+      const cards = document.getElementById('guide-cards-' + stepId);
+      const btnText = document.getElementById('guide-btn-text-' + stepId);
+      if (!cards) return;
+
+      const isCollapsed = cards.classList.contains('collapsed');
+      if (isCollapsed) {
+        cards.classList.remove('collapsed');
+        if (btnText) btnText.innerText = 'Ocultar resumen';
+      } else {
+        cards.classList.add('collapsed');
+        if (btnText) btnText.innerText = 'Ver resumen';
+      }
+    }
+
+    // =========================================================================
+    // 1. GRÁFICO DE TURNOS (Paso 1): Granularidad & Hover Interactivo
+    // =========================================================================
+    let currentGranularity = 'month';
+
+    const chartConfigs = {
+      month: {
+        rev: '31.350,00 € <span class="text-xs font-bold text-emerald-600 font-sans ml-1">(+14.8% vs mes anterior)</span>',
+        desc: 'Mes Completo (4 Semanas Auditadas) &middot; Comparativa de turnos y facturación incremental.',
+        pathCenas: 'M0,130 Q60,110 125,75 T250,55 T375,40 L500,25',
+        areaCenas: 'M0,130 Q60,110 125,75 T250,55 T375,40 L500,25 L500,170 L0,170 Z',
+        pathAlm: 'M0,140 Q60,120 125,90 T250,70 T375,55 L500,45',
+        areaAlm: 'M0,140 Q60,120 125,90 T250,70 T375,55 L500,45 L500,170 L0,170 Z',
+        pathQR: 'M0,165 Q60,155 125,140 T250,115 T375,95 L500,80',
+        rows: [
+          { name: 'Comidas / Almuerzo (13:00 - 16:30)', rev: '14.420,00 €', orders: '238 pedidos', avg: '30,29 €', rot: '1.8x / mesa', grw: '+11.4%', color: 'bg-blue-600' },
+          { name: 'Cenas & Cócteles (20:30 - 23:30)', rev: '12.010,00 €', orders: '195 pedidos', avg: '36,95 €', rot: '1.4x / mesa', grw: '+18.2%', color: 'bg-indigo-500' },
+          { name: 'Turno de Tarde & Re-pedidos Terraza QR', rev: '4.920,00 €', orders: '109 pedidos', avg: '22,56 €', rot: '2.6x / mesa', grw: '+26.5%', color: 'bg-cyan-500' }
+        ]
+      },
+      weekends: {
+        rev: '19.840,00 € <span class="text-xs font-bold text-emerald-600 font-sans ml-1">(+18.4% vs mes anterior)</span>',
+        desc: 'Fines de Semana (Viernes a Domingo) &middot; Mayor afluencia y rotación de terraza.',
+        pathCenas: 'M0,110 Q60,85 125,50 T250,30 T375,20 L500,10',
+        areaCenas: 'M0,110 Q60,85 125,50 T250,30 T375,20 L500,10 L500,170 L0,170 Z',
+        pathAlm: 'M0,130 Q60,100 125,70 T250,50 T375,35 L500,25',
+        areaAlm: 'M0,130 Q60,100 125,70 T250,50 T375,35 L500,25 L500,170 L0,170 Z',
+        pathQR: 'M0,155 Q60,140 125,115 T250,90 T375,70 L500,50',
+        rows: [
+          { name: 'Comidas / Almuerzo (Vie-Dom)', rev: '9.240,00 €', orders: '142 pedidos', avg: '32,53 €', rot: '2.2x / mesa', grw: '+14.2%', color: 'bg-blue-600' },
+          { name: 'Cenas & Cócteles (Vie-Dom)', rev: '8.120,00 €', orders: '128 pedidos', avg: '38,10 €', rot: '1.9x / mesa', grw: '+21.0%', color: 'bg-indigo-500' },
+          { name: 'Re-pedidos Terraza QR (Vie-Dom)', rev: '2.480,00 €', orders: '64 pedidos', avg: '24,20 €', rot: '3.1x / mesa', grw: '+28.4%', color: 'bg-cyan-500' }
+        ]
+      },
+      lunch: {
+        rev: '14.420,00 € <span class="text-xs font-bold text-emerald-600 font-sans ml-1">(+11.4% vs mes anterior)</span>',
+        desc: 'Turno de Mediodía (13:00 - 16:30) &middot; Concentración de menús ejecutivos y rotación rápida.',
+        pathCenas: 'M0,150 Q60,145 125,140 T250,135 T375,130 L500,125',
+        areaCenas: 'M0,150 Q60,145 125,140 T250,135 T375,130 L500,125 L500,170 L0,170 Z',
+        pathAlm: 'M0,120 Q60,95 125,70 T250,55 T375,40 L500,30',
+        areaAlm: 'M0,120 Q60,95 125,70 T250,55 T375,40 L500,30 L500,170 L0,170 Z',
+        pathQR: 'M0,160 Q60,150 125,135 T250,120 T375,105 L500,90',
+        rows: [
+          { name: 'Menús del Día & Ejecutivos', rev: '8.210,00 €', orders: '154 pedidos', avg: '26,65 €', rot: '2.0x / mesa', grw: '+8.9%', color: 'bg-blue-600' },
+          { name: 'Platos a la Carta Mediodía', rev: '4.830,00 €', orders: '68 pedidos', avg: '35,51 €', rot: '1.5x / mesa', grw: '+12.1%', color: 'bg-indigo-500' },
+          { name: 'Bebidas Extra QR', rev: '1.380,00 €', orders: '46 pedidos', avg: '15,00 €', rot: '19.6%', color: 'bg-cyan-500' }
+        ]
+      },
+      dinner: {
+        rev: '12.010,00 € <span class="text-xs font-bold text-emerald-600 font-sans ml-1">(+18.2% vs mes anterior)</span>',
+        desc: 'Turno de Cenas & Noche (20:30 - 23:30) &middot; Mayor ticket medio en carnes y copas.',
+        pathCenas: 'M0,105 Q60,80 125,55 T250,40 T375,25 L500,15',
+        areaCenas: 'M0,105 Q60,80 125,55 T250,40 T375,25 L500,15 L500,170 L0,170 Z',
+        pathAlm: 'M0,165 Q60,160 125,155 T250,150 T375,145 L500,140',
+        areaAlm: 'M0,165 Q60,160 125,155 T250,150 T375,145 L500,140 L500,170 L0,170 Z',
+        pathQR: 'M0,145 Q60,130 125,110 T250,85 T375,65 L500,45',
+        rows: [
+          { name: 'Platos Principales & Carnes', rev: '7.150,00 €', orders: '105 pedidos', avg: '34,04 €', rot: '1.4x / mesa', grw: '+15.3%', color: 'bg-indigo-500' },
+          { name: 'Cócteles, Copas y Aperitivos', rev: '2.940,00 €', orders: '58 pedidos', avg: '25,34 €', rot: '1.8x / mesa', grw: '+24.1%', color: 'bg-cyan-500' },
+          { name: 'Postres y Rondas QR en Mesa', rev: '1.920,00 €', orders: '42 pedidos', avg: '22,85 €', rot: '2.1x / mesa', grw: '+18.7%', color: 'bg-blue-600' }
+        ]
+      }
+    };
+
+    const weekDataByGranularity = {
+      month: [
+        { name: 'Semana 1 (01-07 Sep)', x: 30, yCenas: 120, yAlm: 130, yQR: 160, alm: '3.240 €', cenas: '2.680 €', qr: '990 €', total: '6.910 €', note: 'Almuerzos líderes' },
+        { name: 'Semana 2 (08-14 Sep)', x: 170, yCenas: 56, yAlm: 74, yQR: 130, alm: '3.580 €', cenas: '2.940 €', qr: '1.180 €', total: '7.700 €', note: 'Cenas en alza (+15.2%)' },
+        { name: 'Semana 3 (15-21 Sep)', x: 320, yCenas: 58, yAlm: 70, yQR: 104, alm: '3.750 €', cenas: '3.120 €', qr: '1.340 €', total: '8.210 €', note: 'Récord pedidos tarde QR (+22%)' },
+        { name: 'Semana 4 (22-30 Sep)', x: 470, yCenas: 29, yAlm: 47, yQR: 84, alm: '3.850 €', cenas: '3.270 €', qr: '1.410 €', total: '8.530 €', note: 'Cierre potente (+18.2%)' }
+      ],
+      weekends: [
+        { name: 'Fin de Semana 1 (05-07 Sep)', x: 30, yCenas: 95, yAlm: 112, yQR: 146, alm: '2.120 €', cenas: '1.890 €', qr: '580 €', total: '4.590 €', note: 'Lleno noche viernes' },
+        { name: 'Fin de Semana 2 (12-14 Sep)', x: 170, yCenas: 38, yAlm: 58, yQR: 100, alm: '2.340 €', cenas: '2.050 €', qr: '620 €', total: '5.010 €', note: 'Terraza al 100%' },
+        { name: 'Fin de Semana 3 (19-21 Sep)', x: 320, yCenas: 25, yAlm: 41, yQR: 78, alm: '2.400 €', cenas: '2.110 €', qr: '650 €', total: '5.160 €', note: 'Pico de tarde en terraza' },
+        { name: 'Fin de Semana 4 (26-28 Sep)', x: 470, yCenas: 12, yAlm: 27, yQR: 55, alm: '2.380 €', cenas: '2.070 €', qr: '630 €', total: '5.080 €', note: 'Cenas potentes (+21.0%)' }
+      ],
+      lunch: [
+        { name: 'Semana 1 (Mediodía)', x: 30, yCenas: 148, yAlm: 105, yQR: 153, alm: '3.380 €', cenas: '1.100 €', qr: '310 €', total: '4.790 €', note: 'Menús del día rápidos' },
+        { name: 'Semana 2 (Mediodía)', x: 170, yCenas: 138, yAlm: 61, yQR: 126, alm: '3.620 €', cenas: '1.210 €', qr: '340 €', total: '5.170 €', note: 'Rotación 2.0x por mesa' },
+        { name: 'Semana 3 (Mediodía)', x: 320, yCenas: 133, yAlm: 46, yQR: 111, alm: '3.710 €', cenas: '1.250 €', qr: '360 €', total: '5.320 €', note: 'Ticket medio 26,65 €' },
+        { name: 'Semana 4 (Mediodía)', x: 470, yCenas: 126, yAlm: 32, yQR: 94, alm: '3.710 €', cenas: '1.270 €', qr: '370 €', total: '5.350 €', note: 'Servicio ágil sin demoras' }
+      ],
+      dinner: [
+        { name: 'Semana 1 (Noche)', x: 30, yCenas: 90, yAlm: 163, yQR: 136, alm: '980 €', cenas: '2.680 €', qr: '420 €', total: '4.080 €', note: 'Gran ticket carnes' },
+        { name: 'Semana 2 (Noche)', x: 170, yCenas: 46, yAlm: 153, yQR: 95, alm: '1.020 €', cenas: '2.990 €', qr: '480 €', total: '4.490 €', note: 'Cenas +18.2%' },
+        { name: 'Semana 3 (Noche)', x: 320, yCenas: 31, yAlm: 148, yQR: 73, alm: '1.040 €', cenas: '3.140 €', qr: '510 €', total: '4.690 €', note: 'Pico cócteles 22:15' },
+        { name: 'Semana 4 (Noche)', x: 470, yCenas: 17, yAlm: 141, yQR: 50, alm: '1.050 €', cenas: '3.200 €', qr: '510 €', total: '4.760 €', note: 'Ticket medio 36,95 €' }
+      ]
+    };
+
+    function updateChartGranularity(val) {
+      currentGranularity = val;
+      const cfg = chartConfigs[val] || chartConfigs.month;
+      document.getElementById('chartHeaderRev').innerHTML = cfg.rev;
+      document.getElementById('chartHeaderDesc').innerHTML = cfg.desc;
+      
+      document.getElementById('svgLineCenas').setAttribute('d', cfg.pathCenas);
+      document.getElementById('svgAreaCenas').setAttribute('d', cfg.areaCenas);
+      document.getElementById('svgLineAlmuerzos').setAttribute('d', cfg.pathAlm);
+      document.getElementById('svgAreaAlmuerzos').setAttribute('d', cfg.areaAlm);
+      document.getElementById('svgLineQR').setAttribute('d', cfg.pathQR);
+
+      const tbody = document.getElementById('chartTableBody');
+      tbody.innerHTML = cfg.rows.map(r => `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="py-2.5 px-3 flex items-center gap-2 font-bold text-slate-900">
+            <span class="w-2.5 h-2.5 rounded-full ${r.color}"></span>
+            ${r.name}
+          </td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">${r.rev}</td>
+          <td class="py-2.5 px-3 text-right font-mono">${r.orders}</td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-800">${r.avg}</td>
+          <td class="py-2.5 px-3 text-right font-mono text-blue-600 font-bold">${r.rot}</td>
+          <td class="py-2.5 px-3 text-right font-mono text-emerald-600 font-bold">${r.grw}</td>
+        </tr>
+      `).join('');
+    }
+
+    function handleChartHover(event) {
+      const container = document.getElementById('chartContainer');
+      const svg = document.getElementById('turnosSvg');
+      if (!container || !svg) return;
+
+      const rect = svg.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const svgX = Math.max(0, Math.min(500, (mouseX / rect.width) * 500));
+
+      const weeks = weekDataByGranularity[currentGranularity] || weekDataByGranularity.month;
+      let closestWeek = weeks[0];
+      let minDiff = Infinity;
+      weeks.forEach(w => {
+        const diff = Math.abs(w.x - svgX);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestWeek = w;
+        }
+      });
+
+      const guideLine = document.getElementById('hoverGuideLine');
+      const dotCenas = document.getElementById('dotCenas');
+      const dotAlm = document.getElementById('dotAlmuerzos');
+      const dotQR = document.getElementById('dotQR');
+      const tooltip = document.getElementById('chartTooltip');
+
+      if (guideLine && dotCenas && dotAlm && dotQR && tooltip) {
+        const pctX = (closestWeek.x / 500) * 100;
+        const pctYCenas = (closestWeek.yCenas / 180) * 100;
+        const pctYAlm = (closestWeek.yAlm / 180) * 100;
+        const pctYQR = (closestWeek.yQR / 180) * 100;
+
+        guideLine.style.left = pctX + '%';
+        guideLine.style.opacity = '1';
+
+        dotCenas.style.left = pctX + '%';
+        dotCenas.style.top = pctYCenas + '%';
+        dotCenas.style.opacity = '1';
+
+        dotAlm.style.left = pctX + '%';
+        dotAlm.style.top = pctYAlm + '%';
+        dotAlm.style.opacity = '1';
+
+        dotQR.style.left = pctX + '%';
+        dotQR.style.top = pctYQR + '%';
+        dotQR.style.opacity = '1';
+
+        // Contenido del Tooltip
+        document.getElementById('ttWeekName').innerText = closestWeek.name;
+        document.getElementById('ttTotal').innerText = closestWeek.total;
+        document.getElementById('ttAlm').innerText = closestWeek.alm;
+        document.getElementById('ttCenas').innerText = closestWeek.cenas;
+        document.getElementById('ttQR').innerText = closestWeek.qr;
+        document.getElementById('ttNote').innerText = closestWeek.note;
+
+        const pxX = (closestWeek.x / 500) * rect.width;
+        const minY = Math.min(closestWeek.yCenas, closestWeek.yAlm, closestWeek.yQR);
+        const pxY = (minY / 180) * rect.height;
+
+        // Limitar tooltip a los bordes
+        const clampX = Math.max(130, Math.min(rect.width - 130, pxX));
+        tooltip.style.left = clampX + 'px';
+        tooltip.style.top = Math.max(10, pxY) + 'px';
+        tooltip.style.opacity = '1';
+      }
+    }
+
+    function handleChartLeave() {
+      const guideLine = document.getElementById('hoverGuideLine');
+      const dotCenas = document.getElementById('dotCenas');
+      const dotAlm = document.getElementById('dotAlmuerzos');
+      const dotQR = document.getElementById('dotQR');
+      const tooltip = document.getElementById('chartTooltip');
+
+      if (guideLine) guideLine.style.opacity = '0';
+      if (dotCenas) dotCenas.style.opacity = '0';
+      if (dotAlm) dotAlm.style.opacity = '0';
+      if (dotQR) dotQR.style.opacity = '0';
+      if (tooltip) tooltip.style.opacity = '0';
+    }
+
+    // =========================================================================
+    // 2. DONUT CHART (Paso 2): Hover Interactivo sobre Segmentos & Filas
+    // =========================================================================
+    const donutCategories = {
+      burgers: {
+        name: 'Hamburguesas',
+        rev: '13.167 €',
+        sub: '<span class="text-blue-600 font-bold">42.0%</span> · <span class="text-emerald-600 font-black">68% margen</span>',
+        color: '#2563eb'
+      },
+      drinks: {
+        name: 'Bebidas & Copas',
+        rev: '8.778 €',
+        sub: '<span class="text-cyan-600 font-bold">28.0%</span> · <span class="text-emerald-600 font-black">82% margen</span>',
+        color: '#06b6d4'
+      },
+      starters: {
+        name: 'Entrantes',
+        rev: '5.016 €',
+        sub: '<span class="text-indigo-600 font-bold">16.0%</span> · <span class="text-emerald-600 font-black">78% margen</span>',
+        color: '#6366f1'
+      },
+      desserts: {
+        name: 'Postres & QR',
+        rev: '3.135 €',
+        sub: '<span class="text-amber-600 font-bold">10.0%</span> · <span class="text-emerald-600 font-black">84% margen</span>',
+        color: '#f59e0b'
+      },
+      others: {
+        name: 'Extras & Pan',
+        rev: '1.254 €',
+        sub: '<span class="text-purple-600 font-bold">4.0%</span> · <span class="text-slate-600 font-bold">70% margen</span>',
+        color: '#a855f7'
+      }
+    };
+
+    function hoverDonut(categoryKey) {
+      const data = donutCategories[categoryKey];
+      if (!data) return;
+
+      const label = document.getElementById('donutCenterLabel');
+      const val = document.getElementById('donutCenterValue');
+      const sub = document.getElementById('donutCenterSub');
+
+      if (label) {
+        label.innerText = data.name;
+        label.style.color = data.color;
+      }
+      if (val) {
+        val.innerText = data.rev;
+        val.style.transform = 'scale(1.04)';
+      }
+      if (sub) {
+        sub.innerHTML = data.sub;
+      }
+
+      // Segmento activo
+      const seg = document.getElementById('donutSeg-' + categoryKey);
+      if (seg) seg.classList.add('active');
+      document.getElementById('donutContainer')?.classList.add('donut-has-active');
+
+      // Fila activa
+      const row = document.getElementById('donutRow-' + categoryKey);
+      if (row) row.classList.add('bg-slate-100/90', 'ring-1', 'ring-slate-300');
+    }
+
+    function leaveDonut() {
+      const label = document.getElementById('donutCenterLabel');
+      const val = document.getElementById('donutCenterValue');
+      const sub = document.getElementById('donutCenterSub');
+
+      if (label) {
+        label.innerText = 'Facturación';
+        label.style.color = '';
+      }
+      if (val) {
+        val.innerText = '31.350 €';
+        val.style.transform = 'scale(1)';
+      }
+      if (sub) {
+        sub.innerHTML = '100% · Margen 74%';
+      }
+
+      document.getElementById('donutContainer')?.classList.remove('donut-has-active');
+
+      Object.keys(donutCategories).forEach(k => {
+        const seg = document.getElementById('donutSeg-' + k);
+        if (seg) seg.classList.remove('active');
+        const row = document.getElementById('donutRow-' + k);
+        if (row) row.classList.remove('bg-slate-100/90', 'ring-1', 'ring-slate-300');
+      });
+    }
+
+    // =========================================================================
+    // 3. SEMÁFORO DE COCINA (Paso 3): Hover Interactivo sobre los 30 Días
+    // =========================================================================
+    const kitchenDaysData = [
+      { day: 1, date: 'Lun 01 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Flujo perfecto sin incidencias en comanda ni en cocina.', pase: '11.2 min', orders: '16 pedidos' },
+      { day: 2, date: 'Mar 02 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Cocina ágil y rotación normal en salón y terraza.', pase: '11.0 min', orders: '15 pedidos' },
+      { day: 3, date: 'Mié 03 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: '100% de tickets marchados en menos de 13 min.', pase: '11.4 min', orders: '18 pedidos' },
+      { day: 4, date: 'Jue 04 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Servicio mediodía y cenas dentro de tiempo objetivo.', pase: '11.1 min', orders: '19 pedidos' },
+      { day: 5, date: 'Vie 05 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Pico de cena absorbido con éxito por el equipo.', pase: '11.8 min', orders: '26 pedidos' },
+      { day: 6, date: 'Sáb 06 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Lleno en terraza gestionado fluidamente con QR.', pase: '12.0 min', orders: '29 pedidos' },
+      { day: 7, date: 'Dom 07 Sep', status: 'peak', badge: 'Pico de Congestión (14:40)', desc: 'Rotura puntual de stock de pan artesano para hamburguesas, resuelta en 15 min.', pase: '14.2 min', orders: '28 pedidos' },
+      { day: 8, date: 'Lun 08 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Excelente rendimiento de pase y comandero.', pase: '10.9 min', orders: '14 pedidos' },
+      { day: 9, date: 'Mar 09 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Servicio fluido sin incidencias.', pase: '11.2 min', orders: '16 pedidos' },
+      { day: 10, date: 'Mié 10 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Cadencia rápida de platos principales.', pase: '11.3 min', orders: '17 pedidos' },
+      { day: 11, date: 'Jue 11 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Preparación previa de cocina impecable.', pase: '11.0 min', orders: '18 pedidos' },
+      { day: 12, date: 'Vie 12 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Excelente rotación en cenas de terraza.', pase: '11.9 min', orders: '25 pedidos' },
+      { day: 13, date: 'Sáb 13 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Servicio intensivo sin demoras reseñables.', pase: '12.1 min', orders: '30 pedidos' },
+      { day: 14, date: 'Sáb 14 Sep', status: 'delay', badge: 'Demora en Pase (+6 min)', desc: 'Demora de 6 min en pase por comanda múltiple (Mesa 12, 14 comensales simultánea con 8 mesas).', pase: '17.4 min', orders: '31 pedidos' },
+      { day: 15, date: 'Dom 15 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Servicio de mediodía rápido y organizado.', pase: '11.5 min', orders: '27 pedidos' },
+      { day: 16, date: 'Lun 16 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Tranquilo y 100% fluido.', pase: '10.8 min', orders: '13 pedidos' },
+      { day: 17, date: 'Mar 17 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Tiempos de preparación de carnes excelentes.', pase: '11.1 min', orders: '15 pedidos' },
+      { day: 18, date: 'Mié 18 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Coordinación mozo-cocina instantánea (12 seg).', pase: '11.2 min', orders: '17 pedidos' },
+      { day: 19, date: 'Jue 19 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Excelente despacho de entrantes.', pase: '11.3 min', orders: '20 pedidos' },
+      { day: 20, date: 'Vie 20 Sep', status: 'peak', badge: 'Cuello de Botella Barra (22:15)', desc: 'Cuello de botella puntual en barra de cócteles durante pico de cena.', pase: '15.1 min', orders: '28 pedidos' },
+      { day: 21, date: 'Sáb 21 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Servicio de sábado noche resuelto con rapidez.', pase: '12.2 min', orders: '32 pedidos' },
+      { day: 22, date: 'Dom 22 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Mediodía fluido y alta rotación en terraza.', pase: '11.4 min', orders: '26 pedidos' },
+      { day: 23, date: 'Lun 23 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Servicio impecable.', pase: '10.9 min', orders: '14 pedidos' },
+      { day: 24, date: 'Mar 24 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Pase ágil y sin cuellos de botella.', pase: '11.0 min', orders: '16 pedidos' },
+      { day: 25, date: 'Mié 25 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: '100% de tickets en tiempo.', pase: '11.2 min', orders: '18 pedidos' },
+      { day: 26, date: 'Jue 26 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Servicio ágil en salón.', pase: '11.1 min', orders: '19 pedidos' },
+      { day: 27, date: 'Vie 27 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Viernes noche muy dinámico y sin retrasos.', pase: '11.7 min', orders: '27 pedidos' },
+      { day: 28, date: 'Sáb 28 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Gran rotación de mesas.', pase: '11.9 min', orders: '31 pedidos' },
+      { day: 29, date: 'Dom 29 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Mediodía con terraza completa y servicio fluido.', pase: '11.3 min', orders: '25 pedidos' },
+      { day: 30, date: 'Lun 30 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Cierre de mes con pase medio de 11.0 min.', pase: '11.0 min', orders: '15 pedidos' }
+    ];
+
+    function hoverKitchenDay(dayNum) {
+      const item = kitchenDaysData.find(d => d.day === dayNum);
+      if (!item) return;
+
+      const icon = document.getElementById('kitchenDayIcon');
+      const dateEl = document.getElementById('kitchenDayDate');
+      const badgeEl = document.getElementById('kitchenDayBadge');
+      const descEl = document.getElementById('kitchenDayDesc');
+      const paseEl = document.getElementById('kitchenDayPase');
+      const ordersEl = document.getElementById('kitchenDayOrders');
+
+      if (dateEl) dateEl.innerText = item.date;
+      if (badgeEl) {
+        badgeEl.innerText = item.badge;
+        if (item.status === 'delay') {
+          badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800';
+        } else if (item.status === 'peak') {
+          badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800';
+        } else {
+          badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800';
+        }
+      }
+      if (icon) {
+        if (item.status === 'delay') {
+          icon.innerText = '⚠️';
+          icon.className = 'w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-sm flex-shrink-0';
+        } else if (item.status === 'peak') {
+          icon.innerText = '⚡';
+          icon.className = 'w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm flex-shrink-0';
+        } else {
+          icon.innerText = '✓';
+          icon.className = 'w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm flex-shrink-0';
+        }
+      }
+      if (descEl) descEl.innerText = item.desc;
+      if (paseEl) {
+        paseEl.innerText = item.pase;
+        paseEl.className = item.status === 'delay' ? 'font-bold text-rose-600' : (item.status === 'peak' ? 'font-bold text-amber-600' : 'font-bold text-slate-900');
+      }
+      if (ordersEl) ordersEl.innerText = item.orders;
+    }
+
+    function leaveKitchenDay() {
+      const icon = document.getElementById('kitchenDayIcon');
+      const dateEl = document.getElementById('kitchenDayDate');
+      const badgeEl = document.getElementById('kitchenDayBadge');
+      const descEl = document.getElementById('kitchenDayDesc');
+      const paseEl = document.getElementById('kitchenDayPase');
+      const ordersEl = document.getElementById('kitchenDayOrders');
+
+      if (icon) {
+        icon.innerText = '✓';
+        icon.className = 'w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm flex-shrink-0';
+      }
+      if (dateEl) dateEl.innerText = 'Resumen Mensual de Ritmo';
+      if (badgeEl) {
+        badgeEl.innerText = '94.2% Fluidez';
+        badgeEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800';
+      }
+      if (descEl) descEl.innerText = 'Pasa el ratón sobre cualquier día para auditar el pase medio, demoras o incidencias operativas.';
+      if (paseEl) {
+        paseEl.innerText = '11.4 min';
+        paseEl.className = 'font-bold text-slate-900';
+      }
+      if (ordersEl) ordersEl.innerText = '542 total';
+    }
+
+    // =========================================================================
+    // 4. TABLA BCG & FILTROS (Paso 4)
+    // =========================================================================
+    function filterBcgTable(category) {
+      const rows = document.querySelectorAll('.dish-row');
+      rows.forEach(row => {
+        const rowType = row.getAttribute('data-type');
+        const detailId = row.getAttribute('onclick').match(/'([^']+)'/)[1];
+        const detailRow = document.getElementById(detailId);
+        
+        if (category === 'all' || rowType === category) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+          if (detailRow) detailRow.classList.add('hidden');
+        }
+      });
+    }
+
+    function toggleDishDetail(detailId, rowElement) {
+      const detailRow = document.getElementById(detailId);
+      const chevron = rowElement.querySelector('.chevron-icon');
+      if (!detailRow) return;
+
+      if (detailRow.classList.contains('hidden')) {
+        detailRow.classList.remove('hidden');
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+      } else {
+        detailRow.classList.add('hidden');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    // =========================================================================
+    // GESTOR INTELIGENTE DE IMPRESIÓN Y EXPORTACIÓN A PDF
+    // =========================================================================
+    let _printPreviousState = null;
+
+    function preparePrint() {
+      _printPreviousState = {};
+      accordionIds.forEach(id => {
+        const el = document.getElementById('content-' + id);
+        _printPreviousState[id] = el ? el.classList.contains('open') : false;
+        if (el && !_printPreviousState[id]) {
+          el.classList.add('open');
+        }
+      });
+      // Desplegar detalles técnicos (food cost e incidencias) en print
+      document.querySelectorAll('details').forEach(d => d.setAttribute('open', ''));
+    }
+
+    function restorePrint() {
+      if (_printPreviousState) {
+        accordionIds.forEach(id => {
+          const el = document.getElementById('content-' + id);
+          if (el && !_printPreviousState[id]) {
+            el.classList.remove('open');
+          }
+        });
+        _printPreviousState = null;
+      }
+      document.querySelectorAll('details').forEach(d => d.removeAttribute('open'));
+    }
+
+    window.addEventListener('beforeprint', preparePrint);
+    window.addEventListener('afterprint', restorePrint);
+
+    function exportPDF() {
+      preparePrint();
+      setTimeout(() => {
+        window.print();
+        setTimeout(restorePrint, 500);
+      }, 120);
+    }
+  </script>
+
+</body>
+</html>

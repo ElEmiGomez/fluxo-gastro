@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect } from 'react'
 import {
@@ -17,6 +17,7 @@ import {
   PieChart
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { MonthlyReportViewer } from './MonthlyReportViewer'
 
 interface MonthlyReportModalProps {
   isOpen: boolean
@@ -27,6 +28,8 @@ interface MonthlyReportModalProps {
 export function MonthlyReportModal({ isOpen, onClose, slug = 'burger-gourmet' }: MonthlyReportModalProps) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'tremor' | 'classic'>('tremor')
+  const [printMode, setPrintMode] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -47,16 +50,20 @@ export function MonthlyReportModal({ isOpen, onClose, slug = 'burger-gourmet' }:
 
   const handlePrint = () => {
     if (typeof window !== 'undefined') {
-      window.print()
+      setPrintMode(true)
+      setTimeout(() => {
+        window.print()
+        setTimeout(() => setPrintMode(false), 500)
+      }, 150)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in select-none">
-      <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-white animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-6 animate-in fade-in select-none print:static print:p-0 print:bg-white print:overflow-visible print:block">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-3xl w-full max-w-6xl max-h-[94vh] flex flex-col shadow-2xl overflow-hidden text-white animate-in zoom-in-95 duration-200 print:bg-white print:border-none print:shadow-none print:max-h-none print:overflow-visible print:rounded-none print:w-full print:max-w-none">
         
         {/* Cabecera del Reporte Ejecutivo */}
-        <div className="p-5 sm:p-6 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between gap-4 flex-shrink-0">
+        <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-950/90 flex flex-wrap items-center justify-between gap-3 flex-shrink-0 print:hidden">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 flex items-center justify-center font-black">
               <BarChart3 className="w-5 h-5" />
@@ -71,6 +78,34 @@ export function MonthlyReportModal({ isOpen, onClose, slug = 'burger-gourmet' }:
               <h2 className="text-base sm:text-lg font-black text-white leading-tight mt-0.5">
                 Reporte Mensual Ejecutivo de Eficiencia Gastronómica
               </h2>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Selector de Vista: Clean Light Mode vs Clásica */}
+            <div className="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/80 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setViewMode('tremor')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'tremor'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                ☀️ Clean Light Mode (Nuevo)
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('classic')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  viewMode === 'classic'
+                    ? 'bg-slate-700 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                📊 Vista Clásica
+              </button>
             </div>
           </div>
 
@@ -95,12 +130,14 @@ export function MonthlyReportModal({ isOpen, onClose, slug = 'burger-gourmet' }:
         </div>
 
         {/* Cuerpo con Scroll */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 text-xs sm:text-sm">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 text-xs sm:text-sm print:overflow-visible print:p-0 print:space-y-0 print:text-slate-900 print:h-auto">
           {loading || !data ? (
             <div className="py-20 text-center space-y-3">
               <div className="w-8 h-8 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-slate-400 font-bold">Generando auditoría y métricas de eficiencia con IA...</p>
             </div>
+          ) : viewMode === 'tremor' ? (
+            <MonthlyReportViewer data={data} forceOpen={printMode} />
           ) : (
             <>
               {/* 1. KPIs Principales en 4 Tarjetas */}

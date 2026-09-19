@@ -30,6 +30,7 @@ interface CartDrawerProps {
   isWaiter?: boolean
   onSendWaiterOrder?: () => void
   onSessionUpdate?: (newSessionId: string) => void
+  onOrderSubmitted?: (order: any) => void
 }
 
 export function CartDrawer({
@@ -51,6 +52,7 @@ export function CartDrawer({
   isWaiter = false,
   onSendWaiterOrder,
   onSessionUpdate,
+  onOrderSubmitted,
 }: CartDrawerProps) {
   const activeLang = isWaiter ? 'es' : lang
   const t = (k: string) => getTranslation(activeLang, k)
@@ -262,6 +264,8 @@ export function CartDrawer({
                 body: JSON.stringify(retryPayload),
               })
               if (retryRes.ok) {
+                const retryData = await retryRes.json().catch(() => ({}))
+                if (retryData.order) onOrderSubmitted?.(retryData.order)
                 triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
                 idempotencyKeyRef.current = ''
                 setOrderSuccess(true)
@@ -286,6 +290,10 @@ export function CartDrawer({
           return
         }
         throw new Error(data.message || data.error || 'Error al enviar la comanda al servidor')
+      }
+
+      if (data.order) {
+        onOrderSubmitted?.(data.order)
       }
 
       if (data.session_token) {

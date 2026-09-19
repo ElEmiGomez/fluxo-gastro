@@ -81,6 +81,10 @@ export default function WaiterComanderoPage() {
   const ordersFingerRef = useRef<string>('')
   const callsFingerRef = useRef<string>('')
   const tableStatusesFingerRef = useRef<string>('')
+  const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
+  const attendedValidationOrderIdsRef = useRef<Set<string>>(new Set())
+  // Órdenes que llegaron sin items en el ciclo anterior (race condition) — para backfill en el siguiente ciclo
+  const pendingOrdersWithoutItemsRef = useRef<Map<string, Order>>(new Map())
 
   // Estados no-optimistas con spinner de carga durante transiciones en vuelo
   const [validatingOrderIds, setValidatingOrderIds] = useState<Set<string>>(new Set())
@@ -150,25 +154,66 @@ export default function WaiterComanderoPage() {
         fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
       ])
 
-      const incomingOrders: Order[] = (ordersRes.orders || []).filter(
-        (o: Order) => o.order_items && o.order_items.length > 0
-      )
+      const rawOrders: Order[] = ordersRes.orders || []
+      // Backfill: si la orden viene sin items, intentar reponerlos desde refs previos
+      const incomingOrders: Order[] = rawOrders.map((ord: Order) => {
+        if (!ord.order_items || ord.order_items.length === 0) {
+          const prevOrd = prevOrdersMapRef.current.get(ord.id)
+          if (prevOrd?.order_items && prevOrd.order_items.length > 0) {
+            return { ...ord, order_items: prevOrd.order_items }
+          }
+          const transitOrd = pendingOrdersWithoutItemsRef.current.get(ord.id)
+          if (transitOrd?.order_items && transitOrd.order_items.length > 0) {
+            return { ...ord, order_items: transitOrd.order_items }
+          }
+        }
+        return ord
+      })
       const incomingCalls: any[] = callsRes.calls || []
 
-      // 1. Reconciliación de Órdenes (SSOT sin overrides locales)
+      // 1. Reconciliación de Órdenes — Patrón idéntico a service calls:
+      // Las órdenes se incluyen/excluyen por STATUS, no por si order_items está cargado.
+      // Los items vacíos son un estado transitorio de la race condition; no deben descartar la comanda.
       setServerOrders(prev => {
         const prevMap = new Map(prev.map(o => [o.id, o]))
         const map = new Map<string, Order>()
+        const nextPendingWithoutItems = new Map<string, Order>()
+
         incomingOrders.forEach(ord => {
-          if (ord.status !== 'cancelled') {
-            const existing = prevMap.get(ord.id)
-            const effectiveItems = (ord.order_items && ord.order_items.length > 0)
-              ? ord.order_items
-              : (existing?.order_items || [])
-            map.set(ord.id, { ...ord, order_items: effectiveItems })
+          if (ord.status === 'cancelled') return
+          // Backfill de segunda oportunidad desde prevMap (state anterior de React)
+          const existing = prevMap.get(ord.id)
+          const effectiveItems = (ord.order_items && ord.order_items.length > 0)
+            ? ord.order_items
+            : (existing?.order_items && existing.order_items.length > 0 ? existing.order_items : [])
+          const finalOrd = { ...ord, order_items: effectiveItems }
+          map.set(ord.id, finalOrd)
+          if (!effectiveItems || effectiveItems.length === 0) {
+            nextPendingWithoutItems.set(ord.id, finalOrd)
           }
         })
-        const newOrders = Array.from(map.values())
+
+        pendingOrdersWithoutItemsRef.current = nextPendingWithoutItems
+
+        // PERSISTENCIA DE TAREAS ACTIVAS — igual que attendedCallIdsRef en service calls:
+        // Si una comanda no terminal ya estaba en pantalla, preservarla sin importar si llegó
+        // en la respuesta o no. Solo se retira cuando el mozo la atiende explícitamente o
+        // el servidor confirma un estado terminal.
+        prev.forEach(prevOrd => {
+          if (!map.has(prevOrd.id)) {
+            const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || prevOrd.status === 'delivered'
+            const isHandledLocally = attendedValidationOrderIdsRef.current.has(prevOrd.id)
+            if (!isTerminal && !isHandledLocally) {
+              map.set(prevOrd.id, prevOrd)
+            }
+          }
+        })
+
+        // SIN filtro por order_items — igual que service calls no filtra por contenido
+        const newOrders = Array.from(map.values()).filter(o => o.status !== 'cancelled')
+
+        prevOrdersMapRef.current = new Map(newOrders.map(o => [o.id, o]))
+
         const finger = newOrders.map(o => `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}`).join('|')
         if (finger === ordersFingerRef.current) {
           return prev
@@ -284,7 +329,14 @@ export default function WaiterComanderoPage() {
       Object.entries(dwellMap).forEach(([tNum, ms]) => {
         finalDwellMins[tNum] = Math.max(0, Math.floor((now - ms) / 60000))
       })
-      setTableDwellMinutes(finalDwellMins)
+      setTableDwellMinutes(prev => {
+        const prevKeys = Object.keys(prev)
+        const newKeys = Object.keys(finalDwellMins)
+        if (prevKeys.length === newKeys.length && prevKeys.every(k => prev[k] === finalDwellMins[k])) {
+          return prev
+        }
+        return finalDwellMins
+      })
 
     } catch (err) {
       console.log('Error syncing server orders/calls:', err)
@@ -374,6 +426,7 @@ export default function WaiterComanderoPage() {
 
     // 1. Activar estado de carga (sin mutación optimista de serverOrders)
     setValidatingOrderIds(prev => new Set(prev).add(orderId))
+    attendedValidationOrderIdsRef.current.add(orderId)
 
     const targetOrder = serverOrders.find(o => o.id === orderId)
     const expectedVersion = targetOrder?.version
@@ -427,6 +480,7 @@ export default function WaiterComanderoPage() {
 
   // Descartar/cancelar comanda de cliente
   const handleCancelValidationOrder = async (orderId: string, tableNum?: number | string) => {
+    attendedValidationOrderIdsRef.current.add(orderId)
     const targetOrder = serverOrders.find(o => o.id === orderId)
     const expectedVersion = targetOrder?.version
 
@@ -559,27 +613,37 @@ export default function WaiterComanderoPage() {
 
       // 1. Canal Nativo Supabase Realtime (postgres_changes en orders, order_events, service_calls)
       if (supabase) {
+        // Debounce: el evento de orders llega ANTES de que order_items esté insertado.
+        // Esperar 400ms garantiza que cuando sincronicemos, los items ya están disponibles.
+        let realtimeDebounceTimer: any = null
+        const triggerDebouncedRealtimeSync = () => {
+          if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer)
+          realtimeDebounceTimer = setTimeout(() => {
+            syncServerData()
+          }, 400)
+        }
+
         realtimeChannel = supabase
           .channel(`comandero-orders-${slug}`)
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'orders' },
             () => {
-              syncServerData()
+              triggerDebouncedRealtimeSync()
             }
           )
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'order_events' },
             () => {
-              syncServerData()
+              triggerDebouncedRealtimeSync()
             }
           )
           .on(
             'postgres_changes',
             { event: '*', schema: 'public', table: 'service_calls' },
             () => {
-              syncServerData()
+              triggerDebouncedRealtimeSync()
             }
           )
           .subscribe()
@@ -795,18 +859,14 @@ export default function WaiterComanderoPage() {
     return Object.values(drinksMap)
   }, [selectedTable, serverOrders, products])
   // Listas de Tareas y Avisos Pendientes para el Mozo (Reactivo SSOT)
+  // Filtran SOLO por status — igual que service calls filtra solo por status === 'pending'.
+  // Si items están vacíos es un estado transitorio; el ticket igual se muestra.
   const readyOrdersList = React.useMemo(() => {
-    return serverOrders.filter(
-      o => o.status === 'ready' &&
-           o.order_items && o.order_items.length > 0
-    )
+    return serverOrders.filter(o => o.status === 'ready')
   }, [serverOrders])
 
   const validationOrdersList = React.useMemo(() => {
-    return serverOrders.filter(
-      o => o.status === 'pending_validation' &&
-           o.order_items && o.order_items.length > 0
-    )
+    return serverOrders.filter(o => o.status === 'pending_validation')
   }, [serverOrders])
 
   const totalPendingTasks = readyOrdersList.length + validationOrdersList.length + pendingCalls.length

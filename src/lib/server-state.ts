@@ -297,7 +297,7 @@ export function getServerOrders(slug: string): Order[] {
     .filter(o => o.order_items && o.order_items.length > 0)
 }
 
-export function addServerOrder(slug: string, order: Order): Order {
+export function addServerOrder(slug: string, order: Order, silent: boolean = false): Order {
   if (!globalStore.__GASTRO_ORDERS__) {
     globalStore.__GASTRO_ORDERS__ = {}
   }
@@ -328,10 +328,15 @@ export function addServerOrder(slug: string, order: Order): Order {
       ...order,
       order_items: finalItems,
     }
+    if (!silent) {
+      broadcastEvent({ type: 'order_updated', slug, orderId: order.id, status: order.status, tableNumber: order.table_number, order: globalStore.__GASTRO_ORDERS__[slug][existingIdx] })
+    }
   } else {
     order.order_items = effectiveItems
     globalStore.__GASTRO_ORDERS__[slug].unshift(order)
-    broadcastEvent({ type: 'order_created', slug, order })
+    if (!silent) {
+      broadcastEvent({ type: 'order_created', slug, order })
+    }
   }
   return order
 }
@@ -411,6 +416,7 @@ export function updateServerOrderStatus(
   const nextVersion = currentVersion + 1
   const updatedAt = new Date().toISOString()
   let updatedTableNumber: number | string | undefined = tableNumber
+  let mutatedOrderRef: Order | undefined
 
   for (const s of Object.keys(globalStore.__GASTRO_ORDERS__)) {
     const list = globalStore.__GASTRO_ORDERS__[s] || []
@@ -426,15 +432,28 @@ export function updateServerOrderStatus(
         updated_at: updatedAt,
         table_number: parsedTbl,
       }
+      mutatedOrderRef = list[idx]
     }
   }
 
+  // Construir updatedOrder desde el objeto ya mutado en memoria (que preserva order_items)
+  // Si por alguna razón order_items está vacío, hacer backfill desde caché
+  const baseOrder = mutatedOrderRef || existingOrder
+  const cachedItems = getCachedOrderItems(orderId)
+  const resolvedItems =
+    baseOrder.order_items && baseOrder.order_items.length > 0
+      ? baseOrder.order_items
+      : cachedItems && cachedItems.length > 0
+        ? cachedItems
+        : existingOrder.order_items || []
+
   const updatedOrder: Order = {
-    ...existingOrder,
+    ...baseOrder,
     status,
     version: nextVersion,
     updated_at: updatedAt,
     table_number: updatedTableNumber ? parseInt(String(updatedTableNumber), 10) : existingOrder.table_number,
+    order_items: resolvedItems,
   }
 
   // 6. Emitir evento SSE para sincronización instantánea en Mozo, Cocina y Cliente

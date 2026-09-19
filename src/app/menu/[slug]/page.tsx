@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Image from 'next/image'
 import { useParams, useSearchParams } from 'next/navigation'
 import {
@@ -89,6 +89,7 @@ function DinerMenuContent() {
   const [tableOrderStatus, setTableOrderStatus] = useState<OrderStatus | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [showLegalModal, setShowLegalModal] = useState(false)
+  const prevTableOrdersMapRef = useRef<Map<string, any>>(new Map())
 
   // 1. Carga inicial y recuperación de persistencia
   useEffect(() => {
@@ -320,17 +321,39 @@ function DinerMenuContent() {
 
         const currentSessionId = thisTableSession?.session_id || sessionId
 
-        const serverOrdersList: any[] = (ordersRes.orders || []).filter(
-          (o: any) => o.order_items && o.order_items.length > 0
-        )
+        const rawOrders: any[] = ordersRes.orders || []
+        const serverOrdersList: any[] = rawOrders.map((ord: any) => {
+          if (!ord.order_items || ord.order_items.length === 0) {
+            const prevOrd = prevTableOrdersMapRef.current.get(ord.id)
+            if (prevOrd?.order_items && prevOrd.order_items.length > 0) {
+              return { ...ord, order_items: prevOrd.order_items }
+            }
+          }
+          return ord
+        }).filter((o: any) => o.order_items && o.order_items.length > 0)
 
         // Evaluar todas las órdenes de la mesa bajo la sesión activa para sincronización reactiva con Cocina y Mozo.
-        const allTableOrders = serverOrdersList.filter(
-          o => (o.table_number?.toString() === tableNumber?.toString() ||
-                o.table?.table_number?.toString() === tableNumber?.toString() ||
-                o.table_id === `table-${tableNumber}`) &&
-               (!o.session_token || (currentSessionId ? o.session_token === currentSessionId : true))
-        )
+        const allTableOrders = serverOrdersList.filter(o => {
+          const matchesTable = (
+            o.table_number?.toString() === tableNumber?.toString() ||
+            o.table?.table_number?.toString() === tableNumber?.toString() ||
+            o.table_id === `table-${tableNumber}`
+          )
+          if (!matchesTable) return false
+
+          const isActive = ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
+          // Las órdenes activas de esta mesa en curso se preservan firmemente sin oscilaciones de sesión
+          if (isActive) return true
+
+          // Para historial cerrado/pagado, validar sesión para no mostrar pedidos de turnos anteriores
+          if (!o.session_token || !currentSessionId) return true
+          return o.session_token === currentSessionId || o.session_token === sessionId || o.session_token === thisTableSession?.session_id
+        })
+
+        // Guardar órdenes activas conocidas en ref para persistencia resiliente
+        allTableOrders.forEach(ord => {
+          prevTableOrdersMapRef.current.set(ord.id, ord)
+        })
 
         const activeTableOrders = allTableOrders.filter(
           o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
@@ -338,6 +361,7 @@ function DinerMenuContent() {
 
         // Si la mesa fue liberada por el mozo y no quedan pedidos activos pendientes
         if (thisTableSession && thisTableSession.status === 'free' && activeTableOrders.length === 0) {
+          prevTableOrdersMapRef.current.clear()
           setTableOrderStatus(null)
           setIsTablePaid(false)
           setHasRequestedBill(false)
@@ -394,23 +418,29 @@ function DinerMenuContent() {
           )
 
           if (activeOrders.length > 0) {
+            let nextStatus: OrderStatus = 'pending_validation'
             if (activeOrders.some(o => o.status === 'ready')) {
-              setTableOrderStatus('ready')
+              nextStatus = 'ready'
             } else if (activeOrders.some(o => o.status === 'preparing')) {
-              setTableOrderStatus('preparing')
+              nextStatus = 'preparing'
             } else if (activeOrders.some(o => o.status === 'confirmed' || o.status === 'pending')) {
-              setTableOrderStatus('pending')
+              nextStatus = 'pending'
             } else {
-              setTableOrderStatus('pending_validation')
+              nextStatus = 'pending_validation'
             }
+            setTableOrderStatus(prev => prev === nextStatus ? prev : nextStatus)
           } else if (tableOrders.some(o => o.status === 'delivered')) {
             // Todas las comandas activas fueron entregadas -> Sobremesa (Café/Postre y Cuenta)
-            setTableOrderStatus('delivered')
+            setTableOrderStatus(prev => prev === 'delivered' ? prev : 'delivered')
           } else {
-            setTableOrderStatus(null)
+            if (prevTableOrdersMapRef.current.size === 0) {
+              setTableOrderStatus(null)
+            }
           }
         } else {
-          setTableOrderStatus(null)
+          if (prevTableOrdersMapRef.current.size === 0) {
+            setTableOrderStatus(null)
+          }
         }
       } catch (e) {
         console.log('Error checking order status for diner:', e)
@@ -1627,6 +1657,15 @@ function DinerMenuContent() {
           tableNumber={tableNumber}
           sessionId={sessionId}
           onSessionUpdate={(newSession) => setSessionId(newSession)}
+          onOrderSubmitted={(newOrder) => {
+            if (newOrder) {
+              prevTableOrdersMapRef.current.set(newOrder.id, newOrder)
+              setTableOrderStatus(newOrder.status || 'pending_validation')
+              if (newOrder.total_amount) {
+                setTableTotalAmount(prev => Math.max(prev, Number(newOrder.total_amount) || 0))
+              }
+            }
+          }}
           lang={currentLang}
           products={products}
           onAddProduct={(product) => {

@@ -1,0 +1,25 @@
+https://supabase.com/dashboard/project/oicugcbdlxfjikkgjjah/sql/34c9f7c6-4b57-41f2-9468-e7b35f857fae
+
+https://oicugcbdlxfjikkgjjah.supabase.co
+
+select * from service_calls
+--delete from service_calls where id = '3593d047-ece5-41ed-b1bf-09bafd484e2a'
+
+
+NEXT_PUBLIC_SUPABASE_URL
+https://oicugcbdlxfjikkgjjah.supabase.co
+
+Corresponde a la base de datos
+
+NEXT_PUBLIC_SUPABASE_ANON_KEY:
+sb_publishable_cYvq-lXhAbEX1kHNlncfAg_ycvUmhYK
+
+
+
+Estado actual:
+Causa raíz identificada y corregida: Se detectó que el endpoint enviaba IDs temporales de restaurante (a1111111...) que no coincidían con el tenant real de Supabase (a0000000-0000-0000-0000-000000000001), provocando un error de clave foránea (FK 23503) que forzaba el guardado en memoria (call-...).
+Persistencia en base de datos verificada: Ya se insertó y confirmó un registro real en PostgreSQL (UUID: 4e519c15-f52c-40bd-b7e1-00a572234d1e).
+Validación técnica completada: Compilación Next.js limpia (0 errores), auditoría de seguridad RLS 30/30 superada y escaneo Strix 8/8 aprobado.
+Fase final: Solo restan unos segundos para que concluya la suite de pruebas automatizadas de Playwright y consolidar la entrega definitiva.
+
+()

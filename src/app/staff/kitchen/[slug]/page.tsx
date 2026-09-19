@@ -32,6 +32,7 @@ export default function KitchenKDSPage() {
   const previousOrdersCountRef = useRef<number>(0)
   const seenOrderIdsRef = useRef<Set<string>>(new Set())
   const ordersFingerRef = useRef<string>('')
+  const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
 
   // Toggle de Pantalla Completa con 1 Toque
   const toggleFullscreen = () => {
@@ -86,22 +87,27 @@ export default function KitchenKDSPage() {
         const data = await res.json()
         if (Array.isArray(data.orders)) {
           // La cocina solo recibe comandas activas ya validadas por el mozo y con platos reales
-          const incomingOrders: Order[] = data.orders
+          const rawOrders: Order[] = data.orders || []
+          const incomingOrders: Order[] = rawOrders
             .filter((o: Order) =>
               o.status !== 'pending_validation' &&
               o.status !== 'delivered' &&
-              o.status !== 'cancelled' &&
-              o.order_items &&
-              o.order_items.length > 0
+              o.status !== 'cancelled'
             )
-            .map((o: Order) => ({
-              ...o,
-              order_items: (o.order_items || []).map((it: any) => ({
-                ...it,
-                product: it.product || it.products,
-                course: it.course || 'first',
-              })),
-            }))
+            .map((o: Order) => {
+              const items = (o.order_items && o.order_items.length > 0)
+                ? o.order_items
+                : (prevOrdersMapRef.current.get(o.id)?.order_items || [])
+              return {
+                ...o,
+                order_items: items.map((it: any) => ({
+                  ...it,
+                  product: it.product || it.products,
+                  course: it.course || 'first',
+                })),
+              }
+            })
+            .filter((o: Order) => o.order_items && o.order_items.length > 0)
 
           // Detectar nueva orden entrante real para sonar campana
           let hasNewUnseenOrder = false
@@ -132,6 +138,8 @@ export default function KitchenKDSPage() {
                 : (existing?.order_items || [])
               return { ...ord, order_items: effectiveItems }
             })
+
+            prevOrdersMapRef.current = new Map(reconciled.map(o => [o.id, o]))
 
             const finger = reconciled.map(o => `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}`).join('|')
             if (finger === ordersFingerRef.current) {

@@ -316,6 +316,7 @@ export async function createOrder(
             })) as any,
             table_number: orderData.table_number,
           }
+          saveCachedOrderItems(atomicResult.order.id, fullOrder.order_items)
           addServerOrder(slug, fullOrder)
           return fullOrder
         }
@@ -347,6 +348,23 @@ export async function createOrder(
       const { data: newOrder, error: orderErr } = await insertQuery.select('*').single()
 
       if (!orderErr && newOrder) {
+        const fullOrder: Order = {
+          ...newOrder,
+          session_token: effectiveSessionToken || (newOrder as any).session_token,
+          order_items: (orderData.items || []).map((it: any) => ({
+            ...it,
+            product: it.product || it.products,
+            course: it.course || 'first',
+          })) as any,
+          table_number: orderData.table_number,
+        }
+
+        // Anti-race condition: Hidratar inmediatamente cache y memoria antes de que Realtime
+        // emita postgres_changes hacia los clientes, asegurando que cualquier getRestaurantOrders
+        // concurrente siempre obtenga los items completos de la comanda.
+        saveCachedOrderItems(newOrder.id, fullOrder.order_items)
+        addServerOrder(slug, fullOrder, true)
+
         // Insertar items solo si es una orden nueva y product_id es UUID válido
         const itemsToInsert = orderData.items
           .filter(it => uuidRegex.test(it.product_id))
@@ -361,18 +379,7 @@ export async function createOrder(
           await supabase.from('order_items').insert(itemsToInsert)
         }
 
-        const fullOrder: Order = {
-          ...newOrder,
-          session_token: effectiveSessionToken || (newOrder as any).session_token,
-          order_items: (orderData.items || []).map((it: any) => ({
-            ...it,
-            product: it.product || it.products,
-            course: it.course || 'first',
-          })) as any,
-          table_number: orderData.table_number,
-        }
-
-        saveCachedOrderItems(newOrder.id, fullOrder.order_items)
+        // Ahora que los items están en Supabase, emitir el broadcast con la orden completa
         addServerOrder(slug, fullOrder)
         return fullOrder
       }
@@ -615,14 +622,30 @@ export async function transitionOrderStatus(
 
       if (!error && data) {
         if (data.success) {
+          const rpcItems = (data.order?.order_items || []).map((it: any) => ({
+            ...it,
+            product: it.product || it.products,
+            course: it.course || 'first',
+          }))
+
+          // Backfill desde caché si el RPC devolvió items vacíos (race condition Supabase)
+          const cachedItems = getCachedOrderItems(orderId)
+          const resolvedItems =
+            rpcItems.length > 0
+              ? rpcItems
+              : cachedItems && cachedItems.length > 0
+                ? cachedItems
+                : rpcItems
+
           const parsedOrder: Order | undefined = data.order ? {
             ...data.order,
-            order_items: (data.order.order_items || []).map((it: any) => ({
-              ...it,
-              product: it.product || it.products,
-              course: it.course || 'first',
-            })),
+            order_items: resolvedItems,
           } : undefined
+
+          // Sincronizar en memoria local con items hidratados antes del broadcast
+          if (parsedOrder) {
+            updateServerOrderStatus(slug, orderId, nextStatus, tableNumber)
+          }
 
           broadcastEvent({
             type: 'order_updated',

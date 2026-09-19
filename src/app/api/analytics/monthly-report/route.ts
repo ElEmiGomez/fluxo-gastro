@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { MOCK_RESTAURANTS, MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
 
 export const dynamic = 'force-dynamic'
@@ -101,7 +101,7 @@ export async function GET(req: NextRequest) {
       },
       {
         time_slot: '17:00 - 20:00',
-        label: 'Tardeo & Picoteo Terraza',
+        label: 'Turno de Tarde & Picoteo Terraza',
         order_count: Math.round(baseOrders * 0.16),
         revenue_eur: Number((baseRevenue * 0.14).toFixed(2)),
         percentage: 16,
@@ -167,29 +167,29 @@ export async function GET(req: NextRequest) {
     const aiSuggestions = [
       {
         id: 'sug-1',
-        category: 'staffing' as const,
-        title: 'Refuerzo de mozos en franja pico de 14:00 a 15:30',
+        category: 'upselling' as const,
+        title: 'Activar 2ª Ronda Automática de Bebidas a los 18 Minutos',
         description:
-          'El 44% de los pedidos de comida se concentran en un margen de 90 minutos. Reducir el tiempo de validación a menos de 1 minuto aumentará la rotación de mesas en un +12%.',
-        estimated_impact_eur: '+840 €/mes',
-        priority: 'high' as const,
+          'El 72% de los comensales en terraza termina su primera consumición antes del plato principal. Un aviso sutil en el móvil del cliente genera +48 consumiciones semanales.',
+        estimated_impact_eur: '+1.240 €/mes',
+        priority: 'critical' as const,
       },
       {
         id: 'sug-2',
-        category: 'upselling' as const,
-        title: 'Activar botón "Repetir Bebidas" en Tardeo y Terraza',
+        category: 'kitchen_speed' as const,
+        title: 'Pre-elaboración de Guarniciones antes del Pico de las 21:00',
         description:
-          'Las mesas de terraza muestran un 38% de intención de segunda ronda. El aviso interactivo tras 20 minutos de consumo incrementa el ticket medio en +3,80 €.',
-        estimated_impact_eur: '+1.250 €/mes',
-        priority: 'critical' as const,
+          'El tiempo de pase en cocina sube de 11 a 19 minutos entre 21:15 y 22:30. Preparar raciones de patatas trufadas y ensaladas base a las 20:30 liberará un 35% de cuello de botella.',
+        estimated_impact_eur: '+820 €/mes',
+        priority: 'high' as const,
       },
       {
         id: 'sug-3',
         category: 'menu_engineering' as const,
-        title: `Revisar precio o presentación de "${dogsList[0]?.name || 'Plato de Baja Rotación'}"`,
+        title: 'Reestructurar Posición del Tartar de Atún en Menú Digital',
         description:
-          'Este plato registra una baja demanda respecto a su coste de mise en place. Se recomienda cambiarlo por una sugerencia de temporada o ajustar su visibilidad en carta.',
-        estimated_impact_eur: '+420 €/mes',
+          "El plato tiene un margen bruto del 81% pero solo recibe un 4% de los clics iniciales por ubicarse al final de la carta. Destacarlo en 'Recomendaciones del Chef' generará +18 pedidos/mes.",
+        estimated_impact_eur: '+450 €/mes',
         priority: 'medium' as const,
       },
     ]
