@@ -21,7 +21,8 @@
     "context7:verify": "node scripts/verify_context7_mcp.mjs",
     "surveillance:design": "node scripts/daily_design_surveillance.mjs",
     "surveillance:market": "node scripts/daily_market_intelligence.mjs",
-    "morning:check": "node scripts/daily_design_surveillance.mjs && node scripts/daily_market_intelligence.mjs"
+    "morning:check": "node scripts/daily_design_surveillance.mjs && node scripts/daily_market_intelligence.mjs",
+    "test": "vitest run src/lib"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.6.1",
@@ -48,6 +49,8 @@
     "postcss": "^8.5.2",
     "supabase": "^2.116.0",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   }
 }
