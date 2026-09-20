@@ -46,7 +46,6 @@ flowchart TD
 │ 📈 2. MARKETING & VENTAS (Captación & Go-to-Market)                     │
 │  ├─ [x] Briefing recibido: briefing_delegacion_carta_fija.md            │
 │  ├─ [x] Boceto conceptual de Carta Fija y psicología de precios         │
-│  ├─ [ ] Estructuración comercial del Menú del Día cerrado (12,50€)     │
 │  └─ [ ] Pulido final de carta para imprenta y coordinación con Diseño   │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
