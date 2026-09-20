@@ -46,14 +46,16 @@ flowchart TD
 │ 📈 2. MARKETING & VENTAS (Captación & Go-to-Market)                     │
 │  ├─ [x] Briefing recibido: briefing_delegacion_carta_fija.md            │
 │  ├─ [x] Boceto conceptual de Carta Fija y psicología de precios         │
-│  └─ [ ] Pulido final de carta para imprenta y coordinación con Diseño   │
+│  ├─ [x] Plantilla de Carta Fija completada y aprobada                   │
+│  └─ [ ] Prospección activa del Cliente #1 en Noia (Acuerdo 14 Días 0€)  │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🎨 3. DISEÑO DE MARCA & UI/UX (Identidad & Ergonomía Visual)            │
 │  ├─ [x] Plantilla base modular HTML/CSS Carta Fija (public/carta_fija)  │
 │  ├─ [x] Conmutador de 3 temas (Modern Slate / Tapería / Papel Claro)   │
-│  └─ [ ] Maquetación final de artes finales para imprenta física         │
+│  ├─ [x] Plantilla A4 de Carta Fija lista para imprenta (PDF 386 KB)     │
+│  └─ [ ] Adaptación de artes finales al cerrar el local piloto real      │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
