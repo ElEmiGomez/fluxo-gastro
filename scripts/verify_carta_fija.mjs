@@ -1,9 +1,6 @@
 import { chromium } from '@playwright/test'
 import path from 'path'
 import fs from 'fs'
-import { fileURLToPath } from 'url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 async function auditCartaFija() {
   const browser = await chromium.launch({ headless: true })
@@ -13,87 +10,86 @@ async function auditCartaFija() {
   const htmlPath = path.resolve(process.cwd(), 'carta_fija_digital.html')
   const fileUrl = 'file:///' + htmlPath.replace(/\\/g, '/')
 
-  // ── MÓVIL (iPhone 12 Pro, 390×844) ───────────────────────────────────────
+  // ── 1. MÓVIL (iPhone 12 Pro, 390×844) ───────────────────────────────────
   const mobile = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const mPage = await mobile.newPage()
   await mPage.goto(fileUrl, { waitUntil: 'networkidle' })
-  await mPage.waitForTimeout(900)
+  await mPage.waitForTimeout(600)
 
   await mPage.screenshot({ path: outDir + '/mobile_home.png', fullPage: false })
   console.log('[OK] mobile_home.png')
 
-  // Verificar que NO hay botones transaccionales
+  // Verificar cero botones transaccionales
   const cartBtnCount = await mPage.locator('button:has-text("Añadir")').count()
   const pedirBtnCount = await mPage.locator('button:has-text("Pedir")').count()
-  const mozeroBtnCount = await mPage.locator('button:has-text("mozo"), button:has-text("camarero")').count()
-  console.log('[CHECK] Botones "Añadir":', cartBtnCount, '| Botones "Pedir":', pedirBtnCount, '| Botones mozo/camarero:', mozeroBtnCount)
+  const mozoBtnCount = await mPage.locator('button:has-text("mozo"), button:has-text("camarero")').count()
+  console.log('[CHECK] Botones "Añadir":', cartBtnCount, '| Botones "Pedir":', pedirBtnCount, '| Botones mozo:', mozoBtnCount)
 
-  // Abrir modal de un plato
+  // Expandir primer plato
   const firstCard = mPage.locator('[data-dish-id]').first()
-  const hasCards = await firstCard.count() > 0
-  if (hasCards) {
-    await firstCard.click()
-    await mPage.waitForTimeout(500)
-    await mPage.screenshot({ path: outDir + '/mobile_modal_open.png', fullPage: false })
-    console.log('[OK] mobile_modal_open.png')
-
-    // Cerrar modal con X
-    await mPage.locator('[data-testid="modal-close"]').click()
+  if (await firstCard.count() > 0) {
+    await firstCard.locator('div[onclick]').first().click()
     await mPage.waitForTimeout(400)
-    const modalHidden = await mPage.locator('[data-testid="dish-modal"]').isHidden()
-    console.log('[CHECK] Modal cerrado tras click X:', modalHidden)
-  } else {
-    console.log('[WARN] No se encontraron tarjetas de plato con data-dish-id')
+    await mPage.screenshot({ path: outDir + '/mobile_expanded.png', fullPage: false })
+    console.log('[OK] mobile_expanded.png')
   }
 
-  // Buscador: filtrar por texto
-  await mPage.fill('#search-input', 'pulpo')
-  await mPage.waitForTimeout(500)
-  await mPage.screenshot({ path: outDir + '/mobile_search_pulpo.png', fullPage: false })
-  console.log('[OK] mobile_search_pulpo.png')
+  // Buscador: filtrar por burger
+  await mPage.fill('#search-input', 'burger')
+  await mPage.waitForTimeout(400)
+  await mPage.screenshot({ path: outDir + '/mobile_search.png', fullPage: false })
+  console.log('[OK] mobile_search.png')
+  await mPage.fill('#search-input', '')
+  await mPage.waitForTimeout(200)
 
-  // Barra informativa inferior
-  const bottomBarVisible = await mPage.locator('[data-testid="bottom-info-bar"]').isVisible()
-  console.log('[CHECK] Barra informativa inferior visible:', bottomBarVisible)
+  // Filtro Veggie
+  await mPage.click('#filter-veggie-btn')
+  await mPage.waitForTimeout(400)
+  await mPage.screenshot({ path: outDir + '/mobile_veggie.png', fullPage: false })
+  console.log('[OK] mobile_veggie.png')
 
   await mobile.close()
 
-  // ── ESCRITORIO (1280×900) ────────────────────────────────────────────────
+  // ── 2. ESCRITORIO (1280×900) ────────────────────────────────────────────
   const desktop = await browser.newContext({ viewport: { width: 1280, height: 900 } })
   const dPage = await desktop.newPage()
   await dPage.goto(fileUrl, { waitUntil: 'networkidle' })
-  await dPage.waitForTimeout(900)
+  await dPage.waitForTimeout(600)
 
-  await dPage.screenshot({ path: outDir + '/desktop_home.png', fullPage: true })
+  await dPage.screenshot({ path: outDir + '/desktop_home.png', fullPage: false })
   console.log('[OK] desktop_home.png')
 
-  // Cambio idioma Español
-  await dPage.click('button[data-lang="es"]')
-  await dPage.waitForTimeout(350)
+  // Cambio a Español
+  await dPage.click('#lang-dropdown-btn')
+  await dPage.waitForTimeout(200)
+  await dPage.click('#lang-menu button:has-text("Español")')
+  await dPage.waitForTimeout(300)
   await dPage.screenshot({ path: outDir + '/desktop_es.png', fullPage: false })
   console.log('[OK] desktop_es.png')
 
-  // Cambio idioma English
-  await dPage.click('button[data-lang="en"]')
-  await dPage.waitForTimeout(350)
+  // Cambio a English
+  await dPage.click('#lang-dropdown-btn')
+  await dPage.waitForTimeout(200)
+  await dPage.click('#lang-menu button:has-text("English")')
+  await dPage.waitForTimeout(300)
   await dPage.screenshot({ path: outDir + '/desktop_en.png', fullPage: false })
   console.log('[OK] desktop_en.png')
 
-  // Filtro Sin Gluten
-  await dPage.click('button[data-dietary="sin-gluten"]')
-  await dPage.waitForTimeout(450)
-  await dPage.screenshot({ path: outDir + '/desktop_filter_singluten.png', fullPage: false })
-  console.log('[OK] desktop_filter_singluten.png')
-
-  // Vista cuadricula
-  await dPage.click('button[data-view="grid"]')
+  // Vista Grid
+  await dPage.click('#btn-view-grid')
   await dPage.waitForTimeout(350)
-  await dPage.screenshot({ path: outDir + '/desktop_grid_view.png', fullPage: false })
-  console.log('[OK] desktop_grid_view.png')
+  await dPage.screenshot({ path: outDir + '/desktop_grid.png', fullPage: false })
+  console.log('[OK] desktop_grid.png')
+
+  // Filtro Sin Gluten
+  await dPage.click('#filter-sintacc-btn')
+  await dPage.waitForTimeout(350)
+  await dPage.screenshot({ path: outDir + '/desktop_singluten.png', fullPage: false })
+  console.log('[OK] desktop_singluten.png')
 
   await desktop.close()
   await browser.close()
-  console.log('\n[AUDIT COMPLETE] Capturas en:', outDir)
+  console.log('\n[AUDIT COMPLETE] Todas las capturas generadas correctamente en:', outDir)
 }
 
 auditCartaFija().catch(e => { console.error(e); process.exit(1) })

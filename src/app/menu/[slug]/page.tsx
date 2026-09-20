@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Image from 'next/image'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams, usePathname } from 'next/navigation'
 import {
   ShoppingBag,
   Plus,
@@ -48,8 +48,15 @@ const STORAGE_CART_PREFIX = 'gastro_cart_'
 function DinerMenuContent() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const slug = (params?.slug as string) || 'burger-gourmet'
   const tableParam = searchParams?.get('table') || '4'
+
+  const isFixedMenu = searchParams?.get('mode') === 'fija' || 
+    searchParams?.get('fija') === 'true' || 
+    searchParams?.get('fixed') === 'true' || 
+    searchParams?.get('plan') === 'carta' ||
+    Boolean(pathname?.startsWith('/carta'))
 
   const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
   const [categories, setCategories] = useState<Category[]>(() => MOCK_CATEGORIES[slug] || [])
@@ -303,7 +310,7 @@ function DinerMenuContent() {
     }
 
     const checkOrderStatus = async () => {
-      if (isChecking) return
+      if (isChecking || isFixedMenu) return
       isChecking = true
       try {
         const [ordersRes, callsRes, tablesRes] = await Promise.all([
@@ -753,10 +760,17 @@ function DinerMenuContent() {
                   {searchParams?.get('local') || restaurant.name || 'Nombre del Local'}
                 </h1>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/80 uppercase whitespace-nowrap">
-                    <span>{t('tableNumberLabel')} #{tableNumber}</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-                  </span>
+                  {isFixedMenu ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/80 uppercase whitespace-nowrap">
+                      <span>Carta Digital Informativa</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 flex-shrink-0" />
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/80 uppercase whitespace-nowrap">
+                      <span>{t('tableNumberLabel')} #{tableNumber}</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -813,19 +827,23 @@ function DinerMenuContent() {
                 )}
               </div>
 
-              {/* Botón de Microservicios */}
-              <button
-                type="button"
-                onClick={() => setShowServiceModal(true)}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
-                title="Pedir servilletas, hielo, condimentos"
-              >
-                <Bell className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                <span className="text-[11px] font-bold hidden min-[400px]:inline">{t('services')}</span>
-              </button>
+              {!isFixedMenu && (
+                <>
+                  {/* Botón de Microservicios */}
+                  <button
+                    type="button"
+                    onClick={() => setShowServiceModal(true)}
+                    className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+                    title="Pedir servilletas, hielo, condimentos"
+                  >
+                    <Bell className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                    <span className="text-[11px] font-bold hidden min-[400px]:inline">{t('services')}</span>
+                  </button>
 
-              {/* Botón de Llamar al Mozo */}
-              <CallWaiterButton tableNumber={tableNumber} lang={currentLang} />
+                  {/* Botón de Llamar al Mozo */}
+                  <CallWaiterButton tableNumber={tableNumber} lang={currentLang} />
+                </>
+              )}
             </div>
           </div>
         </header>
@@ -848,22 +866,24 @@ function DinerMenuContent() {
         )}
 
         {/* GUÍA VISUAL INTERACTIVA (MICRO-ONBOARDING DE 4 PASOS ACCIONABLES) */}
-        <MicroOnboardingBanner
-          lang={currentLang}
-          tableNumber={tableNumber}
-          onScrollToMenu={() => {
-            const target = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
-            if (target) {
-              target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
-          }}
-          onOpenCart={() => setIsCartOpen(true)}
-          onOpenCallWaiter={() => setShowServiceModal(true)}
-          onRequestBill={() => setShowDirectBillModal(true)}
-        />
+        {!isFixedMenu && (
+          <MicroOnboardingBanner
+            lang={currentLang}
+            tableNumber={tableNumber}
+            onScrollToMenu={() => {
+              const target = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
+              if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }
+            }}
+            onOpenCart={() => setIsCartOpen(true)}
+            onOpenCallWaiter={() => setShowServiceModal(true)}
+            onRequestBill={() => setShowDirectBillModal(true)}
+          />
+        )}
 
         {/* TRACKER EN VIVO DE ESTADO EN COCINA (Clickeable para ver el camino del pedido) */}
-        {tableOrderStatus && (
+        {!isFixedMenu && tableOrderStatus && (
           <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full">
             {tableOrderStatus === 'preparing' && (
               <div
@@ -1073,7 +1093,7 @@ function DinerMenuContent() {
         )}
 
         {/* VISTA CUANDO LA MESA YA HA SIDO COBRADA */}
-        {isTablePaid && (
+        {!isFixedMenu && isTablePaid && (
           <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
             <div className="space-y-3">
               <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center gap-3">
@@ -1303,7 +1323,7 @@ function DinerMenuContent() {
                           <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2">
                             {translateProductName(currentLang, product.id, product.name)}
                           </h3>
-                          {idx === 0 && totalCartCount === 0 && (
+                          {!isFixedMenu && idx === 0 && totalCartCount === 0 && (
                             <span className="text-[9px] font-extrabold text-blue-700 bg-blue-100/90 px-1.5 py-0.5 rounded-md animate-pulse">
                               ✨ Toca + para pedir
                             </span>
@@ -1328,45 +1348,59 @@ function DinerMenuContent() {
                         )}
                       </div>
 
-                      {/* Control de Cantidad Inline */}
+                      {/* Control de Cantidad Inline o Botón Detalles en Modo Fijo */}
                       <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                        {qty === 0 ? (
-                          <button
-                            onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                            className={`w-8 h-8 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 smooth-press shadow-xs ${
-                              idx === 0 && totalCartCount === 0 ? 'ring-2 ring-blue-500/60 ring-offset-1 animate-pulse' : ''
-                            }`}
-                            title="Añadir a la comanda"
-                          >
-                            <Plus size={16} />
-                          </button>
-                        ) : (
-                          <div className="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100 animate-in zoom-in-95 duration-150">
-                            <button
-                              onClick={(e) => handleUpdateProductQuantity(product, -1, e)}
-                              className="w-6 h-6 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs hover:bg-blue-100 transition-colors smooth-press"
-                            >
-                              <Minus size={11} />
-                            </button>
-                            <span className="text-xs font-black text-blue-900 px-1 animate-pop tabular-nums">{qty}</span>
-                            <button
-                              onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                              className="w-6 h-6 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-xs hover:bg-blue-800 transition-colors smooth-press"
-                            >
-                              <Plus size={11} />
-                            </button>
-                          </div>
-                        )}
+                        {!isFixedMenu ? (
+                          <>
+                            {qty === 0 ? (
+                              <button
+                                onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
+                                className={`w-8 h-8 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 smooth-press shadow-xs ${
+                                  idx === 0 && totalCartCount === 0 ? 'ring-2 ring-blue-500/60 ring-offset-1 animate-pulse' : ''
+                                }`}
+                                title="Añadir a la comanda"
+                              >
+                                <Plus size={16} />
+                              </button>
+                            ) : (
+                              <div className="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100 animate-in zoom-in-95 duration-150">
+                                <button
+                                  onClick={(e) => handleUpdateProductQuantity(product, -1, e)}
+                                  className="w-6 h-6 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs hover:bg-blue-100 transition-colors smooth-press"
+                                >
+                                  <Minus size={11} />
+                                </button>
+                                <span className="text-xs font-black text-blue-900 px-1 animate-pop tabular-nums">{qty}</span>
+                                <button
+                                  onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
+                                  className="w-6 h-6 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-xs hover:bg-blue-800 transition-colors smooth-press"
+                                >
+                                  <Plus size={11} />
+                                </button>
+                              </div>
+                            )}
 
-                        <button
-                          onClick={() => toggleExpand(product.id)}
-                          className={`p-1 text-slate-400 hover:text-slate-700 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                            isExpanded ? 'rotate-180 text-blue-700' : ''
-                          }`}
-                          title="Ver foto y detalles"
-                        >
-                          <ChevronDown size={16} />
-                        </button>
+                            <button
+                              onClick={() => toggleExpand(product.id)}
+                              className={`p-1 text-slate-400 hover:text-slate-700 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                                isExpanded ? 'rotate-180 text-blue-700' : ''
+                              }`}
+                              title="Ver foto y detalles"
+                            >
+                              <ChevronDown size={16} />
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => toggleExpand(product.id)}
+                            className={`p-2 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-500 hover:text-blue-700 border border-slate-200/80 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                              isExpanded ? 'rotate-180 text-blue-700 bg-blue-50 border-blue-200' : ''
+                            }`}
+                            title="Ver foto y detalles"
+                          >
+                            <ChevronDown size={16} />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -1393,22 +1427,34 @@ function DinerMenuContent() {
                             </div>
                           )}
 
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                            <button
-                              onClick={() => setCustomizingProduct(product)}
-                              className="w-full sm:auto px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all shadow-xs text-center"
-                            >
-                              {t('customize')}
-                            </button>
+                          {!isFixedMenu ? (
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                              <button
+                                onClick={() => setCustomizingProduct(product)}
+                                className="w-full sm:auto px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all shadow-xs text-center"
+                              >
+                                {t('customize')}
+                              </button>
 
-                            <button
-                              onClick={() => handleUpdateProductQuantity(product, 1)}
-                              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition-transform active:scale-95"
-                            >
-                              <Plus size={14} className="stroke-[3]" />
-                              <span>{t('addToCart')}</span>
-                            </button>
-                          </div>
+                              <button
+                                onClick={() => handleUpdateProductQuantity(product, 1)}
+                                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition-transform active:scale-95"
+                              >
+                                <Plus size={14} className="stroke-[3]" />
+                                <span>{t('addToCart')}</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between text-xs text-slate-600">
+                              <span className="font-semibold flex items-center gap-1.5 text-slate-700">
+                                <Sparkles size={14} className="text-amber-500 flex-shrink-0" />
+                                Plato elaborado al momento con ingredientes frescos
+                              </span>
+                              <span className="font-black text-blue-700 text-sm">
+                                {formatCurrency(product.price)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1460,41 +1506,49 @@ function DinerMenuContent() {
                       </div>
                     </div>
 
-                    <div className="p-3.5 pt-0 flex items-center justify-between gap-2">
-                      <button
-                        onClick={() => setCustomizingProduct(product)}
-                        className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
-                      >
-                        {t('customize')}
-                      </button>
+                    {!isFixedMenu ? (
+                      <div className="p-3.5 pt-0 flex items-center justify-between gap-2">
+                        <button
+                          onClick={() => setCustomizingProduct(product)}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                        >
+                          {t('customize')}
+                        </button>
 
-                      <div className="flex items-center">
-                        {qty === 0 ? (
-                          <button
-                            onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                            className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs"
-                          >
-                            <Plus size={16} />
-                          </button>
-                        ) : (
-                          <div className="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100">
-                            <button
-                              onClick={(e) => handleUpdateProductQuantity(product, -1, e)}
-                              className="w-6 h-6 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs"
-                            >
-                              <Minus size={11} />
-                            </button>
-                            <span className="text-xs font-black text-blue-900 px-1">{qty}</span>
+                        <div className="flex items-center">
+                          {qty === 0 ? (
                             <button
                               onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                              className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs"
+                              className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs"
                             >
-                              <Plus size={11} />
+                              <Plus size={16} />
                             </button>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100">
+                              <button
+                                onClick={(e) => handleUpdateProductQuantity(product, -1, e)}
+                                className="w-6 h-6 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs"
+                              >
+                                <Minus size={11} />
+                              </button>
+                              <span className="text-xs font-black text-blue-900 px-1">{qty}</span>
+                              <button
+                                onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
+                                className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs"
+                              >
+                                <Plus size={11} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="p-3.5 pt-0">
+                        <div className="py-2 px-3 bg-blue-50/70 rounded-xl border border-blue-100 text-center text-xs font-black text-blue-700">
+                          {formatCurrency(product.price)}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -1529,41 +1583,61 @@ function DinerMenuContent() {
           </footer>
         </main>
 
-        {/* 3. Barra Flotante Inferior de Comanda (Mobile-First) */}
-        {totalCartCount > 0 && (
-          <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 gpu-layer">
-            {/* Tooltip contextual animado discreto */}
-            <div className="flex justify-end pr-2 pb-1.5 animate-in fade-in">
-              <div className="bg-slate-900/95 text-white border border-blue-400/40 text-[10px] sm:text-[11px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 animate-bounce backdrop-blur-md">
-                <Sparkles size={11} className="text-amber-300 flex-shrink-0" />
-                <span>{t('tooltipAddToCartNotice')}</span>
-              </div>
-            </div>
-
-            <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.35)] flex items-center justify-between border border-slate-800 animate-in slide-in-from-bottom duration-350 ease-[cubic-bezier(0.16,1,0.3,1)]">
-              <div className="flex items-center space-x-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-600/30 flex-shrink-0 animate-pop">
-                  <ShoppingBag size={16} />
+        {/* 3. Barra Flotante Inferior de Comanda o Aviso Informativo */}
+        {isFixedMenu ? (
+          <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 pointer-events-auto">
+            <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 border border-slate-800">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 flex items-center justify-center flex-shrink-0 border border-blue-500/20">
+                  <Utensils className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[11px] text-slate-400 font-medium truncate">
-                    {totalCartCount} {totalCartCount === 1 ? (t('itemSingle') || 'ítem') : (t('items') || 'ítems')} &middot; {t('tableNumberLabel')} #{tableNumber}
-                  </div>
-                  <div className="text-sm sm:text-base font-black text-amber-300 tabular-nums">
-                    {formatCurrency(totalCartAmount)}
-                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-400 block leading-tight">
+                    Carta Digital Informativa
+                  </span>
+                  <p className="text-xs text-slate-200 font-medium leading-tight truncate sm:whitespace-normal">
+                    Para realizar tu pedido o consultar dudas sobre alérgenos, avisa a tu camarero.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          totalCartCount > 0 && (
+            <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 gpu-layer">
+              {/* Tooltip contextual animado discreto */}
+              <div className="flex justify-end pr-2 pb-1.5 animate-in fade-in">
+                <div className="bg-slate-900/95 text-white border border-blue-400/40 text-[10px] sm:text-[11px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 animate-bounce backdrop-blur-md">
+                  <Sparkles size={11} className="text-amber-300 flex-shrink-0" />
+                  <span>{t('tooltipAddToCartNotice')}</span>
                 </div>
               </div>
 
-              <button
-                onClick={() => setIsCartOpen(true)}
-                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-extrabold flex items-center space-x-1 transition-all shadow-md shadow-blue-600/30 smooth-press flex-shrink-0 cursor-pointer"
-              >
-                <span>{t('viewCart')}</span>
-                <ChevronRight size={15} />
-              </button>
+              <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.35)] flex items-center justify-between border border-slate-800 animate-in slide-in-from-bottom duration-350 ease-[cubic-bezier(0.16,1,0.3,1)]">
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-600/30 flex-shrink-0 animate-pop">
+                    <ShoppingBag size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] text-slate-400 font-medium truncate">
+                      {totalCartCount} {totalCartCount === 1 ? (t('itemSingle') || 'ítem') : (t('items') || 'ítems')} &middot; {t('tableNumberLabel')} #{tableNumber}
+                    </div>
+                    <div className="text-sm sm:text-base font-black text-amber-300 tabular-nums">
+                      {formatCurrency(totalCartAmount)}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setIsCartOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-extrabold flex items-center space-x-1 transition-all shadow-md shadow-blue-600/30 smooth-press flex-shrink-0 cursor-pointer"
+                >
+                  <span>{t('viewCart')}</span>
+                  <ChevronRight size={15} />
+                </button>
+              </div>
             </div>
-          </div>
+          )
         )}
 
         {/* Modal de Personalización (Píldoras + Notas libres) */}
