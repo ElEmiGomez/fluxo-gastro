@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react'
 import Image from 'next/image'
-import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice, Clock } from 'lucide-react'
+import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice, Clock, AlertCircle } from 'lucide-react'
 import { CartItem, Product, OrderStatus } from '@/types/database.types'
 import { useTenant } from '@/components/tenant/TenantProvider'
 import { formatCurrency } from '@/lib/utils'
@@ -59,6 +59,7 @@ export function CartDrawer({
   const { restaurant } = useTenant()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderSuccess, setOrderSuccess] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showBillModal, setShowBillModal] = useState(false)
   const [isDrinkSuggestionsOpen, setIsDrinkSuggestionsOpen] = useState(false)
@@ -321,7 +322,7 @@ export function CartDrawer({
         onClose()
         return
       }
-      alert('Hubo un error al transmitir el pedido. Por favor avisa al mozo.')
+      setSubmissionError(err?.message || 'Hubo un inconveniente al enviar la comanda a la base de datos. Por favor reintenta.')
     } finally {
       setIsSubmitting(false)
     }
@@ -733,6 +734,54 @@ export function CartDrawer({
         }}
         onCancel={() => setShowClearConfirm(false)}
       />
+
+      {/* MODAL DE ERROR DE TRANSMISIÓN CON REINTENTO (CERO EVENTOS FICTICIOS) */}
+      {submissionError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-sm animate-in fade-in select-none">
+          <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 text-slate-900 animate-in zoom-in-95 duration-200">
+            <div className="p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-slate-900">
+                    No pudimos enviar tu pedido
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                    {submissionError}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSubmissionError(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 font-bold text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Volver
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmissionError(null)
+                    handleSendOrder()
+                  }}
+                  disabled={isSubmitting}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-extrabold text-xs shadow-md transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <span>Reintentar</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

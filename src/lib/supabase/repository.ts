@@ -383,35 +383,16 @@ export async function createOrder(
         addServerOrder(slug, fullOrder)
         return fullOrder
       }
-    } catch (e) {
-      console.warn('Error creating order in Supabase:', e)
+      if (orderErr) {
+        throw new Error(orderErr.message || 'Error al registrar la comanda en Supabase')
+      }
+    } catch (e: any) {
+      console.error('Error creating order in Supabase:', e)
+      throw e
     }
   }
 
-  // Fallback en memoria
-  const orderId = `ord-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
-  const fallbackOrder: Order = {
-    id: orderId,
-    restaurant_id: restaurantId,
-    table_id: `table-${orderData.table_number}`,
-    table_number: orderData.table_number,
-    session_token: orderData.session_token,
-    status: initialStatus,
-    total_amount: orderData.total_amount,
-    created_at: new Date().toISOString(),
-    order_items: orderData.items.map((it, idx) => ({
-      id: `oi-${Date.now()}-${idx}`,
-      order_id: orderId,
-      product_id: it.product_id,
-      quantity: it.quantity,
-      notes: it.notes || null,
-      product: it.product,
-    })),
-  }
-
-  saveCachedOrderItems(orderId, fallbackOrder.order_items)
-  addServerOrder(slug, fallbackOrder)
-  return fallbackOrder
+  throw new Error('Base de datos no configurada o error de conexión al registrar la comanda')
 }
 
 /**
@@ -491,16 +472,14 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
             session_token: token,
           } as Order
         })
-        const supaOrderIds = new Set((data as any[]).map(o => o.id))
-        const pendingMemOnlyOrders = memOrders.filter(m => !supaOrderIds.has(m.id))
-        return [...mappedOrders, ...pendingMemOnlyOrders]
+        return mappedOrders
       }
     } catch (e) {
       console.warn('Error fetching orders from Supabase:', e)
     }
   }
 
-  return getServerOrders(slug)
+  return []
 }
 
 /**

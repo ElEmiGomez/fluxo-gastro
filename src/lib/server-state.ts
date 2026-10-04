@@ -294,7 +294,7 @@ export function getServerOrders(slug: string): Order[] {
       }
       return o
     })
-    .filter(o => o.order_items && o.order_items.length > 0)
+    .filter(o => o.status !== 'cancelled' && o.status !== 'paid')
 }
 
 export function addServerOrder(slug: string, order: Order, silent: boolean = false): Order {
@@ -485,19 +485,14 @@ export function getServerServiceCalls(slug: string): ServiceCall[] {
   return globalStore.__GASTRO_SERVICE_CALLS__?.[slug] || []
 }
 
-export function addServerServiceCall(slug: string, call: Omit<ServiceCall, 'id' | 'created_at' | 'status'>): ServiceCall {
+export function addServerServiceCall(slug: string, call: ServiceCall): ServiceCall {
   if (!globalStore.__GASTRO_SERVICE_CALLS__[slug]) {
     globalStore.__GASTRO_SERVICE_CALLS__[slug] = []
   }
-  const newCall: ServiceCall = {
-    ...call,
-    id: `call-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    status: 'pending',
-    created_at: new Date().toISOString(),
-  }
-  globalStore.__GASTRO_SERVICE_CALLS__[slug].unshift(newCall)
-  broadcastEvent({ type: 'service_call', slug, call: newCall })
-  return newCall
+  // No generar IDs sintéticos 'call-'. Toda alerta debe tener su ID legítimo de base de datos.
+  globalStore.__GASTRO_SERVICE_CALLS__[slug].unshift(call)
+  broadcastEvent({ type: 'service_call', slug, call })
+  return call
 }
 
 export function attendServerServiceCall(slug: string, callId: string): ServiceCall[] {

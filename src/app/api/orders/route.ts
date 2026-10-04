@@ -134,8 +134,6 @@ export async function POST(req: NextRequest) {
     // Asegurar que la mesa pase a estado ocupado con su sesión activa
     setTableOccupied(slug, parsedTableNum, finalSessionToken)
 
-    const orderId = `ord-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
-    const now = new Date().toISOString()
     const tables = MOCK_TABLES[slug] || []
     const matchedTable = tables.find(t => t.id === table_id || t.table_number === parsedTableNum)
     const assignedTableNum = matchedTable ? matchedTable.table_number : parsedTableNum
@@ -160,8 +158,8 @@ export async function POST(req: NextRequest) {
       const sanitizedNotes = item.notes ? sanitizeText(item.notes, 200) : null
 
       validItems.push({
-        id: `oi-${Date.now()}-${idx}`,
-        order_id: orderId,
+        id: `oi-${idx}`,
+        order_id: '',
         product_id: catalogProduct.id,
         quantity,
         notes: sanitizedNotes || null,
@@ -209,7 +207,14 @@ export async function POST(req: NextRequest) {
     if (idempotencyKeyStr && idempotencyLocked) {
       releaseIdempotencyLock(idempotencyKeyStr, err.message)
     }
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'DATABASE_ERROR',
+        message: err.message || 'No se pudo guardar la comanda en la base de datos. Por favor reintenta.',
+      },
+      { status: 500 }
+    )
   }
 }
 
