@@ -80,6 +80,36 @@ if (createServiceCallBody.includes('addServerServiceCall')) {
 }
 console.log('✅ createServiceCall ya NO utiliza addServerServiceCall (cero alertas ficticias en memoria).')
 
+// 3.1 Verificar que createOrder no genera fallbackOrder ficticio con ord-
+const createOrderMatch = repoContent.match(/export async function createOrder[\s\S]*?^}/m)
+if (!createOrderMatch) {
+  console.error('❌ No se encontró createOrder en repository.ts')
+  process.exit(1)
+}
+const createOrderBody = createOrderMatch[0]
+if (createOrderBody.includes('fallbackOrder') || createOrderBody.includes('`ord-')) {
+  console.error('❌ createOrder todavía genera órdenes ficticias fallbackOrder o prefijo ord-!')
+  process.exit(1)
+}
+console.log('✅ createOrder ya NO genera fallbackOrder ni IDs sintéticos ord- (SSOT estricto en Supabase).')
+
+// 3.2 Verificar que getRestaurantOrders no mezcla órdenes residuales de memoria
+const getOrdersMatch = repoContent.match(/export async function getRestaurantOrders[\s\S]*?^}/m)
+if (getOrdersMatch && getOrdersMatch[0].includes('pendingMemOnlyOrders')) {
+  console.error('❌ getRestaurantOrders todavía mezcla órdenes en memoria pendingMemOnlyOrders!')
+  process.exit(1)
+}
+console.log('✅ getRestaurantOrders no mezcla órdenes residuales de memoria (PostgreSQL SSOT verificado).')
+
+// 3.3 Verificar que server-state.ts no genera IDs sintéticos 'call-'
+const serverStatePath = path.join(rootDir, 'src', 'lib', 'server-state.ts')
+const serverStateContent = fs.readFileSync(serverStatePath, 'utf8')
+if (serverStateContent.includes('`call-${Date.now()}-')) {
+  console.error('❌ server-state.ts todavía contiene la plantilla generadora de IDs sintéticos call-!')
+  process.exit(1)
+}
+console.log('✅ server-state.ts ya NO genera IDs sintéticos con prefijo call-.')
+
 // 4. Verificar que CallWaiterButton no hace fallback falso
 const buttonPath = path.join(rootDir, 'src', 'components', 'menu', 'CallWaiterButton.tsx')
 const buttonContent = fs.readFileSync(buttonPath, 'utf8')
@@ -93,4 +123,13 @@ if (!buttonContent.includes('showErrorModal') || !buttonContent.includes('Hubo u
 }
 console.log('✅ CallWaiterButton gestiona errores con modal emergente y sin fallback falso.')
 
-console.log('\n🎉 ¡Todas las validaciones de logging diario y erradicación de alertas ficticias pasaron con éxito!')
+// 5. Verificar que CartDrawer gestiona errores de transmisión con modal de reintento
+const cartDrawerPath = path.join(rootDir, 'src', 'components', 'menu', 'CartDrawer.tsx')
+const cartDrawerContent = fs.readFileSync(cartDrawerPath, 'utf8')
+if (!cartDrawerContent.includes('submissionError') || !cartDrawerContent.includes('Reintentar')) {
+  console.error('❌ CartDrawer no tiene el modal de error con opción de reintento configurado.')
+  process.exit(1)
+}
+console.log('✅ CartDrawer gestiona errores con modal informativo y botón de reintento sin borrar el carrito.')
+
+console.log('\n🎉 ¡Todas las validaciones de logging diario y erradicación de alertas/comandas ficticias pasaron con éxito!')

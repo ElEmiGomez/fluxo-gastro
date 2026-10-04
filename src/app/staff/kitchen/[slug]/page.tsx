@@ -107,7 +107,6 @@ export default function KitchenKDSPage() {
                 })),
               }
             })
-            .filter((o: Order) => o.order_items && o.order_items.length > 0)
 
           // Detectar nueva orden entrante real para sonar campana
           let hasNewUnseenOrder = false
