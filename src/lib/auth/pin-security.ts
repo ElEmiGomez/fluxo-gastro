@@ -89,7 +89,16 @@ export function verifyStaffRequest(
   const pinHeader = req.headers.get('x-staff-pin')
   if (pinHeader) {
     const cleanPin = pinHeader.trim()
-    if (cleanPin === '1234' || cleanPin === '4154928' || cleanPin === '9999' || cleanPin === '5678') {
+    // Master PINs válidos para cualquier rol de staff
+    if (cleanPin === '4154928' || cleanPin === '9999') {
+      return true
+    }
+    // PIN de administración y comandero
+    if ((allowedRoles.includes('admin') || allowedRoles.includes('comandero')) && cleanPin === '1234') {
+      return true
+    }
+    // PIN de cocina
+    if (allowedRoles.includes('kitchen') && cleanPin === '5678') {
       return true
     }
   }

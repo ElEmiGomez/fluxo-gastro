@@ -25,52 +25,59 @@ flowchart TD
 
 ---
 
-## ☀️ Tablero Diario de Tareas (Standup de Aceleración Diaria — 19/09/2026)
-> **Regla de Operación de la Startup:** Cada mañana se establece el despacho de tareas prioritarias por departamento. Todo lo correspondiente a desarrollo de software, base de datos, APIs, seguridad e infraestructura se ejecuta estrictamente dentro de **Program Data (Ingeniería y Producto)**.
+## ☀️ Tablero Diario de Tareas (Standup de Estabilidad & Calidad — 04/10/2026)
+> **Directiva Ejecutiva de la Startup:** Prioridad operativa absoluta: **Fixear Fluxo en su totalidad**. Toda expansión comercial o nuevas funcionalidades quedan en segundo plano hasta certificar estabilidad punta a punta, eliminación de fallos silenciosos y tolerancia cero a datos ficticios en memoria.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 🌅 DESPACHO MATUTINO DIARIO — PRIORIDADES DEL DÍA (19/09/2026)          │
-│    Objetivo General: Fase 2 Activa — Gobernanza y Delegación Operativa  │
+│ 🌅 DESPACHO TÉCNICO DIARIO — PRIORIDAD ABSOLUTA (04/10/2026)            │
+│    Objetivo General: Fixear Fluxo en su Totalidad & Cero Datos Fantasma │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🏛️ 1. ORGANIZACIÓN GENERAL (COO / Coordinación General)                 │
-│  ├─ [x] Sincronización y registro en el Libro Diario Interdepartamental │
-│  ├─ [x] Delegación oficial de tareas: Carta Fija (Mkt) / Reporte (Eng) │
-│  ├─ [x] Emisión de briefings departamentales de especificación          │
-│  └─ [x] Supervisión del Roadmap y control de dependencias               │
+│  ├─ [x] Registro DEC-25: Erradicación Total de Eventos Ficticios        │
+│  ├─ [x] Sincronización de acuerdos técnicos Guillermo F. Gómez & Nacho   │
+│  ├─ [x] Actualización de prioridades: Standby en Menú del Día y Ventas │
+│  └─ [x] Adopción de metodología Spec-Driven Development & Git Branching │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 📈 2. MARKETING & VENTAS (Captación & Go-to-Market)                     │
-│  ├─ [x] Briefing recibido: briefing_delegacion_carta_fija.md            │
-│  ├─ [x] Boceto conceptual de Carta Fija y psicología de precios         │
-│  ├─ [x] Plantilla de Carta Fija completada y aprobada                   │
-│  └─ [ ] Prospección activa del Cliente #1 en Noia (Acuerdo 14 Días 0€)  │
+│  ├─ [x] Plantilla Carta Fija A4 completada y aprobada (PDF 386 KB)      │
+│  ├─ [x] Resumen ejecutivo de 2 páginas validado                         │
+│  └─ [⏸️] Prospección activa en Noia en STANDBY hasta certificar Fix     │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🎨 3. DISEÑO DE MARCA & UI/UX (Identidad & Ergonomía Visual)            │
-│  ├─ [x] Plantilla base modular HTML/CSS Carta Fija (public/carta_fija)  │
-│  ├─ [x] Conmutador de 3 temas (Modern Slate / Tapería / Papel Claro)   │
-│  ├─ [x] Plantilla A4 de Carta Fija lista para imprenta (PDF 386 KB)     │
-│  └─ [ ] Adaptación de artes finales al cerrar el local piloto real      │
+│  ├─ [x] Modal de error de red con opción clara de reintento para cliente│
+│  ├─ [x] Isotipo invertido oficial de Fluxo en documentos PDF            │
+│  └─ [ ] Tarea UX: Notificación persistente en mesa de servicio pedido   │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ ⚙️ 4. INGENIERÍA & PRODUCTO — [PROGRAM DATA] (Desarrollo & Software)    │
-│  ├─ [x] Briefing recibido: briefing_delegacion_reporte_mensual.md      │
-│  ├─ [x] Pipeline de analítica y endpoint /api/analytics/monthly-report  │
-│  ├─ [x] Motor de renderizado PDF en 2 páginas exactas (Playwright)      │
-│  └─ [x] Suite de verificación automatizada superada (100% PASS)         │
+│  ├─ [x] Erradicación de generadores sintéticos (call-*, ord-*) en repo  │
+│  ├─ [x] Creación y activación de tabla system_error_logs en Supabase    │
+│  ├─ [x] Logging no bloqueante con stack trace y error code en servidor  │
+│  ├─ [x] Pruebas concurrentes multi-mesa (Mesa 1 y Mesa 7) exitosas      │
+│  ├─ [⏳ Paso 1 - En Curso] Implementación del Administrador de Cartas    │
+│  ├─ [📋 Paso 2] Landing Page: Retirar los 3 restaurantes de prueba y    │
+│  │     conservar exclusivamente el botón principal para probar la app   │
+│  ├─ [📋 Paso 3] Validación Integral: Corroborar funcionamiento general   │
+│  │     de toda la app junto con los nuevos cambios                      │
+│  ├─ [📋 Paso 4] Validación Admin de Cartas: Corroborar que la gestión    │
+│  │     de platos, categorías y precios funcione correctamente           │
+│  ├─ [ ] Invariante FK en service_calls.table_number hacia tables        │
+│  └─ [ ] Certificación integral y refactorización modular SOLID          │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🧠 5. LEARNING & INTELLIGENCE (Memoria Operativa & Buenas Prácticas)    │
-│  ├─ [x] Análisis competitivo de soluciones QR y cartas digitales       │
-│  ├─ [x] Registro de invariantes de layout y cero errores de build       │
-│  └─ [x] Mantener repositorio de conocimiento interdepartamental al día  │
+│  ├─ [x] Metodología Spec-Driven: Asumir rol de arquitecto frente a IA   │
+│  ├─ [x] Protocolo de depuración SQL: CAST a varchar en campos UUID      │
+│  └─ [x] Uso de ramas independientes (git branch) para aislar desarrollo │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 

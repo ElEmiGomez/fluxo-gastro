@@ -120,3 +120,66 @@ flowchart TD
    - `npx.cmd playwright test`: 10/10 tests E2E en Chromium headless (Carta -> Mozo -> Cocina).
    - `node scripts/test_challenger_invariants.mjs`: 18/18 invariantes de estrés.
    - `node scripts/test_challenger_r5_2_adversarial_verification.mjs`: 42/42 pruebas OCC y transiciones atómicas.
+
+---
+
+## 🛡️ 12. Invariante Anti-Phantom Data, SSOT Estricto en Supabase y Telemetría `system_error_logs`
+> **Origen Metodológico:** Mesa Técnica de Estabilidad (Emiliano Gómez, Guillermo F. Gómez & Ignacio Cerutti Norris — 04/10/2026).
+
+```mermaid
+flowchart TD
+    SUBMIT["📱 Acción de Cliente o Mozo<br/>(Llamar Mozo / Pedir Comanda)"] --> API["📡 Endpoint API (/api/orders, /api/service-calls)"]
+    API --> SUPA{"⚡ Inserción en Supabase Cloud"}
+    
+    SUPA -->|Éxito| REALTIME["📢 Broadcast Realtime & UI Éxito<br/>UUID Canónico Persistido"]
+    
+    SUPA -->|Fallo / FK Error| ERR["❌ Excepción Explícita (throw Error)"]
+    ERR --> LOG["📝 Logging Asíncrono en system_error_logs<br/>(message, stack_trace, restaurant_slug)"]
+    ERR --> UI_FAIL["⚠️ Modal de Error en UI Cliente<br/>'No pudimos enviar tu solicitud' + Botón Reintentar"]
+    
+    style SUBMIT fill:#1e3a8a,stroke:#60a5fa,stroke-width:2px,color:#ffffff
+    style SUPA fill:#166534,stroke:#22c55e,stroke-width:2px,color:#ffffff
+    style REALTIME fill:#0f766e,stroke:#14b8a6,stroke-width:2px,color:#ffffff
+    style ERR fill:#991b1b,stroke:#f87171,stroke-width:2px,color:#ffffff
+    style LOG fill:#7c2d12,stroke:#fb923c,stroke-width:2px,color:#ffffff
+    style UI_FAIL fill:#b45309,stroke:#f59e0b,stroke-width:2px,color:#ffffff
+```
+
+### 1. Erradicación Absoluta de Fallbacks Sintéticos en Memoria (Anti-Phantom Invariant)
+* **Diagnóstico de la Falla Histórica:** En versiones iniciales de `src/lib/supabase/repository.ts` (`createServiceCall`, `createOrder`), ante un error de red o violación de clave foránea (`foreign key`), el código capturaba la excepción y creaba un objeto sintético provisional en memoria (`call-${Date.now()}...` u `ord-${Date.now()}...`). Dicho objeto fingía éxito momentáneo, pero inundaba la memoria de Vercel/Node.js y el polling del comandero con decenas de alertas huérfanas que jamás existieron en PostgreSQL.
+* **Invariante de Arquitectura:** Queda **terminantemente prohibido** simular entidades exitosas con identificadores ficticios. Si Supabase falla:
+  1. El servidor debe arrojar un error explícito (`throw error`), respondiendo HTTP 500 con código de fallo tipificado.
+  2. El cliente (`CartDrawer.tsx` o vista de mesa) debe retener los datos en el carrito o formulario y desplegar un modal informativo accesible con botón interactivo de **Reintentar**.
+  3. Supabase Cloud se mantiene como **Fuente Única de Verdad (SSOT)**: el comandero y la cocina solo leen y muestran registros con UUID reales persistidos en base de datos.
+
+### 2. Tabla Centralizada de Auditoría: `system_error_logs`
+* **Definición de Esquema:** `supabase/migrations/20260917_system_error_logs.sql`.
+  - Columnas: `id` (UUID), `timestamp` (TIMESTAMPTZ), `error_code` (TEXT), `message` (TEXT), `stack_trace` (TEXT), `restaurant_slug` (TEXT), `restaurant_id` (UUID nullable), `created_at` (TIMESTAMPTZ).
+  - Índices dedicados en `timestamp DESC`, `restaurant_slug`, `error_code` y `restaurant_id`.
+  - **Row Level Security (RLS)** habilitado con políticas de inserción y lectura autorizada.
+* **Persistencia No Bloqueante (`src/lib/logger.ts`, `src/lib/supabase/error-logs.ts`):**
+  - Todo error capturado en endpoints y repositorios se envía de forma asíncrona a `system_error_logs` mediante un bloque aislado que jamás interrumpe la respuesta HTTP ni degrada la latencia percibida por el usuario.
+
+### 3. Protocolo Forense de Diagnóstico SQL (Guillermo F. Gómez)
+* **Búsqueda con comodines en columnas UUID:** En PostgreSQL/Supabase, el operador `LIKE` falla sobre tipos UUID. Es obligatorio forzar conversión de tipo:
+  ```sql
+  SELECT * FROM service_calls WHERE CAST(id AS varchar) LIKE '%call%';
+  ```
+* **Guardas de Consulta en Exploración:** Utilizar siempre `LIMIT 5` o `LIMIT 10` al auditar incidencias en el SQL Editor para evitar descargas masivas de memoria.
+* **Plantilla Condicional Rápida:**
+  ```sql
+  SELECT * FROM service_calls 
+  WHERE 1 = 1 
+  -- AND status = 'pending'
+  -- AND restaurant_id = '...'
+  ORDER BY created_at DESC 
+  LIMIT 5;
+  ```
+* **Pruebas Concurrentes Multi-Mesa:** Para validar Realtime sin colisiones de sesión en simulador, duplicar pestañas del navegador abriendo concurrentemente mesas distintas (ej. Mesa 1 y Mesa 7), verificando que las alertas se agrupen y resuelvan de forma aislada en el comandero del mozo.
+
+### 4. Metodología de Desarrollo y Colaboración Asistida por IA
+* **Spec-Driven Development (SDD):** El desarrollador asume el rol de **Arquitecto de Software**: redacta la especificación funcional, los casos borde y las restricciones técnicas antes de delegar la escritura de código a la IA.
+* **Principio de Responsabilidad Única (SOLID):** Desacoplar estrictamente la creación, atención y consulta de entidades en métodos y endpoints independientes para acotar el radio de impacto de cualquier incidencia técnica.
+* **Aislamiento en Ramas de Git (`git branch`):** Todo experimento, refactorización o desarrollo asistido por IA debe realizarse en ramas independientes (`feature/...` o `fix/...`), preservando la rama `main` en estado prístino para demostraciones y producción.
+* **Validación Focalizada Previa a Commits:** Modificar y ejecutar primero los tests unitarios correspondientes a la funcionalidad alterada antes de ejecutar despliegues o suites pesadas.
+

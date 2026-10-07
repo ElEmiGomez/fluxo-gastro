@@ -878,14 +878,33 @@ export async function attendServiceCall(
   callId: string
 ): Promise<void> {
   const supabase = createServerClient()
+  let attendedCall: any = null
+
   if (supabase && isSupabaseConfigured()) {
     try {
-      await supabase
+      const { data } = await supabase
         .from('service_calls')
         .update({ status: 'attended' })
         .eq('id', callId)
+        .select('*')
+        .maybeSingle()
+
+      if (data) {
+        attendedCall = data
+      }
     } catch (e) {
       console.warn('Error attending service call in Supabase:', e)
+    }
+  }
+
+  // Si no se obtuvo de Supabase, intentar de server-state / memoria
+  if (!attendedCall) {
+    try {
+      const { attendServerServiceCall } = await import('@/lib/server-state')
+      attendServerServiceCall(slug, callId)
+      return
+    } catch {
+      // ignore
     }
   }
 
@@ -893,7 +912,37 @@ export async function attendServiceCall(
     type: 'service_call_attended',
     slug,
     callId,
+    call: attendedCall,
+    table_number: attendedCall?.table_number,
+    is_bill: attendedCall?.call_type ? attendedCall.call_type.startsWith('bill_') : false,
   })
+
+  // Si la llamada atendida era de cobro / cuenta, emitir table_bill_paid y marcar órdenes de mesa como paid
+  if (attendedCall && attendedCall.call_type && attendedCall.call_type.startsWith('bill_')) {
+    const tableNum = Number(attendedCall.table_number)
+    broadcastEvent({
+      type: 'table_bill_paid',
+      slug,
+      table_number: tableNum,
+      callId,
+    })
+
+    if (supabase && isSupabaseConfigured() && tableNum) {
+      try {
+        const targetRestaurantId = attendedCall.restaurant_id
+        if (targetRestaurantId) {
+          await supabase
+            .from('orders')
+            .update({ status: 'paid' })
+            .eq('restaurant_id', targetRestaurantId)
+            .eq('table_number', tableNum)
+            .neq('status', 'cancelled')
+        }
+      } catch (err) {
+        console.warn('Error marking table orders as paid on bill attended:', err)
+      }
+    }
+  }
 }
 
 /**

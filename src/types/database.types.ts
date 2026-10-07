@@ -43,6 +43,7 @@ export interface Product {
   is_available: boolean
   price_type?: 'unit' | 'weight' // 'unit' (defecto) o 'weight' (al peso/100g/kg)
   price_unit?: 'kg' | '100g' | 'piece'
+  is_highlighted_promo?: boolean // Promo Fallback destacada del restaurante
 }
 
 export interface Table {
@@ -145,3 +146,37 @@ export interface CartItem {
   is_complimentary?: boolean
   weight_grams?: number
 }
+
+// ==============================================================================
+// MÓDULO: MENÚ DEL DÍA DINÁMICO & PROMO FALLBACK (Preparado para activación futura)
+// ==============================================================================
+
+export interface DailyMenu {
+  id: string
+  restaurant_id: string
+  title: string
+  fixed_price: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  sections?: DailyMenuSection[]
+}
+
+export interface DailyMenuSection {
+  id: string
+  daily_menu_id: string
+  name: string
+  sort_order: number
+  created_at?: string
+  items?: DailyMenuItem[]
+}
+
+export interface DailyMenuItem {
+  id: string
+  section_id: string
+  dish_id: string
+  is_available: boolean
+  created_at?: string
+  product?: Product
+}
+

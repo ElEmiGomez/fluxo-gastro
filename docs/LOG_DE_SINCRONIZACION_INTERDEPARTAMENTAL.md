@@ -6,6 +6,37 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-07 17:52] — Sincronización Operativa: Secuenciación de Tareas de Estabilidad y Producto
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Definición de Secuencia de 4 Pasos:**
+  1. **[Paso 1 - En Curso]:** Culminar la implementación del **Administrador de Cartas** (gestión y edición de productos, categorías y precios por parte del hostelero).
+  2. **[Paso 2 - En Cola]:** **Simplificación de la Landing Page** (`src/app/page.tsx`): retirar los 3 accesos directos de restaurantes de prueba (`burger-gourmet`, `taperia-casco-antigo`, `terraza-malecon`) y conservar exclusivamente el botón principal unificado para probar el simulador de la aplicación.
+  3. **[Paso 3 - En Cola]:** **Validación Integral de la App**: Corroborar exhaustivamente que toda la aplicación funcione de forma óptima junto con los nuevos cambios (flujo completo comensal en mesa -> comandero mozo -> KDS cocina -> cierre de mesa sin eventos ficticios).
+  4. **[Paso 4 - En Cola]:** **Validación del Administrador de Cartas**: Corroborar y certificar que la gestión de cartas funcione correctamente (creación/edición de categorías, platos, precios y sincronización en tiempo real con Supabase).
+
+---
+
+### [2026-10-04 22:22] — Mesa Técnica Especial: Erradicación de Eventos Ficticios ("Calls Fantasma"), Tabla system_error_logs en Supabase Cloud y Metodología Spec-Driven
+* **Participantes de la Mesa:** Emiliano Gómez (Fluxo), Guillermo F. Gómez (Programador Senior) e Ignacio Cerutti Norris (Analista en Sistemas / Programador).
+* **Problema Diagnosticado:**
+  - Presencia anómala de más de 50 comandas y alertas de servicio con identificadores `call-...` y `ord-...` en herramientas de desarrollo (DevTools) y vista de mozo tras días sin actividad en producción.
+  - Al realizar auditoría SQL en Supabase (`SELECT * FROM service_calls WHERE CAST(id AS varchar) LIKE '%call%'`), se verificó un total de 0 registros reales en base de datos.
+  - **Causa Raíz:** En versiones previas del repositorio (`repository.ts` / `createServiceCall` / `createOrder`), ante un fallo de inserción o error de Foreign Key en Supabase, el cliente ejecutaba un fallback sintético en memoria que creaba objetos falsos con prefijos `call-...` u `ord-...` para fingir éxito. Esto contaminaba la memoria de Vercel/Node.js y el polling del comandero.
+* **Resolución Técnica e Invariantes Acordados:**
+  1. **Erradicación Total de Eventos Ficticios:** Queda estrictamente prohibido generar objetos o llamadas provisionales en memoria ante errores. Si Supabase falla, la API debe devolver error 500, la UI debe desplegar un modal claro de aviso con botón de reintento, y el carrito permanece intacto para permitir reintentar.
+  2. **Persistencia Centralizada en `system_error_logs`:** Creación de la tabla `system_error_logs` en Supabase con RLS, registrando mensaje de error y `stack_trace` para diagnóstico ágil sin depender de logs efímeros en local.
+  3. **Pruebas Concurrentes Multi-Mesa:** Validación en vivo abriendo simultáneamente la Mesa 1 y la Mesa 7 en pestañas duplicadas del navegador, comprobando la recepción agregada de alertas en el comandero del mozo y su atención independiente.
+  4. **Metodología de Desarrollo Asistido por IA (Spec-Driven Development):**
+     - Asumir el rol de **Arquitecto de Solución**: definir requisitos precisos y especificaciones antes de codificar.
+     - Implementación guiada: solicitar a la IA la refactorización siguiendo principios **SOLID** (desacoplar creación de atención de servicios/pedidos).
+     - Pruebas unitarias focalizadas previas a cualquier despliegue.
+     - Uso disciplinado de ramas independientes (`git branch`) para nuevas funciones, manteniendo `main` limpia para demostraciones y producción.
+* **Compromisos y Tareas Derivadas:**
+  - Tarea UX pendiente: Incorporar notificación persistente en la vista del comensal cuando solicite un servicio (hielo, agua, mozo), indicando qué ítem pidió hasta ser atendido.
+  - Prioridad Operativa Absoluta: **Fixear Fluxo en su totalidad** (estabilidad y robustez punta a punta antes de cualquier expansión).
+
+---
+
 ### [2026-09-19 12:35] — Delegación Oficial y Sincronización Interdepartamental: Carta Fija (Marketing) & Reporte Mensual (Program Data)
 * **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2) y Program Data / Ingeniería & Producto (Depto 4).
 * **Directiva Ejecutiva de la Dirección:**

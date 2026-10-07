@@ -22,7 +22,7 @@ export default function KitchenKDSPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [newOrderAlert, setNewOrderAlert] = useState(false)
-  const [filterStatus, setFilterStatus] = useState<'active' | 'all' | 'ready'>('all')
+  const [filterStatus, setFilterStatus] = useState<'active' | 'all' | 'ready'>('active')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [updatingOrderIds, setUpdatingOrderIds] = useState<Set<string>>(new Set())
   
@@ -90,9 +90,7 @@ export default function KitchenKDSPage() {
           const rawOrders: Order[] = data.orders || []
           const incomingOrders: Order[] = rawOrders
             .filter((o: Order) =>
-              o.status !== 'pending_validation' &&
-              o.status !== 'delivered' &&
-              o.status !== 'cancelled'
+              ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
             )
             .map((o: Order) => {
               const items = (o.order_items && o.order_items.length > 0)
@@ -314,7 +312,7 @@ export default function KitchenKDSPage() {
     ? activeOrders
     : filterStatus === 'ready'
     ? readyOrders
-    : orders.filter(o => o.status !== 'delivered' && o.status !== 'pending_validation' && o.status !== 'cancelled')
+    : orders.filter(o => ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status))
 
   // Filtrado por Estación (Cocina vs Barra)
   if (stationFilter !== 'all') {

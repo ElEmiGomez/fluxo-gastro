@@ -32,11 +32,15 @@
 | **DEC-22** | 06/09/2026 | Ciberseguridad / Org | **Protección Anti-Bot con Cloudflare Turnstile en Piloto de 14 Días**. | Blindar la captación de leads en la landing page y el endpoint `/api/pilots/request` contra bots de spam con CAPTCHA invisible sin fricción para el usuario. |
 | **DEC-23** | 07/09/2026 | Arquitectura / Org | **Guardas de Egress Bounded (`.limit(60)`) para Supabase Free Tier**. | Limitar las consultas masivas de comandas a 60 registros y consultar mesas activas por filtro directo en base de datos. Reduce el tráfico en un 99.8% asegurando el plan gratuito permanente. |
 | **DEC-24** | 08/09/2026 | Ingeniería & QA | **Certificación Integral Multi-Agente (132/132 Checks - VICTORY CONFIRMED)**. | Verificación unánime con auditoría forense independiente: Playwright E2E, Strix Scanner (8/8), RLS Auditor (30/30), OCC Concurrencia (42/42) y Certificación en Vivo (24/24). |
+| **DEC-25** | 04/10/2026 | Mesa Técnica (Emiliano, Guillermo F. Gómez & Ignacio Cerutti) | **Erradicación Total de Eventos Ficticios en Memoria y SSOT Estricto en Supabase**. | Queda terminantemente prohibido generar pedidos o llamadas sintéticas provisionales (`call-...`, `ord-...`) ante fallos de inserción o Foreign Key. El sistema debe fallar de forma ruidosa y controlada: mostrar modal de error con reintento en la UI del cliente, registrar el fallo con stack trace en la tabla `system_error_logs` de Supabase, y mantener la base de datos como Fuente Única de Verdad (SSOT). |
 
 ---
 
 ## 💡 Banco de Ideas Futuras (Backlog Priorizado)
 
+* [ ] **Notificación Persistente de Servicio Solicitado en Mesa:** Al pedir hielo, agua o mozo, reflejar en la interfaz del comensal qué ítem solicitó de manera persistente hasta que sea atendido (feedback Guillermo).
+* [ ] **Clave Foránea en `service_calls.table_number`:** Restringir el número de mesa en llamadas hacia la tabla `tables` para impedir solicitudes huérfanas en mesas no configuradas.
+* [ ] **Flujo de Trabajo Spec-Driven Development (SDD) & Git Branching:** Trabajar como arquitectos definiendo especificaciones antes de codear, validando unit tests focalizados y usando ramas de Git para mantener `main` 100% estable.
 * [ ] **Control de Stock Dinámico ("Se Agotó"):** Botón rápido en el comandero del mozo para ocultar un plato de la carta cuando se acabe el ingrediente.
 * [ ] **Recomendación Inteligente de Postre/Café:** Al pasar la comanda a estado `delivered`, sugerir sutilmente cafés o postres caseros para aumentar el ticket medio.
 * [ ] **Telemetría de Tiempos de Pase:** Detección de cuellos de botella entre comanda confirmada y entrega en mesa para optimizar cocina en Plan Suite.

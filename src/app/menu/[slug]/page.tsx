@@ -21,7 +21,10 @@ import {
   LayoutList,
   LayoutGrid,
   Receipt,
-  Clock
+  Clock,
+  Edit2,
+  Power,
+  Lock,
 } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
@@ -34,6 +37,8 @@ import { BillModal } from '@/components/menu/BillModal'
 import { GoogleReviewBooster } from '@/components/menu/GoogleReviewBooster'
 import { RestaurantJsonLd } from '@/components/seo/RestaurantJsonLd'
 import { LegalModal } from '@/components/legal/LegalModal'
+import { InSituAdminAuthModal } from '@/components/menu/InSituAdminAuthModal'
+import { InSituEditProductModal } from '@/components/menu/InSituEditProductModal'
 import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
 import { Product, Category, CartItem, Restaurant, Table, OrderStatus } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
@@ -91,12 +96,24 @@ function DinerMenuContent() {
   // Microservicios
   const [showServiceModal, setShowServiceModal] = useState(false)
   const [serviceRequestedToast, setServiceRequestedToast] = useState<string | null>(null)
+  const [pendingServiceCalls, setPendingServiceCalls] = useState<Set<string>>(new Set())
 
   // Tracker en vivo de estado en cocina
   const [tableOrderStatus, setTableOrderStatus] = useState<OrderStatus | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [showLegalModal, setShowLegalModal] = useState(false)
   const prevTableOrdersMapRef = useRef<Map<string, any>>(new Map())
+
+  // Administrador de Carta In-Situ
+  const [isInSituAdmin, setIsInSituAdmin] = useState(false)
+  const [adminSessionToken, setAdminSessionToken] = useState<string | null>(null)
+  const [showAdminAuthModal, setShowAdminAuthModal] = useState(false)
+  const [editingInSituProduct, setEditingInSituProduct] = useState<Product | null>(null)
+  const [isInSituEditModalOpen, setIsInSituEditModalOpen] = useState(false)
+  const [inSituTargetCategoryId, setInSituTargetCategoryId] = useState<string | undefined>(undefined)
+  const [inSituFeedbackToast, setInSituFeedbackToast] = useState<string | null>(null)
+  const logoPressTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
 
   // 1. Carga inicial y recuperación de persistencia
   useEffect(() => {
@@ -210,6 +227,20 @@ function DinerMenuContent() {
       } catch {
         // ignore
       }
+
+      // Recuperar sesión de Administrador In-Situ si está activa en la pestaña
+      try {
+        const savedAdmin = sessionStorage.getItem(`fluxo_insitu_admin_${slug}`)
+        if (savedAdmin) {
+          const parsedAdmin = JSON.parse(savedAdmin)
+          if (parsedAdmin?.token && Date.now() - parsedAdmin.timestamp < 12 * 60 * 60 * 1000) {
+            setIsInSituAdmin(true)
+            setAdminSessionToken(parsedAdmin.token)
+          }
+        }
+      } catch {
+        // ignore
+      }
     }
   }, [slug, tableNumber, searchParams])
 
@@ -221,10 +252,14 @@ function DinerMenuContent() {
         if (menuRes.restaurant) setRestaurant(menuRes.restaurant)
         if (menuRes.categories && menuRes.categories.length > 0) {
           setCategories(menuRes.categories)
-          setSelectedCategory(prev => prev || menuRes.categories[0].id)
+          setSelectedCategory(prev => {
+            if (prev === 'all') return 'all'
+            const exists = menuRes.categories.some((c: Category) => c.id === prev)
+            return exists ? prev : menuRes.categories[0].id
+          })
         }
-        if (menuRes.products && menuRes.products.length > 0) {
-          setProducts(menuRes.products.filter((p: any) => p.is_available !== false))
+        if (Array.isArray(menuRes.products)) {
+          setProducts(menuRes.products)
         }
         const tablesFallback = MOCK_TABLES[slug] || []
         setTables(tablesFallback)
@@ -261,7 +296,6 @@ function DinerMenuContent() {
             .from('products')
             .select('*')
             .eq('restaurant_id', restData.id)
-            .eq('is_available', true)
 
           if (prodData && prodData.length > 0) setProducts(prodData)
 
@@ -386,6 +420,20 @@ function DinerMenuContent() {
           setHasRequestedBill(true)
         }
 
+        // Extraer micro-servicios pendientes para esta mesa (SSOT Supabase)
+        const activeMicroServices = new Set<string>()
+        calls.forEach((c: any) => {
+          if (
+            c.table_number?.toString() === tableNumber?.toString() &&
+            c.status === 'pending' &&
+            c.call_type?.startsWith('service_')
+          ) {
+            const servName = c.call_type.replace('service_', '')
+            if (servName) activeMicroServices.add(servName)
+          }
+        })
+        setPendingServiceCalls(activeMicroServices)
+
         const isBillPaidCall = calls.some(
           (c: any) =>
             c.table_number?.toString() === tableNumber?.toString() &&
@@ -395,9 +443,13 @@ function DinerMenuContent() {
             Date.now() - new Date(c.created_at).getTime() < 15 * 60 * 1000
         )
 
+        const unfinalizedOrders = allTableOrders.filter(
+          o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
+        )
+
         const hasPaidOrders = allTableOrders.length > 0 &&
           allTableOrders.some(o => o.status === 'paid') &&
-          activeTableOrders.length === 0
+          unfinalizedOrders.length === 0
 
         const isBillPaid = isBillPaidCall || hasPaidOrders || thisTableSession?.status === 'closed'
 
@@ -622,8 +674,176 @@ function DinerMenuContent() {
     }))
   }
 
+  // Handlers para Administrador de Carta In-Situ
+  const handleAdminAuthSuccess = (token: string) => {
+    setIsInSituAdmin(true)
+    setAdminSessionToken(token)
+    try {
+      sessionStorage.setItem(
+        `fluxo_insitu_admin_${slug}`,
+        JSON.stringify({ token, timestamp: Date.now() })
+      )
+    } catch {}
+    setInSituFeedbackToast('✨ Modo Edición In-Situ activado')
+    setTimeout(() => setInSituFeedbackToast(null), 3000)
+    loadData()
+  }
+
+  const handleExitAdminMode = () => {
+    setIsInSituAdmin(false)
+    setAdminSessionToken(null)
+    setIsInSituEditModalOpen(false)
+    setEditingInSituProduct(null)
+    setShowAdminAuthModal(false)
+    try {
+      sessionStorage.removeItem(`fluxo_insitu_admin_${slug}`)
+    } catch {}
+    setInSituFeedbackToast('🔒 Modo Edición finalizado')
+    setTimeout(() => setInSituFeedbackToast(null), 3000)
+  }
+
+  const handleToggleAvailability = async (productId: string, currentAvailable: boolean) => {
+    triggerHaptic(HAPTIC_PATTERNS.TAP)
+    const nextState = !currentAvailable
+    // Actualización optimista inmediata
+    setProducts(prev =>
+      prev.map(p => (p.id === productId ? { ...p, is_available: nextState } : p))
+    )
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (adminSessionToken) {
+        headers['Authorization'] = `Bearer ${adminSessionToken}`
+      }
+
+      const res = await fetch('/api/admin/menu', {
+        method: 'PATCH',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          slug,
+          product_id: productId,
+          is_available: nextState,
+        }),
+      })
+
+      const data = await res.json()
+      if (data.success) {
+        setInSituFeedbackToast(
+          data.is_available ? '✅ Plato marcado como DISPONIBLE' : '⚠️ Plato marcado como AGOTADO'
+        )
+        setTimeout(() => setInSituFeedbackToast(null), 3000)
+      } else {
+        // Rollback
+        setProducts(prev =>
+          prev.map(p => (p.id === productId ? { ...p, is_available: currentAvailable } : p))
+        )
+        if (res.status === 401) {
+          handleExitAdminMode()
+          setInSituFeedbackToast('⚠️ Sesión expirada. Por favor identifícate de nuevo.')
+          setShowAdminAuthModal(true)
+        } else {
+          setInSituFeedbackToast(data.error || 'Error al actualizar disponibilidad')
+          setTimeout(() => setInSituFeedbackToast(null), 3000)
+        }
+      }
+    } catch {
+      // Rollback
+      setProducts(prev =>
+        prev.map(p => (p.id === productId ? { ...p, is_available: currentAvailable } : p))
+      )
+      setInSituFeedbackToast('Error de conexión al actualizar la disponibilidad.')
+      setTimeout(() => setInSituFeedbackToast(null), 3000)
+    }
+  }
+
+  const handleOpenEditProductModal = (product: Product) => {
+    setEditingInSituProduct(product)
+    setIsInSituEditModalOpen(true)
+  }
+
+  const handleOpenAddProductModal = (catId?: string) => {
+    setEditingInSituProduct(null)
+    setInSituTargetCategoryId(catId || (selectedCategory !== 'all' ? selectedCategory : categories[0]?.id))
+    setIsInSituEditModalOpen(true)
+  }
+
+  const handleSaveInSituProduct = (savedProduct: Product) => {
+    setProducts(prev => {
+      const idx = prev.findIndex(p => p.id === savedProduct.id)
+      if (idx >= 0) {
+        return prev.map(p => (p.id === savedProduct.id ? savedProduct : p))
+      }
+      return [savedProduct, ...prev]
+    })
+    // Sincronizar items activos del carrito si se editó el precio o nombre del plato
+    setCart(prev =>
+      prev.map(item =>
+        item.product?.id === savedProduct.id
+          ? { ...item, product: { ...item.product, ...savedProduct } }
+          : item
+      )
+    )
+    // Si la categoría visualizada no coincide con la del nuevo plato, cambiar para darle visibilidad inmediata
+    if (savedProduct.category_id && selectedCategory !== 'all' && selectedCategory !== savedProduct.category_id) {
+      setSelectedCategory(savedProduct.category_id)
+    }
+    setInSituFeedbackToast('✅ Plato guardado en la carta')
+    setTimeout(() => setInSituFeedbackToast(null), 3000)
+  }
+
+  const handleDeleteInSituProduct = (productId: string) => {
+    setProducts(prev => prev.filter(p => p.id !== productId))
+    setCart(prev => prev.filter(item => item.product?.id !== productId))
+    setInSituFeedbackToast('🗑️ Plato eliminado de la carta')
+    setTimeout(() => setInSituFeedbackToast(null), 3000)
+  }
+
+  const handleLogoPointerDown = () => {
+    if (logoPressTimerRef.current) clearTimeout(logoPressTimerRef.current)
+    logoPressTimerRef.current = setTimeout(() => {
+      triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+      if (!isInSituAdmin) {
+        setShowAdminAuthModal(true)
+      }
+    }, 800)
+  }
+
+  const handleLogoPointerUp = () => {
+    if (logoPressTimerRef.current) {
+      clearTimeout(logoPressTimerRef.current)
+      logoPressTimerRef.current = null
+    }
+    touchStartPosRef.current = null
+  }
+
+  const handleLogoTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length > 0) {
+      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+    handleLogoPointerDown()
+  }
+
+  const handleLogoTouchMove = (e: React.TouchEvent) => {
+    if (touchStartPosRef.current && e.touches.length > 0) {
+      const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x)
+      const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y)
+      // Cancelar long-press de inmediato si el usuario está haciendo scroll (> 10px)
+      if (dx > 10 || dy > 10) {
+        handleLogoPointerUp()
+      }
+    }
+  }
+
   // Filtrado de productos
   const filteredProducts = products.filter(prod => {
+    // Si no está en modo administrador in-situ, ocultar productos agotados para comensales
+    if (!isInSituAdmin && prod.is_available === false) {
+      return false
+    }
+
     const matchesCategory = selectedCategory === 'all' || prod.category_id === selectedCategory
     const matchesSearch = searchQuery === '' || 
       prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -728,14 +948,14 @@ function DinerMenuContent() {
         throw new Error('Error al solicitar servicio')
       }
 
+      // Marcar de inmediato como solicitado en la UI
+      setPendingServiceCalls(prev => new Set(prev).add(serviceName))
       setServiceRequestedToast(serviceName)
       setTimeout(() => {
         setServiceRequestedToast(null)
-        setShowServiceModal(false)
       }, 3000)
     } catch {
       alert('Hubo un inconveniente al solicitar el servicio. Por favor avisa directamente al camarero o intenta nuevamente.')
-      setShowServiceModal(false)
     }
   }
 
@@ -752,7 +972,18 @@ function DinerMenuContent() {
             
             {/* Logo y Datos de Mesa (Prioridad de espacio en móvil) */}
             <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-              <div className="flex-shrink-0">
+              <div
+                className="flex-shrink-0 cursor-pointer select-none [-webkit-touch-callout:none]"
+                onMouseDown={handleLogoPointerDown}
+                onMouseUp={handleLogoPointerUp}
+                onMouseLeave={handleLogoPointerUp}
+                onTouchStart={handleLogoTouchStart}
+                onTouchMove={handleLogoTouchMove}
+                onTouchEnd={handleLogoPointerUp}
+                onTouchCancel={handleLogoPointerUp}
+                onContextMenu={(e) => e.preventDefault()}
+                title="Fluxo Gastronomic System"
+              >
                 <FluxoLogo size={32} />
               </div>
               <div className="min-w-0 flex-1">
@@ -883,7 +1114,7 @@ function DinerMenuContent() {
         )}
 
         {/* TRACKER EN VIVO DE ESTADO EN COCINA (Clickeable para ver el camino del pedido) */}
-        {!isFixedMenu && tableOrderStatus && (
+        {!isFixedMenu && !isTablePaid && tableOrderStatus && (
           <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full">
             {tableOrderStatus === 'preparing' && (
               <div
@@ -978,7 +1209,7 @@ function DinerMenuContent() {
               </div>
             )}
 
-            {tableOrderStatus === 'delivered' && (
+            {tableOrderStatus === 'delivered' && !isTablePaid && (
               <div className="space-y-3 animate-in fade-in duration-300">
                 {!hasRequestedBill ? (
                   /* OPCIÓN UNIFICADA COMPACTA: PEDIDO ENTREGADO + ACCIONES RÁPIDAS (CAFÉ/POSTRES Y CUENTA) */
@@ -1092,37 +1323,16 @@ function DinerMenuContent() {
           </div>
         )}
 
-        {/* VISTA CUANDO LA MESA YA HA SIDO COBRADA */}
+        {/* VISTA CUANDO LA MESA YA HA SIDO COBRADA (ÚNICAMENTE TARJETA DE GOOGLE REVIEWS) */}
         {!isFixedMenu && isTablePaid && (
           <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
-            <div className="space-y-3">
-              <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                  <Check className="w-5 h-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                      Mesa #{tableNumber} &middot; Cuenta Pagada
-                    </span>
-                  </div>
-                  <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
-                    ¡Cuenta saldada! Muchas gracias por tu visita
-                  </h4>
-                  <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
-                    Esperamos que hayas disfrutado tu comida. ¡Hasta la próxima!
-                  </p>
-                </div>
-              </div>
-
-              <GoogleReviewBooster
-                restaurantName={restaurant.name}
-                restaurantSlug={restaurant.slug}
-                googleReviewUrl={restaurant.google_review_url}
-                googlePlaceId={restaurant.google_place_id}
-                variant="card"
-              />
-            </div>
+            <GoogleReviewBooster
+              restaurantName={restaurant.name}
+              restaurantSlug={restaurant.slug}
+              googleReviewUrl={restaurant.google_review_url}
+              googlePlaceId={restaurant.google_place_id}
+              variant="card"
+            />
           </div>
         )}
 
@@ -1229,6 +1439,28 @@ function DinerMenuContent() {
                 {dietaryFilter === 'veggie' && <span className="font-black">&times;</span>}
               </button>
             </div>
+
+            {/* Botón Discreto Añadir Plato en la Categoría (Solo Modo Administrador In-Situ) */}
+            {isInSituAdmin && (
+              <div className="flex items-center justify-between gap-2 bg-purple-50 border border-purple-200/80 rounded-2xl p-2.5 px-3.5 shadow-xs animate-in fade-in">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Utensils className="w-4 h-4 text-purple-700 flex-shrink-0" />
+                  <span className="text-xs font-black text-purple-900 truncate">
+                    {selectedCategory === 'all'
+                      ? 'Todas las categorías'
+                      : categories.find(c => c.id === selectedCategory)?.name || 'Categoría actual'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
+                  className="px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-black flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer flex-shrink-0"
+                >
+                  <Plus size={14} className="stroke-[3]" />
+                  <span>Añadir plato</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* SUGERENCIA INTELIGENTE DEL CHEF SEGÚN CATEGORÍA */}
@@ -1277,11 +1509,23 @@ function DinerMenuContent() {
               ))}
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 space-y-2 bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
+            <div className="text-center py-16 text-slate-400 space-y-3 bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
               <Utensils className="w-12 h-12 mx-auto stroke-[1.2] text-slate-300" />
               <p className="text-sm font-semibold text-slate-600">
                 {searchQuery ? 'No encontramos platos con esa búsqueda' : 'No hay platos en esta categoría'}
               </p>
+              {isInSituAdmin && !searchQuery && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Plus size={14} className="stroke-[3]" />
+                    <span>Añadir primer plato a esta categoría</span>
+                  </button>
+                </div>
+              )}
             </div>
           ) : viewMode === 'list' ? (
             /* VISTA 1: LISTADO MODERNO CON JERARQUÍA ELEGANTE Y ESPACIO HOLGADO */
@@ -1323,6 +1567,11 @@ function DinerMenuContent() {
                           <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2">
                             {translateProductName(currentLang, product.id, product.name)}
                           </h3>
+                          {isInSituAdmin && product.is_available === false && (
+                            <span className="text-[9px] font-black text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md">
+                              AGOTADO
+                            </span>
+                          )}
                           {!isFixedMenu && idx === 0 && totalCartCount === 0 && (
                             <span className="text-[9px] font-extrabold text-blue-700 bg-blue-100/90 px-1.5 py-0.5 rounded-md animate-pulse">
                               ✨ Toca + para pedir
@@ -1350,6 +1599,32 @@ function DinerMenuContent() {
 
                       {/* Control de Cantidad Inline o Botón Detalles en Modo Fijo */}
                       <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {/* Controles de Administración In-Situ */}
+                        {isInSituAdmin && (
+                          <div className="flex items-center gap-1 mr-1">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAvailability(product.id, product.is_available !== false)}
+                              title={product.is_available !== false ? 'Marcar como agotado' : 'Marcar como disponible'}
+                              className={`px-2 py-1 rounded-xl text-[10px] font-black border transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
+                                product.is_available !== false
+                                  ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20'
+                                  : 'bg-rose-500/15 text-rose-700 border-rose-500/40 hover:bg-rose-500/25'
+                              }`}
+                            >
+                              <Power size={11} className={product.is_available !== false ? 'text-emerald-600' : 'text-rose-600'} />
+                              <span>{product.is_available !== false ? 'Disponible' : 'Agotado'}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditProductModal(product)}
+                              title="Editar plato"
+                              className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer active:scale-95"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                          </div>
+                        )}
                         {!isFixedMenu ? (
                           <>
                             {qty === 0 ? (
@@ -1489,9 +1764,16 @@ function DinerMenuContent() {
                       )}
                       <div className="p-3.5 space-y-1">
                         <div className="flex items-start justify-between gap-2">
-                          <h3 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug">
-                            {translateProductName(currentLang, product.id, product.name)}
-                          </h3>
+                          <div>
+                            <h3 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug">
+                              {translateProductName(currentLang, product.id, product.name)}
+                            </h3>
+                            {isInSituAdmin && product.is_available === false && (
+                              <span className="inline-block mt-0.5 text-[9px] font-black text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md">
+                                AGOTADO
+                              </span>
+                            )}
+                          </div>
                           <span className="font-black text-xs sm:text-sm text-blue-700 flex-shrink-0 tabular-nums">
                             {product.price_type === 'weight'
                               ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
@@ -1505,6 +1787,33 @@ function DinerMenuContent() {
                         )}
                       </div>
                     </div>
+
+                    {/* Controles de Administración In-Situ en Grid */}
+                    {isInSituAdmin && (
+                      <div className="p-3.5 pt-0 pb-2 flex items-center justify-between gap-1 border-b border-slate-100 mb-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleAvailability(product.id, product.is_available !== false)}
+                          title={product.is_available !== false ? 'Marcar como agotado' : 'Marcar como disponible'}
+                          className={`px-2 py-1 rounded-xl text-[10px] font-black border transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
+                            product.is_available !== false
+                              ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20'
+                              : 'bg-rose-500/15 text-rose-700 border-rose-500/40 hover:bg-rose-500/25'
+                          }`}
+                        >
+                          <Power size={10} className={product.is_available !== false ? 'text-emerald-600' : 'text-rose-600'} />
+                          <span>{product.is_available !== false ? 'Disponible' : 'Agotado'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditProductModal(product)}
+                          title="Editar plato"
+                          className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer active:scale-95"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                      </div>
+                    )}
 
                     {!isFixedMenu ? (
                       <div className="p-3.5 pt-0 flex items-center justify-between gap-2">
@@ -1569,13 +1878,28 @@ function DinerMenuContent() {
                   🐟 <span className="font-semibold">{t('anisakisNotice')}</span>
                 </p>
               </div>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => setShowLegalModal(true)}
                   className="text-[10px] font-bold text-blue-900 hover:text-blue-700 underline flex items-center gap-1"
                 >
                   🔒 Aviso Legal, Privacidad (RGPD) y Cookies
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isInSituAdmin) {
+                      handleExitAdminMode()
+                    } else {
+                      setShowAdminAuthModal(true)
+                    }
+                  }}
+                  className="text-[9px] text-slate-400 hover:text-slate-600 font-medium transition-colors cursor-pointer flex items-center gap-1"
+                  title="Acceso para el personal del restaurante"
+                >
+                  <Lock className="w-2.5 h-2.5" />
+                  <span>{isInSituAdmin ? 'Salir de Edición' : 'Acceso Personal / Administrar Carta'}</span>
                 </button>
                 <span className="text-[9px] text-slate-400 font-medium">Fluxo &mdash; Sistema Gastronómico</span>
               </div>
@@ -1585,25 +1909,27 @@ function DinerMenuContent() {
 
         {/* 3. Barra Flotante Inferior de Comanda o Aviso Informativo */}
         {isFixedMenu ? (
-          <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 pointer-events-auto">
-            <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 border border-slate-800">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 flex items-center justify-center flex-shrink-0 border border-blue-500/20">
-                  <Utensils className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-400 block leading-tight">
-                    Carta Digital Informativa
-                  </span>
-                  <p className="text-xs text-slate-200 font-medium leading-tight truncate sm:whitespace-normal">
-                    Para realizar tu pedido o consultar dudas sobre alérgenos, avisa a tu camarero.
-                  </p>
+          !isInSituAdmin && (
+            <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 pointer-events-auto">
+              <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 border border-slate-800">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 flex items-center justify-center flex-shrink-0 border border-blue-500/20">
+                    <Utensils className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-400 block leading-tight">
+                      Carta Digital Informativa
+                    </span>
+                    <p className="text-xs text-slate-200 font-medium leading-tight truncate sm:whitespace-normal">
+                      Para realizar tu pedido o consultar dudas sobre alérgenos, avisa a tu camarero.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )
         ) : (
-          totalCartCount > 0 && (
+          totalCartCount > 0 && !isInSituAdmin && (
             <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 gpu-layer">
               {/* Tooltip contextual animado discreto */}
               <div className="flex justify-end pr-2 pb-1.5 animate-in fade-in">
@@ -1638,6 +1964,47 @@ function DinerMenuContent() {
               </div>
             </div>
           )
+        )}
+
+        {/* Barra Flotante de Administrador In-Situ */}
+        {isInSituAdmin && (
+          <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 gpu-layer animate-in slide-in-from-bottom duration-300">
+            <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl border border-purple-500/40 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-purple-600/30 text-purple-300 flex items-center justify-center flex-shrink-0 border border-purple-500/30">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-white leading-tight">Modo Edición Activo</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  </div>
+                  <p className="text-[10px] text-slate-300 truncate">
+                    Edición de carta en vivo &middot; Modificaciones en tiempo real
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
+                  className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold flex items-center gap-1 transition-all shadow-xs cursor-pointer active:scale-95"
+                >
+                  <Plus size={13} className="stroke-[3]" />
+                  <span className="hidden sm:inline">Añadir plato</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExitAdminMode}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                  title="Salir del modo de edición"
+                >
+                  <Lock className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Salir de Edición</span>
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Modal de Personalización (Píldoras + Notas libres) */}
@@ -1685,16 +2052,35 @@ function DinerMenuContent() {
                   { name: t('extraCutlery'), icon: '🍴' },
                   { name: t('saltCondiments'), icon: '🧂' },
                   { name: t('napkins'), icon: '🧻' },
-                ].map((serv) => (
-                  <button
-                    key={serv.name}
-                    onClick={() => handleRequestMicroService(serv.name)}
-                    className="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-200/80 hover:border-blue-300 text-left transition-all flex flex-col justify-between gap-1 shadow-xs active:scale-95"
-                  >
-                    <span className="text-xl">{serv.icon}</span>
-                    <span className="font-bold text-xs text-slate-900">{serv.name}</span>
-                  </button>
-                ))}
+                ].map((serv) => {
+                  const isRequested = pendingServiceCalls.has(serv.name)
+
+                  return (
+                    <button
+                      key={serv.name}
+                      disabled={isRequested}
+                      onClick={() => handleRequestMicroService(serv.name)}
+                      className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between gap-1 shadow-xs ${
+                        isRequested
+                          ? 'bg-emerald-50 border-emerald-500 text-emerald-950 cursor-not-allowed shadow-emerald-500/10'
+                          : 'bg-slate-50 hover:bg-blue-50 border-slate-200/80 hover:border-blue-300 text-slate-900 active:scale-95 cursor-pointer'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xl">{serv.icon}</span>
+                        {isRequested && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-600 text-[10px] font-black text-white shadow-xs animate-in fade-in">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                            Solicitado
+                          </span>
+                        )}
+                      </div>
+                      <span className={`font-bold text-xs ${isRequested ? 'text-emerald-950' : 'text-slate-900'}`}>
+                        {serv.name}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -1789,6 +2175,47 @@ function DinerMenuContent() {
           onClose={() => setShowLegalModal(false)}
           restaurantName={restaurant.name}
         />
+
+        {/* Modal de Autenticación de Administrador In-Situ */}
+        <InSituAdminAuthModal
+          isOpen={showAdminAuthModal}
+          onClose={() => setShowAdminAuthModal(false)}
+          slug={slug}
+          onSuccess={handleAdminAuthSuccess}
+        />
+
+        {/* Modal de Crear / Editar Plato In-Situ */}
+        <InSituEditProductModal
+          isOpen={isInSituEditModalOpen}
+          onClose={() => {
+            setIsInSituEditModalOpen(false)
+            setEditingInSituProduct(null)
+          }}
+          product={editingInSituProduct}
+          categories={categories}
+          defaultCategoryId={inSituTargetCategoryId}
+          slug={slug}
+          adminToken={adminSessionToken}
+          onSave={handleSaveInSituProduct}
+          onDelete={handleDeleteInSituProduct}
+        />
+
+        {/* Toast de Feedback In-Situ */}
+        {inSituFeedbackToast && (
+          <div className="fixed top-16 inset-x-3 z-50 max-w-md mx-auto p-3 rounded-2xl bg-purple-900 text-white font-bold shadow-2xl flex items-center justify-between gap-2 animate-in slide-in-from-top duration-300 border border-purple-700">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Sparkles className="w-4 h-4 text-purple-300 flex-shrink-0" />
+              <span className="text-xs font-extrabold truncate">{inSituFeedbackToast}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInSituFeedbackToast(null)}
+              className="p-1 rounded-full text-purple-300 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* SEO Semántico Gastronómico Schema.org/Restaurant + Menu */}
         <RestaurantJsonLd
