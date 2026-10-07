@@ -290,15 +290,28 @@ export async function createOrder(
       }
 
       // 1. Invocación atómica en PostgreSQL (Arbitraje a nivel de cerrojo de fila, cero TOCTOU)
+      let safeItemsForDb: typeof orderData.items = []
+      try {
+        const { data: dbProductRows } = await supabase
+          .from('products')
+          .select('id')
+          .eq('restaurant_id', targetRestaurantId)
+        const validDbProductIds = new Set((dbProductRows || []).map((p: any) => p.id))
+        safeItemsForDb = (orderData.items || []).filter(
+          it => uuidRegex.test(it.product_id) && validDbProductIds.has(it.product_id)
+        )
+      } catch {
+        safeItemsForDb = (orderData.items || []).filter(it => uuidRegex.test(it.product_id))
+      }
+
       if (orderData.idempotency_key) {
-        const uuidValidItems = (orderData.items || []).filter(it => uuidRegex.test(it.product_id))
         const { data: atomicResult, error: rpcErr } = await supabase.rpc('create_order_atomic', {
           p_restaurant_id: targetRestaurantId,
           p_table_session_id: resolvedTableSessionId,
           p_table_number: orderData.table_number,
           p_total_amount: orderData.total_amount,
           p_idempotency_key: orderData.idempotency_key,
-          p_items: uuidValidItems,
+          p_items: safeItemsForDb,
         })
 
         if (!rpcErr && atomicResult && atomicResult.order) {
@@ -335,7 +348,7 @@ export async function createOrder(
               status: initialStatus,
               idempotency_key: orderData.idempotency_key,
             },
-            { onConflict: 'idempotency_key', ignoreDuplicates: true }
+            { onConflict: 'idempotency_key' }
           )
         : supabase.from('orders').insert({
             restaurant_id: targetRestaurantId,
@@ -366,15 +379,13 @@ export async function createOrder(
         saveCachedOrderItems(newOrder.id, fullOrder.order_items)
         addServerOrder(slug, fullOrder, true)
 
-        // Insertar items solo si es una orden nueva y product_id es UUID válido
-        const itemsToInsert = orderData.items
-          .filter(it => uuidRegex.test(it.product_id))
-          .map(it => ({
-            order_id: newOrder.id,
-            product_id: it.product_id,
-            quantity: it.quantity,
-            notes: it.notes || null,
-          }))
+        // Insertar items solo si existen como productos válidos en base de datos
+        const itemsToInsert = safeItemsForDb.map(it => ({
+          order_id: newOrder.id,
+          product_id: it.product_id,
+          quantity: it.quantity,
+          notes: it.notes || null,
+        }))
 
         if (itemsToInsert.length > 0) {
           try {

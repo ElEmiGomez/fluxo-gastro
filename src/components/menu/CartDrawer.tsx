@@ -116,13 +116,25 @@ export function CartDrawer({
   // Normalización ultra-segura de items del carrito
   const validCart = (Array.isArray(cart) ? cart : [])
     .filter(item => Boolean(item && typeof item === 'object'))
-    .map(item => ({
-      ...item,
-      product: item.product || { id: 'p-unknown', name: 'Plato', price: 0, category_id: '' },
-      quantity: Math.max(1, parseInt(String(item.quantity || 1), 10) || 1),
-      selectedPills: Array.isArray(item.selectedPills) ? item.selectedPills : [],
-      notes: typeof item.notes === 'string' ? item.notes : '',
-    }))
+    .map(item => {
+      const prod = item.product || {}
+      const prodId = String(prod.id || (item as any).product_id || (item as any).id || (item as any).productId || '').trim() || 'p-unknown'
+      const prodName = String(prod.name || (item as any).name || 'Plato').trim()
+      const prodPrice = Number(prod.price ?? (item as any).price ?? 0)
+      return {
+        ...item,
+        product: {
+          ...prod,
+          id: prodId,
+          name: prodName,
+          price: prodPrice,
+          category_id: prod.category_id || '',
+        },
+        quantity: Math.max(1, parseInt(String(item.quantity || 1), 10) || 1),
+        selectedPills: Array.isArray(item.selectedPills) ? item.selectedPills : [],
+        notes: typeof item.notes === 'string' ? item.notes : '',
+      }
+    })
 
   const totalAmount = validCart.reduce(
     (sum, item) => sum + (Number(item.product?.price) || 0) * item.quantity,
@@ -223,8 +235,9 @@ export function CartDrawer({
         created_by: isWaiter ? 'waiter' : 'diner',
         status: (isWaiter ? 'pending' : 'pending_validation') as OrderStatus,
         items: validCart.map(item => ({
-          product_id: item.product?.id || '',
-          name: item.product?.name || '',
+          product_id: item.product?.id || (item as any).product_id || (item as any).id || '',
+          name: item.product?.name || (item as any).name || '',
+          price: Number(item.product?.price ?? (item as any).price ?? 0),
           quantity: item.quantity,
           notes: item.notes || (item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : null),
         })),

@@ -25,10 +25,19 @@ import {
 import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
+import { PRODUCT_NAMES } from '@/lib/i18n'
 import { Order, OrderItem, OrderStatus, Product } from '@/types/database.types'
 
 const isUuid = (str?: string | null): boolean =>
   Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str))
+
+const cleanStr = (s?: string | null): string =>
+  String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim()
 
 export const dynamic = 'force-dynamic'
 
@@ -91,7 +100,7 @@ export async function POST(req: NextRequest) {
     // 1. Rate Limiting de seguridad
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local-client'
     const rateLimitKey = `order_${slug}_${clientIp}_${table_number}`
-    if (!checkRateLimit(rateLimitKey, 20, 60000)) {
+    if (!checkRateLimit(rateLimitKey, 60, 60000)) {
       if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'Rate limited')
       return NextResponse.json(
         { error: 'Demasiadas solicitudes. Por favor espera unos momentos.' },
@@ -178,18 +187,44 @@ export async function POST(req: NextRequest) {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx]
       const quantity = Math.max(1, parseInt(String(item.quantity || '1'), 10) || 1)
-      const productId = String(item.product_id || '').trim()
-      if (!productId) continue
+      const productId = String(
+        item.product_id ||
+        item.id ||
+        item.productId ||
+        (item.product && item.product.id) ||
+        ''
+      ).trim()
+      const itemName = String(
+        item.name ||
+        (item.product && item.product.name) ||
+        ''
+      ).trim()
+      const itemPrice = Number(item.price ?? (item.product && item.product.price) ?? 0)
 
-      // Búsqueda estricta en catálogo autorizado (Previene Client Price Tampering)
-      let catalogProduct = catalogProducts.find(p => 
-        p.id === productId || 
-        p.id.replace('promo', 'prom') === productId ||
-        p.id.replace('prom', 'promo') === productId ||
-        (item.name && p.name.trim().toLowerCase() === String(item.name).trim().toLowerCase())
+      // Si no hay ni ID ni nombre, omitir
+      if (!productId && !itemName) continue
+
+      const targetClean = cleanStr(itemName)
+
+      // 1. Coincidencia por ID exacto o alias de promoción
+      let catalogProduct = catalogProducts.find(p =>
+        (productId && p.id === productId) ||
+        (productId && p.id.toLowerCase() === productId.toLowerCase()) ||
+        (productId && p.id.replace('promo', 'prom') === productId) ||
+        (productId && p.id.replace('prom', 'promo') === productId) ||
+        (productId && p.id.replace('prom', 'promo') === productId.replace('prom', 'promo'))
       )
 
-      // Fallback 1: Buscar directamente en Supabase si no estaba en la lista consolidada
+      // 2. Coincidencia por nombre exacto o normalizado
+      if (!catalogProduct && targetClean) {
+        catalogProduct = catalogProducts.find(p => {
+          const pClean = cleanStr(p.name)
+          return pClean === targetClean ||
+            (targetClean.length >= 5 && (pClean.includes(targetClean) || targetClean.includes(pClean)))
+        })
+      }
+
+      // 3. Fallback en Supabase (por UUID o por búsqueda aproximada de nombre)
       if (!catalogProduct && supabase && isSupabaseConfigured()) {
         try {
           if (isUuid(productId)) {
@@ -203,16 +238,22 @@ export async function POST(req: NextRequest) {
               catalogProducts.push(dbProd)
             }
           }
-          if (!catalogProduct && item.name) {
-            const { data: dbNameProd } = await supabase
+          if (!catalogProduct && itemName) {
+            const { data: dbNameProds } = await supabase
               .from('products')
               .select('*')
               .eq('restaurant_id', restaurantId)
-              .ilike('name', String(item.name).trim())
-              .maybeSingle()
-            if (dbNameProd) {
-              catalogProduct = dbNameProd
-              catalogProducts.push(dbNameProd)
+              .limit(50)
+            if (dbNameProds && dbNameProds.length > 0) {
+              const matched = dbNameProds.find((dp: any) => {
+                const dpClean = cleanStr(dp.name)
+                return dpClean === targetClean ||
+                  (targetClean.length >= 5 && (dpClean.includes(targetClean) || targetClean.includes(dpClean)))
+              })
+              if (matched) {
+                catalogProduct = matched
+                catalogProducts.push(matched)
+              }
             }
           }
         } catch (findErr) {
@@ -220,19 +261,72 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Fallback 2: Buscar en la memoria del servidor
+      // 4. Fallback en memoria del servidor
       if (!catalogProduct) {
         const memProds = getServerProducts(slug)
         catalogProduct = memProds.find(p =>
-          p.id === productId ||
-          (item.name && p.name.trim().toLowerCase() === String(item.name).trim().toLowerCase())
+          (productId && p.id === productId) ||
+          (targetClean && cleanStr(p.name) === targetClean)
         )
+      }
+
+      // 5. Fallback en todos los restaurantes de MOCK_PRODUCTS
+      if (!catalogProduct) {
+        for (const otherSlug of Object.keys(MOCK_PRODUCTS)) {
+          const list = MOCK_PRODUCTS[otherSlug] || []
+          const found = list.find(p =>
+            (productId && p.id === productId) ||
+            (targetClean && cleanStr(p.name) === targetClean) ||
+            (targetClean && targetClean.length >= 5 && (cleanStr(p.name).includes(targetClean) || targetClean.includes(cleanStr(p.name))))
+          )
+          if (found) {
+            catalogProduct = found
+            break
+          }
+        }
+      }
+
+      // 6. Fallback en diccionario de traducciones multilingüe i18n
+      if (!catalogProduct && (targetClean || productId)) {
+        for (const [tId, tObj] of Object.entries(PRODUCT_NAMES)) {
+          const isIdMatch = Boolean(productId && (tId === productId || tId.toLowerCase() === productId.toLowerCase()))
+          const isNameMatch = Boolean(targetClean && Object.values(tObj).some(tName => {
+            const cName = cleanStr(tName)
+            return cName === targetClean || (targetClean.length >= 5 && (cName.includes(targetClean) || targetClean.includes(cName)))
+          }))
+          if (isIdMatch || isNameMatch) {
+            const found = catalogProducts.find(p => p.id === tId) ||
+              Object.values(MOCK_PRODUCTS).flat().find(p => p.id === tId)
+            if (found) {
+              catalogProduct = found
+              break
+            }
+          }
+        }
+      }
+
+      // 7. Fallback dinámico resiliente: plato in-situ / plato personalizado / plato de carta activa
+      if (!catalogProduct && (itemName || productId)) {
+        const resolvedPrice = itemPrice > 0 ? itemPrice : 0
+        catalogProduct = {
+          id: (productId && productId !== 'unknown' && productId !== 'p-unknown') ? productId : `p-dyn-${Date.now()}-${idx}`,
+          restaurant_id: restaurantId,
+          category_id: (item.product && item.product.category_id) || 'cat-1',
+          name: sanitizeText(itemName || 'Plato Especial', 100),
+          description: sanitizeText((item.product && item.product.description) || '', 200),
+          price: resolvedPrice,
+          image_url: (item.product && item.product.image_url) || null,
+          model_3d_url: null,
+          is_available: true,
+        }
+        catalogProducts.push(catalogProduct)
+        setServerProducts(slug, catalogProducts)
       }
 
       if (!catalogProduct) {
         if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'Producto no encontrado')
         return NextResponse.json(
-          { error: `El producto "${item.name || productId}" no está disponible o no fue encontrado en la carta.` },
+          { error: `El producto "${itemName || productId}" no está disponible o no fue encontrado en la carta.` },
           { status: 400 }
         )
       }
@@ -246,8 +340,8 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      const itemPrice = Number(catalogProduct.price) || 0
-      computedTotal += itemPrice * quantity
+      const itemPriceToCharge = Number(catalogProduct.price) || 0
+      computedTotal += itemPriceToCharge * quantity
 
       const sanitizedNotes = item.notes ? sanitizeText(item.notes, 200) : null
 
@@ -264,7 +358,7 @@ export async function POST(req: NextRequest) {
     if (validItems.length === 0) {
       if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'No valid items')
       return NextResponse.json(
-        { error: 'No se encontraron productos válidos o disponibles en la comanda. Por favor revisa la selección.' },
+        { error: 'No se encontraron productos válidos en la comanda. Por favor revisa la selección.' },
         { status: 400 }
       )
     }

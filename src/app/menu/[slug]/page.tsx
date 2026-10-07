@@ -137,11 +137,12 @@ function DinerMenuContent() {
             const sanitized: CartItem[] = parsed
               .filter((item: any) => item && typeof item === 'object')
               .map((item: any) => ({
-                product: item.product && typeof item.product === 'object' ? item.product : {
-                  id: item.product_id || 'unknown',
-                  name: item.name || 'Plato',
-                  price: Number(item.price) || 0,
-                  category_id: '',
+                product: {
+                  ...(item.product && typeof item.product === 'object' ? item.product : {}),
+                  id: (item.product && item.product.id) || item.product_id || item.id || 'unknown',
+                  name: (item.product && item.product.name) || item.name || 'Plato',
+                  price: Number((item.product && item.product.price) ?? item.price ?? 0),
+                  category_id: (item.product && item.product.category_id) || '',
                 },
                 quantity: Math.max(1, parseInt(String(item.quantity || 1), 10) || 1),
                 selectedPills: Array.isArray(item.selectedPills) ? item.selectedPills : [],
