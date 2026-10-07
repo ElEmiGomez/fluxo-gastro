@@ -268,6 +268,17 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       model_3d_url: null,
       is_available: true,
     },
+    {
+      id: 'b0000000-0000-0000-0000-000000000003',
+      restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+      category_id: 'c0000000-0000-0000-0000-000000000005',
+      name: 'Gin Tonic de Autor con Frutos Rojos',
+      description: 'Gin premium con tónica botánica, bayas de enebro, frutos rojos frescos y un toque cítrico de lima.',
+      price: 6.40,
+      image_url: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80',
+      model_3d_url: null,
+      is_available: true,
+    },
   ],
 
   // ── 2. CATÁLOGO: TAPERÍA CASCO ANTIGO ──

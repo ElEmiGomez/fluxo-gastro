@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { X, Check, Loader2, Sparkles, Trash2 } from 'lucide-react'
+import { X, Check, Loader2, Sparkles, Trash2, Copy } from 'lucide-react'
 import { Product, Category } from '@/types/database.types'
 
 interface InSituEditProductModalProps {
@@ -36,6 +36,7 @@ export function InSituEditProductModal({
   const [isWeight, setIsWeight] = useState(false)
   const [priceUnit, setPriceUnit] = useState<'100g' | 'kg' | 'piece'>('100g')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isDuplicating, setIsDuplicating] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -161,14 +162,79 @@ export function InSituEditProductModal({
         onSave(data.product)
         onClose()
       } else if (res.status === 401) {
+        console.error('[InSituEditProductModal] Sesión rechazada o expirada:', res.status)
         setErrorMsg('Tu sesión ha expirado o no tienes permisos de administración.')
       } else {
+        console.error('[InSituEditProductModal] Error del servidor al guardar plato:', data)
         setErrorMsg(data.error || 'No se pudo guardar el plato. Verifica tus permisos de administración.')
       }
-    } catch {
+    } catch (err) {
+      console.error('[InSituEditProductModal] Excepción de conexión al guardar plato:', err)
       setErrorMsg('Error de conexión al guardar el plato.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleDuplicateToPromos = async () => {
+    if (!product) return
+    setIsDuplicating(true)
+    setErrorMsg(null)
+
+    try {
+      const promoCat =
+        categories.find(
+          c =>
+            c.name.toLowerCase().includes('promo') ||
+            c.name.toLowerCase().includes('oferta')
+        ) || categories[0]
+
+      const sanitizedPriceStr = price.trim().replace(',', '.')
+      const numPrice = parseFloat(sanitizedPriceStr) || Number(product.price) || 0
+
+      const payload = {
+        slug,
+        type: 'product',
+        data: {
+          name: `${product.name} (Promo)`,
+          price: numPrice,
+          category_id: promoCat?.id || 'cat-1',
+          description: description.trim() || product.description || '',
+          image_url: imageUrl.trim() || product.image_url || '',
+          is_available: true,
+          is_highlighted_promo: true,
+          price_type: isWeight ? 'weight' : 'unit',
+          price_unit: isWeight ? priceUnit : undefined,
+        },
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (adminToken) {
+        headers['Authorization'] = `Bearer ${adminToken}`
+      }
+
+      const res = await fetch('/api/admin/menu', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.success && data.product) {
+        onSave(data.product)
+        onClose()
+      } else {
+        console.error('[InSituEditProductModal] Error al duplicar plato en promos:', data)
+        setErrorMsg(data.error || 'No se pudo duplicar el plato en promociones.')
+      }
+    } catch (err) {
+      console.error('[InSituEditProductModal] Excepción al duplicar plato en promos:', err)
+      setErrorMsg('Error de conexión al duplicar el plato.')
+    } finally {
+      setIsDuplicating(false)
     }
   }
 
@@ -319,38 +385,55 @@ export function InSituEditProductModal({
           </div>
 
           {/* Footer de Acciones */}
-          <div className="pt-3 flex items-center justify-between gap-2 border-t border-slate-800">
-            {product && onDelete ? (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={isSubmitting}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
-                  confirmDelete
-                    ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/30'
-                    : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                }`}
-                title="Eliminar plato de la carta"
-              >
-                <Trash2 size={13} />
-                <span>{confirmDelete ? '¿Confirmar eliminación?' : 'Eliminar'}</span>
-              </button>
-            ) : (
-              <div />
-            )}
-
+          <div className="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800">
             <div className="flex items-center gap-2">
+              {product && onDelete && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isSubmitting || isDuplicating}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50 ${
+                    confirmDelete
+                      ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-600/30'
+                      : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                  }`}
+                  title="Eliminar plato de la carta"
+                >
+                  <Trash2 size={13} />
+                  <span>{confirmDelete ? '¿Confirmar eliminación?' : 'Eliminar'}</span>
+                </button>
+              )}
+
+              {product && (
+                <button
+                  type="button"
+                  onClick={handleDuplicateToPromos}
+                  disabled={isSubmitting || isDuplicating}
+                  className="px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
+                  title="Crear una copia de este plato en la categoría Promociones"
+                >
+                  {isDuplicating ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  <span>{isDuplicating ? 'Duplicando...' : 'Duplicar en Promos'}</span>
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
               <button
                 type="button"
                 onClick={onClose}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDuplicating}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition-colors cursor-pointer text-xs"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDuplicating}
                 className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-black transition-all flex items-center gap-1.5 shadow-md shadow-purple-600/20 cursor-pointer active:scale-95 text-xs"
               >
                 {isSubmitting ? (

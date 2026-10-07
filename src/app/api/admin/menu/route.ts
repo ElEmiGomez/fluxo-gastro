@@ -53,8 +53,11 @@ export async function GET(req: NextRequest) {
             .select('*')
             .eq('restaurant_id', rest.id)
           if (dbProds && dbProds.length > 0) {
-            products = dbProds
-            setServerProducts(slug, dbProds)
+            const mergedMap = new Map<string, Product>()
+            products.forEach(p => mergedMap.set(p.id, p))
+            dbProds.forEach((dp: any) => mergedMap.set(dp.id, { ...(mergedMap.get(dp.id) || {}), ...dp }))
+            products = Array.from(mergedMap.values())
+            setServerProducts(slug, products)
           }
         }
       } catch (dbErr) {
@@ -140,38 +143,59 @@ export async function POST(req: NextRequest) {
             saved.restaurant_id = targetRestId
           }
 
-          // Solo sincronizar con Supabase si el ID del producto es un UUID válido para PostgreSQL
-          if (isUuid(saved.id)) {
-            let targetCategoryId = saved.category_id
-            if (!isUuid(targetCategoryId)) {
-              // Intentar emparejar categoría por nombre en Supabase
-              const currentCat = getServerCategories(slug).find(c => c.id === saved.category_id)
-              if (currentCat) {
-                const { data: matchedCats } = await supabase
-                  .from('categories')
-                  .select('id')
-                  .eq('restaurant_id', targetRestId)
-                  .ilike('name', currentCat.name)
-                  .limit(1)
-                if (matchedCats && matchedCats.length > 0) {
-                  targetCategoryId = matchedCats[0].id
-                }
-              }
-              if (!isUuid(targetCategoryId)) {
-                const { data: dbCats } = await supabase
-                  .from('categories')
-                  .select('id')
-                  .eq('restaurant_id', targetRestId)
-                  .limit(1)
-                if (dbCats && dbCats.length > 0) {
-                  targetCategoryId = dbCats[0].id
-                }
+          let targetProductId = saved.id
+          if (!isUuid(targetProductId)) {
+            // Si el producto existente en Supabase ya tiene un UUID emparejado por nombre
+            const { data: matchedDbProds } = await supabase
+              .from('products')
+              .select('id')
+              .eq('restaurant_id', targetRestId)
+              .ilike('name', saved.name)
+              .limit(1)
+            if (matchedDbProds && matchedDbProds.length > 0) {
+              targetProductId = matchedDbProds[0].id
+            } else {
+              targetProductId = crypto.randomUUID()
+            }
+            if (saved.id !== targetProductId) {
+              deleteServerProduct(slug, saved.id)
+            }
+            saved.id = targetProductId
+            upsertServerProduct(slug, saved)
+          }
+
+          let targetCategoryId = saved.category_id
+          if (!isUuid(targetCategoryId)) {
+            // Intentar emparejar categoría por nombre en Supabase
+            const currentCat = getServerCategories(slug).find(c => c.id === saved.category_id)
+            if (currentCat) {
+              const { data: matchedCats } = await supabase
+                .from('categories')
+                .select('id')
+                .eq('restaurant_id', targetRestId)
+                .ilike('name', currentCat.name)
+                .limit(1)
+              if (matchedCats && matchedCats.length > 0) {
+                targetCategoryId = matchedCats[0].id
               }
             }
+            if (!isUuid(targetCategoryId)) {
+              const { data: dbCats } = await supabase
+                .from('categories')
+                .select('id')
+                .eq('restaurant_id', targetRestId)
+                .limit(1)
+              if (dbCats && dbCats.length > 0) {
+                targetCategoryId = dbCats[0].id
+              }
+            }
+          }
 
-            if (isUuid(targetCategoryId)) {
-              await supabase.from('products').upsert({
-                id: saved.id,
+          if (isUuid(targetCategoryId) && isUuid(targetProductId)) {
+            const { data: upsertData, error: upsertErr } = await supabase
+              .from('products')
+              .upsert({
+                id: targetProductId,
                 restaurant_id: targetRestId,
                 category_id: targetCategoryId,
                 name: saved.name,
@@ -183,10 +207,22 @@ export async function POST(req: NextRequest) {
                 model_3d_url: saved.model_3d_url || null,
                 is_available: saved.is_available,
               })
+              .select()
+
+            if (upsertErr) {
+              console.error('[Menu API POST] Error upserting product in Supabase:', {
+                code: upsertErr.code,
+                message: upsertErr.message,
+                details: upsertErr.details,
+                hint: upsertErr.hint,
+                product: saved,
+              })
+            } else {
+              console.log('[Menu API POST] Product synced successfully in Supabase:', targetProductId)
             }
           }
         } catch (dbErr) {
-          console.warn('Could not sync product to Supabase, local state updated:', dbErr)
+          console.error('[Menu API POST] Exception while syncing product to Supabase:', dbErr)
         }
       }
 
@@ -195,6 +231,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: false, error: 'Tipo de entidad no reconocido' }, { status: 400 })
   } catch (err: any) {
+    console.error('[Menu API POST] Exception in POST handler:', err)
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }
@@ -216,29 +253,97 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'product_id requerido' }, { status: 400 })
     }
 
-    const currentProducts = getServerProducts(slug)
-    const product = currentProducts.find(p => p.id === product_id)
+    let currentProducts = getServerProducts(slug)
+    let product = currentProducts.find(p => p.id === product_id)
+
+    const supabase = createServerClient()
+
+    // Si no se encuentra en memoria local, buscar en la base de datos de Supabase
+    if (!product && supabase && isSupabaseConfigured()) {
+      try {
+        if (isUuid(product_id)) {
+          const { data: dbProd, error: fetchErr } = await supabase
+            .from('products')
+            .select('*')
+            .eq('id', product_id)
+            .maybeSingle()
+          if (fetchErr) {
+            console.error('[Menu API PATCH] Error al consultar plato en Supabase por ID:', fetchErr)
+          } else if (dbProd) {
+            product = dbProd
+            currentProducts = [...currentProducts, dbProd]
+          }
+        }
+      } catch (findErr) {
+        console.error('[Menu API PATCH] Excepción al buscar plato en Supabase:', findErr)
+      }
+    }
+
     if (!product) {
       return NextResponse.json({ success: false, error: 'Producto no encontrado' }, { status: 404 })
     }
 
     const newState = typeof is_available === 'boolean' ? is_available : !product.is_available
-    const updated = currentProducts.map(p => (p.id === product_id ? { ...p, is_available: newState } : p))
+    const updated = currentProducts.map(p => (p.id === product.id ? { ...p, is_available: newState } : p))
     setServerProducts(slug, updated)
 
-    const supabase = createServerClient()
+    // Sincronización robusta con Supabase (PostgreSQL)
     if (supabase && isSupabaseConfigured()) {
       try {
-        if (isUuid(product_id)) {
-          await supabase.from('products').update({ is_available: newState }).eq('id', product_id)
+        const rest = await getRestaurantBySlug(slug)
+        const targetRestId = getTargetRestaurantId(rest?.id, slug)
+
+        let targetId = product.id
+        // Si el ID en frontend no es un UUID válido, intentar resolver el UUID real en Supabase por nombre
+        if (!isUuid(targetId)) {
+          const { data: matched, error: matchErr } = await supabase
+            .from('products')
+            .select('id')
+            .eq('restaurant_id', targetRestId)
+            .ilike('name', product.name)
+            .limit(1)
+
+          if (matchErr) {
+            console.error('[Menu API PATCH] Error emparejando producto por nombre en Supabase:', matchErr)
+          } else if (matched && matched.length > 0) {
+            targetId = matched[0].id
+          }
+        }
+
+        if (isUuid(targetId)) {
+          const { data: updateData, error: updateErr } = await supabase
+            .from('products')
+            .update({ is_available: newState })
+            .eq('id', targetId)
+            .select()
+
+          if (updateErr) {
+            console.error('[Menu API PATCH] Error actualizando stock (is_available) en Supabase:', {
+              code: updateErr.code,
+              message: updateErr.message,
+              details: updateErr.details,
+              hint: updateErr.hint,
+              productId: targetId,
+              is_available: newState,
+            })
+          } else {
+            console.log('[Menu API PATCH] Stock actualizado con éxito en Supabase:', {
+              id: targetId,
+              is_available: newState,
+              rowsUpdated: updateData?.length || 0,
+            })
+          }
+        } else {
+          console.warn('[Menu API PATCH] El producto no posee UUID válido para PostgreSQL:', product_id)
         }
       } catch (dbErr) {
-        console.warn('Could not sync availability to Supabase, local state updated:', dbErr)
+        console.error('[Menu API PATCH] Excepción no controlada al actualizar stock en Supabase:', dbErr)
       }
     }
 
     return NextResponse.json({ success: true, product_id, is_available: newState })
   } catch (err: any) {
+    console.error('[Menu API PATCH] Error general en endpoint PATCH:', err)
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }

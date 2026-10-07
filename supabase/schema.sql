@@ -143,7 +143,9 @@ alter table system_error_logs enable row level security;
 
 create policy "Permitir lectura publica de restaurantes" on restaurants for select using (true);
 create policy "Permitir lectura publica de categorias" on categories for select using (true);
+create policy "Permitir gestion de categorias para administracion" on categories for all using (true) with check (true);
 create policy "Permitir lectura publica de productos" on products for select using (true);
+create policy "Permitir gestion de productos para administracion" on products for all using (true) with check (true);
 create policy "Permitir lectura publica de mesas" on tables for select using (true);
 create policy "Permitir gestion completa de table_sessions" on table_sessions for all using (true);
 create policy "Permitir gestion completa de service_calls" on service_calls for all using (true);

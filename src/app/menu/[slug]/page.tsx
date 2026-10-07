@@ -88,8 +88,13 @@ function DinerMenuContent() {
   const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null)
   const [showTimelineModal, setShowTimelineModal] = useState(false)
   const [showDirectBillModal, setShowDirectBillModal] = useState(false)
-  const [isTablePaid, setIsTablePaid] = useState(false)
-  const [hasRequestedBill, setHasRequestedBill] = useState(false)
+  const [isTablePaid, setIsTablePaid] = useState<boolean>(false)
+  const [hasRequestedBill, setHasRequestedBill] = useState<boolean>(false)
+  const userRequestedBillTimeRef = useRef<number | null>(null)
+  const handleBillRequested = () => {
+    userRequestedBillTimeRef.current = Date.now()
+    setHasRequestedBill(true)
+  }
   const [tableTotalAmount, setTableTotalAmount] = useState<number>(0)
   const [addedToast, setAddedToast] = useState<string | null>(null)
 
@@ -118,6 +123,12 @@ function DinerMenuContent() {
   // 1. Carga inicial y recuperación de persistencia
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+        sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+        localStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+      } catch {}
+
       try {
         const savedCart = localStorage.getItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
         if (savedCart) {
@@ -371,7 +382,7 @@ function DinerMenuContent() {
             }
           }
           return ord
-        }).filter((o: any) => o.order_items && o.order_items.length > 0)
+        })
 
         // Evaluar todas las órdenes de la mesa bajo la sesión activa para sincronización reactiva con Cocina y Mozo.
         const allTableOrders = serverOrdersList.filter(o => {
@@ -382,13 +393,17 @@ function DinerMenuContent() {
           )
           if (!matchesTable) return false
 
-          const isActive = ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
+          const isActive = ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
           // Las órdenes activas de esta mesa en curso se preservan firmemente sin oscilaciones de sesión
           if (isActive) return true
 
-          // Para historial cerrado/pagado, validar sesión para no mostrar pedidos de turnos anteriores
-          if (!o.session_token || !currentSessionId) return true
-          return o.session_token === currentSessionId || o.session_token === sessionId || o.session_token === thisTableSession?.session_id
+          // Para historial cerrado/pagado, validar sesión estricta para NO adoptar pedidos de turnos anteriores
+          if (!currentSessionId || !o.session_token) return false
+          const isCurrentSessionOrder = 
+            o.session_token === currentSessionId || 
+            (sessionId && o.session_token === sessionId) || 
+            (thisTableSession?.session_id && o.session_token === thisTableSession.session_id)
+          return Boolean(isCurrentSessionOrder)
         })
 
         // Guardar órdenes activas conocidas en ref para persistencia resiliente
@@ -410,15 +425,6 @@ function DinerMenuContent() {
         }
 
         const calls: any[] = callsRes.calls || []
-        const activeBillCall = calls.some(
-          (c: any) =>
-            c.table_number?.toString() === tableNumber?.toString() &&
-            c.call_type?.startsWith('bill_') &&
-            c.status === 'pending'
-        )
-        if (activeBillCall) {
-          setHasRequestedBill(true)
-        }
 
         // Extraer micro-servicios pendientes para esta mesa (SSOT Supabase)
         const activeMicroServices = new Set<string>()
@@ -434,29 +440,26 @@ function DinerMenuContent() {
         })
         setPendingServiceCalls(activeMicroServices)
 
-        const isBillPaidCall = calls.some(
-          (c: any) =>
-            c.table_number?.toString() === tableNumber?.toString() &&
-            c.status === 'attended' &&
-            c.call_type?.startsWith('bill_') &&
-            c.created_at &&
-            Date.now() - new Date(c.created_at).getTime() < 15 * 60 * 1000
+        // Cobro de mesa: SOLO se activa tras confirmar el pago de la cuenta
+        // Exige estrictamente que el comensal haya solicitado la cuenta en esta sesión (userRequestedBillTimeRef.current)
+        // y el mozo haya confirmado el cobro ('attended') con fecha posterior o coincidente con dicha solicitud
+        const isBillPaidCall = Boolean(
+          userRequestedBillTimeRef.current &&
+          calls.some(
+            (c: any) =>
+              c.table_number?.toString() === tableNumber?.toString() &&
+              c.status === 'attended' &&
+              c.call_type?.startsWith('bill_') &&
+              c.created_at &&
+              new Date(c.created_at).getTime() >= (userRequestedBillTimeRef.current || 0) - 10000
+          )
         )
 
-        const unfinalizedOrders = allTableOrders.filter(
-          o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
-        )
-
-        const hasPaidOrders = allTableOrders.length > 0 &&
-          allTableOrders.some(o => o.status === 'paid') &&
-          unfinalizedOrders.length === 0
-
-        const isBillPaid = isBillPaidCall || hasPaidOrders || thisTableSession?.status === 'closed'
-
-        if (isBillPaid) {
+        if (isBillPaidCall) {
           setIsTablePaid(true)
           setTableOrderStatus(null)
           setHasRequestedBill(false)
+          userRequestedBillTimeRef.current = null
           return
         } else {
           setIsTablePaid(false)
@@ -563,8 +566,13 @@ function DinerMenuContent() {
             setTableOrderStatus(null)
             setIsTablePaid(false)
             setHasRequestedBill(false)
+            userRequestedBillTimeRef.current = null
             if (typeof window !== 'undefined') {
               localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
+              localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
             }
             if (data.new_session_id) {
               setSessionId(data.new_session_id)
@@ -577,9 +585,12 @@ function DinerMenuContent() {
             data.type === 'table_bill_paid' &&
             (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
           ) {
-            setIsTablePaid(true)
-            setTableOrderStatus(null)
-            setHasRequestedBill(false)
+            if (userRequestedBillTimeRef.current || hasRequestedBill || tableOrderStatus) {
+              setIsTablePaid(true)
+              setTableOrderStatus(null)
+              setHasRequestedBill(false)
+              userRequestedBillTimeRef.current = null
+            }
             return
           }
 
@@ -616,17 +627,25 @@ function DinerMenuContent() {
         setTableOrderStatus(null)
         setIsTablePaid(false)
         setHasRequestedBill(false)
+        userRequestedBillTimeRef.current = null
         if (typeof window !== 'undefined') {
           localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
+          localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
+          sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+          sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+          sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
         }
       }
     }
 
     const handleLocalTableBillPaid = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        setIsTablePaid(true)
-        setTableOrderStatus(null)
-        setHasRequestedBill(false)
+        if (userRequestedBillTimeRef.current || hasRequestedBill || tableOrderStatus) {
+          setIsTablePaid(true)
+          setTableOrderStatus(null)
+          setHasRequestedBill(false)
+          userRequestedBillTimeRef.current = null
+        }
       }
     }
 
@@ -736,6 +755,7 @@ function DinerMenuContent() {
         )
         setTimeout(() => setInSituFeedbackToast(null), 3000)
       } else {
+        console.error('[Menu InSitu] Error en actualización de disponibilidad:', data)
         // Rollback
         setProducts(prev =>
           prev.map(p => (p.id === productId ? { ...p, is_available: currentAvailable } : p))
@@ -749,7 +769,8 @@ function DinerMenuContent() {
           setTimeout(() => setInSituFeedbackToast(null), 3000)
         }
       }
-    } catch {
+    } catch (toggleErr) {
+      console.error('[Menu InSitu] Excepción de conexión al alternar disponibilidad:', toggleErr)
       // Rollback
       setProducts(prev =>
         prev.map(p => (p.id === productId ? { ...p, is_available: currentAvailable } : p))
@@ -880,6 +901,9 @@ function DinerMenuContent() {
   // Actualizar cantidad inline (+ / -) con Haptic Feedback
   const handleUpdateProductQuantity = (product: Product, delta: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
+    // Modo Vista Previa: No permitir añadir ni modificar comanda
+    if (isInSituAdmin) return
+
     triggerHaptic(delta > 0 ? HAPTIC_PATTERNS.QUANTITY : HAPTIC_PATTERNS.TAP)
 
     setCart(prev => {
@@ -1063,16 +1087,27 @@ function DinerMenuContent() {
                   {/* Botón de Microservicios */}
                   <button
                     type="button"
-                    onClick={() => setShowServiceModal(true)}
-                    className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
-                    title="Pedir servilletas, hielo, condimentos"
+                    onClick={() => {
+                      if (!isInSituAdmin) setShowServiceModal(true)
+                    }}
+                    disabled={isInSituAdmin}
+                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1 shadow-xs transition-all ${
+                      isInSituAdmin
+                        ? 'opacity-50 cursor-not-allowed pointer-events-none'
+                        : 'hover:bg-slate-200 active:scale-95 cursor-pointer'
+                    }`}
+                    title={isInSituAdmin ? 'Servicios bloqueados en Modo Vista Previa' : 'Pedir servilletas, hielo, condimentos'}
                   >
                     <Bell className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
                     <span className="text-[11px] font-bold hidden min-[400px]:inline">{t('services')}</span>
                   </button>
 
                   {/* Botón de Llamar al Mozo */}
-                  <CallWaiterButton tableNumber={tableNumber} lang={currentLang} />
+                  <CallWaiterButton
+                    tableNumber={tableNumber}
+                    lang={currentLang}
+                    isPreviewMode={isInSituAdmin}
+                  />
                 </>
               )}
             </div>
@@ -1286,7 +1321,7 @@ function DinerMenuContent() {
                     </div>
                   </div>
                 ) : (
-                  /* VISTA TRAS PEDIR LA CUENTA: AVISO AL MOZO + GOOGLE REVIEW BOOSTER MIENTRAS LLEGA */
+                  /* VISTA TRAS PEDIR LA CUENTA: AVISO AL MOZO */
                   <div className="space-y-3 animate-in fade-in duration-300">
                     <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
@@ -1303,19 +1338,10 @@ function DinerMenuContent() {
                           El mozo ya va hacia tu mesa para realizar el cobro
                         </h4>
                         <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
-                          ¡Gracias por tu visita! Puedes valorar tu experiencia mientras llega el mozo.
+                          El personal se acerca a tu mesa con el desglose para abonar en efectivo o con tarjeta.
                         </p>
                       </div>
                     </div>
-
-                    {/* Tarjeta Google Review Booster (Aparece únicamente al pedir la cuenta mientras viene el mozo) */}
-                    <GoogleReviewBooster
-                      restaurantName={restaurant.name}
-                      restaurantSlug={restaurant.slug}
-                      googleReviewUrl={restaurant.google_review_url}
-                      googlePlaceId={restaurant.google_place_id}
-                      variant="card"
-                    />
                   </div>
                 )}
               </div>
@@ -1323,15 +1349,42 @@ function DinerMenuContent() {
           </div>
         )}
 
-        {/* VISTA CUANDO LA MESA YA HA SIDO COBRADA (ÚNICAMENTE TARJETA DE GOOGLE REVIEWS) */}
+        {/* VISTA CUANDO LA MESA YA HA SIDO COBRADA (CONFIRMACIÓN DE COBRO + GOOGLE REVIEWS) */}
         {!isFixedMenu && isTablePaid && (
-          <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
+          <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full space-y-3 animate-in fade-in duration-300">
+            <div className="p-3.5 bg-emerald-950 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                  <Receipt className="w-5 h-5 text-slate-950" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                    Mesa #{tableNumber} &middot; Cuenta Cobrada
+                  </span>
+                  <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
+                    ¡Muchas gracias por tu visita!
+                  </h4>
+                  <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
+                    Tu comanda ha sido cobrada correctamente en mesa.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTablePaid(false)}
+                className="p-1 rounded-full text-emerald-400 hover:text-white hover:bg-emerald-900/50 transition-colors flex-shrink-0"
+                title="Cerrar aviso"
+              >
+                <X size={16} />
+              </button>
+            </div>
             <GoogleReviewBooster
               restaurantName={restaurant.name}
               restaurantSlug={restaurant.slug}
               googleReviewUrl={restaurant.google_review_url}
               googlePlaceId={restaurant.google_place_id}
               variant="card"
+              onDismiss={() => setIsTablePaid(false)}
             />
           </div>
         )}
@@ -1546,16 +1599,13 @@ function DinerMenuContent() {
                     >
                       {/* Miniatura si no está expandido */}
                       {product.image_url && !isExpanded && (
-                        <div
-                          style={{ position: 'relative', width: '58px', height: '58px', minWidth: '58px', minHeight: '58px', overflow: 'hidden', borderRadius: '14px' }}
-                          className="bg-slate-100 shimmer-loading flex-shrink-0 border border-slate-100 transition-opacity duration-300"
-                        >
+                        <div className="relative w-14 h-14 min-w-[3.5rem] min-h-[3.5rem] aspect-square overflow-hidden rounded-xl bg-slate-100 shimmer-loading flex-shrink-0 border border-slate-100 transition-opacity duration-300">
                           <Image
                             src={product.image_url}
                             alt={product.name}
                             fill
-                            className="object-cover"
-                            sizes="58px"
+                            className="w-full h-full object-cover"
+                            sizes="56px"
                             loading="lazy"
                           />
                         </div>
@@ -1627,7 +1677,14 @@ function DinerMenuContent() {
                         )}
                         {!isFixedMenu ? (
                           <>
-                            {qty === 0 ? (
+                            {isInSituAdmin ? (
+                              <div
+                                className="w-8 h-8 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center opacity-50 cursor-not-allowed pointer-events-none select-none"
+                                title="Añadir a comanda bloqueado en Modo Vista Previa"
+                              >
+                                <Plus size={16} />
+                              </div>
+                            ) : qty === 0 ? (
                               <button
                                 onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
                                 className={`w-8 h-8 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 smooth-press shadow-xs ${
@@ -1688,15 +1745,12 @@ function DinerMenuContent() {
                       <div className="overflow-hidden">
                         <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-100 space-y-3 bg-slate-50/50">
                           {product.image_url && (
-                            <div
-                              style={{ position: 'relative', width: '100%', height: '200px', maxHeight: '240px', overflow: 'hidden', borderRadius: '14px' }}
-                              className="bg-slate-100 shimmer-loading border border-slate-200 shadow-inner"
-                            >
+                            <div className="relative w-full aspect-[4/3] overflow-hidden rounded-2xl bg-slate-100 border border-slate-200 shadow-inner shimmer-loading">
                               <Image
                                 src={product.image_url}
                                 alt={product.name}
                                 fill
-                                className="object-cover"
+                                className="w-full h-full object-cover"
                                 sizes="(max-width: 768px) 100vw, 600px"
                               />
                             </div>
@@ -1705,15 +1759,27 @@ function DinerMenuContent() {
                           {!isFixedMenu ? (
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
                               <button
-                                onClick={() => setCustomizingProduct(product)}
-                                className="w-full sm:auto px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all shadow-xs text-center"
+                                onClick={() => {
+                                  if (!isInSituAdmin) setCustomizingProduct(product)
+                                }}
+                                disabled={isInSituAdmin}
+                                className={`w-full sm:w-auto px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold transition-all shadow-xs text-center ${
+                                  isInSituAdmin
+                                    ? 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed pointer-events-none'
+                                    : 'bg-white text-slate-700 hover:bg-slate-50'
+                                }`}
                               >
                                 {t('customize')}
                               </button>
 
                               <button
                                 onClick={() => handleUpdateProductQuantity(product, 1)}
-                                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition-transform active:scale-95"
+                                disabled={isInSituAdmin}
+                                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-white text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition-transform ${
+                                  isInSituAdmin
+                                    ? 'bg-slate-400 opacity-50 cursor-not-allowed pointer-events-none'
+                                    : 'bg-blue-700 hover:bg-blue-800 active:scale-95'
+                                }`}
                               >
                                 <Plus size={14} className="stroke-[3]" />
                                 <span>{t('addToCart')}</span>
@@ -1749,15 +1815,12 @@ function DinerMenuContent() {
                   >
                     <div>
                       {product.image_url && (
-                        <div
-                          style={{ position: 'relative', width: '100%', height: '120px', overflow: 'hidden' }}
-                          className="bg-slate-100 shimmer-loading"
-                        >
+                        <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-100 shimmer-loading">
                           <Image
                             src={product.image_url}
                             alt={product.name}
                             fill
-                            className="object-cover"
+                            className="w-full h-full object-cover"
                             sizes="(max-width: 768px) 50vw, 300px"
                           />
                         </div>
@@ -1818,14 +1881,28 @@ function DinerMenuContent() {
                     {!isFixedMenu ? (
                       <div className="p-3.5 pt-0 flex items-center justify-between gap-2">
                         <button
-                          onClick={() => setCustomizingProduct(product)}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                          onClick={() => {
+                            if (!isInSituAdmin) setCustomizingProduct(product)
+                          }}
+                          disabled={isInSituAdmin}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                            isInSituAdmin
+                              ? 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed pointer-events-none'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
                         >
                           {t('customize')}
                         </button>
 
                         <div className="flex items-center">
-                          {qty === 0 ? (
+                          {isInSituAdmin ? (
+                            <div
+                              className="w-8 h-8 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center opacity-50 cursor-not-allowed pointer-events-none select-none"
+                              title="Añadir a comanda bloqueado en Modo Vista Previa"
+                            >
+                              <Plus size={16} />
+                            </div>
+                          ) : qty === 0 ? (
                             <button
                               onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
                               className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs"
@@ -2156,11 +2233,11 @@ function DinerMenuContent() {
           onRequestBill={() => setShowDirectBillModal(true)}
         />
 
-        {/* Modal Directo de Pedir la Cuenta con Google Review Booster */}
+        {/* Modal Directo de Pedir la Cuenta */}
         <BillModal
           isOpen={showDirectBillModal}
           onClose={() => setShowDirectBillModal(false)}
-          onBillRequested={() => setHasRequestedBill(true)}
+          onBillRequested={handleBillRequested}
           tableNumber={tableNumber}
           slug={restaurant.slug}
           restaurantName={restaurant.name}

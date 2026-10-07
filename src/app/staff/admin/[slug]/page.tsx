@@ -89,6 +89,7 @@ export default function AdminMenuPage() {
       const res = await fetch('/api/admin/menu', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           slug,
           product_id: productId,
@@ -98,9 +99,14 @@ export default function AdminMenuPage() {
       const data = await res.json()
       if (data.success) {
         showToast(data.is_available ? '✅ Plato marcado como DISPONIBLE' : '⚠️ Plato marcado como AGOTADO')
+      } else {
+        console.error('[Admin Menu Panel] Error al actualizar disponibilidad:', data)
+        showToast(data.error || 'Error al actualizar disponibilidad')
+        fetchMenuData()
       }
-    } catch {
-      showToast('Error al actualizar disponibilidad')
+    } catch (err) {
+      console.error('[Admin Menu Panel] Excepción al actualizar disponibilidad:', err)
+      showToast('Error de conexión al actualizar disponibilidad')
       fetchMenuData()
     }
   }
@@ -111,6 +117,7 @@ export default function AdminMenuPage() {
       const res = await fetch('/api/admin/menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           slug,
           type: 'product',
@@ -127,9 +134,13 @@ export default function AdminMenuPage() {
         setEditingProduct(null)
         setIsNewProductModalOpen(false)
         showToast('✅ Plato guardado correctamente')
+      } else {
+        console.error('[Admin Menu Panel] Error al guardar plato:', data)
+        showToast(data.error || 'Error al guardar el plato')
       }
-    } catch {
-      showToast('Error al guardar el plato')
+    } catch (err) {
+      console.error('[Admin Menu Panel] Excepción al guardar plato:', err)
+      showToast('Error de conexión al guardar el plato')
     }
   }
 
@@ -138,11 +149,21 @@ export default function AdminMenuPage() {
     if (!confirm('¿Estás seguro de eliminar este plato?')) return
     setProducts(prev => prev.filter(p => p.id !== productId))
     try {
-      await fetch(`/api/admin/menu?slug=${slug}&type=product&id=${productId}`, {
+      const res = await fetch(`/api/admin/menu?slug=${slug}&type=product&id=${productId}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
-      showToast('🗑️ Plato eliminado')
-    } catch {
+      const data = await res.json()
+      if (res.ok && data.success) {
+        showToast('🗑️ Plato eliminado')
+      } else {
+        console.error('[Admin Menu Panel] Error al eliminar plato:', data)
+        showToast(data.error || 'Error al eliminar plato')
+        fetchMenuData()
+      }
+    } catch (err) {
+      console.error('[Admin Menu Panel] Excepción al eliminar plato:', err)
+      showToast('Error de conexión al eliminar plato')
       fetchMenuData()
     }
   }
@@ -456,15 +477,12 @@ export default function AdminMenuPage() {
                       >
                         {/* Miniatura Foto */}
                         {product.image_url ? (
-                          <div
-                            style={{ position: 'relative', width: '56px', height: '56px', minWidth: '56px', minHeight: '56px', overflow: 'hidden', borderRadius: '12px' }}
-                            className="bg-slate-800 flex-shrink-0 border border-slate-700"
-                          >
+                          <div className="relative w-14 h-14 min-w-[3.5rem] aspect-square overflow-hidden rounded-xl bg-slate-800 flex-shrink-0 border border-slate-700">
                             <Image
                               src={product.image_url}
                               alt={product.name}
                               fill
-                              className="object-cover"
+                              className="w-full h-full object-cover"
                               sizes="56px"
                             />
                           </div>

@@ -11,6 +11,7 @@ import {
   releaseIdempotencyLock,
   isValidOrderTransition,
   getServerProducts,
+  setServerProducts,
 } from '@/lib/server-state'
 import {
   getRestaurantBySlug,
@@ -21,8 +22,13 @@ import {
   transitionOrderStatus,
   getTargetRestaurantId,
 } from '@/lib/supabase/repository'
+import { createServerClient } from '@/lib/supabase/server'
+import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
-import { Order, OrderItem, OrderStatus } from '@/types/database.types'
+import { Order, OrderItem, OrderStatus, Product } from '@/types/database.types'
+
+const isUuid = (str?: string | null): boolean =>
+  Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str))
 
 export const dynamic = 'force-dynamic'
 
@@ -141,16 +147,104 @@ export async function POST(req: NextRequest) {
     let computedTotal = 0
 
     const validItems: OrderItem[] = []
-    const catalogProducts = [...(getServerProducts(slug) || []), ...(MOCK_PRODUCTS[slug] || [])]
+    let catalogProducts: Product[] = [...(getServerProducts(slug) || []), ...(MOCK_PRODUCTS[slug] || [])]
 
-    items.forEach((item: any, idx: number) => {
+    // Consultar catálogo en Supabase para sincronización total con productos en base de datos
+    const supabase = createServerClient()
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        const { data: dbProds } = await supabase
+          .from('products')
+          .select('*')
+          .eq('restaurant_id', restaurantId)
+        if (dbProds && dbProds.length > 0) {
+          const existingIds = new Set(catalogProducts.map(p => p.id))
+          dbProds.forEach((dp: any) => {
+            if (!existingIds.has(dp.id)) {
+              catalogProducts.push(dp)
+            } else {
+              // Actualizar datos oficiales de stock/precio
+              const idx = catalogProducts.findIndex(p => p.id === dp.id)
+              if (idx >= 0) catalogProducts[idx] = { ...catalogProducts[idx], ...dp }
+            }
+          })
+          setServerProducts(slug, catalogProducts)
+        }
+      } catch (e) {
+        console.warn('Could not fetch products from Supabase in /api/orders, using fallback:', e)
+      }
+    }
+
+    for (let idx = 0; idx < items.length; idx++) {
+      const item = items[idx]
       const quantity = Math.max(1, parseInt(String(item.quantity || '1'), 10) || 1)
       const productId = String(item.product_id || '').trim()
-      if (!productId) return
+      if (!productId) continue
 
       // Búsqueda estricta en catálogo autorizado (Previene Client Price Tampering)
-      const catalogProduct = catalogProducts.find(p => p.id === productId || p.id.replace('promo', 'prom') === productId)
-      if (!catalogProduct) return
+      let catalogProduct = catalogProducts.find(p => 
+        p.id === productId || 
+        p.id.replace('promo', 'prom') === productId ||
+        p.id.replace('prom', 'promo') === productId ||
+        (item.name && p.name.trim().toLowerCase() === String(item.name).trim().toLowerCase())
+      )
+
+      // Fallback 1: Buscar directamente en Supabase si no estaba en la lista consolidada
+      if (!catalogProduct && supabase && isSupabaseConfigured()) {
+        try {
+          if (isUuid(productId)) {
+            const { data: dbProd } = await supabase
+              .from('products')
+              .select('*')
+              .eq('id', productId)
+              .maybeSingle()
+            if (dbProd) {
+              catalogProduct = dbProd
+              catalogProducts.push(dbProd)
+            }
+          }
+          if (!catalogProduct && item.name) {
+            const { data: dbNameProd } = await supabase
+              .from('products')
+              .select('*')
+              .eq('restaurant_id', restaurantId)
+              .ilike('name', String(item.name).trim())
+              .maybeSingle()
+            if (dbNameProd) {
+              catalogProduct = dbNameProd
+              catalogProducts.push(dbNameProd)
+            }
+          }
+        } catch (findErr) {
+          console.warn('[Orders POST] Error buscando producto en Supabase:', findErr)
+        }
+      }
+
+      // Fallback 2: Buscar en la memoria del servidor
+      if (!catalogProduct) {
+        const memProds = getServerProducts(slug)
+        catalogProduct = memProds.find(p =>
+          p.id === productId ||
+          (item.name && p.name.trim().toLowerCase() === String(item.name).trim().toLowerCase())
+        )
+      }
+
+      if (!catalogProduct) {
+        if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'Producto no encontrado')
+        return NextResponse.json(
+          { error: `El producto "${item.name || productId}" no está disponible o no fue encontrado en la carta.` },
+          { status: 400 }
+        )
+      }
+
+      // Validación estricta de disponibilidad
+      if (catalogProduct.is_available === false) {
+        if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'Producto agotado')
+        return NextResponse.json(
+          { error: `El producto "${catalogProduct.name}" no está disponible actualmente (Agotado).` },
+          { status: 400 }
+        )
+      }
 
       const itemPrice = Number(catalogProduct.price) || 0
       computedTotal += itemPrice * quantity
@@ -165,12 +259,12 @@ export async function POST(req: NextRequest) {
         notes: sanitizedNotes || null,
         product: catalogProduct,
       })
-    })
+    }
 
     if (validItems.length === 0) {
       if (idempotencyKeyStr && idempotencyLocked) releaseIdempotencyLock(idempotencyKeyStr, 'No valid items')
       return NextResponse.json(
-        { error: 'No se encontraron productos válidos en la comanda' },
+        { error: 'No se encontraron productos válidos o disponibles en la comanda. Por favor revisa la selección.' },
         { status: 400 }
       )
     }

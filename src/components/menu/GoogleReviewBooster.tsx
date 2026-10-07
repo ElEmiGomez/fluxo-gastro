@@ -11,6 +11,7 @@ interface GoogleReviewBoosterProps {
   googlePlaceId?: string | null
   variant?: 'inline' | 'card' | 'compact'
   onReviewOpened?: () => void
+  onDismiss?: () => void
 }
 
 export function GoogleReviewBooster({
@@ -20,8 +21,15 @@ export function GoogleReviewBooster({
   googlePlaceId,
   variant = 'card',
   onReviewOpened,
+  onDismiss,
 }: GoogleReviewBoosterProps) {
-  const [isDismissed, setIsDismissed] = useState(false)
+  const storageKey = `fluxo_review_dismissed_${restaurantSlug}`
+  const [isDismissed, setIsDismissed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(storageKey) === 'true'
+    }
+    return false
+  })
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
   const [feedbackSent, setFeedbackSent] = useState(false)
 
@@ -33,6 +41,14 @@ export function GoogleReviewBooster({
 
   const handleDismiss = () => {
     setIsDismissed(true)
+    onDismiss?.()
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(storageKey, 'true')
+      } catch {
+        // ignore
+      }
+    }
   }
 
   const handleSelectStar = (stars: number) => {

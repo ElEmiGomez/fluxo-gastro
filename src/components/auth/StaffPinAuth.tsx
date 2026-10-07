@@ -12,19 +12,19 @@ interface StaffPinAuthProps {
 const PIN_CONFIG = {
   comandero: {
     title: 'Acceso Comandero Mozo',
-    subtitle: 'Ingresa tu PIN de Mozo / Salón',
+    subtitle: 'Ingresa tu PIN de Mozo (ej: 1234)',
     sessionKey: 'gastro_auth_comandero_',
     badge: 'PERSONAL DE SALÓN',
     badgeColor: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-    targetLength: 7,
+    targetLength: 4,
   },
   kitchen: {
     title: 'Acceso Monitor Cocina (KDS)',
-    subtitle: 'Ingresa el PIN de Cocina / Estación',
+    subtitle: 'Ingresa el PIN de Cocina (ej: 5678)',
     sessionKey: 'gastro_auth_kitchen_',
     badge: 'EQUIPO DE COCINA',
     badgeColor: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
-    targetLength: 7,
+    targetLength: 4,
   },
   admin: {
     title: 'Panel de Administración de Carta',
@@ -44,17 +44,32 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isValidating, setIsValidating] = useState<boolean>(false)
 
-  // Restaurar sesión de turno si está dentro de los 15 minutos (solicitado por el usuario)
+  // Restaurar sesión de pestaña (sessionStorage). Cada nueva pestaña o ventana solicita PIN
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
+        // Limpiar cualquier residuo de localStorage previo que saltaba la autenticación globalmente
+        localStorage.removeItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
+        localStorage.removeItem(`gastro_auth_${role}_${restaurantSlug}`)
+
+        // Si la URL pide reiniciar sesión (?reset_auth=1 o simulación fresca), forzar bloqueo
+        const urlParams = new URLSearchParams(window.location.search)
+        if (urlParams.get('reset_auth') === '1') {
+          sessionStorage.removeItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
+          setIsAuthenticated(false)
+          return
+        }
+
+        const stored = sessionStorage.getItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
         if (stored) {
           const parsed = JSON.parse(stored)
-          if (parsed?.auth && Date.now() - parsed.timestamp < 15 * 60 * 1000) {
+          // La sesión de pestaña caduca tras 15 minutos para seguridad estricta
+          const isRecent = parsed?.timestamp && Date.now() - parsed.timestamp < 15 * 60 * 1000
+          if (parsed?.auth && isRecent) {
             setIsAuthenticated(true)
           } else {
             setIsAuthenticated(false)
+            sessionStorage.removeItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
           }
         }
       } catch {}
@@ -80,7 +95,7 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
       if (res.ok && data.success) {
         setIsAuthenticated(true)
         try {
-          localStorage.setItem(
+          sessionStorage.setItem(
             `fluxo_staff_auth_${role}_${restaurantSlug}`,
             JSON.stringify({ auth: true, timestamp: Date.now() })
           )
@@ -149,6 +164,13 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
           onClick={() => {
             setIsAuthenticated(false)
             setPinInput('')
+            setErrorMsg(null)
+            if (typeof window !== 'undefined') {
+              try {
+                sessionStorage.removeItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
+                localStorage.removeItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
+              } catch {}
+            }
           }}
           title="Bloquear pantalla"
           className="fixed top-2.5 right-20 sm:right-28 z-50 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[10px] font-bold flex items-center gap-1 backdrop-blur-md transition-all shadow-md active:scale-95 cursor-pointer"

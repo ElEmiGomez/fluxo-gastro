@@ -10,9 +10,15 @@ interface CallWaiterButtonProps {
   tableNumber: string | null
   lang?: string
   isPending?: boolean
+  isPreviewMode?: boolean
 }
 
-export function CallWaiterButton({ tableNumber, lang = 'gl', isPending }: CallWaiterButtonProps) {
+export function CallWaiterButton({
+  tableNumber,
+  lang = 'gl',
+  isPending,
+  isPreviewMode = false,
+}: CallWaiterButtonProps) {
   const t = (k: string) => getTranslation(lang, k)
   const { restaurant } = useTenant()
   const [isCalling, setIsCalling] = useState(false)
@@ -125,6 +131,20 @@ export function CallWaiterButton({ tableNumber, lang = 'gl', isPending }: CallWa
     } finally {
       setIsCalling(false)
     }
+  }
+
+  if (isPreviewMode) {
+    return (
+      <button
+        disabled
+        className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-full font-bold text-xs flex items-center gap-1.5 shadow-xs whitespace-nowrap bg-white text-slate-800 border border-slate-300 opacity-50 cursor-not-allowed pointer-events-none"
+        title="Llamar al mozo desactivado en Modo Vista Previa"
+      >
+        <Bell className="w-3.5 h-3.5 text-blue-900 flex-shrink-0" />
+        <span className="text-slate-800 hidden min-[420px]:inline">{t('callWaiter')}</span>
+        <span className="text-slate-800 min-[420px]:hidden text-[11px] font-extrabold">Mozo</span>
+      </button>
+    )
   }
 
   return (

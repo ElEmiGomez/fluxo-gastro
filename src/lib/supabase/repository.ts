@@ -291,13 +291,14 @@ export async function createOrder(
 
       // 1. Invocación atómica en PostgreSQL (Arbitraje a nivel de cerrojo de fila, cero TOCTOU)
       if (orderData.idempotency_key) {
+        const uuidValidItems = (orderData.items || []).filter(it => uuidRegex.test(it.product_id))
         const { data: atomicResult, error: rpcErr } = await supabase.rpc('create_order_atomic', {
           p_restaurant_id: targetRestaurantId,
           p_table_session_id: resolvedTableSessionId,
           p_table_number: orderData.table_number,
           p_total_amount: orderData.total_amount,
           p_idempotency_key: orderData.idempotency_key,
-          p_items: orderData.items,
+          p_items: uuidValidItems,
         })
 
         if (!rpcErr && atomicResult && atomicResult.order) {
@@ -376,7 +377,11 @@ export async function createOrder(
           }))
 
         if (itemsToInsert.length > 0) {
-          await supabase.from('order_items').insert(itemsToInsert)
+          try {
+            await supabase.from('order_items').insert(itemsToInsert)
+          } catch (itemsInsertErr) {
+            console.warn('[createOrder] Warning inserting order_items in Supabase:', itemsInsertErr)
+          }
         }
 
         // Ahora que los items están en Supabase, emitir el broadcast con la orden completa
@@ -727,24 +732,26 @@ export async function transitionOrderStatus(
     try {
       const { error: updErr } = await supabase
         .from('orders')
-        .update({
-          status: nextStatus,
-          version: memResult.version,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ status: nextStatus })
         .eq('id', orderId)
 
-      if (updErr && updErr.code === 'PGRST204') {
-        // En caso de que version y/o updated_at aún no existan en Supabase remoto
-        await supabase
-          .from('orders')
-          .update({ status: nextStatus })
-          .eq('id', orderId)
+      if (updErr) {
+        console.warn('[transitionOrderStatus] Warning updating status in Supabase:', updErr)
       }
     } catch (syncErr) {
       console.warn('[transitionOrderStatus] Error persisting fallback transition to Supabase:', syncErr)
     }
   }
+
+  // EMITIR BROADCAST SSE para que el comensal y todo el personal reciban el evento en tiempo real
+  broadcastEvent({
+    type: 'order_updated',
+    slug,
+    orderId,
+    status: nextStatus,
+    tableNumber: memResult.order?.table_number || tableNumber,
+    order: memResult.order,
+  })
 
   return {
     success: true,

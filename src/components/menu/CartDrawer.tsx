@@ -224,6 +224,7 @@ export function CartDrawer({
         status: (isWaiter ? 'pending' : 'pending_validation') as OrderStatus,
         items: validCart.map(item => ({
           product_id: item.product?.id || '',
+          name: item.product?.name || '',
           quantity: item.quantity,
           notes: item.notes || (item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : null),
         })),

@@ -48,8 +48,8 @@ export default function LandingPage() {
 
   const handleOpenAllDashboards = () => {
     const w1 = window.open('/menu/burger-gourmet?table=7', '_blank')
-    const w2 = window.open('/staff/comandero/burger-gourmet', '_blank')
-    const w3 = window.open('/staff/kitchen/burger-gourmet', '_blank')
+    const w2 = window.open('/staff/comandero/burger-gourmet?reset_auth=1', '_blank')
+    const w3 = window.open('/staff/kitchen/burger-gourmet?reset_auth=1', '_blank')
 
     if (!w2 || !w3) {
       setPopupsBlocked(true)
