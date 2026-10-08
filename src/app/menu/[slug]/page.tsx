@@ -8,6 +8,7 @@ import {
   Plus,
   Minus,
   Check,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
   UtensilsCrossed,
@@ -76,6 +77,54 @@ function DinerMenuContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dietaryFilter, setDietaryFilter] = useState<'all' | 'sintacc' | 'veggie'>('all')
   const [tableNumber, setTableNumber] = useState<string>(tableParam)
+
+  // Navegación horizontal de categorías con flechas (PC / Desktop y Accesibilidad)
+  const categoryTabsRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const updateScrollButtons = useCallback(() => {
+    const el = categoryTabsRef.current
+    if (!el) return
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    setCanScrollLeft(scrollLeft > 6)
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6)
+  }, [])
+
+  const handleScrollCategories = useCallback((direction: 'left' | 'right') => {
+    const el = categoryTabsRef.current
+    if (!el) return
+    const scrollAmount = 220
+    const maxScroll = el.scrollWidth - el.clientWidth
+
+    if (direction === 'left') {
+      const target = el.scrollLeft - scrollAmount
+      if (target <= 40) {
+        el.scrollTo({ left: 0, behavior: 'smooth' })
+      } else {
+        el.scrollBy({ left: -scrollAmount, behavior: 'smooth' })
+      }
+    } else {
+      const target = el.scrollLeft + scrollAmount
+      if (target >= maxScroll - 40) {
+        el.scrollTo({ left: maxScroll, behavior: 'smooth' })
+      } else {
+        el.scrollBy({ left: scrollAmount, behavior: 'smooth' })
+      }
+    }
+    triggerHaptic(HAPTIC_PATTERNS.TAP)
+    setTimeout(updateScrollButtons, 350)
+  }, [updateScrollButtons])
+
+  useEffect(() => {
+    updateScrollButtons()
+    const timer = setTimeout(updateScrollButtons, 400)
+    window.addEventListener('resize', updateScrollButtons)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', updateScrollButtons)
+    }
+  }, [categories, updateScrollButtons])
 
   // Vistas: 'list' (Carta Detallada Desplegable) o 'grid' (Galería de Fotos)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
@@ -1589,48 +1638,89 @@ function DinerMenuContent() {
 
           {/* Carrusel de Categorías Gastronómicas con Filtros Dietéticos Sutiles */}
           <div id="menu-category-tabs" className="space-y-1.5 scroll-mt-16">
-            <div
-              className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 pr-10 touch-pan-x scroll-smooth overscroll-x-contain"
-              onWheel={(e) => {
-                if (e.deltaY !== 0 && e.currentTarget.scrollWidth > e.currentTarget.clientWidth) {
-                  e.currentTarget.scrollLeft += e.deltaY
-                }
-              }}
-            >
+            <div className="flex items-center gap-1.5 w-full">
+              {/* Flecha Izquierda (Navegación Desktop / PC y Accesibilidad) */}
               <button
-                onClick={(e) => {
-                  setSelectedCategory('all')
-                  setSearchQuery('')
-                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
-                }}
-                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
-                  selectedCategory === 'all'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-200 shadow-xs'
+                type="button"
+                onClick={() => handleScrollCategories('left')}
+                disabled={!canScrollLeft}
+                aria-label="Ver categorías anteriores"
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all border ${
+                  canScrollLeft
+                    ? 'bg-white text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 border-slate-200 shadow-xs cursor-pointer active:scale-95'
+                    : 'bg-slate-100/60 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-30'
                 }`}
+                title="Categorías anteriores"
               >
-                {t('allCategories')}
+                <ChevronLeft className="w-4 h-4" />
               </button>
-              {categories.map((category) => {
-                const isSelected = selectedCategory === category.id
-                return (
-                  <button
-                    key={category.id}
-                    onClick={(e) => {
-                      setSelectedCategory(category.id)
-                      setSearchQuery('')
-                      e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
-                    }}
-                    className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
-                      isSelected
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-200 shadow-xs'
-                    }`}
-                  >
-                    {translateCategoryName(currentLang, category.name)}
-                  </button>
-                )
-              })}
+
+              {/* Contenedor deslizable de Categorías */}
+              <div
+                ref={categoryTabsRef}
+                onScroll={updateScrollButtons}
+                className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 touch-pan-x scroll-smooth overscroll-x-contain"
+                onWheel={(e) => {
+                  if (e.deltaY !== 0 && e.currentTarget.scrollWidth > e.currentTarget.clientWidth) {
+                    e.currentTarget.scrollLeft += e.deltaY
+                  }
+                }}
+              >
+                <button
+                  onClick={(e) => {
+                    setSelectedCategory('all')
+                    setSearchQuery('')
+                    if (categoryTabsRef.current) {
+                      categoryTabsRef.current.scrollTo({ left: 0, behavior: 'smooth' })
+                    }
+                    setTimeout(updateScrollButtons, 350)
+                  }}
+                  className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
+                    selectedCategory === 'all'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-200 shadow-xs'
+                  }`}
+                >
+                  {t('allCategories')}
+                </button>
+                {categories.map((category) => {
+                  const isSelected = selectedCategory === category.id
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={(e) => {
+                        setSelectedCategory(category.id)
+                        setSearchQuery('')
+                        e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
+                        setTimeout(updateScrollButtons, 350)
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
+                        isSelected
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-200 shadow-xs'
+                      }`}
+                    >
+                      {translateCategoryName(currentLang, category.name)}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Flecha Derecha (Navegación Desktop / PC y Accesibilidad) */}
+              <button
+                type="button"
+                onClick={() => handleScrollCategories('right')}
+                disabled={!canScrollRight}
+                aria-label="Ver más categorías"
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all border ${
+                  canScrollRight
+                    ? 'bg-white text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 border-slate-200 shadow-xs cursor-pointer active:scale-95'
+                    : 'bg-slate-100/60 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-30'
+                }`}
+                title="Más categorías"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Píldoras Dietéticas Ultra-Discretas (Sin sobrecargar pantalla) */}
