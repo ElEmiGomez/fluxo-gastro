@@ -90,10 +90,33 @@ function DinerMenuContent() {
   const [showDirectBillModal, setShowDirectBillModal] = useState(false)
   const [isTablePaid, setIsTablePaid] = useState<boolean>(false)
   const [hasRequestedBill, setHasRequestedBill] = useState<boolean>(false)
+  const hasRequestedBillRef = useRef<boolean>(false)
   const userRequestedBillTimeRef = useRef<number | null>(null)
+
+  const handleTableMarkedPaid = useCallback(() => {
+    setIsTablePaid(true)
+    setTableOrderStatus(null)
+    setHasRequestedBill(false)
+    hasRequestedBillRef.current = false
+    userRequestedBillTimeRef.current = null
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(`fluxo_table_paid_${slug}_${tableNumber}`, 'true')
+        sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+        sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
+      } catch {}
+    }
+  }, [slug, tableNumber])
+
   const handleBillRequested = () => {
     userRequestedBillTimeRef.current = Date.now()
+    hasRequestedBillRef.current = true
     setHasRequestedBill(true)
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(`fluxo_bill_requested_${slug}_${tableNumber}`, 'true')
+      } catch {}
+    }
   }
   const [tableTotalAmount, setTableTotalAmount] = useState<number>(0)
   const [addedToast, setAddedToast] = useState<string | null>(null)
@@ -416,12 +439,22 @@ function DinerMenuContent() {
           o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
         )
 
+        // Si la mesa ya fue confirmada como pagada en esta sesión, preservar ese estado
+        if (isTablePaid) {
+          return
+        }
+
         // Si la mesa fue liberada por el mozo y no quedan pedidos activos pendientes
         if (thisTableSession && thisTableSession.status === 'free' && activeTableOrders.length === 0) {
           prevTableOrdersMapRef.current.clear()
           setTableOrderStatus(null)
+          if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
+            handleTableMarkedPaid()
+            return
+          }
           setIsTablePaid(false)
           setHasRequestedBill(false)
+          hasRequestedBillRef.current = false
           return
         }
 
@@ -441,6 +474,21 @@ function DinerMenuContent() {
         })
         setPendingServiceCalls(activeMicroServices)
 
+        // Verificar si las órdenes de la mesa ya fueron cobradas ('paid')
+        const hasPaidOrder = serverOrdersList.some(o => {
+          const matchesTable = (
+            o.table_number?.toString() === tableNumber?.toString() ||
+            o.table?.table_number?.toString() === tableNumber?.toString() ||
+            o.table_id === `table-${tableNumber}`
+          )
+          return matchesTable && o.status === 'paid'
+        })
+
+        if ((hasRequestedBillRef.current || userRequestedBillTimeRef.current) && activeTableOrders.length === 0 && hasPaidOrder) {
+          handleTableMarkedPaid()
+          return
+        }
+
         // Cobro de mesa: SOLO se activa tras confirmar el pago de la cuenta
         // Exige estrictamente que el comensal haya solicitado la cuenta en esta sesión (userRequestedBillTimeRef.current)
         // y el mozo haya confirmado el cobro ('attended') con fecha posterior o coincidente con dicha solicitud
@@ -457,13 +505,8 @@ function DinerMenuContent() {
         )
 
         if (isBillPaidCall) {
-          setIsTablePaid(true)
-          setTableOrderStatus(null)
-          setHasRequestedBill(false)
-          userRequestedBillTimeRef.current = null
+          handleTableMarkedPaid()
           return
-        } else {
-          setIsTablePaid(false)
         }
 
         // Ordenar comandas activas de la mesa por fecha descendente
@@ -524,28 +567,56 @@ function DinerMenuContent() {
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders' },
-          () => {
+          (payload: any) => {
+            const newOrder = payload?.new
+            const matchesTable = newOrder && (
+              newOrder.table_number?.toString() === tableNumber?.toString() ||
+              newOrder.table_id === `table-${tableNumber}`
+            )
+            if (matchesTable && newOrder.status === 'paid') {
+              handleTableMarkedPaid()
+              return
+            }
             checkOrderStatus()
           }
         )
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'order_events' },
-          () => {
+          (payload: any) => {
+            const newEvt = payload?.new
+            if (newEvt && (newEvt.event_type === 'order_paid' || newEvt.new_status === 'paid')) {
+              handleTableMarkedPaid()
+              return
+            }
             checkOrderStatus()
           }
         )
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'service_calls' },
-          () => {
+          (payload: any) => {
+            const newCall = payload?.new
+            const matchesTable = newCall && newCall.table_number?.toString() === tableNumber?.toString()
+            if (matchesTable && newCall.status === 'attended' && newCall.call_type?.startsWith('bill_')) {
+              handleTableMarkedPaid()
+              return
+            }
             checkOrderStatus()
           }
         )
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'table_sessions' },
-          () => {
+          (payload: any) => {
+            const newSession = payload?.new
+            const matchesTable = newSession && newSession.table_number?.toString() === tableNumber?.toString()
+            if (matchesTable && (newSession.status === 'closed' || newSession.status === 'free')) {
+              if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
+                handleTableMarkedPaid()
+                return
+              }
+            }
             checkOrderStatus()
           }
         )
@@ -564,10 +635,15 @@ function DinerMenuContent() {
               data.type === 'table_freed' &&
               (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
             ) {
+              if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
+                handleTableMarkedPaid()
+                return
+              }
               setCart([])
               setTableOrderStatus(null)
               setIsTablePaid(false)
               setHasRequestedBill(false)
+              hasRequestedBillRef.current = false
               userRequestedBillTimeRef.current = null
               if (typeof window !== 'undefined') {
                 localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
@@ -584,15 +660,10 @@ function DinerMenuContent() {
 
             // Notificación en vivo de cuenta pagada / mesa cobrada
             if (
-              data.type === 'table_bill_paid' &&
+              ((data.type === 'table_bill_paid') || (data.type === 'service_call_attended' && data.is_bill)) &&
               (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
             ) {
-              if (userRequestedBillTimeRef.current || hasRequestedBill || tableOrderStatus) {
-                setIsTablePaid(true)
-                setTableOrderStatus(null)
-                setHasRequestedBill(false)
-                userRequestedBillTimeRef.current = null
-              }
+              handleTableMarkedPaid()
               return
             }
 
@@ -632,10 +703,15 @@ function DinerMenuContent() {
     // Manejar eventos locales emitidos en el cliente para sincronización inmediata
     const handleLocalTableFreed = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
+        if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
+          handleTableMarkedPaid()
+          return
+        }
         setCart([])
         setTableOrderStatus(null)
         setIsTablePaid(false)
         setHasRequestedBill(false)
+        hasRequestedBillRef.current = false
         userRequestedBillTimeRef.current = null
         if (typeof window !== 'undefined') {
           localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
@@ -649,12 +725,7 @@ function DinerMenuContent() {
 
     const handleLocalTableBillPaid = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        if (userRequestedBillTimeRef.current || hasRequestedBill || tableOrderStatus) {
-          setIsTablePaid(true)
-          setTableOrderStatus(null)
-          setHasRequestedBill(false)
-          userRequestedBillTimeRef.current = null
-        }
+        handleTableMarkedPaid()
       }
     }
 
@@ -1158,7 +1229,7 @@ function DinerMenuContent() {
         )}
 
         {/* TRACKER EN VIVO DE ESTADO EN COCINA (Clickeable para ver el camino del pedido) */}
-        {!isFixedMenu && !isTablePaid && tableOrderStatus && (
+        {!isFixedMenu && !isTablePaid && !hasRequestedBill && tableOrderStatus && (
           <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full">
             {tableOrderStatus === 'preparing' && (
               <div
@@ -1253,108 +1324,108 @@ function DinerMenuContent() {
               </div>
             )}
 
-            {tableOrderStatus === 'delivered' && !isTablePaid && (
+            {tableOrderStatus === 'delivered' && (
               <div className="space-y-3 animate-in fade-in duration-300">
-                {!hasRequestedBill ? (
-                  /* OPCIÓN UNIFICADA COMPACTA: PEDIDO ENTREGADO + ACCIONES RÁPIDAS (CAFÉ/POSTRES Y CUENTA) */
-                  <div className="p-3.5 bg-slate-900 text-white rounded-2xl border border-slate-700/80 shadow-md space-y-3">
-                    {/* Cabecera compacta con estado entregado */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                          <UtensilsCrossed className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
-                              {t('tableNumberLabel')} #{tableNumber}
-                            </span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          </div>
-                          <h4 className="font-extrabold text-xs text-white leading-tight truncate">
-                            {t('orderDeliveredTitle')} · ¡Buen provecho!
-                          </h4>
-                        </div>
+                {/* OPCIÓN UNIFICADA COMPACTA: PEDIDO ENTREGADO + ACCIONES RÁPIDAS (CAFÉ/POSTRES Y CUENTA) */}
+                <div className="p-3.5 bg-slate-900 text-white rounded-2xl border border-slate-700/80 shadow-md space-y-3">
+                  {/* Cabecera compacta con estado entregado */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                        <UtensilsCrossed className="w-4 h-4" />
                       </div>
-
-                      {/* Botón para ver fases de comanda */}
-                      <button
-                        type="button"
-                        onClick={() => setShowTimelineModal(true)}
-                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
-                      >
-                        <span>{t('viewPhases')}</span>
-                        <ChevronRight size={11} />
-                      </button>
-                    </div>
-
-                    {/* Mensaje de tranquilidad / sobremesa */}
-                    <p className="text-[11px] text-slate-300 leading-snug">
-                      ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
-                    </p>
-
-                    {/* 2 Botoncitos en la misma fila sin sobrecargar verticalmente */}
-                    <div className="grid grid-cols-2 gap-2 pt-0.5">
-                      {/* Botón 1: Café o Postres */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const dessertCat = categories.find(c => c.name.toUpperCase().includes('POSTRE')) || categories.find(c => c.id === 'cat-10') || categories[0]
-                          if (dessertCat) {
-                            setSelectedCategory(dessertCat.id)
-                          }
-                          const catEl = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
-                          if (catEl) {
-                            catEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                          }
-                          triggerHaptic(HAPTIC_PATTERNS.TAP)
-                        }}
-                        className="p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                      >
-                        <span className="text-sm">☕🍰</span>
-                        <span>Café / Postres</span>
-                      </button>
-
-                      {/* Botón 2: Pedir la Cuenta */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowDirectBillModal(true)
-                          triggerHaptic(HAPTIC_PATTERNS.TAP)
-                        }}
-                        className="p-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                      >
-                        <Receipt className="w-3.5 h-3.5" />
-                        <span>{t('billButton')}</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* VISTA TRAS PEDIR LA CUENTA: AVISO AL MOZO */
-                  <div className="space-y-3 animate-in fade-in duration-300">
-                    <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                        <Receipt className="w-5 h-5 animate-pulse" />
-                      </div>
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                            Mesa #{tableNumber} &middot; Cuenta Solicitada
+                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                            {t('tableNumberLabel')} #{tableNumber}
                           </span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         </div>
-                        <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
-                          El mozo ya va hacia tu mesa para realizar el cobro
+                        <h4 className="font-extrabold text-xs text-white leading-tight truncate">
+                          {t('orderDeliveredTitle')} · ¡Buen provecho!
                         </h4>
-                        <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
-                          El personal se acerca a tu mesa con el desglose para abonar en efectivo o con tarjeta.
-                        </p>
                       </div>
                     </div>
+
+                    {/* Botón para ver fases de comanda */}
+                    <button
+                      type="button"
+                      onClick={() => setShowTimelineModal(true)}
+                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
+                    >
+                      <span>{t('viewPhases')}</span>
+                      <ChevronRight size={11} />
+                    </button>
                   </div>
-                )}
+
+                  {/* Mensaje de tranquilidad / sobremesa */}
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
+                  </p>
+
+                  {/* 2 Botoncitos en la misma fila sin sobrecargar verticalmente */}
+                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                    {/* Botón 1: Café o Postres */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const dessertCat = categories.find(c => c.name.toUpperCase().includes('POSTRE')) || categories.find(c => c.id === 'cat-10') || categories[0]
+                        if (dessertCat) {
+                          setSelectedCategory(dessertCat.id)
+                        }
+                        const catEl = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
+                        if (catEl) {
+                          catEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }
+                        triggerHaptic(HAPTIC_PATTERNS.TAP)
+                      }}
+                      className="p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                    >
+                      <span className="text-sm">☕🍰</span>
+                      <span>Café / Postres</span>
+                    </button>
+
+                    {/* Botón 2: Pedir la Cuenta */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDirectBillModal(true)
+                        triggerHaptic(HAPTIC_PATTERNS.TAP)
+                      }}
+                      className="p-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      <span>{t('billButton')}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* VISTA TRAS PEDIR LA CUENTA: AVISO AL MOZO */}
+        {!isFixedMenu && !isTablePaid && hasRequestedBill && (
+          <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
+            <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                <Receipt className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                    Mesa #{tableNumber} &middot; Cuenta Solicitada
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                </div>
+                <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
+                  El mozo ya va hacia tu mesa para realizar el cobro
+                </h4>
+                <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
+                  El personal se acerca a tu mesa con el desglose para abonar en efectivo o con tarjeta.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1368,10 +1439,10 @@ function DinerMenuContent() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                    Mesa #{tableNumber} &middot; Cuenta Cobrada
+                    Mesa #{tableNumber} &middot; Pago Confirmado
                   </span>
                   <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
-                    ¡Muchas gracias por tu visita!
+                    ¡Pago confirmado! Gracias por tu visita
                   </h4>
                   <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
                     Tu comanda ha sido cobrada correctamente en mesa.
@@ -1380,7 +1451,12 @@ function DinerMenuContent() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsTablePaid(false)}
+                onClick={() => {
+                  setIsTablePaid(false)
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+                  }
+                }}
                 className="p-1 rounded-full text-emerald-400 hover:text-white hover:bg-emerald-900/50 transition-colors flex-shrink-0"
                 title="Cerrar aviso"
               >
@@ -1393,7 +1469,12 @@ function DinerMenuContent() {
               googleReviewUrl={restaurant.google_review_url}
               googlePlaceId={restaurant.google_place_id}
               variant="card"
-              onDismiss={() => setIsTablePaid(false)}
+              onDismiss={() => {
+                setIsTablePaid(false)
+                if (typeof window !== 'undefined') {
+                  sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+                }
+              }}
             />
           </div>
         )}
@@ -2205,6 +2286,16 @@ function DinerMenuContent() {
           onSessionUpdate={(newSession) => setSessionId(newSession)}
           onOrderSubmitted={(newOrder) => {
             if (newOrder) {
+              setIsTablePaid(false)
+              setHasRequestedBill(false)
+              hasRequestedBillRef.current = false
+              userRequestedBillTimeRef.current = null
+              if (typeof window !== 'undefined') {
+                try {
+                  sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+                  sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+                } catch {}
+              }
               prevTableOrdersMapRef.current.set(newOrder.id, newOrder)
               setTableOrderStatus(newOrder.status || 'pending_validation')
               if (newOrder.total_amount) {
