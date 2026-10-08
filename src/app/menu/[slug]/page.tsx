@@ -89,12 +89,26 @@ function DinerMenuContent() {
   const [showTimelineModal, setShowTimelineModal] = useState(false)
   const [showDirectBillModal, setShowDirectBillModal] = useState(false)
   const [isTablePaid, setIsTablePaid] = useState<boolean>(false)
+  const [isPaidBannerDismissed, setIsPaidBannerDismissed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`) === 'true'
+    }
+    return false
+  })
+  const [isReviewBoosterDismissed, setIsReviewBoosterDismissed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem(`fluxo_review_dismissed_${slug}`) === 'true'
+    }
+    return false
+  })
   const [hasRequestedBill, setHasRequestedBill] = useState<boolean>(false)
   const hasRequestedBillRef = useRef<boolean>(false)
   const userRequestedBillTimeRef = useRef<number | null>(null)
 
   const handleTableMarkedPaid = useCallback(() => {
     setIsTablePaid(true)
+    setIsPaidBannerDismissed(false)
+    setIsReviewBoosterDismissed(false)
     setTableOrderStatus(null)
     setHasRequestedBill(false)
     hasRequestedBillRef.current = false
@@ -103,6 +117,7 @@ function DinerMenuContent() {
       try {
         sessionStorage.setItem(`fluxo_table_paid_${slug}_${tableNumber}`, 'true')
         sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+        sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
       } catch {}
     }
@@ -149,6 +164,7 @@ function DinerMenuContent() {
       try {
         sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+        sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
         localStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
       } catch {}
 
@@ -658,6 +674,8 @@ function DinerMenuContent() {
               setCart([])
               setTableOrderStatus(null)
               setIsTablePaid(false)
+              setIsPaidBannerDismissed(false)
+              setIsReviewBoosterDismissed(false)
               setHasRequestedBill(false)
               hasRequestedBillRef.current = false
               userRequestedBillTimeRef.current = null
@@ -666,6 +684,7 @@ function DinerMenuContent() {
                 localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
                 sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
                 sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+                sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
                 sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
               }
               if (data.new_session_id) {
@@ -726,6 +745,8 @@ function DinerMenuContent() {
         setCart([])
         setTableOrderStatus(null)
         setIsTablePaid(false)
+        setIsPaidBannerDismissed(false)
+        setIsReviewBoosterDismissed(false)
         setHasRequestedBill(false)
         hasRequestedBillRef.current = false
         userRequestedBillTimeRef.current = null
@@ -734,6 +755,7 @@ function DinerMenuContent() {
           localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+          sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
         }
       }
@@ -1442,38 +1464,6 @@ function DinerMenuContent() {
                       <span>{t('billButton')}</span>
                     </button>
                   </div>
-
-                  {/* Píldoras rápidas 1-tap para café y postres en sobremesa */}
-                  <div className="flex items-center gap-1.5 pt-1.5 overflow-x-auto pb-0.5 no-scrollbar">
-                    <span className="text-[10px] text-amber-300/80 font-bold whitespace-nowrap">
-                      {t('addOneTouchPrompt') || 'Rápido:'}
-                    </span>
-                    {products
-                      .filter(p => {
-                        const n = (p.name || '').toLowerCase()
-                        const cid = p.category_id || ''
-                        return cid === 'c0000000-0000-0000-0000-000000000006' ||
-                          cid === 'cat-10' ||
-                          n.includes('café') || n.includes('cafe') ||
-                          n.includes('volcán') || n.includes('volcan') ||
-                          n.includes('tarta') || n.includes('cheesecake')
-                      })
-                      .slice(0, 3)
-                      .map(p => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={(e) => {
-                            handleUpdateProductQuantity(p, 1, e)
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-amber-200 border border-amber-500/30 text-[11px] font-bold whitespace-nowrap flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs"
-                        >
-                          <span>+</span>
-                          <span>{p.name.includes('Café') ? '☕ Café' : p.name.includes('Volcán') ? '🍰 Volcán' : '🍰 Tarta'}</span>
-                          <span className="text-slate-400 font-medium">({p.price.toFixed(2)}€)</span>
-                        </button>
-                      ))}
-                  </div>
                 </div>
               </div>
             )}
@@ -1506,52 +1496,56 @@ function DinerMenuContent() {
         )}
 
         {/* VISTA CUANDO LA MESA YA HA SIDO COBRADA (CONFIRMACIÓN DE COBRO + GOOGLE REVIEWS) */}
-        {!isFixedMenu && isTablePaid && (
+        {!isFixedMenu && isTablePaid && (!isPaidBannerDismissed || !isReviewBoosterDismissed) && (
           <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full space-y-3 animate-in fade-in duration-300">
-            <div className="p-3.5 bg-emerald-950 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                  <Receipt className="w-5 h-5 text-slate-950" />
+            {!isPaidBannerDismissed && (
+              <div className="p-3.5 bg-emerald-950 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                    <Receipt className="w-5 h-5 text-slate-950" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                      Mesa #{tableNumber} &middot; Pago Confirmado
+                    </span>
+                    <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
+                      ¡Pago confirmado! Gracias por tu visita
+                    </h4>
+                    <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
+                      Tu comanda ha sido cobrada correctamente en mesa.
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                    Mesa #{tableNumber} &middot; Pago Confirmado
-                  </span>
-                  <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
-                    ¡Pago confirmado! Gracias por tu visita
-                  </h4>
-                  <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
-                    Tu comanda ha sido cobrada correctamente en mesa.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPaidBannerDismissed(true)
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`, 'true')
+                    }
+                  }}
+                  className="p-1 rounded-full text-emerald-400 hover:text-white hover:bg-emerald-900/50 transition-colors flex-shrink-0 cursor-pointer"
+                  title="Cerrar aviso"
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsTablePaid(false)
+            )}
+            {!isReviewBoosterDismissed && (
+              <GoogleReviewBooster
+                restaurantName={restaurant.name}
+                restaurantSlug={restaurant.slug}
+                googleReviewUrl={restaurant.google_review_url}
+                googlePlaceId={restaurant.google_place_id}
+                variant="card"
+                onDismiss={() => {
+                  setIsReviewBoosterDismissed(true)
                   if (typeof window !== 'undefined') {
-                    sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+                    sessionStorage.setItem(`fluxo_review_dismissed_${slug}`, 'true')
                   }
                 }}
-                className="p-1 rounded-full text-emerald-400 hover:text-white hover:bg-emerald-900/50 transition-colors flex-shrink-0"
-                title="Cerrar aviso"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <GoogleReviewBooster
-              restaurantName={restaurant.name}
-              restaurantSlug={restaurant.slug}
-              googleReviewUrl={restaurant.google_review_url}
-              googlePlaceId={restaurant.google_place_id}
-              variant="card"
-              onDismiss={() => {
-                setIsTablePaid(false)
-                if (typeof window !== 'undefined') {
-                  sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-                }
-              }}
-            />
+              />
+            )}
           </div>
         )}
 
@@ -1595,11 +1589,19 @@ function DinerMenuContent() {
 
           {/* Carrusel de Categorías Gastronómicas con Filtros Dietéticos Sutiles */}
           <div id="menu-category-tabs" className="space-y-1.5 scroll-mt-16">
-            <div className="flex space-x-1.5 overflow-x-auto no-scrollbar py-0.5 touch-pan-x">
+            <div
+              className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 pr-10 touch-pan-x scroll-smooth overscroll-x-contain"
+              onWheel={(e) => {
+                if (e.deltaY !== 0 && e.currentTarget.scrollWidth > e.currentTarget.clientWidth) {
+                  e.currentTarget.scrollLeft += e.deltaY
+                }
+              }}
+            >
               <button
-                onClick={() => {
+                onClick={(e) => {
                   setSelectedCategory('all')
                   setSearchQuery('')
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
                 }}
                 className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
                   selectedCategory === 'all'
@@ -1614,9 +1616,10 @@ function DinerMenuContent() {
                 return (
                   <button
                     key={category.id}
-                    onClick={() => {
+                    onClick={(e) => {
                       setSelectedCategory(category.id)
                       setSearchQuery('')
+                      e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
                     }}
                     className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
                       isSelected
@@ -1683,35 +1686,60 @@ function DinerMenuContent() {
           </div>
 
           {/* SUGERENCIA INTELIGENTE DEL CHEF SEGÚN CATEGORÍA */}
-          {selectedCategory === 'cat-1' || selectedCategory === 'all' ? (
-            <div className="p-3 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl shadow-xs flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                <Sparkles size={16} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 block">
-                  Recomendado para Comenzar
-                </span>
-                <p className="text-xs text-slate-100 font-semibold leading-tight mt-0.5">
-                  Prueba nuestro Combo Pareja con 2 Dobles Monster y 2 Pintas bien frías.
-                </p>
-              </div>
-            </div>
-          ) : selectedCategory === 'cat-7' ? (
-            <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl shadow-xs flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-white text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                <Flame size={16} className="text-orange-600" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-950 block">
-                  Tip del Chef para Burgers
-                </span>
-                <p className="text-xs text-white font-bold leading-tight mt-0.5">
-                  Pídela a Punto y acompáñala con Bastones de Mozzarella o una IPA Tirada.
-                </p>
-              </div>
-            </div>
-          ) : null}
+          {(() => {
+            const isInitialSection =
+              selectedCategory === 'all' ||
+              !selectedCategory ||
+              selectedCategory === 'cat-1' ||
+              selectedCategory === 'c0000000-0000-0000-0000-000000000001' ||
+              (categories.length > 0 && selectedCategory === categories[0]?.id) ||
+              Boolean(categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('PROMO'))
+
+            const isBurgerCategory = Boolean(
+              selectedCategory === 'cat-7' ||
+              selectedCategory === 'c0000000-0000-0000-0000-000000000003' ||
+              categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('BURGER') ||
+              categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('HAMBURGUESA')
+            )
+
+            if (isInitialSection) {
+              return (
+                <div className="p-3 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl shadow-xs flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                    <Sparkles size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 block">
+                      Recomendado para Comenzar
+                    </span>
+                    <p className="text-xs text-slate-100 font-semibold leading-tight mt-0.5">
+                      Prueba nuestro Combo Pareja con 2 Dobles Monster y 2 Pintas bien frías.
+                    </p>
+                  </div>
+                </div>
+              )
+            }
+
+            if (isBurgerCategory) {
+              return (
+                <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl shadow-xs flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                    <Flame size={16} className="text-orange-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-950 block">
+                      Tip del Chef para Burgers
+                    </span>
+                    <p className="text-xs text-white font-bold leading-tight mt-0.5">
+                      Pídela a Punto y acompáñala con Bastones de Mozzarella o una IPA Tirada.
+                    </p>
+                  </div>
+                </div>
+              )
+            }
+
+            return null
+          })()}
 
           {/* Listado de Platos con Skeleton Screens de Carga */}
           {products.length === 0 ? (
@@ -2363,6 +2391,8 @@ function DinerMenuContent() {
           onOrderSubmitted={(newOrder) => {
             if (newOrder) {
               setIsTablePaid(false)
+              setIsPaidBannerDismissed(false)
+              setIsReviewBoosterDismissed(false)
               setHasRequestedBill(false)
               hasRequestedBillRef.current = false
               userRequestedBillTimeRef.current = null
@@ -2370,6 +2400,7 @@ function DinerMenuContent() {
                 try {
                   sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
                   sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+                  sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
                 } catch {}
               }
               prevTableOrdersMapRef.current.set(newOrder.id, newOrder)
