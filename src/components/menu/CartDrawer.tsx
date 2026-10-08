@@ -97,7 +97,11 @@ export function CartDrawer({
     const name = (p.name || '').toLowerCase()
     const catId = p.category_id || ''
     return (
+      catId === 'cat-10' ||
       catId === 'cat-11' ||
+      catId === 'c0000000-0000-0000-0000-000000000006' ||
+      catId === 'cat-tca-7' ||
+      catId === 'cat-tm-7' ||
       name.includes('postre') ||
       name.includes('volcán') ||
       name.includes('volcan') ||
@@ -107,7 +111,9 @@ export function CartDrawer({
       name.includes('flan') ||
       name.includes('tiramisú') ||
       name.includes('tiramisu') ||
-      name.includes('brownie')
+      name.includes('brownie') ||
+      name.includes('café') ||
+      name.includes('cafe')
     )
   }).slice(0, 3)
 
@@ -184,15 +190,22 @@ export function CartDrawer({
     const catId = item.product?.category_id || ''
     const name = (item.product?.name || '').toLowerCase()
     return (
+      catId === 'cat-10' ||
       catId === 'cat-11' ||
+      catId === 'c0000000-0000-0000-0000-000000000006' ||
+      catId === 'cat-tca-7' ||
+      catId === 'cat-tm-7' ||
       name.includes('postre') ||
       name.includes('volcán') ||
       name.includes('volcan') ||
       name.includes('cheesecake') ||
+      name.includes('tarta') ||
       name.includes('helado') ||
       name.includes('flan') ||
       name.includes('tiramisú') ||
-      name.includes('tiramisu')
+      name.includes('tiramisu') ||
+      name.includes('café') ||
+      name.includes('cafe')
     )
   })
 

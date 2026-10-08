@@ -327,6 +327,18 @@ function DinerMenuContent() {
               ...c,
               name: c.name?.toUpperCase().trim() === 'GIN & BEBIDAS' ? 'Bebidas' : c.name,
             }))
+            const hasDesserts = normalizedCats.some((c: any) => {
+              const u = (c.name || '').toUpperCase()
+              return u.includes('POSTRE') || u.includes('CAFÉ') || c.id === 'c0000000-0000-0000-0000-000000000006'
+            })
+            if (!hasDesserts) {
+              normalizedCats.push({
+                id: 'c0000000-0000-0000-0000-000000000006',
+                restaurant_id: restData.id,
+                name: 'POSTRES & CAFÉ',
+                order_index: normalizedCats.length + 1,
+              })
+            }
             setCategories(normalizedCats)
             setSelectedCategory(normalizedCats[0].id)
           }
@@ -949,7 +961,32 @@ function DinerMenuContent() {
       return false
     }
 
-    const matchesCategory = selectedCategory === 'all' || prod.category_id === selectedCategory
+    const currentCatObj = categories.find(c => c.id === selectedCategory)
+    const isDessertCategorySelected = currentCatObj && (
+      currentCatObj.name.toUpperCase().includes('POSTRE') ||
+      currentCatObj.name.toUpperCase().includes('CAFÉ') ||
+      currentCatObj.name.toUpperCase().includes('CAFE') ||
+      currentCatObj.id === 'c0000000-0000-0000-0000-000000000006' ||
+      currentCatObj.id === 'cat-10' ||
+      currentCatObj.id === 'cat-tca-7' ||
+      currentCatObj.id === 'cat-tm-7'
+    )
+
+    const matchesCategory = selectedCategory === 'all' || 
+      prod.category_id === selectedCategory ||
+      (isDessertCategorySelected && (
+        prod.category_id === 'c0000000-0000-0000-0000-000000000006' ||
+        prod.category_id === 'cat-10' ||
+        prod.category_id === 'cat-tca-7' ||
+        prod.category_id === 'cat-tm-7' ||
+        prod.name.toLowerCase().includes('volcán') ||
+        prod.name.toLowerCase().includes('volcan') ||
+        prod.name.toLowerCase().includes('tarta') ||
+        prod.name.toLowerCase().includes('postre') ||
+        prod.name.toLowerCase().includes('café') ||
+        prod.name.toLowerCase().includes('cafe') ||
+        prod.name.toLowerCase().includes('cheesecake')
+      ))
     const matchesSearch = searchQuery === '' || 
       prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (prod.description && prod.description.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -1373,7 +1410,10 @@ function DinerMenuContent() {
                     <button
                       type="button"
                       onClick={() => {
-                        const dessertCat = categories.find(c => c.name.toUpperCase().includes('POSTRE')) || categories.find(c => c.id === 'cat-10') || categories[0]
+                        const dessertCat = categories.find(c => {
+                          const n = (c.name || '').toUpperCase()
+                          return n.includes('POSTRE') || n.includes('CAFÉ') || n.includes('CAFE') || n.includes('DULCE') || n.includes('SOBREMESA')
+                        }) || categories.find(c => c.id === 'c0000000-0000-0000-0000-000000000006' || c.id === 'cat-10' || c.id === 'cat-tca-7' || c.id === 'cat-tm-7') || categories[0]
                         if (dessertCat) {
                           setSelectedCategory(dessertCat.id)
                         }
@@ -1401,6 +1441,38 @@ function DinerMenuContent() {
                       <Receipt className="w-3.5 h-3.5" />
                       <span>{t('billButton')}</span>
                     </button>
+                  </div>
+
+                  {/* Píldoras rápidas 1-tap para café y postres en sobremesa */}
+                  <div className="flex items-center gap-1.5 pt-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                    <span className="text-[10px] text-amber-300/80 font-bold whitespace-nowrap">
+                      {t('addOneTouchPrompt') || 'Rápido:'}
+                    </span>
+                    {products
+                      .filter(p => {
+                        const n = (p.name || '').toLowerCase()
+                        const cid = p.category_id || ''
+                        return cid === 'c0000000-0000-0000-0000-000000000006' ||
+                          cid === 'cat-10' ||
+                          n.includes('café') || n.includes('cafe') ||
+                          n.includes('volcán') || n.includes('volcan') ||
+                          n.includes('tarta') || n.includes('cheesecake')
+                      })
+                      .slice(0, 3)
+                      .map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={(e) => {
+                            handleUpdateProductQuantity(p, 1, e)
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-amber-200 border border-amber-500/30 text-[11px] font-bold whitespace-nowrap flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs"
+                        >
+                          <span>+</span>
+                          <span>{p.name.includes('Café') ? '☕ Café' : p.name.includes('Volcán') ? '🍰 Volcán' : '🍰 Tarta'}</span>
+                          <span className="text-slate-400 font-medium">({p.price.toFixed(2)}€)</span>
+                        </button>
+                      ))}
                   </div>
                 </div>
               </div>

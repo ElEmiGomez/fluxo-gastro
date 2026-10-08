@@ -48,6 +48,18 @@ export async function GET(req: NextRequest) {
               ...c,
               name: c.name?.toUpperCase().trim() === 'GIN & BEBIDAS' ? 'Bebidas' : c.name,
             }))
+            const hasDesserts = normalizedCats.some((c: any) => {
+              const u = (c.name || '').toUpperCase()
+              return u.includes('POSTRE') || u.includes('CAFÉ') || c.id === 'c0000000-0000-0000-0000-000000000006'
+            })
+            if (!hasDesserts) {
+              normalizedCats.push({
+                id: 'c0000000-0000-0000-0000-000000000006',
+                restaurant_id: rest.id,
+                name: 'POSTRES & CAFÉ',
+                order_index: normalizedCats.length + 1,
+              })
+            }
             categories = normalizedCats
             setServerCategories(slug, normalizedCats)
           }
