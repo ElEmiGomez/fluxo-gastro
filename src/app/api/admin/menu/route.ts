@@ -18,7 +18,7 @@ import { verifyStaffRequest } from '@/lib/auth/pin-security'
 import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { getRestaurantBySlug, getTargetRestaurantId } from '@/lib/supabase/repository'
-import { isProductInCategory } from '@/lib/category-matcher'
+import { isProductInCategory, deduplicateProducts } from '@/lib/category-matcher'
 
 const isUuid = (str?: string | null): boolean =>
   Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str))
@@ -70,10 +70,7 @@ export async function GET(req: NextRequest) {
             .select('*')
             .eq('restaurant_id', rest.id)
           if (dbProds && dbProds.length > 0) {
-            const mergedMap = new Map<string, Product>()
-            products.forEach(p => mergedMap.set(p.id, p))
-            dbProds.forEach((dp: any) => mergedMap.set(dp.id, { ...(mergedMap.get(dp.id) || {}), ...dp }))
-            products = Array.from(mergedMap.values())
+            products = deduplicateProducts([...products, ...dbProds])
             setServerProducts(slug, products)
           }
         }
@@ -92,6 +89,8 @@ export async function GET(req: NextRequest) {
         return prod
       })
     }
+
+    products = deduplicateProducts(products)
 
     return NextResponse.json({
       success: true,

@@ -670,16 +670,22 @@ export function translateCategoryName(lang: string, originalName: string): strin
 
 export function translateProductName(lang: string, productId: string, fallback: string): string {
   const code = resolveLang(lang)
-  if (PRODUCT_NAMES[productId] && PRODUCT_NAMES[productId][code]) {
-    return PRODUCT_NAMES[productId][code]
+  const resolvedId = productId === 'b0000000-0000-0000-0000-000000000001' ? 'p-promo-1'
+    : productId === 'b0000000-0000-0000-0000-000000000002' ? 'p-bur-1'
+    : productId
+  if (PRODUCT_NAMES[resolvedId] && PRODUCT_NAMES[resolvedId][code]) {
+    return PRODUCT_NAMES[resolvedId][code]
   }
   return fallback || ''
 }
 
 export function translateProductDescription(lang: string, productId: string, fallback: string | null): string {
   const code = resolveLang(lang)
-  if (PRODUCT_DESCRIPTIONS[productId] && PRODUCT_DESCRIPTIONS[productId][code]) {
-    return PRODUCT_DESCRIPTIONS[productId][code]
+  const resolvedId = productId === 'b0000000-0000-0000-0000-000000000001' ? 'p-promo-1'
+    : productId === 'b0000000-0000-0000-0000-000000000002' ? 'p-bur-1'
+    : productId
+  if (PRODUCT_DESCRIPTIONS[resolvedId] && PRODUCT_DESCRIPTIONS[resolvedId][code]) {
+    return PRODUCT_DESCRIPTIONS[resolvedId][code]
   }
   return fallback || ''
 }

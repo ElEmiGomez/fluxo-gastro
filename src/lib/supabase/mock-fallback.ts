@@ -157,9 +157,9 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
   // ── 1. CATÁLOGO: BURGER GOURMET NOIA ──
   'burger-gourmet': [
     {
-      id: 'p-promo-1',
-      restaurant_id: 'a1111111-1111-1111-1111-111111111111',
-      category_id: 'cat-1',
+      id: 'b0000000-0000-0000-0000-000000000001',
+      restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+      category_id: 'c0000000-0000-0000-0000-000000000001',
       name: 'Combo Pareja: 2 Burgers Dobles + Papas + 2 Pintas',
       description: '2 Burgers Doble Monster con panceta y cheddar, porción gigante de papas rústicas y 2 cervezas artesanales.',
       price: 24.50,
@@ -231,12 +231,12 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       allergens: [],
     },
     {
-      id: 'p-bur-1',
-      restaurant_id: 'a1111111-1111-1111-1111-111111111111',
-      category_id: 'cat-7',
+      id: 'b0000000-0000-0000-0000-000000000002',
+      restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+      category_id: 'c0000000-0000-0000-0000-000000000004',
       name: 'Bacon Cheese Doble Monster',
       description: 'Doble medallón de 160g de blend de asado, cuádruple cheddar fundido, panceta crocante y salsa barbacoa en pan brioche.',
-      price: 13.90,
+      price: 14.20,
       image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
       model_3d_url: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
       is_available: true,

@@ -49,7 +49,7 @@ import { TOP_LANGUAGES, getTranslation, translateCategoryName, translateProductN
 import { getAllergen, getAllergenName } from '@/lib/allergens'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
-import { isProductInCategory } from '@/lib/category-matcher'
+import { isProductInCategory, deduplicateProducts } from '@/lib/category-matcher'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 
@@ -68,7 +68,7 @@ function DinerMenuContent() {
 
   const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
   const [categories, setCategories] = useState<Category[]>(() => MOCK_CATEGORIES[slug] || [])
-  const [products, setProducts] = useState<Product[]>(() => MOCK_PRODUCTS[slug] || [])
+  const [products, setProducts] = useState<Product[]>(() => deduplicateProducts(MOCK_PRODUCTS[slug] || []))
   const [tables, setTables] = useState<Table[]>(() => MOCK_TABLES[slug] || [])
   
   const [currentLang, setCurrentLang] = useState<string>('gl') // Por defecto Galego
@@ -363,7 +363,7 @@ function DinerMenuContent() {
           })
         }
         if (Array.isArray(menuRes.products)) {
-          setProducts(menuRes.products)
+          setProducts(deduplicateProducts(menuRes.products))
         }
         const tablesFallback = MOCK_TABLES[slug] || []
         setTables(tablesFallback)
@@ -417,7 +417,7 @@ function DinerMenuContent() {
             .select('*')
             .eq('restaurant_id', restData.id)
 
-          if (prodData && prodData.length > 0) setProducts(prodData)
+          if (prodData && prodData.length > 0) setProducts(deduplicateProducts(prodData))
 
           const { data: tableData } = await supabase
             .from('tables')

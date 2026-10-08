@@ -26,6 +26,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { PRODUCT_NAMES } from '@/lib/i18n'
+import { deduplicateProducts } from '@/lib/category-matcher'
 import { Order, OrderItem, OrderStatus, Product } from '@/types/database.types'
 import { verifyStaffRequest } from '@/lib/auth/pin-security'
 
@@ -157,7 +158,7 @@ export async function POST(req: NextRequest) {
     let computedTotal = 0
 
     const validItems: OrderItem[] = []
-    let catalogProducts: Product[] = [...(getServerProducts(slug) || []), ...(MOCK_PRODUCTS[slug] || [])]
+    let catalogProducts: Product[] = deduplicateProducts([...(getServerProducts(slug) || []), ...(MOCK_PRODUCTS[slug] || [])])
 
     // Consultar catálogo en Supabase para sincronización total con productos en base de datos
     const supabase = createServerClient()
@@ -168,16 +169,7 @@ export async function POST(req: NextRequest) {
           .select('*')
           .eq('restaurant_id', restaurantId)
         if (dbProds && dbProds.length > 0) {
-          const existingIds = new Set(catalogProducts.map(p => p.id))
-          dbProds.forEach((dp: any) => {
-            if (!existingIds.has(dp.id)) {
-              catalogProducts.push(dp)
-            } else {
-              // Actualizar datos oficiales de stock/precio
-              const idx = catalogProducts.findIndex(p => p.id === dp.id)
-              if (idx >= 0) catalogProducts[idx] = { ...catalogProducts[idx], ...dp }
-            }
-          })
+          catalogProducts = deduplicateProducts([...catalogProducts, ...dbProds])
           setServerProducts(slug, catalogProducts)
         }
       } catch (e) {
@@ -207,10 +199,12 @@ export async function POST(req: NextRequest) {
 
       const targetClean = cleanStr(itemName)
 
-      // 1. Coincidencia por ID exacto o alias de promoción
+      // 1. Coincidencia por ID exacto, alias de promoción o mapeo de ID legado
       let catalogProduct = catalogProducts.find(p =>
         (productId && p.id === productId) ||
         (productId && p.id.toLowerCase() === productId.toLowerCase()) ||
+        (productId === 'p-promo-1' && (p.id === 'b0000000-0000-0000-0000-000000000001' || p.name.includes('Combo Pareja'))) ||
+        (productId === 'p-bur-1' && (p.id === 'b0000000-0000-0000-0000-000000000002' || p.name.includes('Bacon Cheese'))) ||
         (productId && p.id.replace('promo', 'prom') === productId) ||
         (productId && p.id.replace('prom', 'promo') === productId) ||
         (productId && p.id.replace('prom', 'promo') === productId.replace('prom', 'promo'))

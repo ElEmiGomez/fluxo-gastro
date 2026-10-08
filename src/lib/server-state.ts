@@ -6,6 +6,7 @@
 
 import { Order, OrderStatus, Category, Product } from '@/types/database.types'
 import { MOCK_CATEGORIES, MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
+import { deduplicateProducts } from '@/lib/category-matcher'
 
 export interface ServiceCall {
   id: string
@@ -58,10 +59,10 @@ if (!g.__GASTRO_CATEGORIES__) {
 
 if (!g.__GASTRO_PRODUCTS__) {
   g.__GASTRO_PRODUCTS__ = {
-    'burger-gourmet': [...(MOCK_PRODUCTS['burger-gourmet'] || [])],
-    'taperia-casco-antigo': [...(MOCK_PRODUCTS['taperia-casco-antigo'] || [])],
-    'terraza-malecon': [...(MOCK_PRODUCTS['terraza-malecon'] || [])],
-    'bella-napoli': [...(MOCK_PRODUCTS['bella-napoli'] || [])],
+    'burger-gourmet': deduplicateProducts([...(MOCK_PRODUCTS['burger-gourmet'] || [])]),
+    'taperia-casco-antigo': deduplicateProducts([...(MOCK_PRODUCTS['taperia-casco-antigo'] || [])]),
+    'terraza-malecon': deduplicateProducts([...(MOCK_PRODUCTS['terraza-malecon'] || [])]),
+    'bella-napoli': deduplicateProducts([...(MOCK_PRODUCTS['bella-napoli'] || [])]),
   }
 }
 
@@ -874,27 +875,29 @@ export function deleteServerCategory(slug: string, categoryId: string): void {
 export function getServerProducts(slug: string): Product[] {
   if (!globalStore.__GASTRO_PRODUCTS__?.[slug]) {
     if (!globalStore.__GASTRO_PRODUCTS__) globalStore.__GASTRO_PRODUCTS__ = {}
-    globalStore.__GASTRO_PRODUCTS__[slug] = [...(MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])]
+    globalStore.__GASTRO_PRODUCTS__[slug] = deduplicateProducts([...(MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])])
   }
-  return globalStore.__GASTRO_PRODUCTS__[slug]
+  return deduplicateProducts(globalStore.__GASTRO_PRODUCTS__[slug])
 }
 
 export function setServerProducts(slug: string, products: Product[]): void {
   if (!globalStore.__GASTRO_PRODUCTS__) globalStore.__GASTRO_PRODUCTS__ = {}
-  globalStore.__GASTRO_PRODUCTS__[slug] = products
+  globalStore.__GASTRO_PRODUCTS__[slug] = deduplicateProducts(products)
   broadcastEvent({ type: 'menu_updated', slug })
 }
 
 export function upsertServerProduct(slug: string, product: Product): Product {
   const current = getServerProducts(slug)
-  const idx = current.findIndex(p => p.id === product.id)
+  const normName = (product.name || '').toLowerCase().trim()
+  const idx = current.findIndex(p => p.id === product.id || (normName && (p.name || '').toLowerCase().trim() === normName))
   let updated: Product[]
   if (idx >= 0) {
-    updated = current.map(p => (p.id === product.id ? { ...p, ...product } : p))
+    updated = current.map((p, i) => (i === idx ? { ...p, ...product } : p))
   } else {
     updated = [product, ...current]
   }
-  setServerProducts(slug, updated)
+  const deduplicated = deduplicateProducts(updated)
+  setServerProducts(slug, deduplicated)
   return product
 }
 
