@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Search, Sparkles, Hash } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Search, Sparkles, Hash, Package } from 'lucide-react'
 import { Table } from '@/types/database.types'
 
 export type TableStatusType = 'free' | 'busy' | 'calling' | 'ready'
@@ -12,6 +12,8 @@ interface TableSelectorProps {
   tableStatuses?: Record<string | number, TableStatusType>
   tableDwellMinutes?: Record<string | number, number>
   onSelectTable: (table: Table) => void
+  onOpenQuickStock?: () => void
+  pausedItemsCount?: number
 }
 
 export function TableSelector({
@@ -20,6 +22,8 @@ export function TableSelector({
   tableStatuses = {},
   tableDwellMinutes = {},
   onSelectTable,
+  onOpenQuickStock,
+  pausedItemsCount = 0,
 }: TableSelectorProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [searchTableNum, setSearchTableNum] = useState('')
@@ -132,6 +136,24 @@ export function TableSelector({
             >
               <Search className="w-3.5 h-3.5" />
               <span className="hidden sm:inline text-[11px]">Buscar</span>
+            </button>
+          )}
+
+          {/* Botón Control Rápido de Stock ("Se Agotó") */}
+          {onOpenQuickStock && (
+            <button
+              type="button"
+              onClick={onOpenQuickStock}
+              className="px-2.5 py-1 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 shadow-xs border bg-slate-900 hover:bg-slate-800 text-white active:scale-95 cursor-pointer"
+              title="Pausar o reactivar platos de la carta cuando se acabe un ingrediente"
+            >
+              <Package className="w-3.5 h-3.5 text-amber-400 stroke-[2.5]" />
+              <span>Stock / Agotados</span>
+              {pausedItemsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black animate-pulse">
+                  {pausedItemsCount}
+                </span>
+              )}
             </button>
           )}
 

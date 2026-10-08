@@ -6,6 +6,31 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-08 18:06] — Delegación Oficial: Activación de Marketing (Depto 2) y Diseño de Marca (Depto 3) para el Piloto Noia
+* **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2) y Diseño de Marca & UI/UX (Depto 3).
+* **Directiva Ejecutiva:**
+  - Con el MVP prácticamente pulido (Admin de cartas operativo, landing simplificada y mejoras de estabilidad en curso), se reactivan de inmediato las tareas operativas de campo del **Punto 3**.
+  - **Marketing & Ventas (Depto 2):**
+    1. Prospección activa para captación del Cliente #1 en Noia bajo la modalidad "Piloto Gratuito de 14 Días a 0€".
+    2. Preparación del argumentario de ventas, guion de formación de 15 minutos en hora valle y estructura del Informe de Impacto del Día 14 para cierre de contrato mensual.
+  - **Diseño de Marca & UI/UX (Depto 3):**
+    1. Preparación de artes finales de los soportes de mesa físicos en A5 con los códigos QR definitivos del local.
+    2. Preparación de la chuleta adhesiva laminada para la barra (guía visual rápida de camarero).
+    3. Producción de la versión impresa en A4 de la Carta Fija de respaldo.
+
+---
+
+### [2026-10-08 18:03] — Inicio de Implementación: Bloque 1 (Legal & Seguridad) y Bloque 2 (Validación de Producto & UX)
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Hitos Concluidos Previos:**
+  - Administrador de Cartas implementado y con fixeo UX operativo.
+  - Landing Page simplificada (retirados los 3 accesos de demo secundarios; conservado el botón principal unificado al simulador).
+* **Frentes Activos en Ejecución Simultánea:**
+  - **Bloque 1 (Legal, Comercial & Seguridad):** Transparencia LSSI-CE, blindaje de exención fiscal/Veri*Factu en términos de servicio, verificación de los 14 alérgenos alimentarios obligatorios de la UE, aislamiento de claves de servicio y rate limiting.
+  - **Bloque 2 (Validación Técnica & Robustez UX):** Validación integral E2E de la app en vivo, pruebas completas de mutación del Administrador de Cartas, notificación persistente de ítems pedidos en mesa del comensal y restricción de clave foránea en `service_calls.table_number`.
+
+---
+
 ### [2026-10-07 17:52] — Sincronización Operativa: Secuenciación de Tareas de Estabilidad y Producto
 * **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
 * **Definición de Secuencia de 4 Pasos:**

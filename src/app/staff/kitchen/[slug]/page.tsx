@@ -345,6 +345,37 @@ export default function KitchenKDSPage() {
     })
   }
 
+  // Agrupación unificada por mesa (una única tarjeta por mesa con división cronológica por rondas)
+  const tableGroupedOrders = useMemo(() => {
+    const groupsMap = new Map<string, { tableNumber: string | number; orders: Order[] }>()
+
+    displayedOrders.forEach(ord => {
+      const tableKey = String(ord.table?.table_number ?? ord.table_number ?? '1')
+      if (!groupsMap.has(tableKey)) {
+        groupsMap.set(tableKey, {
+          tableNumber: ord.table?.table_number ?? ord.table_number ?? '1',
+          orders: [],
+        })
+      }
+      groupsMap.get(tableKey)!.orders.push(ord)
+    })
+
+    const groups = Array.from(groupsMap.values()).map(g => {
+      const sortedRounds = [...g.orders].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      )
+      const earliestTime = Math.min(...sortedRounds.map(o => new Date(o.created_at).getTime()))
+      return {
+        tableNumber: g.tableNumber,
+        orders: sortedRounds,
+        earliestTime,
+      }
+    })
+
+    // Ordenar mesas en pantalla por la comanda más antigua (FIFO)
+    return groups.sort((a, b) => a.earliestTime - b.earliestTime)
+  }, [displayedOrders])
+
   return (
     <StaffPinAuth role="kitchen" restaurantSlug={slug}>
       <TenantProvider restaurant={restaurant}>
@@ -523,11 +554,11 @@ export default function KitchenKDSPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {displayedOrders.map((order) => (
+              {tableGroupedOrders.map((group) => (
                 <KitchenTicket
-                  key={order.id}
-                  order={order}
-                  isUpdating={updatingOrderIds.has(order.id)}
+                  key={`table-group-${group.tableNumber}`}
+                  orders={group.orders}
+                  updatingOrderIds={updatingOrderIds}
                   onUpdateStatus={handleUpdateStatus}
                 />
               ))}

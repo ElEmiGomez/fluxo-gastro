@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { X, Check, Loader2, Sparkles, Trash2, Copy } from 'lucide-react'
+import { X, Check, Loader2, Sparkles, Trash2, Copy, AlertTriangle } from 'lucide-react'
 import { Product, Category } from '@/types/database.types'
+import { MANDATORY_EU_ALLERGENS } from '@/lib/allergens'
 
 interface InSituEditProductModalProps {
   isOpen: boolean
@@ -29,9 +30,11 @@ export function InSituEditProductModal({
 }: InSituEditProductModalProps) {
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
+  const [originalPrice, setOriginalPrice] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [description, setDescription] = useState('')
   const [imageUrl, setImageUrl] = useState('')
+  const [selectedAllergens, setSelectedAllergens] = useState<string[]>([])
   const [isAvailable, setIsAvailable] = useState(true)
   const [isWeight, setIsWeight] = useState(false)
   const [priceUnit, setPriceUnit] = useState<'100g' | 'kg' | 'piece'>('100g')
@@ -45,18 +48,22 @@ export function InSituEditProductModal({
       if (product) {
         setName(product.name || '')
         setPrice(product.price != null ? product.price.toString() : '')
+        setOriginalPrice(product.original_price != null ? product.original_price.toString() : '')
         setCategoryId(product.category_id || categories[0]?.id || '')
         setDescription(product.description || '')
         setImageUrl(product.image_url || '')
+        setSelectedAllergens(product.allergens || [])
         setIsAvailable(product.is_available !== false)
         setIsWeight(product.price_type === 'weight')
         setPriceUnit(product.price_unit === 'kg' ? 'kg' : product.price_unit === 'piece' ? 'piece' : '100g')
       } else {
         setName('')
         setPrice('')
+        setOriginalPrice('')
         setCategoryId(defaultCategoryId || categories[0]?.id || '')
         setDescription('')
         setImageUrl('')
+        setSelectedAllergens([])
         setIsAvailable(true)
         setIsWeight(false)
         setPriceUnit('100g')
@@ -123,6 +130,15 @@ export function InSituEditProductModal({
       return
     }
 
+    let numOriginalPrice: number | null = null
+    if (originalPrice.trim()) {
+      const sanitizedOrig = originalPrice.trim().replace(',', '.')
+      const parsedOrig = parseFloat(sanitizedOrig)
+      if (!isNaN(parsedOrig) && parsedOrig > 0) {
+        numOriginalPrice = parsedOrig
+      }
+    }
+
     setIsSubmitting(true)
     setErrorMsg(null)
 
@@ -134,9 +150,11 @@ export function InSituEditProductModal({
           id: product?.id,
           name: name.trim(),
           price: numPrice,
+          original_price: numOriginalPrice,
           category_id: categoryId || categories[0]?.id,
           description: description.trim(),
           image_url: imageUrl.trim(),
+          allergens: selectedAllergens,
           is_available: isAvailable,
           price_type: isWeight ? 'weight' : 'unit',
           price_unit: isWeight ? priceUnit : undefined,
@@ -281,11 +299,11 @@ export function InSituEditProductModal({
             />
           </div>
 
-          {/* Precio y Categoría */}
+          {/* Precios (Actual y Habitual/Tachado) */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-slate-300 font-bold block text-xs">
-                Precio (€) *
+                Precio Actual (€) *
               </label>
               <input
                 type="text"
@@ -299,21 +317,37 @@ export function InSituEditProductModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-300 font-bold block text-xs">
-                Categoría *
+              <label className="text-slate-300 font-bold block text-xs flex items-center justify-between">
+                <span>Precio Habitual (€)</span>
+                <span className="text-[10px] text-slate-500 font-normal">Tachado</span>
               </label>
-              <select
-                value={categoryId}
-                onChange={e => setCategoryId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-purple-500 text-xs sm:text-sm cursor-pointer"
-              >
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={originalPrice}
+                onChange={e => setOriginalPrice(e.target.value)}
+                placeholder="Ej: 15.00 (Opcional)"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 placeholder-slate-500 focus:outline-none focus:border-purple-500 tabular-nums text-xs sm:text-sm"
+              />
             </div>
+          </div>
+
+          {/* Categoría */}
+          <div className="space-y-1">
+            <label className="text-slate-300 font-bold block text-xs">
+              Categoría *
+            </label>
+            <select
+              value={categoryId}
+              onChange={e => setCategoryId(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-purple-500 text-xs sm:text-sm cursor-pointer"
+            >
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Descripción */}
@@ -342,6 +376,43 @@ export function InSituEditProductModal({
               placeholder="https://images.unsplash.com/..."
               className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 text-xs sm:text-sm font-mono text-[11px]"
             />
+          </div>
+
+          {/* Selector de 14 Alérgenos Obligatorios UE 1169/2011 */}
+          <div className="space-y-2 pt-1 border-t border-slate-800/80">
+            <div className="flex items-center justify-between">
+              <label className="text-slate-300 font-bold block text-xs flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span>Alérgenos UE (Reg. 1169/2011)</span>
+              </label>
+              <span className="text-[10px] text-slate-500 font-medium">
+                {selectedAllergens.length > 0 ? `${selectedAllergens.length} seleccionados` : 'Ninguno (Apto general)'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-1">
+              {MANDATORY_EU_ALLERGENS.map(al => {
+                const isSelected = selectedAllergens.includes(al.id)
+                return (
+                  <button
+                    key={al.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedAllergens(prev =>
+                        prev.includes(al.id) ? prev.filter(x => x !== al.id) : [...prev, al.id]
+                      )
+                    }}
+                    className={`px-2 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all text-left border cursor-pointer select-none ${
+                      isSelected
+                        ? 'bg-amber-500/20 border-amber-400 text-amber-200 shadow-xs'
+                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300'
+                    }`}
+                  >
+                    <span className="text-sm flex-shrink-0">{al.icon}</span>
+                    <span className="truncate">{al.name.es}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Opciones Rápidas: Disponibilidad y Precio al peso */}

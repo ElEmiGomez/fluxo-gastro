@@ -44,6 +44,8 @@ export interface Product {
   price_type?: 'unit' | 'weight' // 'unit' (defecto) o 'weight' (al peso/100g/kg)
   price_unit?: 'kg' | '100g' | 'piece'
   is_highlighted_promo?: boolean // Promo Fallback destacada del restaurante
+  allergens?: string[] // Alérgenos UE 1169/2011 (gluten, dairy, eggs, etc.)
+  original_price?: number | null // Precio inicial/habitual tachado para productos en descuento
 }
 
 export interface Table {

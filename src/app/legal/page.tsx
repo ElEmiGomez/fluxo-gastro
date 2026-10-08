@@ -195,6 +195,21 @@ export default function LegalPage() {
                   La plataforma no almacena números de tarjeta bancaria ni credenciales financieras sensibles. El cobro final se realiza mediante los datáfonos oficiales (TPV bancario) del restaurante o en efectivo.
                 </p>
               </div>
+
+              <div className="space-y-3 pt-2">
+                <h2 className="text-lg font-black text-white flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-400 inline-flex items-center justify-center text-xs">5</span>
+                  Ley Antifraude y Régimen Veri*Factu (Ley 11/2021 &amp; RD 1007/2023)
+                </h2>
+                <div className="p-4 bg-slate-950/90 border border-slate-800 rounded-2xl space-y-2.5">
+                  <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                    <strong className="text-cyan-400">Delimitación Funcional y Exención de Certificación SIF:</strong> Fluxo Gastronomic System actúa exclusiva y estrictamente como software de soporte operativo de sala, visualización de cartas digitales interactivas y canal de telecomanda interna entre mesas, camareros y cocina.
+                  </p>
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    Fluxo <strong>NO constituye un Sistema Informático de Facturación (SIF)</strong> con arreglo al artículo 29.2.j de la Ley 58/2003 (General Tributaria), la Ley 11/2021 de medidas de prevención y lucha contra el fraude fiscal y el Real Decreto 1007/2023 (Reglamento Veri*Factu). Las vistas previas de cuenta o simulaciones de ticket de mesa son notas informativas de servicio interno. La expedición obligatoria de la factura simplificada o ticket fiscal oficial legalmente vinculante recae única y exclusivamente en el titular del establecimiento hostelero a través de su TPV homologado en el instante del cobro.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 

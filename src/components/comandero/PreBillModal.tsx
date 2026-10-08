@@ -170,14 +170,15 @@ export function PreBillModal({
               </div>
             )}
 
-            <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-              <span>IVA Incluido (10%):</span>
-              <span className="tabular-nums font-bold text-white">{formatCurrency(totalAmount * 0.1)}</span>
-            </div>
             <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-              <span className="text-sm font-black uppercase tracking-wider text-amber-400">
-                Total Mesa:
-              </span>
+              <div>
+                <span className="text-sm font-black uppercase tracking-wider text-amber-400 block">
+                  Total Mesa:
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  (IVA 10% incluido en los precios)
+                </span>
+              </div>
               <span className="text-xl font-black text-white tabular-nums">
                 {formatCurrency(totalAmount)}
               </span>

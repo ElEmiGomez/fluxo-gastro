@@ -134,6 +134,10 @@ export async function POST(req: NextRequest) {
       const productId = data.id || crypto.randomUUID()
       const existingProduct = getServerProducts(slug).find(p => p.id === productId)
 
+      const rawOriginalPrice = data.original_price !== undefined
+        ? (typeof data.original_price === 'number' ? Number(data.original_price.toFixed(2)) : (parseFloat(String(data.original_price || '').replace(',', '.')) || null))
+        : (existingProduct?.original_price ?? null)
+
       const product: Product = {
         id: productId,
         category_id: data.category_id || existingProduct?.category_id || 'cat-1',
@@ -141,12 +145,14 @@ export async function POST(req: NextRequest) {
         name: sanitizeText(data.name || existingProduct?.name || 'Nuevo Plato', 100).trim() || 'Nuevo Plato',
         description: data.description !== undefined ? sanitizeText(data.description, 300) : (existingProduct?.description || ''),
         price: sanitizedPrice,
+        original_price: rawOriginalPrice && rawOriginalPrice > sanitizedPrice ? rawOriginalPrice : null,
         price_type: data.price_type === 'weight' ? 'weight' : 'unit',
         price_unit: data.price_type === 'weight' ? unitVal : undefined,
         image_url: data.image_url !== undefined ? data.image_url : (existingProduct?.image_url || ''),
         model_3d_url: data.model_3d_url !== undefined ? data.model_3d_url : (existingProduct?.model_3d_url || null),
         is_available: data.is_available !== undefined ? (data.is_available !== false) : (existingProduct?.is_available !== false),
         is_highlighted_promo: data.is_highlighted_promo !== undefined ? data.is_highlighted_promo : existingProduct?.is_highlighted_promo,
+        allergens: Array.isArray(data.allergens) ? data.allergens : (existingProduct?.allergens || []),
       }
       const saved = upsertServerProduct(slug, product)
 

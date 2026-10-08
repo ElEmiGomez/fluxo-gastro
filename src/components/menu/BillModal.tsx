@@ -36,7 +36,6 @@ export function BillModal({
   const handleRequestBill = async (paymentMethod: string) => {
     setIsSubmitting(true)
     setErrorMessage(null)
-    const splitNote = splitCount > 1 && totalAmount ? ` (Dividida ÷${splitCount}: ${(totalAmount / splitCount).toFixed(2)} €/pers)` : ''
 
     try {
       const res = await fetch('/api/service-calls', {
@@ -45,7 +44,7 @@ export function BillModal({
         body: JSON.stringify({
           slug,
           table_number: parseInt(tableNumber || '1', 10),
-          call_type: `bill_${paymentMethod}${splitNote}`,
+          call_type: `bill_${paymentMethod}`,
         }),
       })
 
@@ -54,7 +53,7 @@ export function BillModal({
       }
 
       onBillRequested?.()
-      setBillRequested(`${paymentMethod}${splitNote}`)
+      setBillRequested(paymentMethod)
 
       setTimeout(() => {
         setBillRequested(null)

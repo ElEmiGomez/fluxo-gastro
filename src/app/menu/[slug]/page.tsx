@@ -41,11 +41,12 @@ import { LegalModal } from '@/components/legal/LegalModal'
 import { InSituAdminAuthModal } from '@/components/menu/InSituAdminAuthModal'
 import { InSituEditProductModal } from '@/components/menu/InSituEditProductModal'
 import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
-import { Product, Category, CartItem, Restaurant, Table, OrderStatus } from '@/types/database.types'
+import { Product, Category, CartItem, Restaurant, Table, OrderStatus, Order } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { TOP_LANGUAGES, getTranslation, translateCategoryName, translateProductName, translateProductDescription } from '@/lib/i18n'
+import { getAllergen, getAllergenName } from '@/lib/allergens'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
 
@@ -159,6 +160,7 @@ function DinerMenuContent() {
     setIsPaidBannerDismissed(false)
     setIsReviewBoosterDismissed(false)
     setTableOrderStatus(null)
+    setTableOrders([])
     setHasRequestedBill(false)
     hasRequestedBillRef.current = false
     userRequestedBillTimeRef.current = null
@@ -192,6 +194,7 @@ function DinerMenuContent() {
 
   // Tracker en vivo de estado en cocina
   const [tableOrderStatus, setTableOrderStatus] = useState<OrderStatus | null>(null)
+  const [tableOrders, setTableOrders] = useState<Order[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [showLegalModal, setShowLegalModal] = useState(false)
   const prevTableOrdersMapRef = useRef<Map<string, any>>(new Map())
@@ -596,6 +599,7 @@ function DinerMenuContent() {
         )
 
         if (tableOrders.length > 0) {
+          setTableOrders(tableOrders)
           const total = tableOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
           setTableTotalAmount(total)
 
@@ -622,11 +626,13 @@ function DinerMenuContent() {
           } else {
             if (prevTableOrdersMapRef.current.size === 0) {
               setTableOrderStatus(null)
+              setTableOrders([])
             }
           }
         } else {
           if (prevTableOrdersMapRef.current.size === 0) {
             setTableOrderStatus(null)
+            setTableOrders([])
           }
         }
       } catch (e) {
@@ -1913,11 +1919,21 @@ function DinerMenuContent() {
                           )}
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
+                          {product.original_price != null && product.original_price > product.price && (
+                            <span className="line-through text-slate-400 text-xs font-bold tabular-nums">
+                              {formatCurrency(product.original_price)}
+                            </span>
+                          )}
                           <span className="font-black text-xs sm:text-sm text-blue-700 tabular-nums">
                             {product.price_type === 'weight'
                               ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
                               : formatCurrency(product.price)}
                           </span>
+                          {product.original_price != null && product.original_price > product.price && (
+                            <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md">
+                              OFERTA -{Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
+                            </span>
+                          )}
                           {product.price_type === 'weight' && (
                             <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-900 text-[10px] font-extrabold border border-blue-200">
                               ⚖️ {t('byWeight')}
@@ -1928,6 +1944,25 @@ function DinerMenuContent() {
                           <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
                             {translateProductDescription(currentLang, product.id, product.description)}
                           </p>
+                        )}
+                        {/* Badges de Alérgenos UE */}
+                        {product.allergens && product.allergens.length > 0 && (
+                          <div className="flex items-center gap-1 flex-wrap pt-1">
+                            {product.allergens.map((aId) => {
+                              const al = getAllergen(aId)
+                              if (!al) return null
+                              return (
+                                <span
+                                  key={aId}
+                                  title={getAllergenName(aId, currentLang as any)}
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/80 text-[10px] font-bold"
+                                >
+                                  <span>{al.icon}</span>
+                                  <span className="hidden min-[420px]:inline">{getAllergenName(aId, currentLang as any).split(' ')[0]}</span>
+                                </span>
+                              )
+                            })}
+                          </div>
                         )}
                       </div>
 
@@ -2121,16 +2156,42 @@ function DinerMenuContent() {
                               </span>
                             )}
                           </div>
-                          <span className="font-black text-xs sm:text-sm text-blue-700 flex-shrink-0 tabular-nums">
-                            {product.price_type === 'weight'
-                              ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
-                              : formatCurrency(product.price)}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                            {product.original_price != null && product.original_price > product.price && (
+                              <span className="line-through text-slate-400 text-xs font-bold tabular-nums">
+                                {formatCurrency(product.original_price)}
+                              </span>
+                            )}
+                            <span className="font-black text-xs sm:text-sm text-blue-700 tabular-nums">
+                              {product.price_type === 'weight'
+                                ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
+                                : formatCurrency(product.price)}
+                            </span>
+                          </div>
                         </div>
                         {product.description && (
                           <p className="text-[11px] text-slate-500 font-normal line-clamp-2 leading-relaxed">
                             {translateProductDescription(currentLang, product.id, product.description)}
                           </p>
+                        )}
+                        {/* Badges de Alérgenos UE en Grid */}
+                        {product.allergens && product.allergens.length > 0 && (
+                          <div className="flex items-center gap-1 flex-wrap pt-1">
+                            {product.allergens.map((aId) => {
+                              const al = getAllergen(aId)
+                              if (!al) return null
+                              return (
+                                <span
+                                  key={aId}
+                                  title={getAllergenName(aId, currentLang as any)}
+                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/80 text-[10px] font-bold"
+                                >
+                                  <span>{al.icon}</span>
+                                  <span className="hidden min-[420px]:inline">{getAllergenName(aId, currentLang as any).split(' ')[0]}</span>
+                                </span>
+                              )
+                            })}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -2374,6 +2435,7 @@ function DinerMenuContent() {
           onClose={() => setCustomizingProduct(null)}
           onConfirm={handleAddCustomized}
           lang={currentLang}
+          isStaff={false}
         />
 
         {/* Visor 3D */}
@@ -2526,6 +2588,7 @@ function DinerMenuContent() {
           onClose={() => setShowTimelineModal(false)}
           tableNumber={tableNumber}
           status={tableOrderStatus}
+          orders={tableOrders}
           onRequestService={() => setShowServiceModal(true)}
           onRequestBill={() => setShowDirectBillModal(true)}
         />

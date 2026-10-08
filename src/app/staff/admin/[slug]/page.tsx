@@ -25,6 +25,7 @@ import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
 import { Product, Category, Restaurant } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
+import { MANDATORY_EU_ALLERGENS } from '@/lib/allergens'
 
 export default function AdminMenuPage() {
   const params = useParams()
@@ -42,6 +43,7 @@ export default function AdminMenuPage() {
 
   // Modales de Edición
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [selectedAllergens, setSelectedAllergens] = useState<string[]>([])
   const [isNewProductModalOpen, setIsNewProductModalOpen] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const [editingCatId, setEditingCatId] = useState<string | null>(null)
@@ -421,6 +423,7 @@ export default function AdminMenuPage() {
                   <button
                     onClick={() => {
                       setEditingProduct(null)
+                      setSelectedAllergens([])
                       setIsNewProductModalOpen(true)
                     }}
                     className="px-4 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs sm:text-sm shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
@@ -507,12 +510,22 @@ export default function AdminMenuPage() {
                           <h3 className="font-extrabold text-xs sm:text-sm text-white truncate">
                             {product.name}
                           </h3>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {product.original_price != null && product.original_price > product.price && (
+                              <span className="line-through text-slate-500 text-xs font-bold tabular-nums">
+                                {formatCurrency(product.original_price)}
+                              </span>
+                            )}
                             <span className="font-black text-xs text-cyan-400 tabular-nums">
                               {product.price_type === 'weight'
                                 ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
                                 : formatCurrency(product.price)}
                             </span>
+                            {product.original_price != null && product.original_price > product.price && (
+                              <span className="text-[9px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded border border-emerald-500/20">
+                                -{Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -537,6 +550,7 @@ export default function AdminMenuPage() {
                             type="button"
                             onClick={() => {
                               setEditingProduct(product)
+                              setSelectedAllergens(product.allergens || [])
                               setIsNewProductModalOpen(true)
                             }}
                             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
@@ -836,13 +850,17 @@ Agua Mineral 500ml 2,00€`)}
                   onSubmit={e => {
                     e.preventDefault()
                     const fd = new FormData(e.currentTarget)
+                    const origRaw = String(fd.get('original_price') || '').trim()
+                    const origParsed = origRaw ? parseFloat(origRaw) : null
                     handleSaveProduct({
                       id: editingProduct?.id,
                       name: String(fd.get('name') || ''),
                       price: parseFloat(String(fd.get('price') || '0')),
+                      original_price: origParsed && !isNaN(origParsed) && origParsed > 0 ? origParsed : null,
                       category_id: String(fd.get('category_id') || categories[0]?.id || 'cat-1'),
                       description: String(fd.get('description') || ''),
                       image_url: String(fd.get('image_url') || ''),
+                      allergens: selectedAllergens,
                       price_type: fd.get('is_weight') ? 'weight' : 'unit',
                       price_unit: fd.get('is_weight') ? '100g' : undefined,
                     })
@@ -875,19 +893,34 @@ Agua Mineral 500ml 2,00€`)}
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-slate-400 font-bold block">Categoría *</label>
-                      <select
-                        name="category_id"
-                        defaultValue={editingProduct?.category_id || categories[0]?.id}
-                        className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-purple-500"
-                      >
-                        {categories.map(c => (
-                          <option key={c.id} value={c.id}>
-                            {c.name}
-                          </option>
-                        ))}
-                      </select>
+                      <label className="text-slate-400 font-bold block flex items-center justify-between">
+                        <span>Precio Habitual (€)</span>
+                        <span className="text-[10px] text-slate-500 font-normal">Tachado</span>
+                      </label>
+                      <input
+                        name="original_price"
+                        type="number"
+                        step="0.01"
+                        defaultValue={editingProduct?.original_price || ''}
+                        placeholder="Ej: 18.00 (Opcional)"
+                        className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-purple-500 tabular-nums"
+                      />
                     </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-slate-400 font-bold block">Categoría *</label>
+                    <select
+                      name="category_id"
+                      defaultValue={editingProduct?.category_id || categories[0]?.id}
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-purple-500"
+                    >
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-1">
@@ -909,6 +942,42 @@ Agua Mineral 500ml 2,00€`)}
                       placeholder="https://images.unsplash.com/..."
                       className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-purple-500"
                     />
+                  </div>
+
+                  {/* Selector de 14 Alérgenos Obligatorios UE 1169/2011 */}
+                  <div className="space-y-2 pt-1 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <label className="text-slate-300 font-bold block text-xs">
+                        Alérgenos UE (Reg. 1169/2011)
+                      </label>
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {selectedAllergens.length > 0 ? `${selectedAllergens.length} seleccionados` : 'Ninguno (Apto general)'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                      {MANDATORY_EU_ALLERGENS.map(al => {
+                        const isSelected = selectedAllergens.includes(al.id)
+                        return (
+                          <button
+                            key={al.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAllergens(prev =>
+                                prev.includes(al.id) ? prev.filter(x => x !== al.id) : [...prev, al.id]
+                              )
+                            }}
+                            className={`px-2 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all text-left border cursor-pointer select-none ${
+                              isSelected
+                                ? 'bg-amber-500/20 border-amber-400 text-amber-200'
+                                : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300'
+                            }`}
+                          >
+                            <span className="text-sm flex-shrink-0">{al.icon}</span>
+                            <span className="truncate">{al.name.es}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 pt-1">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { sendPilotLeadNotification } from '@/lib/email'
 import { verifyTurnstileToken } from '@/lib/cloudflare'
+import { checkRateLimit } from '@/lib/server-state'
 
 interface PilotRequestBody {
   restaurantName: string
@@ -16,6 +17,16 @@ interface PilotRequestBody {
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate Limiting de seguridad: Máximo 5 solicitudes cada 10 minutos por IP
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local-client'
+    const rateLimitKey = `pilot_lead_${clientIp}`
+    if (!checkRateLimit(rateLimitKey, 5, 10 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: 'Has alcanzado el límite de solicitudes de contacto. Por favor inténtalo más tarde.' },
+        { status: 429 }
+      )
+    }
+
     const body: PilotRequestBody = await req.json()
 
     if (!body.restaurantName || !body.contactName || !body.phone) {

@@ -42,7 +42,21 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const parsedTableNum = Math.min(25, Math.max(1, parseInt(String(table_number || '1'), 10) || 1))
+    if (table_number === undefined || table_number === null || table_number === '') {
+      return NextResponse.json(
+        { error: 'El número de mesa es obligatorio.' },
+        { status: 400 }
+      )
+    }
+
+    const parsedTableNum = parseInt(String(table_number), 10)
+    if (isNaN(parsedTableNum) || parsedTableNum < 1 || parsedTableNum > 25) {
+      return NextResponse.json(
+        { error: 'Mesa inexistente. El local dispone de mesas 1 a 25.' },
+        { status: 400 }
+      )
+    }
+
     const sanitizedCallType = sanitizeText(String(call_type || 'call_waiter'), 50)
     const restaurant = await getRestaurantBySlug(slug)
     const restaurantId = getTargetRestaurantId(restaurant?.id, slug)

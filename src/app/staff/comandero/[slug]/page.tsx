@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
-import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard, Loader2 } from 'lucide-react'
+import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard, Loader2, Package } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector, TableStatusType } from '@/components/comandero/TableSelector'
@@ -11,6 +11,7 @@ import { ProductModifierModal } from '@/components/comandero/ProductModifierModa
 import { PreBillModal } from '@/components/comandero/PreBillModal'
 import { OrderSummaryBar } from '@/components/comandero/OrderSummaryBar'
 import { CartDrawer } from '@/components/menu/CartDrawer'
+import { QuickStockModal } from '@/components/comandero/QuickStockModal'
 import { Product, Category, Table, CartItem, Restaurant, Order, CourseType } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
@@ -51,6 +52,7 @@ export default function WaiterComanderoPage() {
   const [tableDiscounts, setTableDiscounts] = useState<Record<string | number, number>>({})
   const [showPreBill, setShowPreBill] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
+  const [showQuickStockModal, setShowQuickStockModal] = useState(false)
   const [transferTargetTable, setTransferTargetTable] = useState<string>('')
   const currentTableNum = selectedTable?.table_number || 1
   const cart = tableCarts[currentTableNum] || []
@@ -607,6 +609,17 @@ export default function WaiterComanderoPage() {
         if (currentTables.length > 0) {
           setSelectedTable(prev => prev || currentTables[0])
         }
+
+        // Cargar catálogo y disponibilidad real del servidor
+        try {
+          fetch(`/api/admin/menu?slug=${slug}`)
+            .then(r => r.json())
+            .then(data => {
+              if (data?.products && data.products.length > 0) setProducts(data.products)
+              if (data?.categories && data.categories.length > 0) setCategories(data.categories)
+            })
+            .catch(() => {})
+        } catch {}
       }
 
       await syncServerData()
@@ -698,6 +711,18 @@ export default function WaiterComanderoPage() {
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('focus', handleVisibilityChange)
 
+    // Manejar evento de actualización de carta o cambio de disponibilidad de platos
+    const handleMenuUpdated = () => {
+      fetch(`/api/admin/menu?slug=${slug}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data?.products && data.products.length > 0) setProducts(data.products)
+          if (data?.categories && data.categories.length > 0) setCategories(data.categories)
+        })
+        .catch(() => {})
+    }
+    window.addEventListener('fluxo_menu_updated', handleMenuUpdated)
+
     return () => {
       if (realtimeChannel && supabase) {
         supabase.removeChannel(realtimeChannel)
@@ -707,6 +732,7 @@ export default function WaiterComanderoPage() {
       if (popupTimerRef.current) clearTimeout(popupTimerRef.current)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleVisibilityChange)
+      window.removeEventListener('fluxo_menu_updated', handleMenuUpdated)
     }
   }, [slug])
 
@@ -843,9 +869,17 @@ export default function WaiterComanderoPage() {
   // Identificar bebidas previamente ordenadas en la sesión actual de la mesa seleccionada
   const previousDrinksInTable = React.useMemo(() => {
     if (!selectedTable) return []
+    // Si la mesa está libre o liberada, no hay comensales ni bebidas previas para repetir
+    const currentTableStatus = tableStatuses[selectedTable.table_number] || 'free'
+    if (currentTableStatus === 'free') return []
+
+    // Filtrar estrictamente comandas activas de la sesión actual de la mesa (no pagadas ni canceladas)
     const tableOrders = serverOrders.filter(
-      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString())
+      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+           o.status !== 'paid' && o.status !== 'cancelled'
     )
+    if (tableOrders.length === 0) return []
+
     const drinksMap: Record<string, { product: Product; quantity: number }> = {}
     tableOrders.forEach(ord => {
       (ord.order_items || []).forEach(item => {
@@ -865,7 +899,7 @@ export default function WaiterComanderoPage() {
       })
     })
     return Object.values(drinksMap)
-  }, [selectedTable, serverOrders, products])
+  }, [selectedTable, serverOrders, products, tableStatuses])
   // Listas de Tareas y Avisos Pendientes para el Mozo (Reactivo SSOT)
   // Filtran SOLO por status — igual que service calls filtra solo por status === 'pending'.
   // Si items están vacíos es un estado transitorio; el ticket igual se muestra.
@@ -1271,6 +1305,8 @@ export default function WaiterComanderoPage() {
           tableStatuses={tableStatuses}
           tableDwellMinutes={tableDwellMinutes}
           onSelectTable={handleSelectTableAndClearAlerts}
+          onOpenQuickStock={() => setShowQuickStockModal(true)}
+          pausedItemsCount={products.filter(p => p.is_available === false).length}
         />
 
         {/* PANEL DETALLADO DE ESTADO PARA LA MESA SELECCIONADA */}
@@ -1671,46 +1707,75 @@ export default function WaiterComanderoPage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {filteredProducts.map((prod) => (
-                <button
-                  key={prod.id}
-                  onClick={() => setCustomizingProduct(prod)}
-                  className="group bg-white border border-slate-200 hover:border-blue-700/50 active:scale-97 rounded-2xl overflow-hidden text-left flex flex-col justify-between shadow-sm hover:shadow-md transition-all touch-press h-48"
-                >
-                  <div
-                    style={{ position: 'relative', width: '100%', height: '112px', maxHeight: '120px', overflow: 'hidden' }}
-                    className="bg-slate-100 flex-shrink-0"
+              {filteredProducts.map((prod) => {
+                const isUnavailable = prod.is_available === false
+                return (
+                  <button
+                    key={prod.id}
+                    onClick={() => setCustomizingProduct(prod)}
+                    className={`group bg-white border active:scale-97 rounded-2xl overflow-hidden text-left flex flex-col justify-between shadow-sm hover:shadow-md transition-all touch-press h-48 relative ${
+                      isUnavailable
+                        ? 'border-rose-300 opacity-75 bg-rose-50/20'
+                        : 'border-slate-200 hover:border-blue-700/50'
+                    }`}
                   >
-                    {prod.image_url ? (
-                      <Image
-                        src={prod.image_url}
-                        alt={prod.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        sizes="(max-width: 768px) 50vw, 250px"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
-                        <Utensils className="w-6 h-6 stroke-[1.2]" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    
-                    <span className="absolute bottom-1.5 left-2 px-2 py-0.5 rounded-lg bg-white/95 text-[11px] font-black text-blue-900 shadow-sm">
-                      {formatCurrency(prod.price)}
-                    </span>
-                  </div>
+                    <div
+                      style={{ position: 'relative', width: '100%', height: '112px', maxHeight: '120px', overflow: 'hidden' }}
+                      className="bg-slate-100 flex-shrink-0"
+                    >
+                      {prod.image_url ? (
+                        <Image
+                          src={prod.image_url}
+                          alt={prod.name}
+                          fill
+                          className={`object-cover group-hover:scale-105 transition-transform duration-300 ${isUnavailable ? 'grayscale' : ''}`}
+                          sizes="(max-width: 768px) 50vw, 250px"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
+                          <Utensils className="w-6 h-6 stroke-[1.2]" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      
+                      {isUnavailable && (
+                        <span className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-rose-600 text-[10px] font-black uppercase text-white shadow-md z-10 flex items-center gap-1">
+                          Agotado
+                        </span>
+                      )}
 
-                  <div className="p-2.5 flex items-center justify-between gap-1.5 flex-1">
-                    <h4 className="font-bold text-slate-900 text-xs leading-snug line-clamp-2">
-                      {prod.name}
-                    </h4>
-                    <span className="w-7 h-7 rounded-xl bg-blue-900 text-white flex items-center justify-center shadow-sm flex-shrink-0 group-hover:bg-blue-800 transition-colors">
-                      <Plus className="w-4 h-4 stroke-[3]" />
-                    </span>
-                  </div>
-                </button>
-              ))}
+                      <div className="absolute bottom-1.5 left-2 flex items-center gap-1.5 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-lg bg-white/95 text-[11px] font-black text-blue-900 shadow-sm flex items-center gap-1">
+                          {prod.original_price != null && prod.original_price > prod.price && (
+                            <span className="line-through text-slate-400 text-[10px] font-bold">
+                              {formatCurrency(prod.original_price)}
+                            </span>
+                          )}
+                          <span>{formatCurrency(prod.price)}</span>
+                        </span>
+                        {prod.original_price != null && prod.original_price > prod.price && (
+                          <span className="px-1.5 py-0.5 rounded-lg bg-emerald-600 text-white text-[9px] font-black uppercase shadow-sm">
+                            -{Math.round(((prod.original_price - prod.price) / prod.original_price) * 100)}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 flex items-center justify-between gap-1.5 flex-1">
+                      <h4 className="font-bold text-slate-900 text-xs leading-snug line-clamp-2">
+                        {prod.name}
+                      </h4>
+                      <span className={`w-7 h-7 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 transition-colors ${
+                        isUnavailable
+                          ? 'bg-rose-500 text-white'
+                          : 'bg-blue-900 text-white group-hover:bg-blue-800'
+                      }`}>
+                        <Plus className="w-4 h-4 stroke-[3]" />
+                      </span>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
         </main>
@@ -1719,6 +1784,7 @@ export default function WaiterComanderoPage() {
           product={customizingProduct}
           onClose={() => setCustomizingProduct(null)}
           onConfirm={handleAddItemToComanda}
+          isStaff={true}
         />
 
         <OrderSummaryBar
@@ -1864,6 +1930,21 @@ export default function WaiterComanderoPage() {
             </div>
           </div>
         )}
+
+        {/* MODAL CONTROL RÁPIDO DE STOCK ("SE AGOTÓ") */}
+        <QuickStockModal
+          isOpen={showQuickStockModal}
+          onClose={() => setShowQuickStockModal(false)}
+          slug={slug}
+          onStockChanged={() => {
+            fetch(`/api/admin/menu?slug=${slug}`)
+              .then(r => r.json())
+              .then(data => {
+                if (data?.products && data.products.length > 0) setProducts(data.products)
+              })
+              .catch(() => {})
+          }}
+        />
 
         </div>
       </TenantProvider>

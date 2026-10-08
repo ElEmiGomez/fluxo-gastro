@@ -46,13 +46,16 @@ flowchart TD
 │ 📈 2. MARKETING & VENTAS (Captación & Go-to-Market)                     │
 │  ├─ [x] Plantilla Carta Fija A4 completada y aprobada (PDF 386 KB)      │
 │  ├─ [x] Resumen ejecutivo de 2 páginas validado                         │
-│  └─ [⏸️] Prospección activa en Noia en STANDBY hasta certificar Fix     │
+│  ├─ [⏳ EN CURSO] Prospección activa Cliente #1 en Noia (Piloto 14 Días) │
+│  └─ [⏳ EN CURSO] Preparación de pitch de cierre e Informe Día 14       │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🎨 3. DISEÑO DE MARCA & UI/UX (Identidad & Ergonomía Visual)            │
 │  ├─ [x] Modal de error de red con opción clara de reintento para cliente│
 │  ├─ [x] Isotipo invertido oficial de Fluxo en documentos PDF            │
+│  ├─ [⏳ EN CURSO] Kit Físico Piloto: Artes finales de peanas QR A5,     │
+│  │     chuleta adhesiva de barra y cartas impresas para el local real   │
 │  └─ [ ] Tarea UX: Notificación persistente en mesa de servicio pedido   │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
@@ -62,14 +65,13 @@ flowchart TD
 │  ├─ [x] Creación y activación de tabla system_error_logs en Supabase    │
 │  ├─ [x] Logging no bloqueante con stack trace y error code en servidor  │
 │  ├─ [x] Pruebas concurrentes multi-mesa (Mesa 1 y Mesa 7) exitosas      │
-│  ├─ [⏳ Paso 1 - En Curso] Implementación del Administrador de Cartas    │
-│  ├─ [📋 Paso 2] Landing Page: Retirar los 3 restaurantes de prueba y    │
-│  │     conservar exclusivamente el botón principal para probar la app   │
-│  ├─ [📋 Paso 3] Validación Integral: Corroborar funcionamiento general   │
-│  │     de toda la app junto con los nuevos cambios                      │
-│  ├─ [📋 Paso 4] Validación Admin de Cartas: Corroborar que la gestión    │
-│  │     de platos, categorías y precios funcione correctamente           │
-│  ├─ [ ] Invariante FK en service_calls.table_number hacia tables        │
+│  ├─ [x] Administrador de Cartas y Fixeo UX implementados                │
+│  ├─ [x] Landing Page simplificada (solo botón principal a simulador)    │
+│  ├─ [⏳ En Curso - Bloque 1] Legal & Seguridad: LSSI-CE, Exención      │
+│  │     Veri*Factu, 14 Alérgenos UE, Rate Limiting y Secret Isolation    │
+│  ├─ [⏳ En Curso - Bloque 2] Validación de Producto & Robustez UX:       │
+│  │     Validación integral app, test del admin, persistencia en mesa,   │
+│  │     y clave foránea en service_calls.table_number                    │
 │  └─ [ ] Certificación integral y refactorización modular SOLID          │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │

@@ -6,11 +6,13 @@ import { X, Plus, Minus, Check, Flame, Salad, Sparkles, Edit3, Utensils, Gift, S
 import { Product, CourseType } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { getTranslation, translateProductName, translateProductDescription } from '@/lib/i18n'
+import { getAllergen, getAllergenName } from '@/lib/allergens'
 
 interface ProductModifierModalProps {
   product: Product | null
   onClose: () => void
   lang?: string
+  isStaff?: boolean
   onConfirm: (
     product: Product,
     quantity: number,
@@ -26,6 +28,7 @@ export function ProductModifierModal({
   product,
   onClose,
   lang = 'gl',
+  isStaff = false,
   onConfirm,
 }: ProductModifierModalProps) {
   const t = (k: string) => getTranslation(lang, k)
@@ -133,19 +136,21 @@ export function ProductModifierModal({
       ...selectedPreferences,
     ].filter(Boolean) as string[]
 
+    const effectiveComplimentary = Boolean(isStaff && isComplimentary)
+
     onConfirm(
       product,
       quantity,
       combinedPills,
       notes.trim(),
       course,
-      isComplimentary,
+      effectiveComplimentary,
       product.price_type === 'weight' ? weightGrams : undefined
     )
     onClose()
   }
 
-  const unitOrWeightPrice = isComplimentary
+  const unitOrWeightPrice = (isStaff && isComplimentary)
     ? 0
     : product.price_type === 'weight'
     ? product.price * (weightGrams / (product.price_unit === 'kg' ? 1000 : 100))
@@ -199,10 +204,17 @@ export function ProductModifierModal({
                 {translateProductName(lang, product.id, product.name)}
               </h3>
             </div>
-            <div className="px-3 py-1.5 rounded-xl bg-white/95 text-blue-900 text-sm font-black shadow-lg tabular-nums flex-shrink-0">
-              {product.price_type === 'weight'
-                ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
-                : formatCurrency(product.price)}
+            <div className="px-3 py-1.5 rounded-xl bg-white/95 text-blue-900 text-sm font-black shadow-lg tabular-nums flex-shrink-0 flex items-center gap-1.5">
+              {product.original_price != null && product.original_price > product.price && (
+                <span className="line-through text-slate-400 text-xs font-bold">
+                  {formatCurrency(product.original_price)}
+                </span>
+              )}
+              <span>
+                {product.price_type === 'weight'
+                  ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
+                  : formatCurrency(product.price)}
+              </span>
             </div>
           </div>
         </div>
@@ -216,6 +228,43 @@ export function ProductModifierModal({
               <p className="text-xs text-slate-600 leading-relaxed font-medium">
                 {translateProductDescription(lang, product.id, product.description)}
               </p>
+            </div>
+          )}
+
+          {/* INFORMACIÓN SOBRE ALÉRGENOS OFICIALES UE (REG. 1169/2011) */}
+          {product.allergens && product.allergens.length > 0 ? (
+            <div className="p-3.5 bg-amber-50/90 rounded-2xl border border-amber-200/90 shadow-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-amber-950 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span>⚠️</span>
+                  <span>Alérgenos Presentes (Reg. UE 1169/2011)</span>
+                </span>
+                <span className="text-[10px] font-extrabold text-amber-900 bg-amber-200/70 px-2 py-0.5 rounded-full">
+                  {product.allergens.length} declarados
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {product.allergens.map((aId) => {
+                  const al = getAllergen(aId)
+                  return (
+                    <span
+                      key={aId}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-amber-950 text-xs font-black shadow-2xs"
+                    >
+                      <span>{al?.icon || '⚠️'}</span>
+                      <span>{getAllergenName(aId, (lang as any) || 'gl')}</span>
+                    </span>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-amber-900 font-medium leading-relaxed pt-1 border-t border-amber-200/60">
+                🛡️ <strong>Protocolo Alimentario:</strong> Elaborado en cocina donde se manipulan otros alimentos. En caso de alergia severa o riesgo de contaminación cruzada, avisa al personal de sala antes de enviar la comanda.
+              </p>
+            </div>
+          ) : (
+            <div className="p-2.5 bg-emerald-50/90 rounded-2xl border border-emerald-200 text-emerald-950 text-xs flex items-center gap-2">
+              <span>✅</span>
+              <span className="font-semibold text-[11px]">Plato sin alérgenos de declaración obligatoria señalados. Consulta con sala ante cualquier duda.</span>
             </div>
           )}
 
@@ -496,20 +545,22 @@ export function ProductModifierModal({
             </div>
           )}
 
-          {/* SECCIÓN 7: INVITACIÓN DE LA CASA (CORTESÍA) Y CANTIDAD */}
-          <div className="flex items-center justify-between pt-2 border-t border-slate-200 gap-2">
-            <button
-              type="button"
-              onClick={() => setIsComplimentary(!isComplimentary)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                isComplimentary
-                  ? 'bg-purple-700 text-white font-black shadow-xs ring-2 ring-purple-400'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
-              }`}
-            >
-              <Gift size={14} className={isComplimentary ? 'text-amber-300' : 'text-purple-600'} />
-              <span>{isComplimentary ? '🎁 Invita la Casa (0,00 €)' : '🎁 Marcar Cortesía'}</span>
-            </button>
+          {/* SECCIÓN 7: INVITACIÓN DE LA CASA (CORTESÍA - EXCLUSIVO MOZO) Y CANTIDAD */}
+          <div className={`flex items-center pt-2 border-t border-slate-200 gap-2 ${isStaff ? 'justify-between' : 'justify-end'}`}>
+            {isStaff && (
+              <button
+                type="button"
+                onClick={() => setIsComplimentary(!isComplimentary)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  isComplimentary
+                    ? 'bg-purple-700 text-white font-black shadow-xs ring-2 ring-purple-400'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                }`}
+              >
+                <Gift size={14} className={isComplimentary ? 'text-amber-300' : 'text-purple-600'} />
+                <span>{isComplimentary ? '🎁 Invita la Casa (0,00 €)' : '🎁 Marcar Cortesía'}</span>
+              </button>
+            )}
 
             <div className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-xs">
               <button

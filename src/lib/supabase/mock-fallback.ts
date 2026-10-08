@@ -166,6 +166,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80',
       model_3d_url: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
       is_available: true,
+      allergens: ['gluten', 'dairy'],
     },
     {
       id: 'p-ent-1',
@@ -177,6 +178,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1531749668029-2db88e4276c7?auto=format&fit=crop&w=800&q=80',
       model_3d_url: null,
       is_available: true,
+      allergens: ['gluten', 'dairy', 'eggs'],
     },
     {
       id: 'p-tab-1',
@@ -188,6 +190,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
       model_3d_url: null,
       is_available: true,
+      allergens: ['gluten', 'dairy', 'eggs'],
     },
     {
       id: 'p-ens-1',
@@ -199,6 +202,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
       model_3d_url: null,
       is_available: true,
+      allergens: ['gluten', 'dairy', 'eggs', 'mustard'],
     },
     {
       id: 'p-pp-1',
@@ -210,6 +214,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=800&q=80',
       model_3d_url: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
       is_available: true,
+      allergens: ['gluten', 'dairy', 'eggs'],
     },
     {
       id: 'p-gal-1',
@@ -223,6 +228,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80',
       model_3d_url: null,
       is_available: true,
+      allergens: [],
     },
     {
       id: 'p-bur-1',
@@ -234,6 +240,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
       model_3d_url: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
       is_available: true,
+      allergens: ['gluten', 'dairy'],
     },
     {
       id: 'p-bur-gallaecia',
@@ -245,6 +252,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=800&q=80',
       model_3d_url: null,
       is_available: true,
+      allergens: ['gluten', 'dairy'],
     },
     {
       id: 'p-pos-1',
@@ -256,6 +264,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
       model_3d_url: null,
       is_available: true,
+      allergens: ['gluten', 'dairy', 'eggs'],
     },
     {
       id: 'p-pos-2',
@@ -267,6 +276,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       image_url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80',
       model_3d_url: null,
       is_available: true,
+      allergens: ['gluten', 'dairy', 'eggs'],
     },
     {
       id: 'p-caf-1',

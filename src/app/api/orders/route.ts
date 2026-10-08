@@ -27,6 +27,7 @@ import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { PRODUCT_NAMES } from '@/lib/i18n'
 import { Order, OrderItem, OrderStatus, Product } from '@/types/database.types'
+import { verifyStaffRequest } from '@/lib/auth/pin-security'
 
 const isUuid = (str?: string | null): boolean =>
   Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str))
@@ -340,7 +341,11 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      const itemPriceToCharge = Number(catalogProduct.price) || 0
+      // Cortesía ("Invita la casa"): Solo autorizada para personal de sala autenticado
+      const isStaffSender = verifyStaffRequest(req, slug, ['comandero', 'admin', 'kitchen'])
+      const isComplimentary = Boolean(isStaffSender && (item.is_complimentary || (item.notes && item.notes.includes('[🎁 INVITACIÓN DE LA CASA]'))))
+
+      const itemPriceToCharge = isComplimentary ? 0 : (Number(catalogProduct.price) || 0)
       computedTotal += itemPriceToCharge * quantity
 
       const sanitizedNotes = item.notes ? sanitizeText(item.notes, 200) : null
@@ -352,6 +357,8 @@ export async function POST(req: NextRequest) {
         quantity,
         notes: sanitizedNotes || null,
         product: catalogProduct,
+        is_complimentary: isComplimentary,
+        course: item.course || 'first',
       })
     }
 
