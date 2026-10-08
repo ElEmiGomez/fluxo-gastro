@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect } from 'react'
 
@@ -12,7 +12,6 @@ export function SecurityProtection() {
       const alertStyle = 'color: #f59e0b; font-size: 13px; font-weight: 700;'
 
       try {
-        console.clear()
         console.log('%cFLUXO GASTRO OS 🛡️', bannerStyle)
         console.log('%c¡ALTO! / STOP!', titleStyle)
         console.log(
@@ -29,42 +28,6 @@ export function SecurityProtection() {
     }
 
     printSecurityWarning()
-
-    // 2. Prevención de menú contextual (clic derecho) para evitar inspección rápida en modo demostración
-    const handleContextMenu = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        return
-      }
-      e.preventDefault()
-    }
-
-    // 3. Bloqueo de atajos de teclado de inspección rápida (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U)
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F12') {
-        e.preventDefault()
-        printSecurityWarning()
-        return false
-      }
-      if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
-        e.preventDefault()
-        printSecurityWarning()
-        return false
-      }
-      if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
-        e.preventDefault()
-        printSecurityWarning()
-        return false
-      }
-    }
-
-    window.addEventListener('contextmenu', handleContextMenu)
-    window.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      window.removeEventListener('contextmenu', handleContextMenu)
-      window.removeEventListener('keydown', handleKeyDown)
-    }
   }, [])
 
   return null

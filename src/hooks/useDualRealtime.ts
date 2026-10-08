@@ -148,6 +148,12 @@ export function useDualRealtime({
             }
           } catch {}
         }
+        sseEventSource.onerror = () => {
+          if (sseEventSource) {
+            sseEventSource.close()
+            sseEventSource = null
+          }
+        }
       } catch {}
     }
 

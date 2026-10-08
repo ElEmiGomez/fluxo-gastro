@@ -650,29 +650,37 @@ export default function WaiterComanderoPage() {
       }
 
       // 2. SSE (Server-Sent Events) de respaldo para testing local sin Supabase
-      try {
-        let sseDebounceTimer: any = null
-        const triggerDebouncedSync = () => {
-          if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
-          sseDebounceTimer = setTimeout(() => {
-            syncServerData()
-          }, 300)
-        }
-
-        sseEventSource = new EventSource('/api/events')
-        sseEventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
-            if (data.type === 'connected') return
-            if (!data.slug || data.slug === slug) {
-              triggerDebouncedSync()
-            }
-          } catch {
-            // ignore
+      if (!supabase) {
+        try {
+          let sseDebounceTimer: any = null
+          const triggerDebouncedSync = () => {
+            if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
+            sseDebounceTimer = setTimeout(() => {
+              syncServerData()
+            }, 300)
           }
+
+          sseEventSource = new EventSource('/api/events')
+          sseEventSource.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data)
+              if (data.type === 'connected') return
+              if (!data.slug || data.slug === slug) {
+                triggerDebouncedSync()
+              }
+            } catch {
+              // ignore
+            }
+          }
+          sseEventSource.onerror = () => {
+            if (sseEventSource) {
+              sseEventSource.close()
+              sseEventSource = null
+            }
+          }
+        } catch (err) {
+          console.log('SSE fallback to polling:', err)
         }
-      } catch (err) {
-        console.log('SSE fallback to polling:', err)
       }
 
       // 3. Soft Polling de respaldo cada 4.5s

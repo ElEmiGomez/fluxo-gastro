@@ -194,28 +194,36 @@ export default function KitchenKDSPage() {
         .subscribe()
     }
 
-    // B. SSE de respaldo para modo offline/local
-    try {
-      let sseDebounceTimer: any = null
-      const triggerDebouncedFetch = () => {
-        if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
-        sseDebounceTimer = setTimeout(() => {
-          fetchServerOrders()
-        }, 300)
-      }
+    // B. SSE de respaldo para modo offline/local (solo si no hay canal de Supabase)
+    if (!supabase) {
+      try {
+        let sseDebounceTimer: any = null
+        const triggerDebouncedFetch = () => {
+          if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
+          sseDebounceTimer = setTimeout(() => {
+            fetchServerOrders()
+          }, 300)
+        }
 
-      sseEventSource = new EventSource('/api/events')
-      sseEventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          if (data.type === 'connected') return
-          if (!data.slug || data.slug === slug) {
-            triggerDebouncedFetch()
+        sseEventSource = new EventSource('/api/events')
+        sseEventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
+            if (data.type === 'connected') return
+            if (!data.slug || data.slug === slug) {
+              triggerDebouncedFetch()
+            }
+          } catch {}
+        }
+        sseEventSource.onerror = () => {
+          if (sseEventSource) {
+            sseEventSource.close()
+            sseEventSource = null
           }
-        } catch {}
+        }
+      } catch (err) {
+        console.log('SSE fallback not active:', err)
       }
-    } catch (err) {
-      console.log('SSE fallback not active:', err)
     }
 
     // C. Soft Polling de Respaldo cada 4.5 segundos (R4 de Interface Contracts)

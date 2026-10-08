@@ -85,6 +85,12 @@ export function CallWaiterButton({
           // ignore
         }
       }
+      sse.onerror = () => {
+        if (sse) {
+          sse.close()
+          sse = null
+        }
+      }
     } catch {
       // fallback
     }

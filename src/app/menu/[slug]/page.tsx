@@ -552,70 +552,78 @@ function DinerMenuContent() {
         .subscribe()
     }
 
-    try {
-      sseEventSource = new EventSource('/api/events')
-      sseEventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
+    if (!supabase) {
+      try {
+        sseEventSource = new EventSource('/api/events')
+        sseEventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
 
-          // Si el mozo liberó esta mesa específica, limpiar estado y carrito residual
-          if (
-            data.type === 'table_freed' &&
-            (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
-          ) {
-            setCart([])
-            setTableOrderStatus(null)
-            setIsTablePaid(false)
-            setHasRequestedBill(false)
-            userRequestedBillTimeRef.current = null
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
-              localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
-            }
-            if (data.new_session_id) {
-              setSessionId(data.new_session_id)
-            }
-            return
-          }
-
-          // Notificación en vivo de cuenta pagada / mesa cobrada
-          if (
-            data.type === 'table_bill_paid' &&
-            (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
-          ) {
-            if (userRequestedBillTimeRef.current || hasRequestedBill || tableOrderStatus) {
-              setIsTablePaid(true)
+            // Si el mozo liberó esta mesa específica, limpiar estado y carrito residual
+            if (
+              data.type === 'table_freed' &&
+              (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
+            ) {
+              setCart([])
               setTableOrderStatus(null)
+              setIsTablePaid(false)
               setHasRequestedBill(false)
               userRequestedBillTimeRef.current = null
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
+                localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
+                sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+                sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+                sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
+              }
+              if (data.new_session_id) {
+                setSessionId(data.new_session_id)
+              }
+              return
             }
-            return
-          }
 
-          if (data.type === 'menu_updated') {
-            loadData()
-            return
-          }
+            // Notificación en vivo de cuenta pagada / mesa cobrada
+            if (
+              data.type === 'table_bill_paid' &&
+              (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
+            ) {
+              if (userRequestedBillTimeRef.current || hasRequestedBill || tableOrderStatus) {
+                setIsTablePaid(true)
+                setTableOrderStatus(null)
+                setHasRequestedBill(false)
+                userRequestedBillTimeRef.current = null
+              }
+              return
+            }
 
-          if (data.type === 'connected') return
+            if (data.type === 'menu_updated') {
+              loadData()
+              return
+            }
 
-          if (
-            data.tableNumber?.toString() === tableNumber?.toString() ||
-            data.table_number?.toString() === tableNumber?.toString() ||
-            data.type?.startsWith('order_') ||
-            data.type?.startsWith('service_')
-          ) {
-            triggerDebouncedCheck()
+            if (data.type === 'connected') return
+
+            if (
+              data.tableNumber?.toString() === tableNumber?.toString() ||
+              data.table_number?.toString() === tableNumber?.toString() ||
+              data.type?.startsWith('order_') ||
+              data.type?.startsWith('service_')
+            ) {
+              triggerDebouncedCheck()
+            }
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
         }
+        sseEventSource.onerror = () => {
+          if (sseEventSource) {
+            sseEventSource.close()
+            sseEventSource = null
+          }
+        }
+      } catch {
+        // fallback
       }
-    } catch {
-      // fallback
     }
 
     // Soft Polling de respaldo cada 4.5s
