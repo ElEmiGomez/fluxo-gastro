@@ -44,8 +44,12 @@ export async function GET(req: NextRequest) {
             .eq('restaurant_id', rest.id)
             .order('order_index')
           if (dbCats && dbCats.length > 0) {
-            categories = dbCats
-            setServerCategories(slug, dbCats)
+            const normalizedCats = dbCats.map((c: any) => ({
+              ...c,
+              name: c.name?.toUpperCase().trim() === 'GIN & BEBIDAS' ? 'Bebidas' : c.name,
+            }))
+            categories = normalizedCats
+            setServerCategories(slug, normalizedCats)
           }
 
           const { data: dbProds } = await supabase

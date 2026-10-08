@@ -210,7 +210,7 @@ insert into categories (id, restaurant_id, name, order_index) values
 ('c0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'ENTRADAS', 2),
 ('c0000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-000000000001', 'PLATOS PRINCIPALES', 3),
 ('c0000000-0000-0000-0000-000000000004', 'a0000000-0000-0000-0000-000000000001', 'BURGERS', 4),
-('c0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001', 'GIN & BEBIDAS', 5)
+('c0000000-0000-0000-0000-000000000005', 'a0000000-0000-0000-0000-000000000001', 'Bebidas', 5)
 on conflict (id) do nothing;
 
 insert into products (id, restaurant_id, category_id, name, description, price, image_url, is_available) values

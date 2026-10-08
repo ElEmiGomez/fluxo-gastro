@@ -34,6 +34,8 @@ export const CATEGORY_TRANSLATIONS: Record<'gl' | 'es' | 'en', Record<string, st
     'BEBIDAS CON ALCOHOL': 'Cervezas y Vinos',
     'TRAGOS': 'Tragos y Cócteles',
     'GIN': 'Gin Tonics',
+    'GIN & BEBIDAS': 'Bebidas',
+    'BEBIDAS': 'Bebidas',
   },
   gl: {
     'NUESTRAS PROMOS': 'As Nosas Promos',
@@ -51,6 +53,8 @@ export const CATEGORY_TRANSLATIONS: Record<'gl' | 'es' | 'en', Record<string, st
     'BEBIDAS CON ALCOHOL': 'Cervexas e Viños',
     'TRAGOS': 'Tragos e Cócteles',
     'GIN': 'Xinebras e Tonics',
+    'GIN & BEBIDAS': 'Bebidas',
+    'BEBIDAS': 'Bebidas',
   },
   en: {
     'NUESTRAS PROMOS': 'Special Offers',
@@ -68,6 +72,8 @@ export const CATEGORY_TRANSLATIONS: Record<'gl' | 'es' | 'en', Record<string, st
     'BEBIDAS CON ALCOHOL': 'Beers & Wine',
     'TRAGOS': 'Cocktails & Spirits',
     'GIN': 'Premium Gin & Tonics',
+    'GIN & BEBIDAS': 'Drinks',
+    'BEBIDAS': 'Drinks',
   },
 }
 
@@ -627,6 +633,9 @@ export function getTranslation(lang: string, key: string): string {
 export function translateCategoryName(lang: string, originalName: string): string {
   const code = resolveLang(lang)
   const upper = (originalName || '').toUpperCase().trim()
+  if (upper === 'GIN & BEBIDAS' || upper.includes('GIN & BEBIDAS')) {
+    return code === 'en' ? 'Drinks' : 'Bebidas'
+  }
   return CATEGORY_TRANSLATIONS[code]?.[upper] || originalName
 }
 

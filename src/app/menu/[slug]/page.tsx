@@ -323,8 +323,12 @@ function DinerMenuContent() {
             .order('order_index')
 
           if (catData && catData.length > 0) {
-            setCategories(catData)
-            setSelectedCategory(catData[0].id)
+            const normalizedCats = catData.map(c => ({
+              ...c,
+              name: c.name?.toUpperCase().trim() === 'GIN & BEBIDAS' ? 'Bebidas' : c.name,
+            }))
+            setCategories(normalizedCats)
+            setSelectedCategory(normalizedCats[0].id)
           }
 
           const { data: prodData } = await supabase
@@ -1591,7 +1595,7 @@ function DinerMenuContent() {
                   <span className="text-xs font-black text-purple-900 truncate">
                     {selectedCategory === 'all'
                       ? 'Todas las categorías'
-                      : categories.find(c => c.id === selectedCategory)?.name || 'Categoría actual'}
+                      : translateCategoryName(currentLang, categories.find(c => c.id === selectedCategory)?.name || 'Categoría actual')}
                   </span>
                 </div>
                 <button
