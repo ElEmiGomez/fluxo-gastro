@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice, Clock, AlertCircle } from 'lucide-react'
+import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice, Clock, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { CartItem, Product, OrderStatus } from '@/types/database.types'
 import { useTenant } from '@/components/tenant/TenantProvider'
 import { formatCurrency } from '@/lib/utils'
@@ -91,7 +91,7 @@ export function CartDrawer({
       name.includes('mencía') ||
       name.includes('vermú')
     )
-  }).slice(0, 3)
+  }).slice(0, 6)
 
   const suggestedDessertsList = (products || []).filter(p => {
     const name = (p.name || '').toLowerCase()
@@ -115,7 +115,91 @@ export function CartDrawer({
       name.includes('café') ||
       name.includes('cafe')
     )
-  }).slice(0, 3)
+  }).slice(0, 6)
+
+  // Navegación horizontal con flechas para Bebidas Sugeridas
+  const drinksScrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollDrinksLeft, setCanScrollDrinksLeft] = useState(false)
+  const [canScrollDrinksRight, setCanScrollDrinksRight] = useState(false)
+
+  const updateDrinksScrollButtons = useCallback(() => {
+    const el = drinksScrollRef.current
+    if (!el) return
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    setCanScrollDrinksLeft(scrollLeft > 6)
+    setCanScrollDrinksRight(scrollLeft < scrollWidth - clientWidth - 6)
+  }, [])
+
+  const handleScrollDrinks = useCallback((direction: 'left' | 'right') => {
+    const el = drinksScrollRef.current
+    if (!el) return
+    const scrollAmount = 180
+    const maxScroll = el.scrollWidth - el.clientWidth
+    if (direction === 'left') {
+      const target = el.scrollLeft - scrollAmount
+      if (target <= 30) el.scrollTo({ left: 0, behavior: 'smooth' })
+      else el.scrollBy({ left: -scrollAmount, behavior: 'smooth' })
+    } else {
+      const target = el.scrollLeft + scrollAmount
+      if (target >= maxScroll - 30) el.scrollTo({ left: maxScroll, behavior: 'smooth' })
+      else el.scrollBy({ left: scrollAmount, behavior: 'smooth' })
+    }
+    triggerHaptic(HAPTIC_PATTERNS.TAP)
+    setTimeout(updateDrinksScrollButtons, 300)
+  }, [updateDrinksScrollButtons])
+
+  useEffect(() => {
+    if (isDrinkSuggestionsOpen) {
+      const timer = setTimeout(updateDrinksScrollButtons, 150)
+      window.addEventListener('resize', updateDrinksScrollButtons)
+      return () => {
+        clearTimeout(timer)
+        window.removeEventListener('resize', updateDrinksScrollButtons)
+      }
+    }
+  }, [isDrinkSuggestionsOpen, updateDrinksScrollButtons])
+
+  // Navegación horizontal con flechas para Postres Sugeridos
+  const dessertsScrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollDessertsLeft, setCanScrollDessertsLeft] = useState(false)
+  const [canScrollDessertsRight, setCanScrollDessertsRight] = useState(false)
+
+  const updateDessertsScrollButtons = useCallback(() => {
+    const el = dessertsScrollRef.current
+    if (!el) return
+    const { scrollLeft, scrollWidth, clientWidth } = el
+    setCanScrollDessertsLeft(scrollLeft > 6)
+    setCanScrollDessertsRight(scrollLeft < scrollWidth - clientWidth - 6)
+  }, [])
+
+  const handleScrollDesserts = useCallback((direction: 'left' | 'right') => {
+    const el = dessertsScrollRef.current
+    if (!el) return
+    const scrollAmount = 180
+    const maxScroll = el.scrollWidth - el.clientWidth
+    if (direction === 'left') {
+      const target = el.scrollLeft - scrollAmount
+      if (target <= 30) el.scrollTo({ left: 0, behavior: 'smooth' })
+      else el.scrollBy({ left: -scrollAmount, behavior: 'smooth' })
+    } else {
+      const target = el.scrollLeft + scrollAmount
+      if (target >= maxScroll - 30) el.scrollTo({ left: maxScroll, behavior: 'smooth' })
+      else el.scrollBy({ left: scrollAmount, behavior: 'smooth' })
+    }
+    triggerHaptic(HAPTIC_PATTERNS.TAP)
+    setTimeout(updateDessertsScrollButtons, 300)
+  }, [updateDessertsScrollButtons])
+
+  useEffect(() => {
+    if (isDessertSuggestionsOpen) {
+      const timer = setTimeout(updateDessertsScrollButtons, 150)
+      window.addEventListener('resize', updateDessertsScrollButtons)
+      return () => {
+        clearTimeout(timer)
+        window.removeEventListener('resize', updateDessertsScrollButtons)
+      }
+    }
+  }, [isDessertSuggestionsOpen, updateDessertsScrollButtons])
 
   if (!isOpen) return null
 
@@ -574,25 +658,69 @@ export function CartDrawer({
                       </div>
                     </button>
                     {isDrinkSuggestionsOpen && (
-                      <div className="p-2.5 pt-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar animate-in slide-in-from-top-1 duration-200">
-                        {suggestedDrinksList.map(drink => (
-                          <button
-                            key={drink.id}
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
-                              if (onAddProduct) {
-                                onAddProduct(drink)
-                              } else if (onAddSuggestedDrink) {
-                                onAddSuggestedDrink(drink.id)
-                              }
-                            }}
-                            className="px-2.5 py-1.5 rounded-xl bg-white border border-amber-300 text-[11px] font-bold text-slate-800 shadow-xs flex items-center gap-1 hover:bg-amber-100 whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
-                          >
-                            <span>{drink.name.includes('Limonada') ? '🍋' : drink.name.includes('Vino') || drink.name.includes('Albariño') || drink.name.includes('Mencía') ? '🍷' : drink.name.includes('Vermú') ? '🍹' : '🍺'} {drink.name.split('(')[0].trim()} ({formatCurrency(drink.price)})</span>
-                            <Plus size={12} className="text-amber-700" />
-                          </button>
-                        ))}
+                      <div className="p-2.5 pt-0 flex items-center gap-1 w-full animate-in slide-in-from-top-1 duration-200">
+                        {/* Flecha Izquierda (PC / Desktop y Accesibilidad) */}
+                        <button
+                          type="button"
+                          onClick={() => handleScrollDrinks('left')}
+                          disabled={!canScrollDrinksLeft}
+                          aria-label="Ver bebidas anteriores"
+                          className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all border ${
+                            canScrollDrinksLeft
+                              ? 'bg-white text-amber-900 hover:text-amber-700 hover:bg-amber-100 border-amber-300 shadow-xs cursor-pointer active:scale-95'
+                              : 'bg-amber-100/40 text-amber-300 border-amber-200/50 cursor-not-allowed opacity-30'
+                          }`}
+                          title="Bebidas anteriores"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Carrusel Desplazable de Bebidas (Táctil en móvil, rueda y flechas en PC) */}
+                        <div
+                          ref={drinksScrollRef}
+                          onScroll={updateDrinksScrollButtons}
+                          className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 touch-pan-x scroll-smooth overscroll-x-contain"
+                          onWheel={(e) => {
+                            if (e.deltaY !== 0 && e.currentTarget.scrollWidth > e.currentTarget.clientWidth) {
+                              e.currentTarget.scrollLeft += e.deltaY
+                            }
+                          }}
+                        >
+                          {suggestedDrinksList.map(drink => (
+                            <button
+                              key={drink.id}
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+                                if (onAddProduct) {
+                                  onAddProduct(drink)
+                                } else if (onAddSuggestedDrink) {
+                                  onAddSuggestedDrink(drink.id)
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl bg-white border border-amber-300 text-[11px] font-bold text-slate-800 shadow-xs flex items-center gap-1 hover:bg-amber-100 whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
+                            >
+                              <span>{drink.name.includes('Limonada') ? '🍋' : drink.name.includes('Vino') || drink.name.includes('Albariño') || drink.name.includes('Mencía') ? '🍷' : drink.name.includes('Vermú') ? '🍹' : '🍺'} {drink.name.split('(')[0].trim()} ({formatCurrency(drink.price)})</span>
+                              <Plus size={12} className="text-amber-700" />
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Flecha Derecha (PC / Desktop y Accesibilidad) */}
+                        <button
+                          type="button"
+                          onClick={() => handleScrollDrinks('right')}
+                          disabled={!canScrollDrinksRight}
+                          aria-label="Ver más bebidas"
+                          className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all border ${
+                            canScrollDrinksRight
+                              ? 'bg-white text-amber-900 hover:text-amber-700 hover:bg-amber-100 border-amber-300 shadow-xs cursor-pointer active:scale-95'
+                              : 'bg-amber-100/40 text-amber-300 border-amber-200/50 cursor-not-allowed opacity-30'
+                          }`}
+                          title="Más bebidas"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     )}
                   </div>
@@ -615,25 +743,69 @@ export function CartDrawer({
                       </div>
                     </button>
                     {isDessertSuggestionsOpen && (
-                      <div className="p-2.5 pt-0 flex items-center gap-1.5 overflow-x-auto no-scrollbar animate-in slide-in-from-top-1 duration-200">
-                        {suggestedDessertsList.map(dessert => (
-                          <button
-                            key={dessert.id}
-                            type="button"
-                            onClick={() => {
-                              triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
-                              if (onAddProduct) {
-                                onAddProduct(dessert)
-                              } else if (onAddSuggestedDessert) {
-                                onAddSuggestedDessert(dessert.id)
-                              }
-                            }}
-                            className="px-2.5 py-1.5 rounded-xl bg-white border border-pink-300 text-[11px] font-bold text-slate-800 shadow-xs flex items-center gap-1 hover:bg-pink-100 whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
-                          >
-                            <span>🍰 {dessert.name.split('(')[0].trim()} ({formatCurrency(dessert.price)})</span>
-                            <Plus size={12} className="text-pink-700" />
-                          </button>
-                        ))}
+                      <div className="p-2.5 pt-0 flex items-center gap-1 w-full animate-in slide-in-from-top-1 duration-200">
+                        {/* Flecha Izquierda (PC / Desktop y Accesibilidad) */}
+                        <button
+                          type="button"
+                          onClick={() => handleScrollDesserts('left')}
+                          disabled={!canScrollDessertsLeft}
+                          aria-label="Ver postres anteriores"
+                          className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all border ${
+                            canScrollDessertsLeft
+                              ? 'bg-white text-rose-900 hover:text-rose-700 hover:bg-pink-100 border-pink-300 shadow-xs cursor-pointer active:scale-95'
+                              : 'bg-pink-100/40 text-pink-300 border-pink-200/50 cursor-not-allowed opacity-30'
+                          }`}
+                          title="Postres anteriores"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Carrusel Desplazable de Postres (Táctil en móvil, rueda y flechas en PC) */}
+                        <div
+                          ref={dessertsScrollRef}
+                          onScroll={updateDessertsScrollButtons}
+                          className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 touch-pan-x scroll-smooth overscroll-x-contain"
+                          onWheel={(e) => {
+                            if (e.deltaY !== 0 && e.currentTarget.scrollWidth > e.currentTarget.clientWidth) {
+                              e.currentTarget.scrollLeft += e.deltaY
+                            }
+                          }}
+                        >
+                          {suggestedDessertsList.map(dessert => (
+                            <button
+                              key={dessert.id}
+                              type="button"
+                              onClick={() => {
+                                triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+                                if (onAddProduct) {
+                                  onAddProduct(dessert)
+                                } else if (onAddSuggestedDessert) {
+                                  onAddSuggestedDessert(dessert.id)
+                                }
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl bg-white border border-pink-300 text-[11px] font-bold text-slate-800 shadow-xs flex items-center gap-1 hover:bg-pink-100 whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
+                            >
+                              <span>🍰 {dessert.name.split('(')[0].trim()} ({formatCurrency(dessert.price)})</span>
+                              <Plus size={12} className="text-pink-700" />
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Flecha Derecha (PC / Desktop y Accesibilidad) */}
+                        <button
+                          type="button"
+                          onClick={() => handleScrollDesserts('right')}
+                          disabled={!canScrollDessertsRight}
+                          aria-label="Ver más postres"
+                          className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all border ${
+                            canScrollDessertsRight
+                              ? 'bg-white text-rose-900 hover:text-rose-700 hover:bg-pink-100 border-pink-300 shadow-xs cursor-pointer active:scale-95'
+                              : 'bg-pink-100/40 text-pink-300 border-pink-200/50 cursor-not-allowed opacity-30'
+                          }`}
+                          title="Más postres"
+                        >
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     )}
                   </div>
