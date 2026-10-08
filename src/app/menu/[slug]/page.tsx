@@ -49,6 +49,7 @@ import { TOP_LANGUAGES, getTranslation, translateCategoryName, translateProductN
 import { getAllergen, getAllergenName } from '@/lib/allergens'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
+import { isProductInCategory } from '@/lib/category-matcher'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 
@@ -446,7 +447,22 @@ function DinerMenuContent() {
 
   useEffect(() => {
     loadData()
-  }, [loadData])
+
+    const handleMenuUpdated = (e: any) => {
+      const { slug: updatedSlug, productId, isAvailable } = e?.detail || {}
+      if (!updatedSlug || updatedSlug === slug) {
+        if (productId) {
+          setProducts(prev => prev.map(p => p.id === productId ? { ...p, is_available: isAvailable } : p))
+        }
+        loadData()
+      }
+    }
+
+    window.addEventListener('fluxo_menu_updated', handleMenuUpdated)
+    return () => {
+      window.removeEventListener('fluxo_menu_updated', handleMenuUpdated)
+    }
+  }, [loadData, slug])
 
   // 2. Sincronización en vivo del estado del pedido en Cocina para el comensal
   useEffect(() => {
@@ -1038,32 +1054,7 @@ function DinerMenuContent() {
       return false
     }
 
-    const currentCatObj = categories.find(c => c.id === selectedCategory)
-    const isDessertCategorySelected = currentCatObj && (
-      currentCatObj.name.toUpperCase().includes('POSTRE') ||
-      currentCatObj.name.toUpperCase().includes('CAFÉ') ||
-      currentCatObj.name.toUpperCase().includes('CAFE') ||
-      currentCatObj.id === 'c0000000-0000-0000-0000-000000000006' ||
-      currentCatObj.id === 'cat-10' ||
-      currentCatObj.id === 'cat-tca-7' ||
-      currentCatObj.id === 'cat-tm-7'
-    )
-
-    const matchesCategory = selectedCategory === 'all' || 
-      prod.category_id === selectedCategory ||
-      (isDessertCategorySelected && (
-        prod.category_id === 'c0000000-0000-0000-0000-000000000006' ||
-        prod.category_id === 'cat-10' ||
-        prod.category_id === 'cat-tca-7' ||
-        prod.category_id === 'cat-tm-7' ||
-        prod.name.toLowerCase().includes('volcán') ||
-        prod.name.toLowerCase().includes('volcan') ||
-        prod.name.toLowerCase().includes('tarta') ||
-        prod.name.toLowerCase().includes('postre') ||
-        prod.name.toLowerCase().includes('café') ||
-        prod.name.toLowerCase().includes('cafe') ||
-        prod.name.toLowerCase().includes('cheesecake')
-      ))
+    const matchesCategory = isProductInCategory(prod, selectedCategory, categories)
     const matchesSearch = searchQuery === '' || 
       prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (prod.description && prod.description.toLowerCase().includes(searchQuery.toLowerCase()))

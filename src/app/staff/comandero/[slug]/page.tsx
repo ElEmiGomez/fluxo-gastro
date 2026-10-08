@@ -19,6 +19,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
+import { isProductInCategory } from '@/lib/category-matcher'
 
 interface PendingServiceCall {
   id: string
@@ -454,8 +455,11 @@ export default function WaiterComanderoPage() {
         setServerOrders(prev =>
           prev.map(o => {
             if (o.id === orderId) {
+              const effectiveItems = (data.order?.order_items && data.order.order_items.length > 0)
+                ? data.order.order_items
+                : (o.order_items || [])
               return data.order
-                ? { ...data.order, table_number: tableNum || data.order.table_number }
+                ? { ...data.order, table_number: tableNum || data.order.table_number, order_items: effectiveItems }
                 : { ...o, status: 'pending', version: data.version ?? (o.version ? o.version + 1 : 1) }
             }
             return o
@@ -737,7 +741,7 @@ export default function WaiterComanderoPage() {
   }, [slug])
 
   const filteredProducts = products.filter(prod => {
-    const matchesCat = prod.category_id === selectedCategory
+    const matchesCat = isProductInCategory(prod, selectedCategory, categories)
     const matchesSearch = searchQuery === '' || prod.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCat && matchesSearch
   })

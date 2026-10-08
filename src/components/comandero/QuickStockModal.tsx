@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Product, Category } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
+import { isProductInCategory } from '@/lib/category-matcher'
 
 interface QuickStockModalProps {
   isOpen: boolean
@@ -86,7 +87,11 @@ export function QuickStockModal({
     try {
       const res = await fetch('/api/admin/menu', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-staff-pin': '1234',
+        },
         body: JSON.stringify({
           slug,
           product_id: product.id,
@@ -137,7 +142,7 @@ export function QuickStockModal({
       }
 
       // Filtro por categoría
-      if (selectedCategoryId !== 'all' && p.category_id !== selectedCategoryId) {
+      if (selectedCategoryId !== 'all' && !isProductInCategory(p, selectedCategoryId, categories)) {
         return false
       }
 

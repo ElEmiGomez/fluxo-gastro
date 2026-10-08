@@ -50,11 +50,8 @@ export function KitchenTicket({
     return null
   }
 
-  // Filtrar comandas que realmente tengan items
-  const validOrders = effectiveOrders.filter(o => o.order_items && o.order_items.length > 0)
-  if (validOrders.length === 0) {
-    return null
-  }
+  // Invariante Zero-Flicker: La visibilidad de comandas depende exclusivamente de su status, NUNCA de order_items.length
+  const validOrders = effectiveOrders
 
   const primaryOrder = validOrders[0]
   const tableNumberDisplay = primaryOrder.table?.table_number ?? primaryOrder.table_number ?? '?'
@@ -348,7 +345,10 @@ export function KitchenTicket({
                     )
                   })
                 ) : (
-                  <p className="text-xs text-slate-400 italic py-1">Sin platos detallados</p>
+                  <div className="py-2.5 px-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-amber-900 text-xs flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600 flex-shrink-0" />
+                    <span className="font-semibold">Preparando comanda · Cargando detalle de platos...</span>
+                  </div>
                 )}
               </div>
 

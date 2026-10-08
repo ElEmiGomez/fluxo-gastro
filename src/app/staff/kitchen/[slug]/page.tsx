@@ -339,8 +339,22 @@ export default function KitchenKDSPage() {
         )
       })
 
+      const hasKitchenItems = order.order_items.some(item => {
+        const prod = item.product || (item as any).products
+        const catId = (prod?.category_id || '').toLowerCase()
+        const name = (prod?.name || '').toLowerCase()
+        return (
+          catId.includes('postre') || catId.includes('cafe') || catId.includes('café') ||
+          catId.includes('entrada') || catId.includes('burger') || catId.includes('principal') ||
+          catId === 'c0000000-0000-0000-0000-000000000006' || catId === 'cat-10' ||
+          name.includes('volcán') || name.includes('volcan') || name.includes('tarta') ||
+          name.includes('postre') || name.includes('burger') || name.includes('milanesa') ||
+          name.includes('bastones') || name.includes('papas') || name.includes('ensalada')
+        )
+      })
+
       if (stationFilter === 'bar') return hasBarItems
-      if (stationFilter === 'kitchen') return !hasBarItems || order.order_items.length > 1
+      if (stationFilter === 'kitchen') return hasKitchenItems || !hasBarItems || order.order_items.length > 1
       return true
     })
   }

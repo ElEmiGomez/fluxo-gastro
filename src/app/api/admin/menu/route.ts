@@ -18,6 +18,7 @@ import { verifyStaffRequest } from '@/lib/auth/pin-security'
 import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { getRestaurantBySlug, getTargetRestaurantId } from '@/lib/supabase/repository'
+import { isProductInCategory } from '@/lib/category-matcher'
 
 const isUuid = (str?: string | null): boolean =>
   Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str))
@@ -79,6 +80,17 @@ export async function GET(req: NextRequest) {
       } catch (dbErr) {
         console.warn('Could not fetch menu from Supabase, falling back to server state:', dbErr)
       }
+    }
+
+    // Normalizar category_id de los productos para que coincida exactamente con las categorías activas
+    if (categories && categories.length > 0) {
+      products = products.map(prod => {
+        const matchingCat = categories.find(cat => isProductInCategory(prod, cat.id, categories))
+        if (matchingCat && prod.category_id !== matchingCat.id) {
+          return { ...prod, category_id: matchingCat.id }
+        }
+        return prod
+      })
     }
 
     return NextResponse.json({

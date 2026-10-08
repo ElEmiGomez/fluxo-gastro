@@ -623,14 +623,19 @@ export async function transitionOrderStatus(
             course: it.course || 'first',
           }))
 
-          // Backfill desde caché si el RPC devolvió items vacíos (race condition Supabase)
+          // Backfill desde memoria o caché si el RPC devolvió items vacíos (race condition Supabase)
+          const memOrder = getServerOrders(slug).find(o => o.id === orderId)
           const cachedItems = getCachedOrderItems(orderId)
           const resolvedItems =
             rpcItems.length > 0
               ? rpcItems
-              : cachedItems && cachedItems.length > 0
-                ? cachedItems
-                : rpcItems
+              : (memOrder?.order_items && memOrder.order_items.length > 0)
+                ? memOrder.order_items
+                : (cachedItems && cachedItems.length > 0 ? cachedItems : [])
+
+          if (resolvedItems.length > 0) {
+            saveCachedOrderItems(orderId, resolvedItems)
+          }
 
           const parsedOrder: Order | undefined = data.order ? {
             ...data.order,
