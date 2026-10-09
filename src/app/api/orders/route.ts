@@ -12,6 +12,8 @@ import {
   isValidOrderTransition,
   getServerProducts,
   setServerProducts,
+  resolveCanonicalProductId,
+  CANONICAL_PRODUCT_MAP,
 } from '@/lib/server-state'
 import {
   getRestaurantBySlug,
@@ -180,13 +182,15 @@ export async function POST(req: NextRequest) {
     for (let idx = 0; idx < items.length; idx++) {
       const item = items[idx]
       const quantity = Math.max(1, parseInt(String(item.quantity || '1'), 10) || 1)
-      const productId = String(
+      const rawProductId = String(
         item.product_id ||
         item.id ||
         item.productId ||
         (item.product && item.product.id) ||
         ''
       ).trim()
+      const canonicalUuid = resolveCanonicalProductId(rawProductId)
+      const productId = canonicalUuid || rawProductId
       const itemName = String(
         item.name ||
         (item.product && item.product.name) ||
@@ -201,8 +205,10 @@ export async function POST(req: NextRequest) {
 
       // 1. Coincidencia por ID exacto, alias de promoción o mapeo de ID legado
       let catalogProduct = catalogProducts.find(p =>
-        (productId && p.id === productId) ||
-        (productId && p.id.toLowerCase() === productId.toLowerCase()) ||
+        (productId && (p.id === productId || p.id.toLowerCase() === productId.toLowerCase())) ||
+        (rawProductId && (p.id === rawProductId || p.id.toLowerCase() === rawProductId.toLowerCase())) ||
+        (canonicalUuid && p.id === canonicalUuid) ||
+        (resolveCanonicalProductId(p.id) === canonicalUuid) ||
         (productId === 'p-promo-1' && (p.id === 'b0000000-0000-0000-0000-000000000001' || p.name.includes('Combo Pareja'))) ||
         (productId === 'p-bur-1' && (p.id === 'b0000000-0000-0000-0000-000000000002' || p.name.includes('Bacon Cheese'))) ||
         (productId && p.id.replace('promo', 'prom') === productId) ||
@@ -344,13 +350,18 @@ export async function POST(req: NextRequest) {
 
       const sanitizedNotes = item.notes ? sanitizeText(item.notes, 200) : null
 
+      const canonicalProdId = resolveCanonicalProductId(catalogProduct.id) || catalogProduct.id
+
       validItems.push({
         id: `oi-${idx}`,
         order_id: '',
-        product_id: catalogProduct.id,
+        product_id: canonicalProdId,
         quantity,
         notes: sanitizedNotes || null,
-        product: catalogProduct,
+        product: {
+          ...catalogProduct,
+          id: canonicalProdId,
+        },
         is_complimentary: isComplimentary,
         course: item.course || 'first',
       })

@@ -189,7 +189,8 @@ export function ProductModifierModal({
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 p-2 rounded-full bg-black/50 backdrop-blur-md text-white hover:bg-black/70 shadow-md transition-colors"
+            aria-label="Cerrar personalizador de plato"
+            className="absolute top-3 right-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-black/50 backdrop-blur-md text-white hover:bg-black/70 shadow-md transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -562,21 +563,23 @@ export function ProductModifierModal({
               </button>
             )}
 
-            <div className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-xl border border-slate-200 shadow-xs">
               <button
                 type="button"
                 onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                className="p-1 rounded-lg bg-slate-100 text-slate-600 hover:text-slate-900"
+                aria-label="Disminuir cantidad"
+                className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer"
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
-              <span className="font-black text-sm text-slate-900 w-5 text-center tabular-nums">
+              <span className="font-black text-sm text-slate-900 w-6 text-center tabular-nums">
                 {quantity}
               </span>
               <button
                 type="button"
                 onClick={() => setQuantity(q => q + 1)}
-                className="p-1 rounded-lg bg-slate-100 text-slate-600 hover:text-slate-900"
+                aria-label="Aumentar cantidad"
+                className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>

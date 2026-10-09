@@ -18,7 +18,8 @@ import { verifyStaffRequest } from '@/lib/auth/pin-security'
 import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { getRestaurantBySlug, getTargetRestaurantId } from '@/lib/supabase/repository'
-import { isProductInCategory, deduplicateProducts } from '@/lib/category-matcher'
+import { isProductInCategory, deduplicateProducts, resolveCanonicalProductId } from '@/lib/category-matcher'
+
 
 const isUuid = (str?: string | null): boolean =>
   Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str))
@@ -286,19 +287,25 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'product_id requerido' }, { status: 400 })
     }
 
+    const canonicalId = resolveCanonicalProductId(product_id) || product_id
     let currentProducts = getServerProducts(slug)
-    let product = currentProducts.find(p => p.id === product_id)
+    let product = currentProducts.find(p =>
+      p.id === product_id ||
+      p.id === canonicalId ||
+      resolveCanonicalProductId(p.id) === canonicalId
+    )
 
     const supabase = createServerClient()
 
     // Si no se encuentra en memoria local, buscar en la base de datos de Supabase
     if (!product && supabase && isSupabaseConfigured()) {
       try {
-        if (isUuid(product_id)) {
+        const queryId = isUuid(canonicalId) ? canonicalId : (isUuid(product_id) ? product_id : null)
+        if (queryId) {
           const { data: dbProd, error: fetchErr } = await supabase
             .from('products')
             .select('*')
-            .eq('id', product_id)
+            .eq('id', queryId)
             .maybeSingle()
           if (fetchErr) {
             console.error('[Menu API PATCH] Error al consultar plato en Supabase por ID:', fetchErr)
@@ -317,7 +324,11 @@ export async function PATCH(req: NextRequest) {
     }
 
     const newState = typeof is_available === 'boolean' ? is_available : !product.is_available
-    const updated = currentProducts.map(p => (p.id === product.id ? { ...p, is_available: newState } : p))
+    const updated = currentProducts.map(p =>
+      (p.id === product.id || p.id === product_id || p.id === canonicalId || resolveCanonicalProductId(p.id) === canonicalId)
+        ? { ...p, is_available: newState }
+        : p
+    )
     setServerProducts(slug, updated)
 
     // Sincronización robusta con Supabase (PostgreSQL)
@@ -326,9 +337,8 @@ export async function PATCH(req: NextRequest) {
         const rest = await getRestaurantBySlug(slug)
         const targetRestId = getTargetRestaurantId(rest?.id, slug)
 
-        let targetId = product.id
-        // Si el ID en frontend no es un UUID válido, intentar resolver el UUID real en Supabase por nombre
-        if (!isUuid(targetId)) {
+        let targetId = isUuid(canonicalId) ? canonicalId : (isUuid(product.id) ? product.id : null)
+        if (!targetId) {
           const { data: matched, error: matchErr } = await supabase
             .from('products')
             .select('id')
@@ -343,7 +353,7 @@ export async function PATCH(req: NextRequest) {
           }
         }
 
-        if (isUuid(targetId)) {
+        if (targetId && isUuid(targetId)) {
           const { data: updateData, error: updateErr } = await supabase
             .from('products')
             .update({ is_available: newState })
@@ -375,6 +385,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, product_id, is_available: newState })
+
   } catch (err: any) {
     console.error('[Menu API PATCH] Error general en endpoint PATCH:', err)
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })

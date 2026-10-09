@@ -81,8 +81,10 @@ export function BillModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-full bg-white/10 text-white hover:bg-white/20"
+            aria-label="Cerrar solicitud de cuenta"
+            className="w-8 h-8 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>

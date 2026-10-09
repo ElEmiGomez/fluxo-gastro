@@ -15,7 +15,9 @@ import {
 } from 'lucide-react'
 import { Product, Category } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
-import { isProductInCategory } from '@/lib/category-matcher'
+import { isProductInCategory, resolveCanonicalProductId } from '@/lib/category-matcher'
+import { createBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client'
+
 
 interface QuickStockModalProps {
   isOpen: boolean
@@ -77,14 +79,36 @@ export function QuickStockModal({
   // Pausar / Reactivar disponibilidad en 1 toque
   const handleToggleAvailability = async (product: Product) => {
     const newStatus = !product.is_available
+    const canonicalId = resolveCanonicalProductId(product.id) || product.id
     setUpdatingId(product.id)
 
-    // Actualización optimista inmediata para respuesta instantánea en sala
+    // 1. Actualización optimista inmediata para respuesta instantánea en sala
     setProducts(prev =>
-      prev.map(p => (p.id === product.id ? { ...p, is_available: newStatus } : p))
+      prev.map(p =>
+        (p.id === product.id || p.id === canonicalId || resolveCanonicalProductId(p.id) === canonicalId)
+          ? { ...p, is_available: newStatus }
+          : p
+      )
     )
 
     try {
+      // 2. Mutación directa a Supabase si el cliente está configurado
+      const supabase = createBrowserClient()
+      if (supabase && isSupabaseConfigured()) {
+        try {
+          const { error: supaErr } = await supabase
+            .from('products')
+            .update({ is_available: newStatus })
+            .eq('id', canonicalId)
+          if (supaErr) {
+            console.warn('[QuickStockModal] Mutación directa en Supabase notificada:', supaErr)
+          }
+        } catch (dbErr) {
+          console.warn('[QuickStockModal] Excepción en mutación directa a Supabase:', dbErr)
+        }
+      }
+
+      // 3. Mutación en API de Administración de Carta (persiste en servidor y base de datos)
       const res = await fetch('/api/admin/menu', {
         method: 'PATCH',
         credentials: 'include',
@@ -94,12 +118,12 @@ export function QuickStockModal({
         },
         body: JSON.stringify({
           slug,
-          product_id: product.id,
+          product_id: canonicalId,
           is_available: newStatus,
         }),
       })
 
-      const json = await res.json()
+      const json = await res.json().catch(() => ({}))
       if (!res.ok || json.success === false) {
         throw new Error(json.error || 'Error al actualizar disponibilidad')
       }
@@ -111,15 +135,23 @@ export function QuickStockModal({
           : `⚠️ "${product.name}" marcado como AGOTADO`,
       })
 
-      // Notificar a otras vistas de la aplicación
+      // 4. Notificar a todas las vistas de la aplicación (Comandero, Carta, KDS)
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('fluxo_menu_updated', { detail: { slug, productId: product.id, isAvailable: newStatus } }))
+        window.dispatchEvent(
+          new CustomEvent('fluxo_menu_updated', {
+            detail: { slug, productId: canonicalId, isAvailable: newStatus },
+          })
+        )
       }
       if (onStockChanged) onStockChanged()
     } catch (err: any) {
       // Revertir estado optimista si falla
       setProducts(prev =>
-        prev.map(p => (p.id === product.id ? { ...p, is_available: !newStatus } : p))
+        prev.map(p =>
+          (p.id === product.id || p.id === canonicalId || resolveCanonicalProductId(p.id) === canonicalId)
+            ? { ...p, is_available: !newStatus }
+            : p
+        )
       )
       setToastMessage({
         type: 'error',
@@ -129,6 +161,7 @@ export function QuickStockModal({
       setUpdatingId(null)
     }
   }
+
 
   // Filtrado reactivo de platos
   const filteredProducts = useMemo(() => {
@@ -196,7 +229,8 @@ export function QuickStockModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex-shrink-0"
+            aria-label="Cerrar modal de control de stock"
+            className="w-10 h-10 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer"
             title="Cerrar modal"
           >
             <X className="w-5 h-5" />
@@ -382,6 +416,11 @@ export function QuickStockModal({
                       type="button"
                       disabled={isUpdating}
                       onClick={() => handleToggleAvailability(prod)}
+                      aria-label={
+                        isAvailable
+                          ? `Marcar ${prod.name} como agotado`
+                          : `Reactivar ${prod.name} en la carta`
+                      }
                       className={`px-3.5 py-2.5 rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer ${
                         isAvailable
                           ? 'bg-rose-500 hover:bg-rose-600 text-white'

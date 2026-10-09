@@ -107,8 +107,10 @@ export function OrderTimelineModal({
         {/* Cabecera */}
         <div className="bg-slate-900 text-white p-5 relative flex-shrink-0">
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            aria-label="Cerrar seguimiento de comanda"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>

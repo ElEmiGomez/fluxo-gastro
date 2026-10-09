@@ -6,7 +6,8 @@
 
 import { Order, OrderStatus, Category, Product } from '@/types/database.types'
 import { MOCK_CATEGORIES, MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
-import { deduplicateProducts } from '@/lib/category-matcher'
+import { deduplicateProducts, CANONICAL_PRODUCT_MAP, resolveCanonicalProductId } from '@/lib/category-matcher'
+
 
 export interface ServiceCall {
   id: string
@@ -901,24 +902,33 @@ export function upsertServerProduct(slug: string, product: Product): Product {
   return product
 }
 
+export { CANONICAL_PRODUCT_MAP, resolveCanonicalProductId }
+
+
 export function toggleProductAvailability(slug: string, productId: string): boolean {
   const current = getServerProducts(slug)
+  const canonicalId = resolveCanonicalProductId(productId)
   let nextState = true
+  let found = false
   const updated = current.map(p => {
-    if (p.id === productId) {
+    if (p.id === productId || p.id === canonicalId || resolveCanonicalProductId(p.id) === canonicalId) {
+      found = true
       const isAvailable = p.is_available !== false
       nextState = !isAvailable
       return { ...p, is_available: nextState }
     }
     return p
   })
-  setServerProducts(slug, updated)
+  if (found) {
+    setServerProducts(slug, updated)
+  }
   return nextState
 }
 
 export function deleteServerProduct(slug: string, productId: string): void {
   const current = getServerProducts(slug)
-  setServerProducts(slug, current.filter(p => p.id !== productId))
+  const canonicalId = resolveCanonicalProductId(productId)
+  setServerProducts(slug, current.filter(p => p.id !== productId && p.id !== canonicalId))
 }
 
 

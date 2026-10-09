@@ -10,6 +10,8 @@ import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { BillModal } from '@/components/menu/BillModal'
 import { getTranslation, translateProductName } from '@/lib/i18n'
 import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
+import { resolveCanonicalProductId } from '@/lib/category-matcher'
+
 
 interface CartDrawerProps {
   isOpen: boolean
@@ -331,14 +333,19 @@ export function CartDrawer({
         total_amount: totalAmount,
         created_by: isWaiter ? 'waiter' : 'diner',
         status: (isWaiter ? 'pending' : 'pending_validation') as OrderStatus,
-        items: validCart.map(item => ({
-          product_id: item.product?.id || (item as any).product_id || (item as any).id || '',
-          name: item.product?.name || (item as any).name || '',
-          price: Number(item.product?.price ?? (item as any).price ?? 0),
-          quantity: item.quantity,
-          notes: item.notes || (item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : null),
-        })),
+        items: validCart.map(item => {
+          const rawId = String(item.product?.id || (item as any).product_id || (item as any).id || '').trim()
+          const canonicalId = resolveCanonicalProductId(rawId) || rawId
+          return {
+            product_id: canonicalId,
+            name: item.product?.name || (item as any).name || '',
+            price: Number(item.product?.price ?? (item as any).price ?? 0),
+            quantity: item.quantity,
+            notes: item.notes || (item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : null),
+          }
+        }),
       }
+
 
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -474,8 +481,10 @@ export function CartDrawer({
             </div>
 
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
+              aria-label="Cerrar comanda"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -599,8 +608,10 @@ export function CartDrawer({
 
                         {/* Botón Eliminar individual */}
                         <button
+                          type="button"
                           onClick={() => onRemoveItem(index)}
-                          className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 cursor-pointer"
+                          aria-label={`Eliminar ${item.product?.name || 'plato'} de la comanda`}
+                          className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 cursor-pointer"
                           title="Eliminar plato"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -610,7 +621,7 @@ export function CartDrawer({
                       {/* Control de Cantidad (+ / -) */}
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                         <span className="text-[11px] text-slate-500 font-bold">Cantidad:</span>
-                        <div className="flex items-center gap-2 bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80">
+                        <div className="flex items-center gap-1.5 bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80">
                           <button
                             type="button"
                             onClick={() => {
@@ -620,9 +631,10 @@ export function CartDrawer({
                                 onUpdateQuantity(index, item.quantity - 1)
                               }
                             }}
-                            className="p-1 text-slate-500 hover:text-slate-900 cursor-pointer"
+                            aria-label={item.quantity <= 1 ? `Eliminar ${item.product?.name || 'plato'}` : `Disminuir cantidad de ${item.product?.name || 'plato'}`}
+                            className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
                           >
-                            {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-red-500" /> : <Minus className="w-3 h-3" />}
+                            {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-red-500" /> : <Minus className="w-3.5 h-3.5" />}
                           </button>
                           <span className="font-black text-xs text-slate-900 px-1.5 tabular-nums">
                             {item.quantity}
@@ -630,9 +642,10 @@ export function CartDrawer({
                           <button
                             type="button"
                             onClick={() => onUpdateQuantity(index, item.quantity + 1)}
-                            className="p-1 text-slate-500 hover:text-slate-900 cursor-pointer"
+                            aria-label={`Aumentar cantidad de ${item.product?.name || 'plato'}`}
+                            className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>

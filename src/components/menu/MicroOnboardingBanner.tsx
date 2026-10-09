@@ -98,7 +98,8 @@ export function MicroOnboardingBanner({
         <button
           type="button"
           onClick={toggleCollapsed}
-          className="w-full py-2 px-3.5 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200/90 rounded-2xl text-xs font-black text-blue-950 shadow-xs hover:shadow-sm hover:border-blue-300 flex items-center justify-between transition-all active:scale-98 cursor-pointer"
+          aria-label={t('onboardingShow') || '¿Cómo pedir desde tu mesa? Ver 4 pasos'}
+          className="w-full py-2.5 px-3.5 min-h-[44px] bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border border-blue-200/90 rounded-2xl text-xs font-black text-blue-950 shadow-xs hover:shadow-sm hover:border-blue-300 flex items-center justify-between transition-all active:scale-98 cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <span className="text-base leading-none">💡</span>
@@ -179,7 +180,8 @@ export function MicroOnboardingBanner({
           <button
             type="button"
             onClick={toggleCollapsed}
-            className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-[11px] font-bold flex items-center gap-1 transition-colors flex-shrink-0 cursor-pointer"
+            aria-label="Minimizar guía rápida de pedido"
+            className="px-2.5 py-1.5 min-h-[36px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 text-[11px] font-bold flex items-center gap-1 transition-colors flex-shrink-0 cursor-pointer"
             title="Minimizar guía"
           >
             <span className="hidden sm:inline">{t('onboardingMinimize') || 'Minimizar'}</span>

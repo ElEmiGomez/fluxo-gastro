@@ -668,11 +668,26 @@ export function translateCategoryName(lang: string, originalName: string): strin
   return CATEGORY_TRANSLATIONS[code]?.[upper] || originalName
 }
 
+const UUID_TO_TRANSLATION_KEY: Record<string, string> = {
+  'b0000000-0000-0000-0000-000000000001': 'p-promo-1',
+  'b0000000-0000-0000-0000-000000000002': 'p-bur-1',
+  'b0000000-0000-0000-0000-000000000003': 'p-gin-1',
+  'b0000000-0000-0000-0000-000000000006': 'p-pos-1',
+  'b0000000-0000-0000-0000-000000000007': 'p-pos-2',
+  'b0000000-0000-0000-0000-000000000008': 'p-caf-1',
+  'b0000000-0000-0000-0000-000000000009': 'p-bca-1',
+  'p-beb-1': 'p-bca-1',
+  'b0000000-0000-0000-0000-000000000011': 'p-ent-1',
+  'b0000000-0000-0000-0000-000000000012': 'p-tab-1',
+  'b0000000-0000-0000-0000-000000000013': 'p-ens-1',
+  'b0000000-0000-0000-0000-000000000014': 'p-pp-1',
+  'b0000000-0000-0000-0000-000000000015': 'p-gal-1',
+  'b0000000-0000-0000-0000-000000000016': 'p-bur-gallaecia',
+}
+
 export function translateProductName(lang: string, productId: string, fallback: string): string {
   const code = resolveLang(lang)
-  const resolvedId = productId === 'b0000000-0000-0000-0000-000000000001' ? 'p-promo-1'
-    : productId === 'b0000000-0000-0000-0000-000000000002' ? 'p-bur-1'
-    : productId
+  const resolvedId = UUID_TO_TRANSLATION_KEY[productId] || productId
   if (PRODUCT_NAMES[resolvedId] && PRODUCT_NAMES[resolvedId][code]) {
     return PRODUCT_NAMES[resolvedId][code]
   }
@@ -681,9 +696,7 @@ export function translateProductName(lang: string, productId: string, fallback: 
 
 export function translateProductDescription(lang: string, productId: string, fallback: string | null): string {
   const code = resolveLang(lang)
-  const resolvedId = productId === 'b0000000-0000-0000-0000-000000000001' ? 'p-promo-1'
-    : productId === 'b0000000-0000-0000-0000-000000000002' ? 'p-bur-1'
-    : productId
+  const resolvedId = UUID_TO_TRANSLATION_KEY[productId] || productId
   if (PRODUCT_DESCRIPTIONS[resolvedId] && PRODUCT_DESCRIPTIONS[resolvedId][code]) {
     return PRODUCT_DESCRIPTIONS[resolvedId][code]
   }

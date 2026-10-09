@@ -1601,34 +1601,48 @@ function DinerMenuContent() {
           {/* Buscador & Controles de Vista */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('searchPlaceholder')}
-                className="w-full pl-9 pr-3 py-2 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 shadow-xs transition-all"
+                className="w-full pl-9 pr-9 py-2 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 shadow-xs transition-all"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Borrar búsqueda"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 flex-shrink-0">
               <button
+                type="button"
                 onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-xl transition-all ${
+                aria-label="Vista Carta Detallada"
+                className={`p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl transition-all cursor-pointer ${
                   viewMode === 'list' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
                 title="Vista Carta Detallada"
               >
-                <LayoutList className="w-3.5 h-3.5" />
+                <LayoutList className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-xl transition-all ${
+                aria-label="Vista Galería de Fotos"
+                className={`p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl transition-all cursor-pointer ${
                   viewMode === 'grid' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
                 }`}
                 title="Vista Galería de Fotos"
               >
-                <LayoutGrid className="w-3.5 h-3.5" />
+                <LayoutGrid className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -1724,8 +1738,10 @@ function DinerMenuContent() {
             <div className="flex items-center gap-1.5 px-0.5">
               <span className="text-[10px] text-slate-400 font-semibold">Filtros:</span>
               <button
+                type="button"
                 onClick={() => setDietaryFilter(prev => prev === 'sintacc' ? 'all' : 'sintacc')}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 ${
+                aria-label={dietaryFilter === 'sintacc' ? 'Quitar filtro Sin TACC' : 'Filtrar platos aptos Sin TACC'}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
                   dietaryFilter === 'sintacc'
                     ? 'bg-amber-600 text-white shadow-xs'
                     : 'bg-white text-slate-500 border border-slate-200 hover:text-slate-800'
@@ -1736,8 +1752,10 @@ function DinerMenuContent() {
                 {dietaryFilter === 'sintacc' && <span className="font-black">&times;</span>}
               </button>
               <button
+                type="button"
                 onClick={() => setDietaryFilter(prev => prev === 'veggie' ? 'all' : 'veggie')}
-                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 ${
+                aria-label={dietaryFilter === 'veggie' ? 'Quitar filtro Vegetariano' : 'Filtrar platos vegetarianos'}
+                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
                   dietaryFilter === 'veggie'
                     ? 'bg-emerald-600 text-white shadow-xs'
                     : 'bg-white text-slate-500 border border-slate-200 hover:text-slate-800'
@@ -1887,7 +1905,8 @@ function DinerMenuContent() {
                             fill
                             className="w-full h-full object-cover"
                             sizes="56px"
-                            loading="lazy"
+                            priority={idx < 2}
+                            loading={idx < 2 ? undefined : 'lazy'}
                           />
                         </div>
                       )}
@@ -1996,8 +2015,10 @@ function DinerMenuContent() {
                               </div>
                             ) : qty === 0 ? (
                               <button
+                                type="button"
                                 onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                                className={`w-8 h-8 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 smooth-press shadow-xs ${
+                                aria-label={`Añadir ${product.name} a la comanda`}
+                                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 smooth-press shadow-xs cursor-pointer ${
                                   idx === 0 && totalCartCount === 0 ? 'ring-2 ring-blue-500/60 ring-offset-1 animate-pulse' : ''
                                 }`}
                                 title="Añadir a la comanda"
@@ -2007,29 +2028,35 @@ function DinerMenuContent() {
                             ) : (
                               <div className="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100 animate-in zoom-in-95 duration-150">
                                 <button
+                                  type="button"
                                   onClick={(e) => handleUpdateProductQuantity(product, -1, e)}
-                                  className="w-6 h-6 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs hover:bg-blue-100 transition-colors smooth-press"
+                                  aria-label={`Disminuir ${product.name}`}
+                                  className="w-7 h-7 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs hover:bg-blue-100 transition-colors smooth-press cursor-pointer"
                                 >
-                                  <Minus size={11} />
+                                  <Minus size={13} />
                                 </button>
                                 <span className="text-xs font-black text-blue-900 px-1 animate-pop tabular-nums">{qty}</span>
                                 <button
+                                  type="button"
                                   onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                                  className="w-6 h-6 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-xs hover:bg-blue-800 transition-colors smooth-press"
+                                  aria-label={`Aumentar ${product.name}`}
+                                  className="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-xs hover:bg-blue-800 transition-colors smooth-press cursor-pointer"
                                 >
-                                  <Plus size={11} />
+                                  <Plus size={13} />
                                 </button>
                               </div>
                             )}
 
                             <button
+                              type="button"
                               onClick={() => toggleExpand(product.id)}
-                              className={`p-1 text-slate-400 hover:text-slate-700 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                              aria-label={isExpanded ? `Ocultar foto y detalles de ${product.name}` : `Ver foto y detalles de ${product.name}`}
+                              className={`p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer ${
                                 isExpanded ? 'rotate-180 text-blue-700' : ''
                               }`}
                               title="Ver foto y detalles"
                             >
-                              <ChevronDown size={16} />
+                              <ChevronDown size={18} />
                             </button>
                           </>
                         ) : (
@@ -2116,7 +2143,7 @@ function DinerMenuContent() {
           ) : (
             /* VISTA 2: GALERÍA DE FOTOS */
             <div className="grid grid-cols-2 gap-3">
-              {filteredProducts.map((product) => {
+              {filteredProducts.map((product, idx) => {
                 const qty = getProductQuantityInCart(product.id)
                 return (
                   <div
@@ -2132,6 +2159,8 @@ function DinerMenuContent() {
                             fill
                             className="w-full h-full object-cover"
                             sizes="(max-width: 768px) 50vw, 300px"
+                            priority={idx < 2}
+                            loading={idx < 2 ? undefined : 'lazy'}
                           />
                         </div>
                       )}
@@ -2240,25 +2269,31 @@ function DinerMenuContent() {
                             </div>
                           ) : qty === 0 ? (
                             <button
+                              type="button"
                               onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                              className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs"
+                              aria-label={`Añadir ${product.name} a la comanda`}
+                              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs cursor-pointer"
                             >
                               <Plus size={16} />
                             </button>
                           ) : (
                             <div className="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100">
                               <button
+                                type="button"
                                 onClick={(e) => handleUpdateProductQuantity(product, -1, e)}
-                                className="w-6 h-6 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs"
+                                aria-label={`Disminuir ${product.name}`}
+                                className="w-7 h-7 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs hover:bg-blue-100 transition-colors cursor-pointer"
                               >
-                                <Minus size={11} />
+                                <Minus size={13} />
                               </button>
-                              <span className="text-xs font-black text-blue-900 px-1">{qty}</span>
+                              <span className="text-xs font-black text-blue-900 px-1 tabular-nums">{qty}</span>
                               <button
+                                type="button"
                                 onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                                className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs"
+                                aria-label={`Aumentar ${product.name}`}
+                                className="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-xs hover:bg-blue-800 transition-colors cursor-pointer"
                               >
-                                <Plus size={11} />
+                                <Plus size={13} />
                               </button>
                             </div>
                           )}

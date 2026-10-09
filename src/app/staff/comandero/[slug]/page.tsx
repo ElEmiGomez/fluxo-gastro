@@ -15,11 +15,12 @@ import { QuickStockModal } from '@/components/comandero/QuickStockModal'
 import { Product, Category, Table, CartItem, Restaurant, Order, CourseType } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
-import { createBrowserClient } from '@/lib/supabase/client'
+import { createBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
-import { isProductInCategory } from '@/lib/category-matcher'
+import { isProductInCategory, resolveCanonicalProductId } from '@/lib/category-matcher'
+
 
 interface PendingServiceCall {
   id: string
@@ -1185,6 +1186,7 @@ export default function WaiterComanderoPage() {
                             <button
                               type="button"
                               onClick={() => handleAttendCall(call.id)}
+                              aria-label={isBill ? `Confirmar cobro de Mesa #${call.table_number}` : `Marcar aviso atendido de Mesa #${call.table_number}`}
                               className={`px-3 py-2 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1 cursor-pointer ${
                                 isBill
                                   ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950'
@@ -1198,7 +1200,8 @@ export default function WaiterComanderoPage() {
                             <button
                               type="button"
                               onClick={() => handleAttendCall(call.id)}
-                              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                              aria-label="Cerrar aviso"
+                              className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                               title="Cerrar aviso"
                             >
                               <X className="w-4 h-4" />
@@ -1742,11 +1745,65 @@ export default function WaiterComanderoPage() {
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       
-                      {isUnavailable && (
-                        <span className="absolute top-2 right-2 px-2 py-0.5 rounded-lg bg-rose-600 text-[10px] font-black uppercase text-white shadow-md z-10 flex items-center gap-1">
-                          Agotado
-                        </span>
-                      )}
+                      {/* Toggle de Agotado / Disponibilidad en 1 toque directo */}
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          const nextStatus = isUnavailable ? true : false
+                          const canonicalId = resolveCanonicalProductId(prod.id) || prod.id
+                          setProducts(prev =>
+                            prev.map(p =>
+                              (p.id === prod.id || p.id === canonicalId || resolveCanonicalProductId(p.id) === canonicalId)
+                                ? { ...p, is_available: nextStatus }
+                                : p
+                            )
+                          )
+                          try {
+                            const supabase = createBrowserClient()
+                            if (supabase && isSupabaseConfigured()) {
+                              await supabase
+                                .from('products')
+                                .update({ is_available: nextStatus })
+                                .eq('id', canonicalId)
+
+                            }
+                            await fetch('/api/admin/menu', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json', 'x-staff-pin': '1234' },
+                              body: JSON.stringify({ slug, product_id: canonicalId, is_available: nextStatus }),
+                            })
+                            window.dispatchEvent(
+                              new CustomEvent('fluxo_menu_updated', {
+                                detail: { slug, productId: canonicalId, isAvailable: nextStatus },
+                              })
+                            )
+                          } catch (err) {
+                            console.error('Error al cambiar disponibilidad del plato:', err)
+                          }
+                        }}
+                        className={`absolute top-2 right-2 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shadow-md z-10 flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                          isUnavailable
+                            ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                            : 'bg-slate-900/70 hover:bg-slate-900 text-white/90 hover:text-white'
+                        }`}
+                        aria-label={
+                          isUnavailable
+                            ? `Plato ${prod.name} agotado. Clic para reactivar en carta`
+                            : `Marcar ${prod.name} como agotado`
+                        }
+                        title={isUnavailable ? 'Plato Agotado · Clic para reactivar en carta' : 'Marcar como Agotado'}
+                      >
+                        {isUnavailable ? (
+                          <>
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                            <span>Agotado</span>
+                          </>
+                        ) : (
+                          <span>Disponible</span>
+                        )}
+                      </button>
+
 
                       <div className="absolute bottom-1.5 left-2 flex items-center gap-1.5 flex-wrap">
                         <span className="px-2 py-0.5 rounded-lg bg-white/95 text-[11px] font-black text-blue-900 shadow-sm flex items-center gap-1">

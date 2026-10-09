@@ -215,6 +215,7 @@ export function KitchenTicket({
                         })
                         setCompletedItemIds(nextMap)
                       }}
+                      aria-label="Marcar todos los platos de esta comanda como preparados"
                       className="text-[10px] px-2 py-0.5 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 hover:border-emerald-300 font-bold flex items-center gap-1 transition-all shadow-2xs active:scale-95 cursor-pointer"
                       title="Marcar todos los platos de esta ronda como listos"
                     >

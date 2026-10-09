@@ -389,11 +389,15 @@ export async function createOrder(
 
         if (itemsToInsert.length > 0) {
           try {
-            await supabase.from('order_items').insert(itemsToInsert)
+            const { error: itemsInsertErr } = await supabase.from('order_items').insert(itemsToInsert)
+            if (itemsInsertErr) {
+              console.error('[createOrder] Explicit error inserting order_items in Supabase:', itemsInsertErr)
+            }
           } catch (itemsInsertErr) {
-            console.warn('[createOrder] Warning inserting order_items in Supabase:', itemsInsertErr)
+            console.error('[createOrder] Exception inserting order_items in Supabase:', itemsInsertErr)
           }
         }
+
 
         // Ahora que los items están en Supabase, emitir el broadcast con la orden completa
         addServerOrder(slug, fullOrder)
@@ -469,15 +473,22 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
           }
 
           const cachedItems = getCachedOrderItems(o.id)
-          const resolvedOrderItems = normalizedItems.length > 0
-            ? normalizedItems
-            : ((mem?.order_items && mem.order_items.length > 0)
-                ? mem.order_items
-                : (cachedItems && cachedItems.length > 0 ? cachedItems : []))
+          // Anti-Loss Invariant: Si memoria o cache contiene más items que la respuesta parcial de DB (ej. comida/postres),
+          // preservar la comanda íntegra en lugar de truncarla a los pocos items que pasaron la FK.
+          const resolvedOrderItems = (mem?.order_items && mem.order_items.length > normalizedItems.length)
+            ? mem.order_items
+            : (cachedItems && cachedItems.length > normalizedItems.length)
+                ? cachedItems
+                : (normalizedItems.length > 0
+                    ? normalizedItems
+                    : ((mem?.order_items && mem.order_items.length > 0)
+                        ? mem.order_items
+                        : (cachedItems && cachedItems.length > 0 ? cachedItems : [])))
 
           if (resolvedOrderItems.length > 0) {
             saveCachedOrderItems(o.id, resolvedOrderItems)
           }
+
 
           return {
             ...o,
