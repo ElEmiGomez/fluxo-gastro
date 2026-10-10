@@ -74,7 +74,7 @@ flowchart TD
 │  ├─ [📋 Pendiente #3.1] LSSI-CE: Datos fiscales del titular en /legal   │
 │  ├─ [x] Punto 3.2: Correo contactofluxosystem@gmail.com configurado     │
 │  │     (enlace activo en LEAD_NOTIFICATION_EMAIL y página legal)        │
-│  └─ [x] Certificación integral y refactorización modular SOLID (v1.2)   │
+│  └─ [x] Arquitectura funcional modular y desacoplamiento por dominio    │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
