@@ -1,102 +1,73 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import Image from 'next/image'
+import React, { useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard, Loader2, Package, Ban } from 'lucide-react'
+import { CheckCircle2 } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
-import { TableSelector, TableStatusType } from '@/components/comandero/TableSelector'
-import { ProductModifierModal } from '@/components/comandero/ProductModifierModal'
-import { PreBillModal } from '@/components/comandero/PreBillModal'
-import { OrderSummaryBar } from '@/components/comandero/OrderSummaryBar'
-import { CartDrawer } from '@/components/menu/CartDrawer'
-import { QuickStockModal } from '@/components/comandero/QuickStockModal'
-import { Product, Category, Table, CartItem, Restaurant, Order, CourseType } from '@/types/database.types'
-import { formatCurrency } from '@/lib/utils'
+import { TableSelector } from '@/components/comandero/TableSelector'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
-import { createBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client'
-import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
-import { ConfirmModal } from '@/components/common/ConfirmModal'
-import { playKitchenChime } from '@/components/kitchen/AudioNotification'
-import { isProductInCategory, resolveCanonicalProductId } from '@/lib/category-matcher'
-
-
-interface PendingServiceCall {
-  id: string
-  table_number: string | number
-  call_type: string
-  text: string
-}
+import { Product, CartItem, CourseType } from '@/types/database.types'
+import { useComanderoData } from '@/hooks/comandero/useComanderoData'
+import { useComanderoActions } from '@/hooks/comandero/useComanderoActions'
+import { ComanderoTaskQueue } from '@/components/comandero/ComanderoTaskQueue'
+import { ComanderoTableDetailPanel } from '@/components/comandero/ComanderoTableDetailPanel'
+import { ComanderoCatalogGrid } from '@/components/comandero/ComanderoCatalogGrid'
+import { ComanderoModals } from '@/components/comandero/ComanderoModals'
 
 export default function WaiterComanderoPage() {
   const params = useParams()
   const slug = (params?.slug as string) || 'burger-gourmet'
 
-  const fallbackTables = MOCK_TABLES[slug] || MOCK_TABLES['burger-gourmet'] || Array.from({ length: 25 }, (_, i) => ({
-    id: `t1111111-1111-1111-1111-${String(i + 1).padStart(12, '0')}`,
-    restaurant_id: 'a1111111-1111-1111-1111-111111111111',
-    table_number: i + 1,
-  }))
+  // 1. Estado y sincronización en tiempo real (SSOT)
+  const {
+    restaurant,
+    categories,
+    products,
+    setProducts,
+    tables,
+    selectedTable,
+    setSelectedTable,
+    serverOrders,
+    setServerOrders,
+    tableStatuses,
+    setTableStatuses,
+    tableDwellMinutes,
+    pendingCalls,
+    setPendingCalls,
+    readyOrderAlert,
+    setReadyOrderAlert,
+    dismissedReadyBannerOrderIds,
+    setDismissedReadyBannerOrderIds,
+    syncServerData,
+    attendedCallIdsRef,
+    seenCallIdsRef,
+    attendedValidationOrderIdsRef,
+    recentTogglesRef,
+  } = useComanderoData(slug)
 
-  const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
-  const [categories, setCategories] = useState<Category[]>(() => MOCK_CATEGORIES[slug] || MOCK_CATEGORIES['burger-gourmet'] || [])
-  const [products, setProducts] = useState<Product[]>(() => MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])
-  const [tables, setTables] = useState<Table[]>(() => fallbackTables)
-  
-  const [selectedTable, setSelectedTable] = useState<Table | null>(() => fallbackTables[0] || null)
-  const [selectedCategory, setSelectedCategory] = useState<string>(() => MOCK_CATEGORIES[slug]?.[0]?.id || 'cat-1')
-  const [searchQuery, setSearchQuery] = useState('')
-  
-  // Carritos aislados por mesa para que cambiar de mesa nunca mezcle pedidos
+  // 2. Carritos y configuración aislada por mesa
   const [tableCarts, setTableCarts] = useState<Record<string | number, CartItem[]>>({})
   const [tablePax, setTablePax] = useState<Record<string | number, number>>({})
   const [tableDiscounts, setTableDiscounts] = useState<Record<string | number, number>>({})
+  
+  // 3. Modales y vistas secundarias
   const [showPreBill, setShowPreBill] = useState(false)
+  const [showFreeConfirmTable, setShowFreeConfirmTable] = useState<number | string | null>(null)
   const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferTargetTable, setTransferTargetTable] = useState('')
   const [showQuickStockModal, setShowQuickStockModal] = useState(false)
-  const [transferTargetTable, setTransferTargetTable] = useState<string>('')
+  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null)
+  const [isCartDetailsOpen, setIsCartDetailsOpen] = useState(false)
+
+  // 4. Filtros de catálogo
+  const [selectedCategory, setSelectedCategory] = useState<string>(() => categories[0]?.id || 'cat-1')
+  const [searchQuery, setSearchQuery] = useState('')
+
   const currentTableNum = selectedTable?.table_number || 1
   const cart = tableCarts[currentTableNum] || []
 
-  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null)
-  const [isCartDetailsOpen, setIsCartDetailsOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [orderSentToast, setOrderSentToast] = useState(false)
-
-  // Estado del Semáforo de Mesas (Libre / Ocupada / Llamando / Listo)
-  const [tableStatuses, setTableStatuses] = useState<Record<string | number, TableStatusType>>({})
-  const [tableDwellMinutes, setTableDwellMinutes] = useState<Record<string | number, number>>({})
-  const [readyOrderAlert, setReadyOrderAlert] = useState<string | number | null>(null)
-  const [dismissedReadyBannerOrderIds, setDismissedReadyBannerOrderIds] = useState<Set<string>>(new Set())
-  const [serverOrders, setServerOrders] = useState<Order[]>([])
-
-  // Sistema de Avisos: Estado Reconciliado Persistente (Anti-Flicker / Anti-Desaparición)
-  const [popupAlert, setPopupAlert] = useState<PendingServiceCall | null>(null)
-  const [pendingCalls, setPendingCalls] = useState<PendingServiceCall[]>([])
-  
-  // Set de IDs ya atendidos o procesados para State Lock infalible
-  const attendedCallIdsRef = useRef<Set<string>>(new Set())
-  const seenCallIdsRef = useRef<Set<string>>(new Set())
-  const seenReadyOrderIdsRef = useRef<Set<string>>(new Set())
-  const popupTimerRef = useRef<any>(null)
-
-  // Anti-flicker: fingerprints para evitar re-renders cuando los datos del servidor no cambiaron
-  const ordersFingerRef = useRef<string>('')
-  const callsFingerRef = useRef<string>('')
-  const tableStatusesFingerRef = useRef<string>('')
-  const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
-  const attendedValidationOrderIdsRef = useRef<Set<string>>(new Set())
-  // Órdenes que llegaron sin items en el ciclo anterior (race condition) — para backfill en el siguiente ciclo
-  const pendingOrdersWithoutItemsRef = useRef<Map<string, Order>>(new Map())
-  // Bloqueo temporal anti-flicker para platos recién conmutados (evita que un poll rezagado revierta el estado)
-  const recentTogglesRef = useRef<Map<string, { status: boolean; until: number }>>(new Map())
-
-  // Estados no-optimistas con spinner de carga durante transiciones en vuelo
-  const [validatingOrderIds, setValidatingOrderIds] = useState<Set<string>>(new Set())
-  const [deliveringOrderIds, setDeliveringOrderIds] = useState<Set<string>>(new Set())
-
-  // Helper para modificar el carrito de la mesa activa
+  // Helper para mutar el carrito de la mesa activa
   const updateCartForCurrentTable = (updater: (prev: CartItem[]) => CartItem[]) => {
     setTableCarts(prev => ({
       ...prev,
@@ -104,756 +75,43 @@ export default function WaiterComanderoPage() {
     }))
   }
 
-  // 1. Mantener pantalla siempre encendida (WakeLock API Nativa)
-  useEffect(() => {
-    let wakeLock: any = null
-    const requestWakeLock = async () => {
-      try {
-        if ('wakeLock' in navigator) {
-          wakeLock = await (navigator as any).wakeLock.request('screen')
-        }
-      } catch (err) {
-        console.log('WakeLock not active:', err)
-      }
-    }
-    requestWakeLock()
-
-    return () => {
-      if (wakeLock) wakeLock.release()
-    }
-  }, [])
-
-  // Marcar llamada como atendida (Servidor + Local con State Lock)
-  const handleAttendCall = async (callId: string) => {
-    attendedCallIdsRef.current.add(callId)
-    seenCallIdsRef.current.add(callId)
-    setPendingCalls(prev => prev.filter(c => c.id !== callId))
-    if (popupAlert?.id === callId) {
-      setPopupAlert(null)
-      if (popupTimerRef.current) clearTimeout(popupTimerRef.current)
-    }
-
-    try {
-      await fetch('/api/service-calls', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, callId }),
-      })
-    } catch (e) {
-      console.error('Error attending call:', e)
-    }
-  }
-
-  // Al seleccionar una mesa, cambiar la selección
-  const handleSelectTableAndClearAlerts = (table: Table) => {
-    setSelectedTable(table)
-  }
-
-  const [showFreeConfirmTable, setShowFreeConfirmTable] = useState<number | string | null>(null)
-
-  // Sincronización reactiva de datos desde el servidor (SSOT)
-  const syncServerData = useCallback(async () => {
-    try {
-      const [ordersRes, callsRes, tablesRes] = await Promise.all([
-        fetch(`/api/orders?slug=${slug}`).then(r => r.json()).catch(() => ({ orders: [] })),
-        fetch(`/api/service-calls?slug=${slug}`).then(r => r.json()).catch(() => ({ calls: [] })),
-        fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
-      ])
-
-      const rawOrders: Order[] = ordersRes.orders || []
-
-      // Sincronización reactiva de disponibilidad de platos desde el servidor
-      if (ordersRes?.product_availability) {
-        setProducts(prev => {
-          let hasDiff = false
-          const next = prev.map(p => {
-            const canonical = resolveCanonicalProductId(p.id) || p.id
-            const normName = (p.name || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
-
-            // Si el plato fue conmutado localmente hace menos de 3.5 segundos, protegerlo del poll rezagado
-            const recentToggle = recentTogglesRef.current.get(p.id) || recentTogglesRef.current.get(canonical)
-            if (recentToggle && Date.now() < recentToggle.until) {
-              if (p.is_available !== recentToggle.status) {
-                hasDiff = true
-                return { ...p, is_available: recentToggle.status }
-              }
-              return p
-            }
-
-            const serverAvail = ordersRes.product_availability[canonical] ?? ordersRes.product_availability[p.id] ?? ordersRes.product_availability[normName]
-            if (serverAvail !== undefined && p.is_available !== serverAvail) {
-              hasDiff = true
-              return { ...p, is_available: serverAvail }
-            }
-            return p
-          })
-          return hasDiff ? next : prev
-        })
-      }
-
-      // Backfill: si la orden viene sin items, intentar reponerlos desde refs previos
-      const incomingOrders: Order[] = rawOrders.map((ord: Order) => {
-        if (!ord.order_items || ord.order_items.length === 0) {
-          const prevOrd = prevOrdersMapRef.current.get(ord.id)
-          if (prevOrd?.order_items && prevOrd.order_items.length > 0) {
-            return { ...ord, order_items: prevOrd.order_items }
-          }
-          const transitOrd = pendingOrdersWithoutItemsRef.current.get(ord.id)
-          if (transitOrd?.order_items && transitOrd.order_items.length > 0) {
-            return { ...ord, order_items: transitOrd.order_items }
-          }
-        }
-        return ord
-      })
-      const incomingCalls: any[] = callsRes.calls || []
-
-      // 1. Reconciliación de Órdenes — Patrón idéntico a service calls:
-      // Las órdenes se incluyen/excluyen por STATUS, no por si order_items está cargado.
-      // Los items vacíos son un estado transitorio de la race condition; no deben descartar la comanda.
-      setServerOrders(prev => {
-        const prevMap = new Map(prev.map(o => [o.id, o]))
-        const map = new Map<string, Order>()
-        const nextPendingWithoutItems = new Map<string, Order>()
-
-        incomingOrders.forEach(ord => {
-          if (ord.status === 'cancelled') return
-          // Backfill de segunda oportunidad desde prevMap (state anterior de React)
-          const existing = prevMap.get(ord.id)
-          const effectiveItems = (ord.order_items && ord.order_items.length > 0)
-            ? ord.order_items
-            : (existing?.order_items && existing.order_items.length > 0 ? existing.order_items : [])
-          const finalOrd = { ...ord, order_items: effectiveItems }
-          map.set(ord.id, finalOrd)
-          if (!effectiveItems || effectiveItems.length === 0) {
-            nextPendingWithoutItems.set(ord.id, finalOrd)
-          }
-        })
-
-        pendingOrdersWithoutItemsRef.current = nextPendingWithoutItems
-
-        // PERSISTENCIA DE TAREAS ACTIVAS — igual que attendedCallIdsRef en service calls:
-        // Si una comanda no terminal ya estaba en pantalla, preservarla sin importar si llegó
-        // en la respuesta o no. Solo se retira cuando el mozo la atiende explícitamente o
-        // el servidor confirma un estado terminal.
-        prev.forEach(prevOrd => {
-          if (!map.has(prevOrd.id)) {
-            const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || prevOrd.status === 'delivered'
-            const isHandledLocally = attendedValidationOrderIdsRef.current.has(prevOrd.id)
-            if (!isTerminal && !isHandledLocally) {
-              map.set(prevOrd.id, prevOrd)
-            }
-          }
-        })
-
-        // SIN filtro por order_items — igual que service calls no filtra por contenido
-        const newOrders = Array.from(map.values()).filter(o => o.status !== 'cancelled')
-
-        prevOrdersMapRef.current = new Map(newOrders.map(o => [o.id, o]))
-
-        const finger = newOrders.map(o => `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}`).join('|')
-        if (finger === ordersFingerRef.current) {
-          return prev
-        }
-        ordersFingerRef.current = finger
-        return newOrders
-      })
-
-      // 2. Reconciliación de Avisos de Servicio
-      const serverPendingCalls = incomingCalls.filter((c: any) => c.status === 'pending')
-
-      const formattedPendingCalls: PendingServiceCall[] = serverPendingCalls.map((c: any) => {
-        let desc = 'Solicita atención del mozo'
-        if (c.call_type === 'order_dictate') desc = 'Comanda lista para dictar al mozo'
-        else if (c.call_type.startsWith('bill_')) desc = `Pide la cuenta (${c.call_type.replace('bill_', '')})`
-        else if (c.call_type.startsWith('service_')) desc = `Solicita: ${c.call_type.replace('service_', '')}`
-
-        return {
-          id: c.id,
-          table_number: c.table_number,
-          call_type: c.call_type,
-          text: desc,
-        }
-      })
-
-      const callsFinger = formattedPendingCalls.map(c => `${c.id}:${c.table_number}:${c.call_type}`).join('|')
-      if (callsFinger !== callsFingerRef.current) {
-        callsFingerRef.current = callsFinger
-        setPendingCalls(formattedPendingCalls)
-      }
-
-      const statusMap: Record<string | number, TableStatusType> = {}
-      const dwellMap: Record<string | number, number> = {}
-
-      // 3. Mesas con órdenes creadas
-      incomingOrders.forEach(ord => {
-        if (ord.status === 'cancelled' || ord.status === 'paid') {
-          return
-        }
-        const tblNum = ord.table?.table_number || ord.table_number
-        if (tblNum) {
-          const isDelivered = ord.status === 'delivered'
-          const numKey = Number(tblNum)
-          const strKey = String(tblNum)
-          if (ord.status === 'ready' && !isDelivered) {
-            statusMap[tblNum] = 'ready'
-            statusMap[numKey] = 'ready'
-            statusMap[strKey] = 'ready'
-            if (!seenReadyOrderIdsRef.current.has(ord.id)) {
-              seenReadyOrderIdsRef.current.add(ord.id)
-              setReadyOrderAlert(tblNum)
-              playKitchenChime()
-            }
-          } else if (!isDelivered && ['pending_validation', 'pending', 'preparing'].includes(ord.status) && !statusMap[tblNum] && !statusMap[numKey]) {
-            statusMap[tblNum] = 'busy'
-            statusMap[numKey] = 'busy'
-            statusMap[strKey] = 'busy'
-          } else if (!statusMap[tblNum] && !statusMap[numKey]) {
-            statusMap[tblNum] = 'busy'
-            statusMap[numKey] = 'busy'
-            statusMap[strKey] = 'busy'
-          }
-
-          const createdMs = new Date(ord.created_at).getTime()
-          if (!dwellMap[tblNum] || createdMs < dwellMap[tblNum]) {
-            dwellMap[tblNum] = createdMs
-            dwellMap[numKey] = createdMs
-            dwellMap[strKey] = createdMs
-          }
-        }
-      })
-
-      // 4. Mesas con llamadas de servicio
-      incomingCalls.forEach((call: any) => {
-        if (call.status === 'pending' && !attendedCallIdsRef.current.has(call.id)) {
-          const tblNum = call.table_number
-          if (tblNum) {
-            statusMap[tblNum] = 'calling'
-            statusMap[Number(tblNum)] = 'calling'
-            statusMap[String(tblNum)] = 'calling'
-          }
-        }
-      })
-
-      // 5. Mesas con sesión iniciada desde el QR móvil
-      const sessions = tablesRes.sessions || {}
-      Object.entries(sessions).forEach(([tblNum, sessionData]: [string, any]) => {
-        if (sessionData && sessionData.status === 'active') {
-          if (!statusMap[tblNum] && !statusMap[Number(tblNum)]) {
-            statusMap[tblNum] = 'busy'
-            statusMap[Number(tblNum)] = 'busy'
-            statusMap[String(tblNum)] = 'busy'
-          }
-          if (sessionData.started_at) {
-            const sessionMs = new Date(sessionData.started_at).getTime()
-            if (!dwellMap[tblNum] || sessionMs < dwellMap[tblNum]) {
-              dwellMap[tblNum] = sessionMs
-              dwellMap[Number(tblNum)] = sessionMs
-              dwellMap[String(tblNum)] = sessionMs
-            }
-          }
-        }
-      })
-
-      const statusFinger = JSON.stringify(statusMap)
-      if (statusFinger !== tableStatusesFingerRef.current) {
-        tableStatusesFingerRef.current = statusFinger
-        setTableStatuses(statusMap)
-      }
-
-      const finalDwellMins: Record<string | number, number> = {}
-      const now = Date.now()
-      Object.entries(dwellMap).forEach(([tNum, ms]) => {
-        finalDwellMins[tNum] = Math.max(0, Math.floor((now - ms) / 60000))
-      })
-      setTableDwellMinutes(prev => {
-        const prevKeys = Object.keys(prev)
-        const newKeys = Object.keys(finalDwellMins)
-        if (prevKeys.length === newKeys.length && prevKeys.every(k => prev[k] === finalDwellMins[k])) {
-          return prev
-        }
-        return finalDwellMins
-      })
-
-    } catch (err) {
-      console.log('Error syncing server orders/calls:', err)
-    }
-  }, [slug])
-
-  // Entregar un ticket o comanda individual específica (No-optimista con OCC)
-  const handleDeliverSingleOrder = async (orderId: string, tableNum?: number | string) => {
-    if (deliveringOrderIds.has(orderId)) return
-
-    setDeliveringOrderIds(prev => new Set(prev).add(orderId))
-
-    const targetOrder = serverOrders.find(o => o.id === orderId)
-    const expectedVersion = targetOrder?.version
-
-    try {
-      const res = await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug,
-          orderId,
-          status: 'delivered',
-          table_number: tableNum,
-          expected_version: expectedVersion,
-          actor_type: 'waiter',
-        }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setServerOrders(prev =>
-          prev.map(o => {
-            if (o.id === orderId) {
-              return data.order
-                ? { ...data.order, table_number: tableNum || data.order.table_number }
-                : { ...o, status: 'delivered', version: data.version ?? (o.version ? o.version + 1 : 1) }
-            }
-            return o
-          })
-        )
-        if (tableNum && readyOrderAlert?.toString() === tableNum.toString()) {
-          setReadyOrderAlert(null)
-        }
-      } else if (res.status === 409) {
-        console.warn(`[handleDeliverSingleOrder] Conflicto OCC 409 en orden ${orderId}. Reconciliando...`)
-        await syncServerData()
-      } else {
-        console.error(`[handleDeliverSingleOrder] Error entregando orden ${orderId}:`, res.status)
-        await syncServerData()
-      }
-    } catch (e) {
-      console.error('Error de red al entregar orden:', e)
-      await syncServerData()
-    } finally {
-      setDeliveringOrderIds(prev => {
-        const next = new Set(prev)
-        next.delete(orderId)
-        return next
-      })
-    }
-  }
-
-  // Marcar todos los platos listos/en curso de la mesa como entregados
-  const handleMarkDelivered = async (tableNum: string | number) => {
-    if (readyOrderAlert?.toString() === tableNum.toString()) {
-      setReadyOrderAlert(null)
-    }
-
-    try {
-      const activeOrders = serverOrders.filter(
-        o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString()) &&
-             (o.status === 'ready' || o.status === 'preparing' || o.status === 'pending')
-      )
-
-      for (const ord of activeOrders) {
-        await handleDeliverSingleOrder(ord.id, tableNum)
-      }
-    } catch (e) {
-      console.error('Error marking all delivered:', e)
-    }
-  }
-
-  // Validar comanda de cliente y enviarla a cocina (No-optimista con OCC)
-  const handleValidateOrder = async (orderId: string, tableNum?: number | string) => {
-    if (validatingOrderIds.has(orderId)) return
-
-    // 1. Activar estado de carga (sin mutación optimista de serverOrders)
-    setValidatingOrderIds(prev => new Set(prev).add(orderId))
-    attendedValidationOrderIdsRef.current.add(orderId)
-
-    const targetOrder = serverOrders.find(o => o.id === orderId)
-    const expectedVersion = targetOrder?.version
-
-    try {
-      const res = await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug,
-          orderId,
-          status: 'pending',
-          table_number: tableNum,
-          tableNumber: tableNum,
-          expected_version: expectedVersion,
-          actor_type: 'waiter',
-        }),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        // 2. Actualizar estado exclusivamente tras confirmación del servidor
-        setServerOrders(prev =>
-          prev.map(o => {
-            if (o.id === orderId) {
-              const effectiveItems = (data.order?.order_items && data.order.order_items.length > 0)
-                ? data.order.order_items
-                : (o.order_items || [])
-              return data.order
-                ? { ...data.order, table_number: tableNum || data.order.table_number, order_items: effectiveItems }
-                : { ...o, status: 'pending', version: data.version ?? (o.version ? o.version + 1 : 1) }
-            }
-            return o
-          })
-        )
-      } else if (res.status === 409) {
-        console.warn(`[handleValidateOrder] Conflicto OCC 409 en orden ${orderId}. Reconciliando con servidor...`)
-        await syncServerData()
-      } else {
-        console.error(`[handleValidateOrder] Error en validación de orden ${orderId}:`, res.status)
-        await syncServerData()
-      }
-    } catch (e) {
-      console.error('Error de red al validar comanda hacia cocina:', e)
-      await syncServerData()
-    } finally {
-      setValidatingOrderIds(prev => {
-        const next = new Set(prev)
-        next.delete(orderId)
-        return next
-      })
-    }
-  }
-
-  // Descartar/cancelar comanda de cliente
-  const handleCancelValidationOrder = async (orderId: string, tableNum?: number | string) => {
-    attendedValidationOrderIdsRef.current.add(orderId)
-    const targetOrder = serverOrders.find(o => o.id === orderId)
-    const expectedVersion = targetOrder?.version
-
-    try {
-      const res = await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug,
-          orderId,
-          status: 'cancelled',
-          table_number: tableNum,
-          expected_version: expectedVersion,
-          actor_type: 'waiter',
-        }),
-      })
-      if (res.ok) {
-        setServerOrders(prev => prev.filter(o => o.id !== orderId))
-      } else {
-        await syncServerData()
-      }
-    } catch (e) {
-      console.error('Error al cancelar comanda:', e)
-      await syncServerData()
-    }
-  }
-
-  // Marcar mesa como cobrada y liberarla para el próximo cliente
-  const executeCloseAndFreeTable = async (tableNum: number | string) => {
-    try {
-      // 1. Notificar al backend para liberar la sesión y limpiar órdenes
-      await fetch('/api/tables', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, table_number: tableNum, action: 'free' }),
-      })
-
-      // 2. Limpiar carritos y estado local de la mesa
-      setTableCarts(prev => {
-        const next = { ...prev }
-        delete next[tableNum]
-        return next
-      })
-
-      setShowFreeConfirmTable(null)
-      setSelectedTable(null)
-
-      // 3. Emitir evento local para cerrar modales abiertos
-      window.dispatchEvent(new CustomEvent('fluxo_table_freed', { detail: { tableNumber: tableNum } }))
-
-      // 4. Limpiar llamadas
-      const tableCalls = pendingCalls.filter(c => c.table_number.toString() === tableNum.toString())
-      for (const c of tableCalls) {
-        await handleAttendCall(c.id)
-      }
-
-      setServerOrders(prev => prev.filter(o => o.table_number?.toString() !== tableNum.toString()))
-      setTableCarts(prev => ({ ...prev, [tableNum]: [] }))
-      setTableStatuses(prev => ({ ...prev, [tableNum]: 'free' as TableStatusType }))
-    } catch (e) {
-      console.error('Error freeing table:', e)
-    }
-  }
-
-  // Transferir toda la comanda, pedidos y cuenta de una mesa a otra
-  const handleTransferTable = async (toTableNum: string | number) => {
-    if (!selectedTable || !toTableNum || toTableNum === selectedTable.table_number) return
-    const fromNum = selectedTable.table_number
-    try {
-      await fetch('/api/tables', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug,
-          table_number: fromNum,
-          action: 'transfer',
-          to_table: toTableNum,
-        }),
-      })
-
-      // Transferir carritos locales
-      setTableCarts(prev => {
-        const copy = { ...prev }
-        copy[toTableNum] = copy[fromNum] || []
-        delete copy[fromNum]
-        return copy
-      })
-
-      // Transferir pax
-      setTablePax(prev => {
-        const copy = { ...prev }
-        copy[toTableNum] = copy[fromNum] || 2
-        delete copy[fromNum]
-        return copy
-      })
-
-      const target = tables.find(t => t.table_number.toString() === toTableNum.toString())
-      if (target) setSelectedTable(target)
-      setShowTransferModal(false)
-      setOrderSentToast(true)
-      setTimeout(() => setOrderSentToast(false), 2500)
-    } catch (err) {
-      console.error('Error transferring table:', err)
-    }
-  }
-
-  // 2. Carga y sincronización de órdenes y avisos entre dispositivos (Celular <-> PC)
-  useEffect(() => {
-    let sseEventSource: EventSource | null = null
-    let pollInterval: any = null
-    const supabase = createBrowserClient()
-    let realtimeChannel: any = null
-
-    async function loadInitialData() {
-      if (typeof window !== 'undefined') {
-        const rest = MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet']
-        setRestaurant(rest)
-        const cats = MOCK_CATEGORIES[slug] || MOCK_CATEGORIES['burger-gourmet'] || []
-        setCategories(cats)
-        if (cats.length > 0) setSelectedCategory(cats[0].id)
-        setProducts(MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])
-        const currentTables = MOCK_TABLES[slug] || MOCK_TABLES['burger-gourmet'] || fallbackTables
-        setTables(currentTables)
-        if (currentTables.length > 0) {
-          setSelectedTable(prev => prev || currentTables[0])
-        }
-
-        // Cargar catálogo y disponibilidad real del servidor
-        try {
-          fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
-            .then(r => r.json())
-            .then(data => {
-              if (data?.products && data.products.length > 0) setProducts(data.products)
-              if (data?.categories && data.categories.length > 0) setCategories(data.categories)
-            })
-            .catch(() => {})
-        } catch {}
-      }
-
-      await syncServerData()
-
-      // 1. Canal Nativo Supabase Realtime (postgres_changes en orders, order_events, service_calls)
-      if (supabase) {
-        // Debounce: el evento de orders llega ANTES de que order_items esté insertado.
-        // Esperar 400ms garantiza que cuando sincronicemos, los items ya están disponibles.
-        let realtimeDebounceTimer: any = null
-        const triggerDebouncedRealtimeSync = () => {
-          if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer)
-          realtimeDebounceTimer = setTimeout(() => {
-            syncServerData()
-          }, 400)
-        }
-
-        realtimeChannel = supabase
-          .channel(`comandero-orders-${slug}`)
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'orders' },
-            () => {
-              triggerDebouncedRealtimeSync()
-            }
-          )
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'order_events' },
-            () => {
-              triggerDebouncedRealtimeSync()
-            }
-          )
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'service_calls' },
-            () => {
-              triggerDebouncedRealtimeSync()
-            }
-          )
-          .subscribe()
-      }
-
-      // 2. SSE (Server-Sent Events) en vivo para sincronización instantánea de comandas y carta
-      try {
-        let sseDebounceTimer: any = null
-        const triggerDebouncedSync = () => {
-          if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
-          sseDebounceTimer = setTimeout(() => {
-            syncServerData()
-          }, 300)
-        }
-
-        sseEventSource = new EventSource('/api/events')
-        sseEventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
-            if (data.type === 'connected') return
-
-            if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
-              if (data.productId && data.isAvailable !== undefined) {
-                const canonical = resolveCanonicalProductId(data.productId) || data.productId
-                recentTogglesRef.current.set(data.productId, { status: data.isAvailable, until: Date.now() + 3500 })
-                if (canonical) recentTogglesRef.current.set(canonical, { status: data.isAvailable, until: Date.now() + 3500 })
-                setProducts(prev => prev.map(p => {
-                  const pCanon = resolveCanonicalProductId(p.id) || p.id
-                  if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
-                    return { ...p, is_available: data.isAvailable }
-                  }
-                  return p
-                }))
-                return
-              }
-              fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
-                .then(r => r.json())
-                .then(d => {
-                  if (d?.products && d.products.length > 0) setProducts(d.products)
-                  if (d?.categories && d.categories.length > 0) setCategories(d.categories)
-                })
-                .catch(() => {})
-              return
-            }
-
-            if (!data.slug || data.slug === slug) {
-              triggerDebouncedSync()
-            }
-          } catch {
-            // ignore
-          }
-        }
-        sseEventSource.onerror = () => {
-          if (sseEventSource) {
-            sseEventSource.close()
-            sseEventSource = null
-          }
-        }
-      } catch (err) {
-        console.log('SSE connection error:', err)
-      }
-
-      // 3. Soft Polling de respaldo cada 4.5s
-      pollInterval = setInterval(syncServerData, 4500)
-    }
-
-    loadInitialData()
-
-    // Manejar sincronización cross-tab instantánea en el mismo navegador
-    let menuBc: BroadcastChannel | null = null
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        menuBc = new BroadcastChannel('fluxo_menu_channel')
-        menuBc.onmessage = (event) => {
-          const { type, slug: evtSlug, productId, isAvailable } = event.data || {}
-          if (type === 'menu_updated' && (!evtSlug || evtSlug === slug)) {
-            if (productId && isAvailable !== undefined) {
-              const canonical = resolveCanonicalProductId(productId) || productId
-              recentTogglesRef.current.set(productId, { status: isAvailable, until: Date.now() + 3500 })
-              if (canonical) recentTogglesRef.current.set(canonical, { status: isAvailable, until: Date.now() + 3500 })
-              setProducts(prev => prev.map(p => {
-                const pCanon = resolveCanonicalProductId(p.id) || p.id
-                if (p.id === productId || p.id === canonical || pCanon === canonical) {
-                  return { ...p, is_available: isAvailable }
-                }
-                return p
-              }))
-              return
-            }
-            fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
-              .then(r => r.json())
-              .then(d => {
-                if (d?.products && d.products.length > 0) setProducts(d.products)
-              })
-              .catch(() => {})
-          }
-        }
-      }
-    } catch {}
-
-    // Manejar desbloqueo de móvil / cambio de pestaña de vuelta a la app
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        syncServerData()
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('focus', handleVisibilityChange)
-
-    // Manejar evento de actualización de carta o cambio de disponibilidad de platos
-    const handleMenuUpdated = (e: any) => {
-      const { slug: evtSlug, productId, isAvailable } = e?.detail || {}
-      if (!evtSlug || evtSlug === slug) {
-        if (productId && isAvailable !== undefined) {
-          const canonical = resolveCanonicalProductId(productId) || productId
-          recentTogglesRef.current.set(productId, { status: isAvailable, until: Date.now() + 3500 })
-          if (canonical) recentTogglesRef.current.set(canonical, { status: isAvailable, until: Date.now() + 3500 })
-          setProducts(prev => prev.map(p => {
-            const pCanon = resolveCanonicalProductId(p.id) || p.id
-            if (p.id === productId || p.id === canonical || pCanon === canonical) {
-              return { ...p, is_available: isAvailable }
-            }
-            return p
-          }))
-          return
-        }
-        fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
-          .then(r => r.json())
-          .then(data => {
-            if (data?.products && data.products.length > 0) setProducts(data.products)
-            if (data?.categories && data.categories.length > 0) setCategories(data.categories)
-          })
-          .catch(() => {})
-      }
-    }
-    window.addEventListener('fluxo_menu_updated', handleMenuUpdated)
-
-    return () => {
-      if (realtimeChannel && supabase) {
-        supabase.removeChannel(realtimeChannel)
-      }
-      if (sseEventSource) sseEventSource.close()
-      if (menuBc) {
-        try { menuBc.close() } catch {}
-      }
-      if (pollInterval) clearInterval(pollInterval)
-      if (popupTimerRef.current) clearTimeout(popupTimerRef.current)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('focus', handleVisibilityChange)
-      window.removeEventListener('fluxo_menu_updated', handleMenuUpdated)
-    }
-  }, [slug])
-
-  const filteredProducts = products.filter(prod => {
-    const matchesCat = isProductInCategory(prod, selectedCategory, categories)
-    const matchesSearch = searchQuery === '' || prod.name.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCat && matchesSearch
+  // 5. Acciones y mutaciones de comandas
+  const {
+    validatingOrderIds,
+    deliveringOrderIds,
+    isSubmitting,
+    orderSentToast,
+    handleAttendCall,
+    handleDeliverSingleOrder,
+    handleMarkDelivered,
+    handleValidateOrder,
+    handleCancelValidationOrder,
+    handleCancelSingleOrder,
+    handleFireSecondCourses,
+    executeCloseAndFreeTable,
+    handleTransferTable,
+    handleSendOrderToKitchen,
+  } = useComanderoActions({
+    slug,
+    restaurant,
+    serverOrders,
+    setServerOrders,
+    pendingCalls,
+    setPendingCalls,
+    setTableCarts,
+    setTablePax,
+    setTableStatuses,
+    setSelectedTable,
+    tables,
+    syncServerData,
+    attendedCallIdsRef,
+    seenCallIdsRef,
+    attendedValidationOrderIdsRef,
+    readyOrderAlert,
+    setReadyOrderAlert,
   })
 
-  // Añadir ítem configurado con Píldoras + Notas libres + Pase + Cortesía + Peso
+  // Añadir ítem configurado al carrito de la mesa
   const handleAddItemToComanda = (
     product: Product,
     quantity: number,
@@ -865,126 +123,16 @@ export default function WaiterComanderoPage() {
   ) => {
     updateCartForCurrentTable(prev => [
       ...prev,
-      { product, quantity, selectedPills, notes, course, isComplimentary, weightGrams }
+      { product, quantity, selectedPills, notes, course, isComplimentary, weightGrams },
     ])
   }
 
-  // Marchar segundos platos retenidos a la cocina
-  const handleFireSecondCourses = async (tableNum: string | number) => {
-    const tableOrders = serverOrders.filter(
-      o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
-    )
-    const fireableOrders = tableOrders.filter(o => o.status === 'pending' || o.status === 'ready')
-    for (const ord of fireableOrders) {
-      await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, orderId: ord.id, status: 'preparing' }),
-      })
-    }
-    setOrderSentToast(true)
-    setTimeout(() => setOrderSentToast(false), 2500)
-  }
-
-  // Anular plato marchado
-  const handleCancelSingleOrder = async (orderId: string, reason: string) => {
-    try {
-      await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, orderId, status: 'delivered', notes: `[ANULADO: ${reason}]` }),
-      })
-      setServerOrders(prev => prev.filter(o => o.id !== orderId))
-    } catch (err) {
-      console.error('Error cancelling order:', err)
-    }
-  }
-
-  // Envío de comanda a Cocina
-  const handleSendOrderToKitchen = async () => {
-    if (!selectedTable) {
-      alert('Por favor selecciona una mesa antes de enviar la comanda.')
-      return
-    }
-
-    if (cart.length === 0) {
-      alert('La comanda está vacía.')
-      return
-    }
-
-    setIsSubmitting(true)
-    const rawTotal = cart.reduce((sum, item) => {
-      if (item.is_complimentary) return sum
-      const price = item.product.price_type === 'weight'
-        ? item.product.price * ((item.weight_grams || 300) / (item.product.price_unit === 'kg' ? 1000 : 100))
-        : item.product.price
-      return sum + price * item.quantity
-    }, 0)
-
-    const discountPct = tableDiscounts[selectedTable.table_number] || 0
-    const totalAmount = discountPct > 0 ? rawTotal * (1 - discountPct / 100) : rawTotal
-
-    try {
-      const formattedItems = cart.map(item => {
-        const formattedNotes = [
-          item.is_complimentary ? '[🎁 INVITACIÓN DE LA CASA]' : '',
-          item.weight_grams ? `[⚖️ ${item.weight_grams}g]` : '',
-          item.selectedPills && item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : '',
-          item.notes ? item.notes : '',
-        ].filter(Boolean).join(' ')
-
-        return {
-          product_id: item.product.id,
-          quantity: item.quantity,
-          notes: formattedNotes || null,
-          product: item.product,
-          course: item.course || 'first',
-          is_complimentary: item.is_complimentary || false,
-          weight_grams: item.weight_grams,
-        }
-      })
-
-      await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug: restaurant?.slug || slug,
-          restaurant_id: restaurant?.id || '',
-          table_id: selectedTable.id,
-          table_number: selectedTable.table_number,
-          total_amount: totalAmount,
-          items: formattedItems,
-          discount_percentage: discountPct,
-          created_by: 'waiter',
-          status: 'pending',
-        }),
-      })
-
-      setOrderSentToast(true)
-      // Limpiar únicamente el carrito de esta mesa
-      setTableCarts(prev => ({ ...prev, [selectedTable.table_number]: [] }))
-      
-      setTimeout(() => {
-        setOrderSentToast(false)
-      }, 3500)
-    } catch (err) {
-      console.error('Error al enviar comanda:', err)
-      setOrderSentToast(true)
-      setTableCarts(prev => ({ ...prev, [selectedTable.table_number]: [] }))
-      setTimeout(() => setOrderSentToast(false), 3000)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  // Identificar bebidas previamente ordenadas en la sesión actual de la mesa seleccionada
-  const previousDrinksInTable = React.useMemo(() => {
+  // Bebidas previamente pedidas en la mesa para repetición rápida
+  const previousDrinksInTable = useMemo(() => {
     if (!selectedTable) return []
-    // Si la mesa está libre o liberada, no hay comensales ni bebidas previas para repetir
     const currentTableStatus = tableStatuses[selectedTable.table_number] || 'free'
     if (currentTableStatus === 'free') return []
 
-    // Filtrar estrictamente comandas activas de la sesión actual de la mesa (no pagadas ni canceladas)
     const tableOrders = serverOrders.filter(
       o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
            o.status !== 'paid' && o.status !== 'cancelled'
@@ -1011,1156 +159,163 @@ export default function WaiterComanderoPage() {
     })
     return Object.values(drinksMap)
   }, [selectedTable, serverOrders, products, tableStatuses])
-  // Listas de Tareas y Avisos Pendientes para el Mozo (Reactivo SSOT)
-  // Filtran SOLO por status — igual que service calls filtra solo por status === 'pending'.
-  // Si items están vacíos es un estado transitorio; el ticket igual se muestra.
-  const readyOrdersList = React.useMemo(() => {
-    return serverOrders.filter(o => o.status === 'ready')
-  }, [serverOrders])
 
-  const validationOrdersList = React.useMemo(() => {
-    return serverOrders.filter(o => o.status === 'pending_validation')
-  }, [serverOrders])
-
-  const totalPendingTasks = readyOrdersList.length + validationOrdersList.length + pendingCalls.length
+  // Listas de comanda reactivas
+  const readyOrdersList = useMemo(() => serverOrders.filter(o => o.status === 'ready'), [serverOrders])
+  const validationOrdersList = useMemo(() => serverOrders.filter(o => o.status === 'pending_validation'), [serverOrders])
 
   return (
     <StaffPinAuth role="comandero" restaurantSlug={slug}>
-<TenantProvider restaurant={restaurant} initialTable={selectedTable?.table_number.toString() || null}>
+      <TenantProvider restaurant={restaurant} initialTable={selectedTable?.table_number.toString() || null}>
         <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col pb-28 select-none" style={{ touchAction: 'manipulation' }}>
-        
-        <TenantHeader viewType="comandero" tableNumber={selectedTable?.table_number.toString()} />
+          
+          <TenantHeader viewType="comandero" tableNumber={selectedTable?.table_number.toString()} />
 
-        {/* 1. CENTRO DE TAREAS Y AVISOS PENDIENTES DEL MOZO (PERMANENTE Y DETALLADO) */}
-        {totalPendingTasks > 0 && (
-          <div className="bg-gradient-to-b from-slate-900 to-slate-950 text-white border-b-4 border-amber-400 p-3.5 sm:p-4 shadow-xl space-y-3.5">
-            <div className="max-w-7xl mx-auto space-y-3">
-              {/* Encabezado General */}
-              <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-3.5 h-3.5 rounded-full bg-amber-400 animate-ping flex-shrink-0" />
-                  <h3 className="text-sm sm:text-base font-black text-amber-300 uppercase tracking-wide flex items-center gap-2">
-                    <BellRing className="w-5 h-5 text-amber-400 stroke-[2.5]" />
-                    <span>Centro de Tareas y Avisos Pendientes ({totalPendingTasks})</span>
-                  </h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  {readyOrdersList.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        readyOrdersList.forEach(ord => {
-                          const tblNum = ord.table_number || ord.table?.table_number
-                          handleDeliverSingleOrder(ord.id, tblNum)
-                        })
-                      }}
-                      className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all shadow-xs flex items-center gap-1 active:scale-95"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Servir Todos ({readyOrdersList.length})</span>
-                    </button>
-                  )}
-                  {pendingCalls.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => pendingCalls.forEach(c => handleAttendCall(c.id))}
-                      className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all shadow-xs flex items-center gap-1 active:scale-95"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>Atender Avisos ({pendingCalls.length})</span>
-                    </button>
-                  )}
+          {/* 1. Centro de Tareas y Avisos Pendientes */}
+          <ComanderoTaskQueue
+            readyOrdersList={readyOrdersList}
+            validationOrdersList={validationOrdersList}
+            pendingCalls={pendingCalls}
+            deliveringOrderIds={deliveringOrderIds}
+            validatingOrderIds={validatingOrderIds}
+            dismissedReadyBannerOrderIds={dismissedReadyBannerOrderIds}
+            tables={tables}
+            onDeliverSingleOrder={handleDeliverSingleOrder}
+            onDeliverAllReady={() => {
+              readyOrdersList.forEach(ord => {
+                const tblNum = ord.table_number || ord.table?.table_number
+                handleDeliverSingleOrder(ord.id, tblNum)
+              })
+            }}
+            onAttendCall={handleAttendCall}
+            onAttendAllCalls={() => pendingCalls.forEach(c => handleAttendCall(c.id))}
+            onValidateOrder={handleValidateOrder}
+            onCancelValidationOrder={handleCancelValidationOrder}
+            onSelectTable={setSelectedTable}
+            onDismissReadyBanner={(ordId) => setDismissedReadyBannerOrderIds(prev => new Set(prev).add(ordId))}
+          />
+
+          {/* Toast de confirmación de envío */}
+          {orderSentToast && (
+            <div className="fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-4 rounded-2xl bg-blue-900 text-white font-black shadow-2xl flex items-center justify-between animate-in slide-in-from-top duration-300 border border-blue-800">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-7 h-7 text-blue-300 stroke-[2.5]" />
+                <div>
+                  <div className="text-sm font-black uppercase">¡Comanda Enviada a Cocina!</div>
+                  <div className="text-xs text-blue-200">Mesa #{selectedTable?.table_number} en preparación</div>
                 </div>
               </div>
-
-              {/* SECCIÓN A: COMANDAS LISTAS PARA SERVIR EN SALA */}
-              {readyOrdersList.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <h4 className="text-xs sm:text-sm font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-emerald-400" />
-                      <span>Platos Listos en Cocina para Servir ({readyOrdersList.length})</span>
-                    </h4>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {readyOrdersList.map((ord, idx) => {
-                      const tblNum = ord.table_number || ord.table?.table_number || '?'
-                      const waitingMins = ord.created_at ? Math.max(1, Math.floor((Date.now() - new Date(ord.created_at).getTime()) / 60000)) : 1
-
-                      return (
-                        <div
-                          key={ord.id}
-                          className="bg-slate-900/90 border-2 border-emerald-400 rounded-2xl p-3.5 shadow-lg flex flex-col justify-between space-y-3 relative overflow-hidden"
-                        >
-                          <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500" />
-                          <div>
-                            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                              <span className="px-3 py-1 rounded-xl bg-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-xs">
-                                <span>Mesa #{tblNum}</span>
-                              </span>
-                              <span className="text-[11px] font-extrabold text-emerald-300 flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>Listo (hace {waitingMins} min)</span>
-                              </span>
-                            </div>
-
-                            {/* Desglose completo de platos listos */}
-                            <div className="mt-2.5 space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                              {(ord.order_items || []).map((it, itemIdx) => (
-                                <div key={itemIdx} className="text-xs text-slate-200 leading-tight">
-                                  <span className="font-black text-emerald-400">{it.quantity}x </span>
-                                  <span className="font-bold text-white">{it.product?.name || `Plato #${itemIdx + 1}`}</span>
-                                  {it.notes && (
-                                    <span className="block text-[10px] text-amber-300 font-extrabold pl-3 mt-0.5">
-                                      &bull; {it.notes}
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
-                            <button
-                              type="button"
-                              disabled={deliveringOrderIds.has(ord.id)}
-                              onClick={() => handleDeliverSingleOrder(ord.id, tblNum)}
-                              className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-700 disabled:opacity-70 text-slate-950 disabled:text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
-                              title="Marcar como servido en mesa"
-                            >
-                              {deliveringOrderIds.has(ord.id) ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                  <span>Entregando...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                                  <span>Marcar Servido</span>
-                                </>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const target = tables.find(t => t.table_number.toString() === tblNum.toString())
-                                if (target) setSelectedTable(target)
-                              }}
-                              className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 font-black text-xs border border-slate-700 transition-colors cursor-pointer"
-                              title="Ver mesa en comandero"
-                            >
-                              Ver Mesa
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* SECCIÓN B: COMANDAS PENDIENTES DE VALIDACIÓN EN MESA */}
-              {validationOrdersList.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
-                    <h4 className="text-xs sm:text-sm font-black text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <UserCheck className="w-4 h-4 text-blue-400 stroke-[2.5]" />
-                      <span>Validación Requerida en Mesa ({validationOrdersList.length})</span>
-                    </h4>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {validationOrdersList.map(valOrder => {
-                      const tblNum = valOrder.table_number || valOrder.table?.table_number
-
-                      return (
-                        <div
-                          key={valOrder.id}
-                          className="bg-slate-900/90 rounded-2xl p-3.5 border-2 border-blue-400/80 shadow-md flex flex-col justify-between space-y-3"
-                        >
-                          <div>
-                            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                              <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/30 text-blue-200 border border-blue-400 font-black text-xs">
-                                Mesa #{tblNum}
-                              </span>
-                              <span className="font-black text-xs text-white tabular-nums">
-                                {formatCurrency(valOrder.total_amount)}
-                              </span>
-                            </div>
-
-                            <div className="mt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                              {(valOrder.order_items || []).map((it, idx) => (
-                                <div key={idx} className="text-xs text-slate-300 leading-tight">
-                                  <span className="font-black text-blue-400">{it.quantity}x </span>
-                                  <span className="font-semibold text-white">{it.product?.name || `Plato #${idx + 1}`}</span>
-                                  {it.notes && (
-                                    <span className="block text-[10px] text-amber-300 font-bold pl-3">
-                                      &bull; {it.notes}
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
-                            <button
-                              type="button"
-                              disabled={validatingOrderIds.has(valOrder.id)}
-                              onClick={() => handleValidateOrder(valOrder.id, tblNum)}
-                              className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-70 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
-                              title="Enviar a cocina tras verificar verbalmente en mesa"
-                            >
-                              {validatingOrderIds.has(valOrder.id) ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                                  <span>Confirmando...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                                  <span>Confirmar a Cocina</span>
-                                </>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (confirm(`¿Descartar comanda de Mesa #${tblNum}?`)) {
-                                  handleCancelValidationOrder(valOrder.id, tblNum)
-                                }
-                              }}
-                              className="p-2.5 rounded-xl bg-red-950/60 hover:bg-red-900 text-red-300 font-black text-xs border border-red-800/80 transition-colors cursor-pointer"
-                              title="Descartar comanda falsa o errónea"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* SECCIÓN C: AVISOS DE SALÓN Y COBRO */}
-              {pendingCalls.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                    <h4 className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Bell className="w-4 h-4 text-amber-400 stroke-[2.5]" />
-                      <span>Avisos y Cobros de Salón ({pendingCalls.length})</span>
-                    </h4>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                    {pendingCalls.map(call => {
-                      const isBill = call.text.toLowerCase().includes('cuenta')
-                      return (
-                        <div
-                          key={call.id}
-                          className={`p-3.5 rounded-2xl border-2 shadow-md flex items-center justify-between gap-3 transition-all ${
-                            isBill
-                              ? 'bg-emerald-950/90 border-emerald-400 text-white'
-                              : 'bg-slate-900/90 border-amber-400 text-white'
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const tbl = tables.find(t => t.table_number.toString() === call.table_number.toString())
-                              if (tbl) setSelectedTable(tbl)
-                            }}
-                            className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
-                          >
-                            <span className={`px-2.5 py-1 rounded-xl text-xs font-black flex-shrink-0 ${
-                              isBill ? 'bg-emerald-400 text-slate-950' : 'bg-amber-400 text-slate-950'
-                            }`}>
-                              Mesa #{call.table_number}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-black truncate">{call.text}</p>
-                              <span className="text-[10px] text-slate-400 block mt-0.5 font-semibold">Toca para abrir mesa</span>
-                            </div>
-                          </button>
-
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => handleAttendCall(call.id)}
-                              aria-label={isBill ? `Confirmar cobro de Mesa #${call.table_number}` : `Marcar aviso atendido de Mesa #${call.table_number}`}
-                              className={`px-3 py-2 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1 cursor-pointer ${
-                                isBill
-                                  ? 'bg-emerald-400 hover:bg-emerald-300 text-slate-950'
-                                  : 'bg-amber-400 hover:bg-amber-300 text-slate-950'
-                              }`}
-                              title={isBill ? 'Confirmar cobro' : 'Marcar como atendido'}
-                            >
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
-                              <span>{isBill ? 'Cobrado' : 'Atendido'}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleAttendCall(call.id)}
-                              aria-label="Cerrar aviso"
-                              className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-                              title="Cerrar aviso"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-        )}
-
-        {/* Alertas Flotantes Permanentes de Comandas Listas para Servir */}
-        {readyOrdersList.filter(ord => !dismissedReadyBannerOrderIds.has(ord.id)).map(ord => {
-          const tblNum = ord.table_number || ord.table?.table_number || '?'
-          const itemsCount = (ord.order_items || []).reduce((acc, it) => acc + (it.quantity || 1), 0)
-          const itemsSummary = (ord.order_items || []).map(it => `${it.quantity}x ${it.product?.name || 'Plato'}`).join(', ')
-
-          return (
-            <div
-              key={`float-ready-${ord.id}`}
-              className="fixed top-16 inset-x-3 z-50 max-w-lg mx-auto p-3.5 sm:p-4 rounded-2xl bg-emerald-600 text-white font-black shadow-2xl flex items-center justify-between gap-3 border-2 border-emerald-400 animate-in slide-in-from-top duration-300"
-            >
-              <div
-                onClick={() => {
-                  const target = tables.find(t => t.table_number.toString() === tblNum.toString())
-                  if (target) setSelectedTable(target)
-                }}
-                className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
-                title="Toca para ir a la mesa"
-              >
-                <div className="w-10 h-10 rounded-xl bg-white text-emerald-900 flex items-center justify-center flex-shrink-0 font-black shadow-xs animate-bounce">
-                  <Sparkles className="w-6 h-6 text-emerald-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] uppercase font-black tracking-wider bg-emerald-700/90 text-white px-2 py-0.5 rounded-md">
-                      Mesa #{tblNum}
-                    </span>
-                    <span className="text-[10px] text-emerald-100 font-extrabold">
-                      {itemsCount} {itemsCount === 1 ? 'plato listo' : 'platos listos'}
-                    </span>
-                  </div>
-                  <div className="text-xs sm:text-sm font-black uppercase text-white truncate mt-0.5">
-                    ¡Comanda Lista en Cocina!
-                  </div>
-                  <div className="text-[10px] text-emerald-100 truncate font-semibold">
-                    {itemsSummary}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <button
-                  type="button"
-                  disabled={deliveringOrderIds.has(ord.id)}
-                  onClick={() => handleDeliverSingleOrder(ord.id, tblNum)}
-                  className="px-3 py-2 rounded-xl bg-white hover:bg-emerald-50 disabled:opacity-70 text-emerald-950 font-black text-xs shadow-md active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                  title="Marcar como servido"
-                >
-                  {deliveringOrderIds.has(ord.id) ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-700" />
-                      <span>Entregando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
-                      <span>Servir</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDismissedReadyBannerOrderIds(prev => new Set(prev).add(ord.id))
-                  }}
-                  className="p-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-800 text-white transition-colors cursor-pointer"
-                  title="Ocultar aviso flotante"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-          )
-        })}
-
-        {orderSentToast && (
-          <div className="fixed top-16 inset-x-4 z-50 max-w-md mx-auto p-4 rounded-2xl bg-blue-900 text-white font-black shadow-2xl flex items-center justify-between animate-in slide-in-from-top duration-300 border border-blue-800">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-7 h-7 text-blue-300 stroke-[2.5]" />
-              <div>
-                <div className="text-sm font-black uppercase">¡Comanda Enviada a Cocina!</div>
-                <div className="text-xs text-blue-200">Mesa #{selectedTable?.table_number} en preparación</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Selector Rápido de Mesas con Semáforo */}
-        <TableSelector
-          tables={tables}
-          selectedTable={selectedTable?.table_number || null}
-          tableStatuses={tableStatuses}
-          tableDwellMinutes={tableDwellMinutes}
-          onSelectTable={handleSelectTableAndClearAlerts}
-          onOpenQuickStock={() => setShowQuickStockModal(true)}
-          pausedItemsCount={products.filter(p => p.is_available === false).length}
-        />
-
-        {/* PANEL DETALLADO DE ESTADO PARA LA MESA SELECCIONADA */}
-        {selectedTable && (
-          <div className="max-w-7xl mx-auto w-full px-3 pt-3 space-y-2.5">
-            
-            {/* A. Avisos Pendientes Específicos de esta Mesa */}
-            {pendingCalls.filter(c => c.table_number.toString() === selectedTable.table_number.toString()).length > 0 && (
-              <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-3.5 space-y-2 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                    <h4 className="font-black text-xs sm:text-sm text-amber-950 uppercase tracking-wider">
-                      Solicitudes de Mesa #{selectedTable.table_number}
-                    </h4>
-                  </div>
-                  <span className="text-[11px] font-bold text-amber-800">
-                    {pendingCalls.filter(c => c.table_number.toString() === selectedTable.table_number.toString()).length} pendientes
-                  </span>
-                </div>
-
-                <div className="space-y-1.5">
-                  {pendingCalls
-                    .filter(c => c.table_number.toString() === selectedTable.table_number.toString())
-                    .map(call => (
-                      <div
-                        key={call.id}
-                        className="bg-white p-2.5 rounded-xl border border-amber-200 flex items-center justify-between gap-2 shadow-xs"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Bell className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                          <span className="text-xs font-extrabold text-slate-900 truncate">
-                            {call.text}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => handleAttendCall(call.id)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1 shadow-xs transition-transform active:scale-95 flex-shrink-0"
-                        >
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          <span>Atendido</span>
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* B. Platos Listos en Cocina para Servir (Individuales por Ticket) */}
-            {serverOrders.filter(
-              o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && o.status === 'ready'
-            ).length > 0 && (
-              <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-3.5 space-y-2.5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-emerald-700 animate-pulse" />
-                    <h4 className="font-black text-xs sm:text-sm text-emerald-950 uppercase tracking-wider">
-                      Platos Listos para Servir (Mesa #{selectedTable.table_number})
-                    </h4>
-                  </div>
-                  <button
-                    onClick={() => handleMarkDelivered(selectedTable.table_number)}
-                    className="px-3 py-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black transition-all shadow-xs"
-                  >
-                    Servir Todos ({serverOrders.filter(
-                      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && o.status === 'ready'
-                    ).length})
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {serverOrders
-                    .filter(
-                      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && o.status === 'ready'
-                    )
-                    .map((ord, idx) => (
-                      <div
-                        key={ord.id}
-                        className="bg-white p-3 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs"
-                      >
-                        <div className="space-y-0.5 min-w-0">
-                          <span className="text-[10px] font-black uppercase text-emerald-700 block">
-                            Ticket #{idx + 1}
-                          </span>
-                          <div className="text-xs font-bold text-slate-900">
-                            {ord.order_items?.map(it => `${it.quantity}x ${it.product?.name || 'Plato'}`).join(' + ')}
-                          </div>
-                          {ord.order_items?.some(it => it.notes) && (
-                            <p className="text-[11px] text-red-700 font-semibold">
-                              Nota: {ord.order_items.map(it => it.notes).filter(Boolean).join(' | ')}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                          <button
-                            disabled={deliveringOrderIds.has(ord.id)}
-                            onClick={() => handleDeliverSingleOrder(ord.id)}
-                            className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-70 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95 flex-shrink-0 disabled:cursor-not-allowed"
-                          >
-                            {deliveringOrderIds.has(ord.id) ? (
-                              <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>Entregando...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                <span>Entregado</span>
-                              </>
-                            )}
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              const reason = prompt('Motivo de anulación (ej: Error comanda / Plato frío):', 'Error de comanda')
-                              if (reason) handleCancelSingleOrder(ord.id, reason)
-                            }}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-50 text-slate-400 hover:text-red-700 border border-slate-200 transition-colors"
-                            title="Anular plato marchado"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* B.2. Comandas Pendientes de Validación en esta Mesa */}
-            {serverOrders.filter(
-              o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
-                   o.status === 'pending_validation'
-            ).length > 0 && (
-              <div className="bg-blue-950/80 border-2 border-blue-400 rounded-2xl p-3.5 space-y-2.5 shadow-md">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="w-5 h-5 text-blue-400 animate-pulse" />
-                    <h4 className="font-black text-xs sm:text-sm text-blue-200 uppercase tracking-wider">
-                      Comandas Pendientes de Validación (Mesa #{selectedTable.table_number})
-                    </h4>
-                  </div>
-                  <span className="text-[11px] font-bold text-blue-300">
-                    {serverOrders.filter(
-                      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
-                           o.status === 'pending_validation'
-                    ).length} comanda(s)
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {serverOrders
-                    .filter(
-                      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
-                           o.status === 'pending_validation'
-                    )
-                    .map((valOrder, idx) => (
-                      <div
-                        key={valOrder.id}
-                        className="bg-slate-900 p-3 rounded-xl border border-blue-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs"
-                      >
-                        <div className="space-y-0.5 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black uppercase text-blue-400 block">
-                              Comanda #{idx + 1}
-                            </span>
-                            <span className="text-xs font-black text-white tabular-nums">
-                              {formatCurrency(valOrder.total_amount)}
-                            </span>
-                          </div>
-                          <div className="text-xs font-bold text-slate-200">
-                            {valOrder.order_items?.map(it => `${it.quantity}x ${it.product?.name || 'Plato'}`).join(' + ')}
-                          </div>
-                          {valOrder.order_items?.some(it => it.notes) && (
-                            <p className="text-[11px] text-amber-300 font-semibold">
-                              Nota: {valOrder.order_items.map(it => it.notes).filter(Boolean).join(' | ')}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                          <button
-                            type="button"
-                            disabled={validatingOrderIds.has(valOrder.id)}
-                            onClick={() => handleValidateOrder(valOrder.id, selectedTable.table_number)}
-                            className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-70 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
-                          >
-                            {validatingOrderIds.has(valOrder.id) ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                                <span>Confirmando...</span>
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                                <span>Confirmar a Cocina</span>
-                              </>
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm(`¿Descartar comanda de Mesa #${selectedTable.table_number}?`)) {
-                                handleCancelValidationOrder(valOrder.id, selectedTable.table_number)
-                              }
-                            }}
-                            className="p-2 rounded-xl bg-red-950/60 hover:bg-red-900 text-red-300 font-black text-xs border border-red-800/80 transition-colors cursor-pointer"
-                            title="Descartar comanda"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* C. Panel de Control de Mesa (Ordenado, Ergonómico y Limpio) */}
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-              
-              {/* Fila 1: Datos de Mesa, Comensales y Descuentos */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
-                <div className="flex items-center justify-between sm:justify-start gap-2.5">
-                  <span className="text-slate-900 font-extrabold text-sm">
-                    Mesa #{selectedTable.table_number}
-                  </span>
-                  
-                  {/* Selector de Comensales (Pax) */}
-                  <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
-                    <Users size={14} className="text-slate-600" />
-                    <span className="text-xs font-black text-slate-800">
-                      {tablePax[selectedTable.table_number] || 2} pax
-                    </span>
-                    <div className="flex items-center gap-0.5 ml-1">
-                      <button
-                        type="button"
-                        onClick={() => setTablePax(prev => ({
-                          ...prev,
-                          [selectedTable.table_number]: Math.max(1, (prev[selectedTable.table_number] || 2) - 1)
-                        }))}
-                        className="w-5 h-5 rounded-lg bg-white hover:bg-slate-200 text-slate-800 font-black flex items-center justify-center text-xs shadow-2xs cursor-pointer active:scale-95"
-                        title="Menos comensales"
-                      >
-                        -
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTablePax(prev => ({
-                          ...prev,
-                          [selectedTable.table_number]: (prev[selectedTable.table_number] || 2) + 1
-                        }))}
-                        className="w-5 h-5 rounded-lg bg-white hover:bg-slate-200 text-slate-800 font-black flex items-center justify-center text-xs shadow-2xs cursor-pointer active:scale-95"
-                        title="Más comensales"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Selector de Descuento de Mesa */}
-                <div className="flex items-center justify-between sm:justify-end gap-1.5">
-                  <span className="text-xs font-bold text-slate-500">Dto:</span>
-                  <div className="flex items-center gap-1 bg-slate-50 p-0.5 rounded-xl border border-slate-200">
-                    {[0, 5, 10, 15, 20].map((pct) => (
-                      <button
-                        key={pct}
-                        type="button"
-                        onClick={() => setTableDiscounts(prev => ({ ...prev, [selectedTable.table_number]: pct }))}
-                        className={`px-2 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                          (tableDiscounts[selectedTable.table_number] || 0) === pct
-                            ? 'bg-blue-900 text-white shadow-xs'
-                            : 'text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {pct === 0 ? '0%' : `-${pct}%`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Fila 2: Grid de Acciones Operativas Ordenadas en 2 Columnas (Móvil) / 4 (Desktop) */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {/* 1. Marchar Segundos */}
-                <button
-                  type="button"
-                  onClick={() => handleFireSecondCourses(selectedTable.table_number)}
-                  className="h-11 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                  title="Avisar a cocina que marchen los segundos platos"
-                >
-                  <Flame className="w-4 h-4 text-slate-950 flex-shrink-0" />
-                  <span className="truncate">Marchar Segundos</span>
-                </button>
-
-                {/* 2. Pre-Cuenta */}
-                <button
-                  type="button"
-                  onClick={() => setShowPreBill(true)}
-                  className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-900 border border-slate-200 hover:border-blue-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-                  title="Ver pre-cuenta digital desglosada"
-                >
-                  <Receipt className="w-4 h-4 text-blue-700 flex-shrink-0" />
-                  <span className="truncate">Pre-Cuenta</span>
-                </button>
-
-                {/* 3. Transferir Mesa */}
-                <button
-                  type="button"
-                  onClick={() => setShowTransferModal(true)}
-                  className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-800 hover:text-amber-900 border border-slate-200 hover:border-amber-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-                  title="Cambiar comanda a otra mesa"
-                >
-                  <RefreshCw className="w-4 h-4 text-amber-700 flex-shrink-0" />
-                  <span className="truncate">Transferir</span>
-                </button>
-
-                {/* 4. Liberar / Cobrar Mesa */}
-                <button
-                  type="button"
-                  onClick={() => setShowFreeConfirmTable(selectedTable.table_number)}
-                  className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-                  title="Cobrar y liberar mesa"
-                >
-                  <CreditCard className="w-4 h-4 text-emerald-700 flex-shrink-0" />
-                  <span className="truncate">Liberar Mesa</span>
-                </button>
-              </div>
-
-              {/* Botón extra si hay bebidas previas para repetir ronda */}
-              {previousDrinksInTable.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    previousDrinksInTable.forEach(d => {
-                      handleAddItemToComanda(d.product, d.quantity, [], 'Repetición de ronda')
-                    })
-                    setOrderSentToast(true)
-                    setTimeout(() => setOrderSentToast(false), 2500)
-                  }}
-                  className="w-full h-10 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-black transition-all text-xs flex items-center justify-center gap-1.5 border border-amber-300 shadow-xs active:scale-95 cursor-pointer"
-                  title="Añadir a la comanda las mismas bebidas que ya pidieron"
-                >
-                  <span>🍺 Repetir Ronda de Bebidas ({previousDrinksInTable.reduce((s, d) => s + d.quantity, 0)} uds)</span>
-                </button>
-              )}
-            </div>
-
-          </div>
-        )}
-
-        {/* Buscador & Selector de Categorías en Píldoras Blancas */}
-        <div className="p-3 bg-white border-b border-slate-200 space-y-2.5 shadow-sm">
-          <div className="max-w-7xl mx-auto relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar plato rápido..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-800/20 focus:border-blue-800 shadow-inner"
-              autoComplete="off"
-            />
-          </div>
-
-          {/* Carrusel de Píldoras */}
-          <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {categories.map((cat) => {
-              const isSelected = selectedCategory === cat.id
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategory(cat.id)
-                    setSearchQuery('')
-                  }}
-                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all ${
-                    isSelected
-                      ? 'bg-blue-900 text-white shadow-md'
-                      : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 shadow-sm'
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Parrilla de Platos */}
-        <main className="p-3 max-w-7xl mx-auto w-full flex-1">
-          {filteredProducts.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 space-y-2 bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
-              <Utensils className="w-12 h-12 mx-auto stroke-[1.2] text-slate-300" />
-              <p className="text-sm font-semibold text-slate-600">No hay platos registrados en esta categoría</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {filteredProducts.map((prod) => {
-                const isUnavailable = prod.is_available === false
-                return (
-                  <button
-                    key={prod.id}
-                    onClick={() => {
-                      if (isUnavailable) {
-                        return
-                      }
-                      setCustomizingProduct(prod)
-                    }}
-                    className={`group bg-white border active:scale-97 rounded-2xl overflow-hidden text-left flex flex-col justify-between shadow-sm hover:shadow-md transition-all touch-press h-48 relative ${
-                      isUnavailable
-                        ? 'border-rose-400 bg-rose-50/30'
-                        : 'border-slate-200 hover:border-blue-700/50'
-                    }`}
-                  >
-                    <div
-                      style={{ position: 'relative', width: '100%', height: '112px', maxHeight: '120px', overflow: 'hidden' }}
-                      className="bg-slate-100 flex-shrink-0"
-                    >
-                      {prod.image_url ? (
-                        <Image
-                          src={prod.image_url}
-                          alt={prod.name}
-                          fill
-                          className={`object-cover group-hover:scale-105 transition-transform duration-300 ${isUnavailable ? 'grayscale opacity-60' : ''}`}
-                          sizes="(max-width: 768px) 50vw, 250px"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
-                          <Utensils className="w-6 h-6 stroke-[1.2]" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-                      {/* Banner superpuesto de Agotado en la imagen */}
-                      {isUnavailable && (
-                        <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[0.5px] flex items-center justify-center pointer-events-none">
-                          <span className="px-2.5 py-1 rounded-xl bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider shadow-md flex items-center gap-1 border border-white/20">
-                            <Ban className="w-3 h-3 stroke-[2.5]" />
-                            <span>Agotado</span>
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Toggle de Agotado / Disponibilidad en 1 toque directo */}
-                      <button
-                        type="button"
-                        onClick={async (e) => {
-                          e.stopPropagation()
-                          const nextStatus = isUnavailable ? true : false
-                          const canonicalId = resolveCanonicalProductId(prod.id) || prod.id
-
-                          recentTogglesRef.current.set(prod.id, { status: nextStatus, until: Date.now() + 3500 })
-                          if (canonicalId) recentTogglesRef.current.set(canonicalId, { status: nextStatus, until: Date.now() + 3500 })
-
-                          // 1. Actualización optimista inmediata
-                          setProducts(prev =>
-                            prev.map(p =>
-                              (p.id === prod.id || p.id === canonicalId || resolveCanonicalProductId(p.id) === canonicalId)
-                                ? { ...p, is_available: nextStatus }
-                                : p
-                            )
-                          )
-
-                          // 2. Mutación opcional directa a Supabase
-                          try {
-                            const isProdUuid = Boolean(canonicalId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalId))
-                            const supabase = createBrowserClient()
-                            if (supabase && isSupabaseConfigured() && isProdUuid) {
-                              await supabase
-                                .from('products')
-                                .update({ is_available: nextStatus })
-                                .eq('id', canonicalId)
-                            }
-                          } catch (supaErr) {
-                            console.warn('Direct Supabase update skipped:', supaErr)
-                          }
-
-                          // 3. Mutación en la API del servidor (Fuente única de verdad)
-                          try {
-                            const res = await fetch('/api/admin/menu', {
-                              method: 'PATCH',
-                              credentials: 'include',
-                              headers: { 'Content-Type': 'application/json', 'x-staff-pin': '1234' },
-                              body: JSON.stringify({ slug, product_id: canonicalId, name: prod.name, is_available: nextStatus }),
-                            })
-                            const json = await res.json().catch(() => ({}))
-                            if (json.success) {
-                              try {
-                                if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-                                  const bc = new BroadcastChannel('fluxo_menu_channel')
-                                  bc.postMessage({ type: 'menu_updated', slug, productId: canonicalId, isAvailable: nextStatus })
-                                  bc.close()
-                                }
-                              } catch {}
-                              window.dispatchEvent(
-                                new CustomEvent('fluxo_menu_updated', {
-                                  detail: { slug, productId: canonicalId, isAvailable: nextStatus },
-                                })
-                              )
-                            }
-                          } catch (err) {
-                            console.error('Error al cambiar disponibilidad del plato en API:', err)
-                          }
-                        }}
-                        className={`absolute top-2 right-2 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shadow-md z-20 flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
-                          isUnavailable
-                            ? 'bg-rose-600 hover:bg-rose-700 text-white ring-2 ring-white/30'
-                            : 'bg-slate-900/70 hover:bg-slate-900 text-white/90 hover:text-white'
-                        }`}
-                        aria-label={
-                          isUnavailable
-                            ? `Plato ${prod.name} agotado. Clic para reactivar en carta`
-                            : `Marcar ${prod.name} como agotado`
-                        }
-                        title={isUnavailable ? 'Plato Agotado · Clic para reactivar en carta' : 'Marcar como Agotado'}
-                      >
-                        {isUnavailable ? (
-                          <>
-                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                            <span>Agotado</span>
-                          </>
-                        ) : (
-                          <span>Disponible</span>
-                        )}
-                      </button>
-
-
-                      <div className="absolute bottom-1.5 left-2 flex items-center gap-1.5 flex-wrap z-10">
-                        <span className="px-2 py-0.5 rounded-lg bg-white/95 text-[11px] font-black text-blue-900 shadow-sm flex items-center gap-1">
-                          {prod.original_price != null && prod.original_price > prod.price && (
-                            <span className="line-through text-slate-400 text-[10px] font-bold">
-                              {formatCurrency(prod.original_price)}
-                            </span>
-                          )}
-                          <span>{formatCurrency(prod.price)}</span>
-                        </span>
-                        {prod.original_price != null && prod.original_price > prod.price && (
-                          <span className="px-1.5 py-0.5 rounded-lg bg-emerald-600 text-white text-[9px] font-black uppercase shadow-sm">
-                            -{Math.round(((prod.original_price - prod.price) / prod.original_price) * 100)}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 flex items-center justify-between gap-1.5 flex-1">
-                      <h4 className="font-bold text-slate-900 text-xs leading-snug line-clamp-2">
-                        {prod.name}
-                      </h4>
-                      <span className={`w-7 h-7 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 transition-colors ${
-                        isUnavailable
-                          ? 'bg-rose-600 text-white'
-                          : 'bg-blue-900 text-white group-hover:bg-blue-800'
-                      }`}>
-                        {isUnavailable ? (
-                          <Ban className="w-3.5 h-3.5 stroke-[2.5]" />
-                        ) : (
-                          <Plus className="w-4 h-4 stroke-[3]" />
-                        )}
-                      </span>
-                    </div>
-                  </button>
-                )
-              })}
             </div>
           )}
-        </main>
 
-        <ProductModifierModal
-          product={customizingProduct}
-          onClose={() => setCustomizingProduct(null)}
-          onConfirm={handleAddItemToComanda}
-          isStaff={true}
-        />
+          {/* Selector de Mesas con Semáforo */}
+          <TableSelector
+            tables={tables}
+            selectedTable={selectedTable?.table_number || null}
+            tableStatuses={tableStatuses}
+            tableDwellMinutes={tableDwellMinutes}
+            onSelectTable={setSelectedTable}
+            onOpenQuickStock={() => setShowQuickStockModal(true)}
+            pausedItemsCount={products.filter(p => p.is_available === false).length}
+          />
 
-        <OrderSummaryBar
-          cart={cart}
-          tableNumber={selectedTable?.table_number.toString() || null}
-          isSubmitting={isSubmitting}
-          onSendOrder={handleSendOrderToKitchen}
-          onOpenCartDetails={() => setIsCartDetailsOpen(true)}
-        />
+          {/* Panel Detallado de la Mesa Seleccionada */}
+          {selectedTable && (
+            <ComanderoTableDetailPanel
+              selectedTable={selectedTable}
+              pendingCalls={pendingCalls}
+              serverOrders={serverOrders}
+              deliveringOrderIds={deliveringOrderIds}
+              validatingOrderIds={validatingOrderIds}
+              tablePax={tablePax[selectedTable.table_number] || 2}
+              onSetTablePax={(pax) => setTablePax(prev => ({ ...prev, [selectedTable.table_number]: pax }))}
+              tableDiscount={tableDiscounts[selectedTable.table_number] || 0}
+              onSetTableDiscount={(pct) => setTableDiscounts(prev => ({ ...prev, [selectedTable.table_number]: pct }))}
+              previousDrinks={previousDrinksInTable}
+              onAttendCall={handleAttendCall}
+              onDeliverSingleOrder={handleDeliverSingleOrder}
+              onMarkDelivered={handleMarkDelivered}
+              onCancelSingleOrder={handleCancelSingleOrder}
+              onValidateOrder={handleValidateOrder}
+              onCancelValidationOrder={handleCancelValidationOrder}
+              onFireSecondCourses={handleFireSecondCourses}
+              onOpenPreBill={() => setShowPreBill(true)}
+              onOpenTransferModal={() => setShowTransferModal(true)}
+              onOpenFreeTableModal={(tbl) => setShowFreeConfirmTable(tbl)}
+              onRepeatDrinksRound={() => {
+                previousDrinksInTable.forEach(d => {
+                  handleAddItemToComanda(d.product, d.quantity, [], 'Repetición de ronda')
+                })
+                handleFireSecondCourses(selectedTable.table_number)
+              }}
+            />
+          )}
 
-        <CartDrawer
-          isOpen={isCartDetailsOpen}
-          onClose={() => setIsCartDetailsOpen(false)}
-          cart={cart}
-          isWaiter={true}
-          lang="es"
-          onSendWaiterOrder={handleSendOrderToKitchen}
-          onUpdateQuantity={(idx, q) => {
-            updateCartForCurrentTable(prev => {
-              if (q <= 0) return prev.filter((_, i) => i !== idx)
-              const copy = [...prev]
-              copy[idx].quantity = q
-              return copy
-            })
-          }}
-          onRemoveItem={(idx) => {
-            updateCartForCurrentTable(prev => prev.filter((_, i) => i !== idx))
-          }}
-          onClearCart={() => {
-            setTableCarts(prev => ({ ...prev, [currentTableNum]: [] }))
-          }}
-          tableNumber={selectedTable?.table_number.toString() || null}
-          onAddSuggestedDrink={(drinkId) => {
-            const drink = products.find(p => p.id === drinkId)
-            if (drink) {
-              handleAddItemToComanda(drink, 1, [], '')
-            }
-          }}
-          onAddSuggestedDessert={(dessertId) => {
-            const dessert = products.find(p => p.id === dessertId)
-            if (dessert) {
-              handleAddItemToComanda(dessert, 1, [], '')
-            }
-          }}
-        />
+          {/* Catálogo de Productos y Selector de Categorías */}
+          <ComanderoCatalogGrid
+            slug={slug}
+            categories={categories}
+            products={products}
+            setProducts={setProducts}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            recentTogglesRef={recentTogglesRef}
+            onCustomizeProduct={setCustomizingProduct}
+          />
 
-        {/* MODAL DE CONFIRMACIÓN ELEGANTE DENTRO DE LA APP PARA LIBERAR MESA */}
-        <ConfirmModal
-          isOpen={Boolean(showFreeConfirmTable)}
-          title={`¿Liberar Mesa #${showFreeConfirmTable}?`}
-          message="Se marcará la mesa como libre, se cerrarán los pedidos y se limpiará la sesión para los próximos comensales."
-          confirmText="Sí, liberar mesa"
-          cancelText="Cancelar"
-          variant="success"
-          onConfirm={() => {
-            if (showFreeConfirmTable) {
-              executeCloseAndFreeTable(showFreeConfirmTable)
-            }
-            setShowFreeConfirmTable(null)
-          }}
-          onCancel={() => setShowFreeConfirmTable(null)}
-        />
-
-        {/* MODAL DE PRE-CUENTA DIGITAL */}
-        {selectedTable && (
-          <PreBillModal
-            isOpen={showPreBill}
-            onClose={() => setShowPreBill(false)}
+          {/* Modales y Paneles Desplegables */}
+          <ComanderoModals
+            slug={slug}
             restaurant={restaurant}
-            tableNumber={selectedTable.table_number}
-            paxCount={tablePax[selectedTable.table_number] || 2}
-            discountPercentage={tableDiscounts[selectedTable.table_number] || 0}
-            orders={serverOrders.filter(
-              o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && ['pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
-            )}
-            onProceedToCharge={() => {
-              setShowFreeConfirmTable(selectedTable.table_number)
+            selectedTable={selectedTable}
+            tables={tables}
+            products={products}
+            setProducts={setProducts}
+            cart={cart}
+            isSubmitting={isSubmitting}
+            customizingProduct={customizingProduct}
+            setCustomizingProduct={setCustomizingProduct}
+            isCartDetailsOpen={isCartDetailsOpen}
+            setIsCartDetailsOpen={setIsCartDetailsOpen}
+            showPreBill={showPreBill}
+            setShowPreBill={setShowPreBill}
+            showFreeConfirmTable={showFreeConfirmTable}
+            setShowFreeConfirmTable={setShowFreeConfirmTable}
+            showTransferModal={showTransferModal}
+            setShowTransferModal={setShowTransferModal}
+            transferTargetTable={transferTargetTable}
+            setTransferTargetTable={setTransferTargetTable}
+            showQuickStockModal={showQuickStockModal}
+            setShowQuickStockModal={setShowQuickStockModal}
+            tablePax={tablePax[currentTableNum] || 2}
+            tableDiscount={tableDiscounts[currentTableNum] || 0}
+            serverOrders={serverOrders}
+            recentTogglesRef={recentTogglesRef}
+            onAddItemToComanda={handleAddItemToComanda}
+            onSendOrderToKitchen={() => handleSendOrderToKitchen(selectedTable, cart, tableDiscounts[currentTableNum] || 0)}
+            onUpdateCartQuantity={(idx, q) => {
+              updateCartForCurrentTable(prev => {
+                if (q <= 0) return prev.filter((_, i) => i !== idx)
+                const copy = [...prev]
+                copy[idx].quantity = q
+                return copy
+              })
+            }}
+            onRemoveCartItem={(idx) => {
+              updateCartForCurrentTable(prev => prev.filter((_, i) => i !== idx))
+            }}
+            onClearCurrentCart={() => {
+              setTableCarts(prev => ({ ...prev, [currentTableNum]: [] }))
+            }}
+            onExecuteCloseAndFreeTable={executeCloseAndFreeTable}
+            onTransferTable={(target) => {
+              if (selectedTable) {
+                handleTransferTable(selectedTable.table_number, target)
+              }
             }}
           />
-        )}
-
-        {/* MODAL DE TRANSFERIR MESA */}
-        {showTransferModal && selectedTable && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in select-none">
-            <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-200">
-              <div className="flex items-center gap-2 text-amber-600">
-                <RefreshCw className="w-6 h-6 animate-spin" />
-                <h3 className="text-base font-black text-slate-900">
-                  Transferir Mesa #{selectedTable.table_number}
-                </h3>
-              </div>
-              <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                Selecciona la nueva mesa a la que se mudan los comensales. Sus pedidos, carrito y cuenta se transferirán automáticamente.
-              </p>
-              
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Mesa de Destino:</label>
-                <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1">
-                  {tables
-                    .filter(t => t.table_number.toString() !== selectedTable.table_number.toString())
-                    .map(t => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setTransferTargetTable(t.table_number.toString())}
-                        className={`p-2.5 rounded-xl text-xs font-black transition-all border ${
-                          transferTargetTable === t.table_number.toString()
-                            ? 'bg-amber-500 text-slate-950 border-amber-600 ring-2 ring-amber-400'
-                            : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
-                        }`}
-                      >
-                        #{t.table_number}
-                      </button>
-                    ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowTransferModal(false)
-                    setTransferTargetTable('')
-                  }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  disabled={!transferTargetTable}
-                  onClick={() => {
-                    if (transferTargetTable) {
-                      handleTransferTable(transferTargetTable)
-                      setTransferTargetTable('')
-                    }
-                  }}
-                  className="px-5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
-                >
-                  Confirmar Mudanza
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL CONTROL RÁPIDO DE STOCK ("SE AGOTÓ") */}
-        <QuickStockModal
-          isOpen={showQuickStockModal}
-          onClose={() => setShowQuickStockModal(false)}
-          slug={slug}
-          onStockChanged={(changedId, changedAvail) => {
-            if (changedId && changedAvail !== undefined) {
-              const canonical = resolveCanonicalProductId(changedId) || changedId
-              recentTogglesRef.current.set(changedId, { status: changedAvail, until: Date.now() + 3500 })
-              if (canonical) recentTogglesRef.current.set(canonical, { status: changedAvail, until: Date.now() + 3500 })
-              setProducts(prev => prev.map(p => {
-                const pCanon = resolveCanonicalProductId(p.id) || p.id
-                if (p.id === changedId || p.id === canonical || pCanon === canonical) {
-                  return { ...p, is_available: changedAvail }
-                }
-                return p
-              }))
-            }
-          }}
-        />
 
         </div>
       </TenantProvider>
