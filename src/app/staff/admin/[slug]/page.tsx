@@ -63,7 +63,7 @@ export default function AdminMenuPage() {
   const fetchMenuData = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/admin/menu?slug=${slug}`)
+      const res = await fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
       const data = await res.json()
       if (data.success) {
         if (data.categories) setCategories(data.categories)
@@ -83,8 +83,11 @@ export default function AdminMenuPage() {
 
   // Toggle Inmediato de Disponibilidad ("Se Agotó")
   const handleToggleAvailability = async (productId: string, currentAvailable: boolean) => {
+    const nextState = !currentAvailable
+    const targetProd = products.find(p => p.id === productId)
+
     setProducts(prev =>
-      prev.map(p => (p.id === productId ? { ...p, is_available: !currentAvailable } : p))
+      prev.map(p => (p.id === productId ? { ...p, is_available: nextState } : p))
     )
 
     try {
@@ -95,12 +98,27 @@ export default function AdminMenuPage() {
         body: JSON.stringify({
           slug,
           product_id: productId,
-          is_available: !currentAvailable,
+          name: targetProd?.name,
+          is_available: nextState,
         }),
       })
       const data = await res.json()
       if (data.success) {
         showToast(data.is_available ? '✅ Plato marcado como DISPONIBLE' : '⚠️ Plato marcado como AGOTADO')
+        try {
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('fluxo_menu_channel')
+            bc.postMessage({ type: 'menu_updated', slug, productId, isAvailable: nextState })
+            bc.close()
+          }
+        } catch {}
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('fluxo_menu_updated', {
+              detail: { slug, productId, isAvailable: nextState },
+            })
+          )
+        }
       } else {
         console.error('[Admin Menu Panel] Error al actualizar disponibilidad:', data)
         showToast(data.error || 'Error al actualizar disponibilidad')

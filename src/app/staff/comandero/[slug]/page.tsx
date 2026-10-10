@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
-import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard, Loader2, Package } from 'lucide-react'
+import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard, Loader2, Package, Ban } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector, TableStatusType } from '@/components/comandero/TableSelector'
@@ -159,6 +159,25 @@ export default function WaiterComanderoPage() {
       ])
 
       const rawOrders: Order[] = ordersRes.orders || []
+
+      // Sincronización reactiva de disponibilidad de platos desde el servidor
+      if (ordersRes?.product_availability) {
+        setProducts(prev => {
+          let hasDiff = false
+          const next = prev.map(p => {
+            const canonical = resolveCanonicalProductId(p.id) || p.id
+            const normName = (p.name || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+            const serverAvail = ordersRes.product_availability[canonical] ?? ordersRes.product_availability[p.id] ?? ordersRes.product_availability[normName]
+            if (serverAvail !== undefined && p.is_available !== serverAvail) {
+              hasDiff = true
+              return { ...p, is_available: serverAvail }
+            }
+            return p
+          })
+          return hasDiff ? next : prev
+        })
+      }
+
       // Backfill: si la orden viene sin items, intentar reponerlos desde refs previos
       const incomingOrders: Order[] = rawOrders.map((ord: Order) => {
         if (!ord.order_items || ord.order_items.length === 0) {
@@ -617,7 +636,7 @@ export default function WaiterComanderoPage() {
 
         // Cargar catálogo y disponibilidad real del servidor
         try {
-          fetch(`/api/admin/menu?slug=${slug}`)
+          fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
             .then(r => r.json())
             .then(data => {
               if (data?.products && data.products.length > 0) setProducts(data.products)
@@ -667,38 +686,58 @@ export default function WaiterComanderoPage() {
           .subscribe()
       }
 
-      // 2. SSE (Server-Sent Events) de respaldo para testing local sin Supabase
-      if (!supabase) {
-        try {
-          let sseDebounceTimer: any = null
-          const triggerDebouncedSync = () => {
-            if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
-            sseDebounceTimer = setTimeout(() => {
-              syncServerData()
-            }, 300)
-          }
-
-          sseEventSource = new EventSource('/api/events')
-          sseEventSource.onmessage = (event) => {
-            try {
-              const data = JSON.parse(event.data)
-              if (data.type === 'connected') return
-              if (!data.slug || data.slug === slug) {
-                triggerDebouncedSync()
-              }
-            } catch {
-              // ignore
-            }
-          }
-          sseEventSource.onerror = () => {
-            if (sseEventSource) {
-              sseEventSource.close()
-              sseEventSource = null
-            }
-          }
-        } catch (err) {
-          console.log('SSE fallback to polling:', err)
+      // 2. SSE (Server-Sent Events) en vivo para sincronización instantánea de comandas y carta
+      try {
+        let sseDebounceTimer: any = null
+        const triggerDebouncedSync = () => {
+          if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
+          sseDebounceTimer = setTimeout(() => {
+            syncServerData()
+          }, 300)
         }
+
+        sseEventSource = new EventSource('/api/events')
+        sseEventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
+            if (data.type === 'connected') return
+
+            if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
+              if (data.productId) {
+                const canonical = resolveCanonicalProductId(data.productId) || data.productId
+                setProducts(prev => prev.map(p => {
+                  const pCanon = resolveCanonicalProductId(p.id) || p.id
+                  if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
+                    return { ...p, is_available: data.isAvailable }
+                  }
+                  return p
+                }))
+              }
+              fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
+                .then(r => r.json())
+                .then(d => {
+                  if (d?.products && d.products.length > 0) setProducts(d.products)
+                  if (d?.categories && d.categories.length > 0) setCategories(d.categories)
+                })
+                .catch(() => {})
+              return
+            }
+
+            if (!data.slug || data.slug === slug) {
+              triggerDebouncedSync()
+            }
+          } catch {
+            // ignore
+          }
+        }
+        sseEventSource.onerror = () => {
+          if (sseEventSource) {
+            sseEventSource.close()
+            sseEventSource = null
+          }
+        }
+      } catch (err) {
+        console.log('SSE connection error:', err)
       }
 
       // 3. Soft Polling de respaldo cada 4.5s
@@ -706,6 +745,35 @@ export default function WaiterComanderoPage() {
     }
 
     loadInitialData()
+
+    // Manejar sincronización cross-tab instantánea en el mismo navegador
+    let menuBc: BroadcastChannel | null = null
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        menuBc = new BroadcastChannel('fluxo_menu_channel')
+        menuBc.onmessage = (event) => {
+          const { type, slug: evtSlug, productId, isAvailable } = event.data || {}
+          if (type === 'menu_updated' && (!evtSlug || evtSlug === slug)) {
+            if (productId) {
+              const canonical = resolveCanonicalProductId(productId) || productId
+              setProducts(prev => prev.map(p => {
+                const pCanon = resolveCanonicalProductId(p.id) || p.id
+                if (p.id === productId || p.id === canonical || pCanon === canonical) {
+                  return { ...p, is_available: isAvailable }
+                }
+                return p
+              }))
+            }
+            fetch(`/api/admin/menu?slug=${slug}`)
+              .then(r => r.json())
+              .then(d => {
+                if (d?.products && d.products.length > 0) setProducts(d.products)
+              })
+              .catch(() => {})
+          }
+        }
+      }
+    } catch {}
 
     // Manejar desbloqueo de móvil / cambio de pestaña de vuelta a la app
     const handleVisibilityChange = () => {
@@ -717,8 +785,21 @@ export default function WaiterComanderoPage() {
     window.addEventListener('focus', handleVisibilityChange)
 
     // Manejar evento de actualización de carta o cambio de disponibilidad de platos
-    const handleMenuUpdated = () => {
-      fetch(`/api/admin/menu?slug=${slug}`)
+    const handleMenuUpdated = (e: any) => {
+      const { slug: evtSlug, productId, isAvailable } = e?.detail || {}
+      if (!evtSlug || evtSlug === slug) {
+        if (productId) {
+          const canonical = resolveCanonicalProductId(productId) || productId
+          setProducts(prev => prev.map(p => {
+            const pCanon = resolveCanonicalProductId(p.id) || p.id
+            if (p.id === productId || p.id === canonical || pCanon === canonical) {
+              return { ...p, is_available: isAvailable }
+            }
+            return p
+          }))
+        }
+      }
+      fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
         .then(r => r.json())
         .then(data => {
           if (data?.products && data.products.length > 0) setProducts(data.products)
@@ -733,6 +814,9 @@ export default function WaiterComanderoPage() {
         supabase.removeChannel(realtimeChannel)
       }
       if (sseEventSource) sseEventSource.close()
+      if (menuBc) {
+        try { menuBc.close() } catch {}
+      }
       if (pollInterval) clearInterval(pollInterval)
       if (popupTimerRef.current) clearTimeout(popupTimerRef.current)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -1719,10 +1803,15 @@ export default function WaiterComanderoPage() {
                 return (
                   <button
                     key={prod.id}
-                    onClick={() => setCustomizingProduct(prod)}
+                    onClick={() => {
+                      if (isUnavailable) {
+                        return
+                      }
+                      setCustomizingProduct(prod)
+                    }}
                     className={`group bg-white border active:scale-97 rounded-2xl overflow-hidden text-left flex flex-col justify-between shadow-sm hover:shadow-md transition-all touch-press h-48 relative ${
                       isUnavailable
-                        ? 'border-rose-300 opacity-75 bg-rose-50/20'
+                        ? 'border-rose-400 bg-rose-50/30'
                         : 'border-slate-200 hover:border-blue-700/50'
                     }`}
                   >
@@ -1735,7 +1824,7 @@ export default function WaiterComanderoPage() {
                           src={prod.image_url}
                           alt={prod.name}
                           fill
-                          className={`object-cover group-hover:scale-105 transition-transform duration-300 ${isUnavailable ? 'grayscale' : ''}`}
+                          className={`object-cover group-hover:scale-105 transition-transform duration-300 ${isUnavailable ? 'grayscale opacity-60' : ''}`}
                           sizes="(max-width: 768px) 50vw, 250px"
                         />
                       ) : (
@@ -1744,6 +1833,16 @@ export default function WaiterComanderoPage() {
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                      {/* Banner superpuesto de Agotado en la imagen */}
+                      {isUnavailable && (
+                        <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[0.5px] flex items-center justify-center pointer-events-none">
+                          <span className="px-2.5 py-1 rounded-xl bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider shadow-md flex items-center gap-1 border border-white/20">
+                            <Ban className="w-3 h-3 stroke-[2.5]" />
+                            <span>Agotado</span>
+                          </span>
+                        </div>
+                      )}
                       
                       {/* Toggle de Agotado / Disponibilidad en 1 toque directo */}
                       <button
@@ -1760,18 +1859,33 @@ export default function WaiterComanderoPage() {
                             )
                           )
                           try {
+                            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                              const bc = new BroadcastChannel('fluxo_menu_channel')
+                              bc.postMessage({ type: 'menu_updated', slug, productId: canonicalId, isAvailable: nextStatus })
+                              bc.close()
+                            }
+                          } catch {}
+                          // Mutación opcional directa a Supabase (aislada sin bloquear la API)
+                          try {
+                            const isProdUuid = Boolean(canonicalId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalId))
                             const supabase = createBrowserClient()
-                            if (supabase && isSupabaseConfigured()) {
+                            if (supabase && isSupabaseConfigured() && isProdUuid) {
                               await supabase
                                 .from('products')
                                 .update({ is_available: nextStatus })
                                 .eq('id', canonicalId)
-
                             }
+                          } catch (supaErr) {
+                            console.warn('Direct Supabase update skipped:', supaErr)
+                          }
+
+                          // Mutación en la API del servidor (Fuente única de verdad)
+                          try {
                             await fetch('/api/admin/menu', {
                               method: 'PATCH',
+                              credentials: 'include',
                               headers: { 'Content-Type': 'application/json', 'x-staff-pin': '1234' },
-                              body: JSON.stringify({ slug, product_id: canonicalId, is_available: nextStatus }),
+                              body: JSON.stringify({ slug, product_id: canonicalId, name: prod.name, is_available: nextStatus }),
                             })
                             window.dispatchEvent(
                               new CustomEvent('fluxo_menu_updated', {
@@ -1779,12 +1893,12 @@ export default function WaiterComanderoPage() {
                               })
                             )
                           } catch (err) {
-                            console.error('Error al cambiar disponibilidad del plato:', err)
+                            console.error('Error al cambiar disponibilidad del plato en API:', err)
                           }
                         }}
-                        className={`absolute top-2 right-2 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shadow-md z-10 flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                        className={`absolute top-2 right-2 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shadow-md z-20 flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
                           isUnavailable
-                            ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                            ? 'bg-rose-600 hover:bg-rose-700 text-white ring-2 ring-white/30'
                             : 'bg-slate-900/70 hover:bg-slate-900 text-white/90 hover:text-white'
                         }`}
                         aria-label={
@@ -1805,7 +1919,7 @@ export default function WaiterComanderoPage() {
                       </button>
 
 
-                      <div className="absolute bottom-1.5 left-2 flex items-center gap-1.5 flex-wrap">
+                      <div className="absolute bottom-1.5 left-2 flex items-center gap-1.5 flex-wrap z-10">
                         <span className="px-2 py-0.5 rounded-lg bg-white/95 text-[11px] font-black text-blue-900 shadow-sm flex items-center gap-1">
                           {prod.original_price != null && prod.original_price > prod.price && (
                             <span className="line-through text-slate-400 text-[10px] font-bold">
@@ -1828,10 +1942,14 @@ export default function WaiterComanderoPage() {
                       </h4>
                       <span className={`w-7 h-7 rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 transition-colors ${
                         isUnavailable
-                          ? 'bg-rose-500 text-white'
+                          ? 'bg-rose-600 text-white'
                           : 'bg-blue-900 text-white group-hover:bg-blue-800'
                       }`}>
-                        <Plus className="w-4 h-4 stroke-[3]" />
+                        {isUnavailable ? (
+                          <Ban className="w-3.5 h-3.5 stroke-[2.5]" />
+                        ) : (
+                          <Plus className="w-4 h-4 stroke-[3]" />
+                        )}
                       </span>
                     </div>
                   </button>
@@ -1998,7 +2116,7 @@ export default function WaiterComanderoPage() {
           onClose={() => setShowQuickStockModal(false)}
           slug={slug}
           onStockChanged={() => {
-            fetch(`/api/admin/menu?slug=${slug}`)
+            fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
               .then(r => r.json())
               .then(data => {
                 if (data?.products && data.products.length > 0) setProducts(data.products)

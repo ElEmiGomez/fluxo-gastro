@@ -49,7 +49,7 @@ export function QuickStockModal({
     const loadMenu = async () => {
       setLoading(true)
       try {
-        const res = await fetch(`/api/admin/menu?slug=${slug}`)
+        const res = await fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
         if (!res.ok) throw new Error('Error al cargar la carta')
         const data = await res.json()
         if (isMounted) {
@@ -78,7 +78,8 @@ export function QuickStockModal({
 
   // Pausar / Reactivar disponibilidad en 1 toque
   const handleToggleAvailability = async (product: Product) => {
-    const newStatus = !product.is_available
+    const isCurrentlyAvailable = product.is_available !== false
+    const newStatus = !isCurrentlyAvailable
     const canonicalId = resolveCanonicalProductId(product.id) || product.id
     setUpdatingId(product.id)
 
@@ -92,9 +93,10 @@ export function QuickStockModal({
     )
 
     try {
-      // 2. Mutación directa a Supabase si el cliente está configurado
+      // 2. Mutación directa a Supabase si el cliente está configurado y el ID es UUID
+      const isProdUuid = Boolean(canonicalId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalId))
       const supabase = createBrowserClient()
-      if (supabase && isSupabaseConfigured()) {
+      if (supabase && isSupabaseConfigured() && isProdUuid) {
         try {
           const { error: supaErr } = await supabase
             .from('products')
@@ -119,6 +121,7 @@ export function QuickStockModal({
         body: JSON.stringify({
           slug,
           product_id: canonicalId,
+          name: product.name,
           is_available: newStatus,
         }),
       })
@@ -136,6 +139,14 @@ export function QuickStockModal({
       })
 
       // 4. Notificar a todas las vistas de la aplicación (Comandero, Carta, KDS)
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('fluxo_menu_channel')
+          bc.postMessage({ type: 'menu_updated', slug, productId: canonicalId, isAvailable: newStatus })
+          bc.close()
+        }
+      } catch {}
+
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
           new CustomEvent('fluxo_menu_updated', {

@@ -14,6 +14,7 @@ import {
   setServerProducts,
   resolveCanonicalProductId,
   CANONICAL_PRODUCT_MAP,
+  getProductAvailabilityOverrides,
 } from '@/lib/server-state'
 import {
   getRestaurantBySlug,
@@ -52,7 +53,53 @@ export async function GET(req: NextRequest) {
     const restaurant = await getRestaurantBySlug(slug)
     const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
     const orders = await getRestaurantOrders(restaurantId, slug)
-    return NextResponse.json({ orders })
+    const catalogProducts = getServerProducts(slug)
+    const overrides = getProductAvailabilityOverrides(slug)
+
+    const pausedIdsSet = new Set<string>()
+    const productAvailability: Record<string, boolean> = {}
+
+    // 1. Mapeo a partir de todos los productos del catálogo
+    catalogProducts.forEach(p => {
+      const isAvail = p.is_available !== false
+      productAvailability[p.id] = isAvail
+      const canon = resolveCanonicalProductId(p.id)
+      if (canon) productAvailability[canon] = isAvail
+      const cName = cleanStr(p.name)
+      if (cName) productAvailability[cName] = isAvail
+
+      if (!isAvail) {
+        pausedIdsSet.add(p.id)
+        if (canon) pausedIdsSet.add(canon)
+        if (cName) pausedIdsSet.add(cName)
+      }
+    })
+
+    // 2. Mapeo de overrides directos del almacén de staff
+    Object.entries(overrides).forEach(([key, isAvail]) => {
+      productAvailability[key] = isAvail
+      const canon = resolveCanonicalProductId(key)
+      if (canon) productAvailability[canon] = isAvail
+      if (!isAvail) {
+        pausedIdsSet.add(key)
+        if (canon) pausedIdsSet.add(canon)
+      }
+    })
+
+    const pausedProductIds = Array.from(pausedIdsSet)
+
+    return NextResponse.json(
+      {
+        orders,
+        paused_product_ids: pausedProductIds,
+        product_availability: productAvailability,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        },
+      }
+    )
   } catch (err: any) {
     return NextResponse.json({ error: err.message, orders: [] }, { status: 500 })
   }

@@ -49,7 +49,7 @@ import { TOP_LANGUAGES, getTranslation, translateCategoryName, translateProductN
 import { getAllergen, getAllergenName } from '@/lib/allergens'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
-import { isProductInCategory, deduplicateProducts } from '@/lib/category-matcher'
+import { isProductInCategory, deduplicateProducts, resolveCanonicalProductId } from '@/lib/category-matcher'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 
@@ -351,7 +351,7 @@ function DinerMenuContent() {
   const loadData = useCallback(async () => {
     // 0. Cargar menú dinámico actualizado desde la API en tiempo real
     try {
-      const menuRes = await fetch(`/api/admin/menu?slug=${slug}`).then(r => r.json())
+      const menuRes = await fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json())
       if (menuRes.success) {
         if (menuRes.restaurant) setRestaurant(menuRes.restaurant)
         if (menuRes.categories && menuRes.categories.length > 0) {
@@ -417,7 +417,19 @@ function DinerMenuContent() {
             .select('*')
             .eq('restaurant_id', restData.id)
 
-          if (prodData && prodData.length > 0) setProducts(deduplicateProducts(prodData))
+          if (prodData && prodData.length > 0) {
+            setProducts(prev => {
+              const deduped = deduplicateProducts(prodData)
+              const prevPausedMap = new Map(prev.map(p => [resolveCanonicalProductId(p.id) || p.id, p.is_available]))
+              return deduped.map(p => {
+                const canon = resolveCanonicalProductId(p.id) || p.id
+                if (prevPausedMap.get(canon) === false || prevPausedMap.get(p.id) === false) {
+                  return { ...p, is_available: false }
+                }
+                return p
+              })
+            })
+          }
 
           const { data: tableData } = await supabase
             .from('tables')
@@ -448,11 +460,41 @@ function DinerMenuContent() {
   useEffect(() => {
     loadData()
 
+    let menuBc: BroadcastChannel | null = null
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        menuBc = new BroadcastChannel('fluxo_menu_channel')
+        menuBc.onmessage = (event) => {
+          const { type, slug: evtSlug, productId, isAvailable } = event.data || {}
+          if (type === 'menu_updated' && (!evtSlug || evtSlug === slug)) {
+            if (productId) {
+              const canonical = resolveCanonicalProductId(productId) || productId
+              setProducts(prev => prev.map(p => {
+                const pCanon = resolveCanonicalProductId(p.id) || p.id
+                if (p.id === productId || p.id === canonical || pCanon === canonical) {
+                  return { ...p, is_available: isAvailable }
+                }
+                return p
+              }))
+            }
+            loadData()
+          }
+        }
+      }
+    } catch {}
+
     const handleMenuUpdated = (e: any) => {
       const { slug: updatedSlug, productId, isAvailable } = e?.detail || {}
       if (!updatedSlug || updatedSlug === slug) {
         if (productId) {
-          setProducts(prev => prev.map(p => p.id === productId ? { ...p, is_available: isAvailable } : p))
+          const canonical = resolveCanonicalProductId(productId) || productId
+          setProducts(prev => prev.map(p => {
+            const pCanon = resolveCanonicalProductId(p.id) || p.id
+            if (p.id === productId || p.id === canonical || pCanon === canonical) {
+              return { ...p, is_available: isAvailable }
+            }
+            return p
+          }))
         }
         loadData()
       }
@@ -460,6 +502,9 @@ function DinerMenuContent() {
 
     window.addEventListener('fluxo_menu_updated', handleMenuUpdated)
     return () => {
+      if (menuBc) {
+        try { menuBc.close() } catch {}
+      }
       window.removeEventListener('fluxo_menu_updated', handleMenuUpdated)
     }
   }, [loadData, slug])
@@ -487,6 +532,24 @@ function DinerMenuContent() {
           fetch(`/api/service-calls?slug=${slug}`).then(r => r.json()).catch(() => ({ calls: [] })),
           fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
         ])
+
+        // Sincronización reactiva de disponibilidad de platos en sala
+        if (ordersRes?.product_availability) {
+          setProducts(prev => {
+            let hasDiff = false
+            const next = prev.map(p => {
+              const canonical = resolveCanonicalProductId(p.id) || p.id
+              const normName = (p.name || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+              const serverAvail = ordersRes.product_availability[canonical] ?? ordersRes.product_availability[p.id] ?? ordersRes.product_availability[normName]
+              if (serverAvail !== undefined && p.is_available !== serverAvail) {
+                hasDiff = true
+                return { ...p, is_available: serverAvail }
+              }
+              return p
+            })
+            return hasDiff ? next : prev
+          })
+        }
 
         const sessions = tablesRes.sessions || {}
         const thisTableSession = sessions[tableNumber]
@@ -726,59 +789,69 @@ function DinerMenuContent() {
         .subscribe()
     }
 
-    if (!supabase) {
-      try {
-        sseEventSource = new EventSource('/api/events')
-        sseEventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
+    // Conexión SSE en vivo para recibir avisos del mozo y actualizaciones de carta al instante
+    try {
+      sseEventSource = new EventSource('/api/events')
+      sseEventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
 
-            // Si el mozo liberó esta mesa específica, limpiar estado y carrito residual
-            if (
-              data.type === 'table_freed' &&
-              (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
-            ) {
-              if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-                handleTableMarkedPaid()
-                return
-              }
-              setCart([])
-              setTableOrderStatus(null)
-              setIsTablePaid(false)
-              setIsPaidBannerDismissed(false)
-              setIsReviewBoosterDismissed(false)
-              setHasRequestedBill(false)
-              hasRequestedBillRef.current = false
-              userRequestedBillTimeRef.current = null
-              if (typeof window !== 'undefined') {
-                localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
-                localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
-                sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-                sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
-                sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
-                sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
-              }
-              if (data.new_session_id) {
-                setSessionId(data.new_session_id)
-              }
-              return
-            }
-
-            // Notificación en vivo de cuenta pagada / mesa cobrada
-            if (
-              ((data.type === 'table_bill_paid') || (data.type === 'service_call_attended' && data.is_bill)) &&
-              (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
-            ) {
+          // Si el mozo liberó esta mesa específica, limpiar estado y carrito residual
+          if (
+            data.type === 'table_freed' &&
+            (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
+          ) {
+            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
               handleTableMarkedPaid()
               return
             }
-
-            if (data.type === 'menu_updated') {
-              loadData()
-              return
+            setCart([])
+            setTableOrderStatus(null)
+            setIsTablePaid(false)
+            setIsPaidBannerDismissed(false)
+            setIsReviewBoosterDismissed(false)
+            setHasRequestedBill(false)
+            hasRequestedBillRef.current = false
+            userRequestedBillTimeRef.current = null
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
+              localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
             }
+            if (data.new_session_id) {
+              setSessionId(data.new_session_id)
+            }
+            return
+          }
 
-            if (data.type === 'connected') return
+          // Notificación en vivo de cuenta pagada / mesa cobrada
+          if (
+            ((data.type === 'table_bill_paid') || (data.type === 'service_call_attended' && data.is_bill)) &&
+            (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
+          ) {
+            handleTableMarkedPaid()
+            return
+          }
+
+          if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
+            if (data.productId) {
+              const canonical = resolveCanonicalProductId(data.productId) || data.productId
+              setProducts(prev => prev.map(p => {
+                const pCanon = resolveCanonicalProductId(p.id) || p.id
+                if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
+                  return { ...p, is_available: data.isAvailable }
+                }
+                return p
+              }))
+            }
+            loadData()
+            return
+          }
+
+          if (data.type === 'connected') return
 
             if (
               data.tableNumber?.toString() === tableNumber?.toString() ||
@@ -801,7 +874,6 @@ function DinerMenuContent() {
       } catch {
         // fallback
       }
-    }
 
     // Soft Polling de respaldo cada 4.5s
     pollInterval = setInterval(checkOrderStatus, 4500)
@@ -933,6 +1005,7 @@ function DinerMenuContent() {
         body: JSON.stringify({
           slug,
           product_id: productId,
+          name: products.find(p => p.id === productId)?.name,
           is_available: nextState,
         }),
       })
@@ -943,6 +1016,20 @@ function DinerMenuContent() {
           data.is_available ? '✅ Plato marcado como DISPONIBLE' : '⚠️ Plato marcado como AGOTADO'
         )
         setTimeout(() => setInSituFeedbackToast(null), 3000)
+        try {
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('fluxo_menu_channel')
+            bc.postMessage({ type: 'menu_updated', slug, productId, isAvailable: nextState })
+            bc.close()
+          }
+        } catch {}
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('fluxo_menu_updated', {
+              detail: { slug, productId, isAvailable: nextState },
+            })
+          )
+        }
       } else {
         console.error('[Menu InSitu] Error en actualización de disponibilidad:', data)
         // Rollback

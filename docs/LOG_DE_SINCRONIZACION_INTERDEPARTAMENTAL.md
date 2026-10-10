@@ -6,6 +6,38 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-10 00:17] — Desglose Operativo: Correo Corporativo Formal de Fluxo y Recepción de Leads (Punto 3.2)
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Definición de Nuevas Tareas:**
+  - **Punto 3.1:** Cumplimentación de datos fiscales formales del titular según LSSI-CE en `src/app/legal/page.tsx`.
+  - **Punto 3.2:** Creación de correo con dominio empresarial propio (ej. `contacto@fluxogastro.com` o `info@...`) mediante Cloudflare Email Routing / Zoho / Google Workspace, y vinculación de la variable `LEAD_NOTIFICATION_EMAIL` en `.env.local` y Vercel para que las solicitudes del formulario del Piloto de 14 Días en la Landing Page se entreguen directamente en dicha bandeja.
+
+---
+
+### [2026-10-10 00:11] — Certificación de Seguridad Aprobada: Check del Punto 2 por Program Data
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Resultado de la Auditoría Técnica:**
+  - **Punto 2 [COMPLETADO & BLINDADO]:** Verificación integral del aislamiento de secretos y variables de entorno en producción Vercel y Next.js.
+  - Escaneo de código libre de secrets o tokens privados en bundles de cliente (`NEXT_PUBLIC_*`).
+  - Clientes de Supabase validados con uso estricto de `anon` key + RLS evaluado en base de datos.
+  - Suites de penetración y RLS certificadas al 100% (RLS Auditor 33/33 PASS, Strix Scanner 8/8 PASS, `tsc --noEmit` 0 errores).
+
+---
+
+### [2026-10-09 23:30] — Sincronización de Estado: Auditoría de Tareas Técnicas y Legales (Puntos 1 al 8)
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Estado de Tareas Validado:**
+  - **Punto 8 [COMPLETADO]:** Notificación persistente en mesa de servicio solicitado implementada y operativa en la vista del comensal.
+  - **Punto 5 [COMPLETADO]:** Auditoría y configuración de los 14 alérgenos alimentarios según Reglamento (UE) 1169/2011 completada en catálogo y admin.
+  - **Punto 4 [COMPLETADO]:** Cláusula de delimitación fiscal de TPV externo (exención Ley Antifraude / Veri*Factu) incorporada en términos legales.
+  - **Punto 7 [EN CURSO / PULIDO]:** Administrador de Cartas In Situ funcionando; pendiente rematar detalles finos de UX y validación.
+  - **Punto 6 [EN CURSO / MANTENIMIENTO]:** Flujo integral E2E general funcionando de forma estable; se mantiene vigilancia continua ante refactorizaciones.
+  - **Punto 1 [PENDIENTE CRÍTICO]:** Ejecución pendiente en Supabase Cloud SQL Editor de las migraciones de catálogo canónico, políticas RLS de stock y clave foránea de llamadas (`20261009_fix_catalog_products_and_stock_rls.sql` y `20261008_fk_service_calls_tables.sql`).
+  - **Punto 2 [PENDIENTE]:** Aislamiento y comprobación estricta de secrets de entorno en producción Vercel.
+  - **Punto 3 [PENDIENTE]:** LSSI-CE: Cumplimentación de datos fiscales formales del titular en la página legal antes de comercialización de pago.
+
+---
+
 ### [2026-10-08 18:06] — Delegación Oficial: Activación de Marketing (Depto 2) y Diseño de Marca (Depto 3) para el Piloto Noia
 * **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2) y Diseño de Marca & UI/UX (Depto 3).
 * **Directiva Ejecutiva:**

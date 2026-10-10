@@ -268,9 +268,15 @@ export function deduplicateProducts(products: Product[]): Product[] {
     if (prod.id && seenIds.has(prod.id)) {
       const idx = result.findIndex(p => p.id === prod.id)
       if (idx >= 0) {
+        const effectiveAvailable =
+          typeof prod.is_available === 'boolean'
+            ? prod.is_available
+            : (typeof result[idx].is_available === 'boolean' ? result[idx].is_available : true)
+
         result[idx] = {
           ...result[idx],
           ...prod,
+          is_available: effectiveAvailable,
           allergens:
             Array.isArray(prod.allergens) && prod.allergens.length > 0
               ? prod.allergens
@@ -287,10 +293,16 @@ export function deduplicateProducts(products: Product[]): Product[] {
 
       // Si el nuevo producto tiene UUID y el existente no, adoptar el UUID oficial
       const chosenId = isProdUuid ? prod.id : existing.id
+      const effectiveAvailable =
+        typeof prod.is_available === 'boolean'
+          ? prod.is_available
+          : (typeof existing.is_available === 'boolean' ? existing.is_available : true)
+
       const merged: Product = {
         ...existing,
         ...prod,
         id: chosenId,
+        is_available: effectiveAvailable,
         allergens:
           Array.isArray(prod.allergens) && prod.allergens.length > 0
             ? prod.allergens

@@ -10,6 +10,9 @@ import {
   deleteServerProduct,
   setServerCategories,
   setServerProducts,
+  setProductAvailabilityOverride,
+  applyProductAvailabilityOverrides,
+  broadcastEvent,
   sanitizeText,
 } from '@/lib/server-state'
 import { MOCK_RESTAURANTS } from '@/lib/supabase/mock-fallback'
@@ -71,7 +74,9 @@ export async function GET(req: NextRequest) {
             .select('*')
             .eq('restaurant_id', rest.id)
           if (dbProds && dbProds.length > 0) {
-            products = deduplicateProducts([...products, ...dbProds])
+            const overriddenDbProds = applyProductAvailabilityOverrides(slug, dbProds)
+            products = deduplicateProducts([...products, ...overriddenDbProds])
+            products = applyProductAvailabilityOverrides(slug, products)
             setServerProducts(slug, products)
           }
         }
@@ -91,14 +96,21 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    products = deduplicateProducts(products)
+    products = applyProductAvailabilityOverrides(slug, deduplicateProducts(products))
 
-    return NextResponse.json({
-      success: true,
-      restaurant,
-      categories,
-      products,
-    })
+    return NextResponse.json(
+      {
+        success: true,
+        restaurant,
+        categories,
+        products,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        },
+      }
+    )
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
@@ -288,11 +300,13 @@ export async function PATCH(req: NextRequest) {
     }
 
     const canonicalId = resolveCanonicalProductId(product_id) || product_id
+    const normName = (body.name || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     let currentProducts = getServerProducts(slug)
     let product = currentProducts.find(p =>
       p.id === product_id ||
       p.id === canonicalId ||
-      resolveCanonicalProductId(p.id) === canonicalId
+      resolveCanonicalProductId(p.id) === canonicalId ||
+      (normName && (p.name || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === normName)
     )
 
     const supabase = createServerClient()
@@ -324,12 +338,40 @@ export async function PATCH(req: NextRequest) {
     }
 
     const newState = typeof is_available === 'boolean' ? is_available : !product.is_available
-    const updated = currentProducts.map(p =>
-      (p.id === product.id || p.id === product_id || p.id === canonicalId || resolveCanonicalProductId(p.id) === canonicalId)
-        ? { ...p, is_available: newState }
-        : p
-    )
+
+    // 1. Guardar override persistente en el almacén de autoridad del servidor
+    setProductAvailabilityOverride(slug, product_id, newState)
+    if (canonicalId) setProductAvailabilityOverride(slug, canonicalId, newState)
+    if (product?.id) setProductAvailabilityOverride(slug, product.id, newState)
+    if (product?.name) {
+      const pNorm = product.name.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      setProductAvailabilityOverride(slug, pNorm, newState)
+    }
+
+    // 2. Actualizar estado reactivo en memoria
+    const updated = currentProducts.map(p => {
+      const pCanon = resolveCanonicalProductId(p.id) || p.id
+      const pNorm = (p.name || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      if (
+        p.id === product.id ||
+        p.id === product_id ||
+        p.id === canonicalId ||
+        pCanon === canonicalId ||
+        (normName && pNorm === normName)
+      ) {
+        return { ...p, is_available: newState }
+      }
+      return p
+    })
     setServerProducts(slug, updated)
+
+    // 3. Notificar en vivo a todos los clientes (SSE)
+    broadcastEvent({
+      type: 'menu_updated',
+      slug,
+      productId: canonicalId || product.id,
+      isAvailable: newState,
+    })
 
     // Sincronización robusta con Supabase (PostgreSQL)
     if (supabase && isSupabaseConfigured()) {
@@ -384,7 +426,12 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, product_id, is_available: newState })
+    return NextResponse.json({
+      success: true,
+      product_id,
+      canonical_id: canonicalId,
+      is_available: newState,
+    })
 
   } catch (err: any) {
     console.error('[Menu API PATCH] Error general en endpoint PATCH:', err)

@@ -42,6 +42,7 @@ interface GlobalStoreState {
   __GASTRO_ANALYTICS__: Record<string, AnalyticsEvent[]>
   __GASTRO_CATEGORIES__: Record<string, Category[]>
   __GASTRO_PRODUCTS__: Record<string, Product[]>
+  __GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__: Record<string, Record<string, boolean>>
   __GASTRO_SSE_CLIENTS__: Array<(data: string) => void>
   __GASTRO_IDEMPOTENCY_LOCKS__: Map<string, IdempotencyLockEntry>
   __GASTRO_ORDER_ITEMS_CACHE__: Map<string, any[]>
@@ -64,6 +65,15 @@ if (!g.__GASTRO_PRODUCTS__) {
     'taperia-casco-antigo': deduplicateProducts([...(MOCK_PRODUCTS['taperia-casco-antigo'] || [])]),
     'terraza-malecon': deduplicateProducts([...(MOCK_PRODUCTS['terraza-malecon'] || [])]),
     'bella-napoli': deduplicateProducts([...(MOCK_PRODUCTS['bella-napoli'] || [])]),
+  }
+}
+
+if (!g.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__) {
+  g.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__ = {
+    'burger-gourmet': {},
+    'taperia-casco-antigo': {},
+    'terraza-malecon': {},
+    'bella-napoli': {},
   }
 }
 
@@ -873,17 +883,65 @@ export function deleteServerCategory(slug: string, categoryId: string): void {
   setServerCategories(slug, current.filter(c => c.id !== categoryId))
 }
 
+export function setProductAvailabilityOverride(slug: string, productIdOrName: string, isAvailable: boolean): void {
+  if (!globalStore.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__) {
+    globalStore.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__ = {}
+  }
+  if (!globalStore.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__[slug]) {
+    globalStore.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__[slug] = {}
+  }
+  const cleanKey = productIdOrName.trim()
+  globalStore.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__[slug][cleanKey] = isAvailable
+  const canonical = resolveCanonicalProductId(cleanKey)
+  if (canonical && canonical !== cleanKey) {
+    globalStore.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__[slug][canonical] = isAvailable
+  }
+  const norm = cleanKey.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (norm) {
+    globalStore.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__[slug][norm] = isAvailable
+  }
+}
+
+export function getProductAvailabilityOverrides(slug: string): Record<string, boolean> {
+  return globalStore.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__?.[slug] || {}
+}
+
+export function applyProductAvailabilityOverrides(slug: string, products: Product[]): Product[] {
+  if (!Array.isArray(products) || products.length === 0) return []
+  const overrides = globalStore.__GASTRO_PRODUCT_AVAILABILITY_OVERRIDES__?.[slug]
+  if (!overrides || Object.keys(overrides).length === 0) return products
+
+  return products.map(p => {
+    if (!p) return p
+    const canonical = resolveCanonicalProductId(p.id) || p.id
+    const normName = (p.name || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+    let override: boolean | undefined = undefined
+    if (overrides[canonical] !== undefined) override = overrides[canonical]
+    else if (p.id && overrides[p.id] !== undefined) override = overrides[p.id]
+    else if (normName && overrides[normName] !== undefined) override = overrides[normName]
+
+    if (override !== undefined) {
+      return { ...p, is_available: override }
+    }
+    return p
+  })
+}
+
 export function getServerProducts(slug: string): Product[] {
   if (!globalStore.__GASTRO_PRODUCTS__?.[slug]) {
     if (!globalStore.__GASTRO_PRODUCTS__) globalStore.__GASTRO_PRODUCTS__ = {}
     globalStore.__GASTRO_PRODUCTS__[slug] = deduplicateProducts([...(MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])])
   }
-  return deduplicateProducts(globalStore.__GASTRO_PRODUCTS__[slug])
+  const rawProds = deduplicateProducts(globalStore.__GASTRO_PRODUCTS__[slug])
+  return applyProductAvailabilityOverrides(slug, rawProds)
 }
 
 export function setServerProducts(slug: string, products: Product[]): void {
   if (!globalStore.__GASTRO_PRODUCTS__) globalStore.__GASTRO_PRODUCTS__ = {}
-  globalStore.__GASTRO_PRODUCTS__[slug] = deduplicateProducts(products)
+  const deduplicated = deduplicateProducts(products)
+  const overridden = applyProductAvailabilityOverrides(slug, deduplicated)
+  globalStore.__GASTRO_PRODUCTS__[slug] = overridden
   broadcastEvent({ type: 'menu_updated', slug })
 }
 
@@ -907,11 +965,12 @@ export { CANONICAL_PRODUCT_MAP, resolveCanonicalProductId }
 
 export function toggleProductAvailability(slug: string, productId: string): boolean {
   const current = getServerProducts(slug)
-  const canonicalId = resolveCanonicalProductId(productId)
+  const canonicalId = resolveCanonicalProductId(productId) || productId
   let nextState = true
   let found = false
   const updated = current.map(p => {
-    if (p.id === productId || p.id === canonicalId || resolveCanonicalProductId(p.id) === canonicalId) {
+    const pCanonical = resolveCanonicalProductId(p.id) || p.id
+    if (p.id === productId || p.id === canonicalId || pCanonical === canonicalId) {
       found = true
       const isAvailable = p.is_available !== false
       nextState = !isAvailable
@@ -920,7 +979,10 @@ export function toggleProductAvailability(slug: string, productId: string): bool
     return p
   })
   if (found) {
+    setProductAvailabilityOverride(slug, productId, nextState)
+    setProductAvailabilityOverride(slug, canonicalId, nextState)
     setServerProducts(slug, updated)
+    broadcastEvent({ type: 'menu_updated', slug, productId: canonicalId, isAvailable: nextState })
   }
   return nextState
 }

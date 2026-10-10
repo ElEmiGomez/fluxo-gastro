@@ -54,24 +54,24 @@ flowchart TD
 │ 🎨 3. DISEÑO DE MARCA & UI/UX (Identidad & Ergonomía Visual)            │
 │  ├─ [x] Modal de error de red con opción clara de reintento para cliente│
 │  ├─ [x] Isotipo invertido oficial de Fluxo en documentos PDF            │
-│  ├─ [⏳ EN CURSO] Kit Físico Piloto: Artes finales de peanas QR A5,     │
-│  │     chuleta adhesiva de barra y cartas impresas para el local real   │
-│  └─ [ ] Tarea UX: Notificación persistente en mesa de servicio pedido   │
+│  ├─ [x] Notificación persistente en mesa de servicio pedido (Punto 8)   │
+│  └─ [⏳ EN CURSO] Kit Físico Piloto: Artes finales de peanas QR A5,     │
+│       chuleta adhesiva de barra y cartas impresas para el local real    │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ ⚙️ 4. INGENIERÍA & PRODUCTO — [PROGRAM DATA] (Desarrollo & Software)    │
-│  ├─ [x] Erradicación de generadores sintéticos (call-*, ord-*) en repo  │
-│  ├─ [x] Creación y activación de tabla system_error_logs en Supabase    │
-│  ├─ [x] Logging no bloqueante con stack trace y error code en servidor  │
-│  ├─ [x] Pruebas concurrentes multi-mesa (Mesa 1 y Mesa 7) exitosas      │
-│  ├─ [x] Administrador de Cartas y Fixeo UX implementados                │
-│  ├─ [x] Landing Page simplificada (solo botón principal a simulador)    │
-│  ├─ [⏳ En Curso - Bloque 1] Legal & Seguridad: LSSI-CE, Exención      │
-│  │     Veri*Factu, 14 Alérgenos UE, Rate Limiting y Secret Isolation    │
-│  ├─ [⏳ En Curso - Bloque 2] Validación de Producto & Robustez UX:       │
-│  │     Validación integral app, test del admin, persistencia en mesa,   │
-│  │     y clave foránea en service_calls.table_number                    │
+│  ├─ [x] Punto 8: Notificación persistente de servicio en mesa funcional │
+│  ├─ [x] Punto 5: Alérgenos UE (Reglamento 1169/2011) en catálogo/admin  │
+│  ├─ [x] Punto 4: Cláusula de exención fiscal Veri*Factu / Ley Antifraude│
+│  ├─ [⏳ En Curso] Punto 7: Pulir detalles del Admin de Cartas In Situ   │
+│  ├─ [⏳ En Curso] Punto 6: Mantenimiento y validación continua flujo E2E│
+│  ├─ [📋 Pendiente #1 - Crítico] Ejecutar migraciones en Supabase Cloud  │
+│  │     (catálogo canónico, stock RLS y clave foránea de llamadas)       │
+│  ├─ [x] Punto 2: Aislamiento de secretos y chequeo Vercel certificado   │
+│  ├─ [📋 Pendiente #3.1] LSSI-CE: Datos fiscales del titular en /legal   │
+│  ├─ [📋 Pendiente #3.2] Correo Corporativo Fluxo & Landing Leads        │
+│  │     (creación de email empresarial y enlace en LEAD_NOTIFICATION)    │
 │  └─ [ ] Certificación integral y refactorización modular SOLID          │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
