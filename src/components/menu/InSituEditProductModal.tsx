@@ -30,6 +30,7 @@ export function InSituEditProductModal({
 }: InSituEditProductModalProps) {
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
+  const [costPrice, setCostPrice] = useState('')
   const [originalPrice, setOriginalPrice] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [description, setDescription] = useState('')
@@ -48,6 +49,7 @@ export function InSituEditProductModal({
       if (product) {
         setName(product.name || '')
         setPrice(product.price != null ? product.price.toString() : '')
+        setCostPrice(product.cost_price != null ? product.cost_price.toString() : '')
         setOriginalPrice(product.original_price != null ? product.original_price.toString() : '')
         setCategoryId(product.category_id || categories[0]?.id || '')
         setDescription(product.description || '')
@@ -59,6 +61,7 @@ export function InSituEditProductModal({
       } else {
         setName('')
         setPrice('')
+        setCostPrice('')
         setOriginalPrice('')
         setCategoryId(defaultCategoryId || categories[0]?.id || '')
         setDescription('')
@@ -139,6 +142,15 @@ export function InSituEditProductModal({
       }
     }
 
+    let numCostPrice: number | null = null
+    if (costPrice.trim()) {
+      const sanitizedCost = costPrice.trim().replace(',', '.')
+      const parsedCost = parseFloat(sanitizedCost)
+      if (!isNaN(parsedCost) && parsedCost >= 0) {
+        numCostPrice = parsedCost
+      }
+    }
+
     setIsSubmitting(true)
     setErrorMsg(null)
 
@@ -150,6 +162,7 @@ export function InSituEditProductModal({
           id: product?.id,
           name: name.trim(),
           price: numPrice,
+          cost_price: numCostPrice,
           original_price: numOriginalPrice,
           category_id: categoryId || categories[0]?.id,
           description: description.trim(),
@@ -299,8 +312,8 @@ export function InSituEditProductModal({
             />
           </div>
 
-          {/* Precios (Actual y Habitual/Tachado) */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Precios (Actual, Coste de Materia Prima y Habitual/Tachado) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-slate-300 font-bold block text-xs">
                 Precio Actual (€) *
@@ -313,6 +326,21 @@ export function InSituEditProductModal({
                 onChange={e => setPrice(e.target.value)}
                 placeholder="Ej: 12.50"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 tabular-nums text-xs sm:text-sm"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-slate-300 font-bold block text-xs flex items-center justify-between">
+                <span>Coste Ingredientes (€)</span>
+                <span className="text-[10px] text-slate-500 font-normal">Materia prima</span>
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={costPrice}
+                onChange={e => setCostPrice(e.target.value)}
+                placeholder="Ej: 3.80 (Opcional)"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 placeholder-slate-500 focus:outline-none focus:border-purple-500 tabular-nums text-xs sm:text-sm"
               />
             </div>
 

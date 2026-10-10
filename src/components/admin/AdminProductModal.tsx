@@ -46,11 +46,14 @@ export function AdminProductModal({
             e.preventDefault()
             const fd = new FormData(e.currentTarget)
             const origRaw = String(fd.get('original_price') || '').trim()
-            const origParsed = origRaw ? parseFloat(origRaw) : null
+            const origParsed = origRaw ? parseFloat(origRaw.replace(',', '.')) : null
+            const costRaw = String(fd.get('cost_price') || '').trim()
+            const costParsed = costRaw ? parseFloat(costRaw.replace(',', '.')) : null
             onSave({
               id: editingProduct?.id,
               name: String(fd.get('name') || ''),
-              price: parseFloat(String(fd.get('price') || '0')),
+              price: parseFloat(String(fd.get('price') || '0').replace(',', '.')),
+              cost_price: costParsed && !isNaN(costParsed) && costParsed >= 0 ? costParsed : null,
               original_price: origParsed && !isNaN(origParsed) && origParsed > 0 ? origParsed : null,
               category_id: String(fd.get('category_id') || categories[0]?.id || 'cat-1'),
               description: String(fd.get('description') || ''),
@@ -73,7 +76,7 @@ export function AdminProductModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <label className="text-slate-400 font-bold block">Precio (€) *</label>
               <input
@@ -83,6 +86,21 @@ export function AdminProductModal({
                 required
                 defaultValue={editingProduct?.price || ''}
                 placeholder="Ej: 14.50"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-purple-500 tabular-nums"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-slate-400 font-bold block flex items-center justify-between">
+                <span>Coste Ingredientes (€)</span>
+                <span className="text-[10px] text-slate-500 font-normal">Materia prima</span>
+              </label>
+              <input
+                name="cost_price"
+                type="number"
+                step="0.01"
+                defaultValue={editingProduct?.cost_price != null ? editingProduct.cost_price : ''}
+                placeholder="Ej: 4.20 (Opcional)"
                 className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-purple-500 tabular-nums"
               />
             </div>

@@ -6,6 +6,17 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-10 22:15] — Inteligencia de Mercado B2B: Posicionamiento Anti-Hardware (BYOD) y Nuevas Battle Cards
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Organización General e Ingeniería.
+* **Acciones Realizadas:**
+  - **Documento Creado:** `docs/departamentos/2_marketing/analisis_competencia_benchmark_global.md` consolidando los 4 cuadrantes del mercado (Monstruos de Hardware: Turbopos/Shift4/Epos; Dueños de la Puerta: CoverManager/Restoo; Aliados Backoffice: Haddock/VFactu; y Order & Pay Ligero: Forkpi/Honei).
+  - **Actualización del Manual de Ventas (`manual_prospeccion_y_objeciones.md`):**
+    1. *Battle Card 4:* Argumentario frente a TPVs pesados (defensa BYOD: cero coste de rotura, cero hardware cautivo de 1.000€).
+    2. *Battle Card 5:* Argumentario frente a apps de cobro con comisión (defensa de 0% comisiones vs 1.5-2% de Honei/Sunday y filtro Mozo Gatekeeper antifraude).
+  - **Estrategia Comercial Confirmada:** Posicionamiento de Fluxo como "Multiplicador de Reputación en Google y Rotación de Terrazas" en coexistencia pacífica con TPVs contables existentes.
+
+---
+
 ### [2026-10-10 19:10] — Certificación DB Aprobada: Migraciones de Supabase Cloud Ejecutadas (Punto 1 Check)
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
 * **Acciones Realizadas:**

@@ -38,6 +38,7 @@ export interface Product {
   name: string
   description: string | null
   price: number
+  cost_price?: number | null // Coste de ingredientes / materia prima
   image_url: string | null
   model_3d_url: string | null // Campo opcional preparado para Realidad Aumentada
   is_available: boolean

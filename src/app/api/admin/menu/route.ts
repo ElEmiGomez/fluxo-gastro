@@ -162,6 +162,11 @@ export async function POST(req: NextRequest) {
         ? (typeof data.original_price === 'number' ? Number(data.original_price.toFixed(2)) : (parseFloat(String(data.original_price || '').replace(',', '.')) || null))
         : (existingProduct?.original_price ?? null)
 
+      const rawCostPrice = data.cost_price !== undefined
+        ? (data.cost_price === null || data.cost_price === '' ? null : (typeof data.cost_price === 'number' ? Number(data.cost_price.toFixed(2)) : (parseFloat(String(data.cost_price || '').replace(',', '.')) || null)))
+        : (existingProduct?.cost_price ?? null)
+      const sanitizedCostPrice = rawCostPrice !== null && !isNaN(rawCostPrice) ? Math.max(0, Number(rawCostPrice.toFixed(2))) : null
+
       const product: Product = {
         id: productId,
         category_id: data.category_id || existingProduct?.category_id || 'cat-1',
@@ -169,6 +174,7 @@ export async function POST(req: NextRequest) {
         name: sanitizeText(data.name || existingProduct?.name || 'Nuevo Plato', 100).trim() || 'Nuevo Plato',
         description: data.description !== undefined ? sanitizeText(data.description, 300) : (existingProduct?.description || ''),
         price: sanitizedPrice,
+        cost_price: sanitizedCostPrice,
         original_price: rawOriginalPrice && rawOriginalPrice > sanitizedPrice ? rawOriginalPrice : null,
         price_type: data.price_type === 'weight' ? 'weight' : 'unit',
         price_unit: data.price_type === 'weight' ? unitVal : undefined,
@@ -238,22 +244,31 @@ export async function POST(req: NextRequest) {
           }
 
           if (isUuid(targetCategoryId) && isUuid(targetProductId)) {
-            const { data: upsertData, error: upsertErr } = await supabase
+            const dbPayload: any = {
+              id: targetProductId,
+              restaurant_id: targetRestId,
+              category_id: targetCategoryId,
+              name: saved.name,
+              description: saved.description,
+              price: saved.price,
+              cost_price: saved.cost_price !== undefined ? saved.cost_price : null,
+              price_type: saved.price_type,
+              price_unit: saved.price_unit || null,
+              image_url: saved.image_url,
+              model_3d_url: saved.model_3d_url || null,
+              is_available: saved.is_available,
+            }
+
+            let { data: upsertData, error: upsertErr } = await supabase
               .from('products')
-              .upsert({
-                id: targetProductId,
-                restaurant_id: targetRestId,
-                category_id: targetCategoryId,
-                name: saved.name,
-                description: saved.description,
-                price: saved.price,
-                price_type: saved.price_type,
-                price_unit: saved.price_unit || null,
-                image_url: saved.image_url,
-                model_3d_url: saved.model_3d_url || null,
-                is_available: saved.is_available,
-              })
+              .upsert(dbPayload)
               .select()
+
+            if (upsertErr && (upsertErr.code === '42703' || upsertErr.message?.includes('cost_price'))) {
+              delete dbPayload.cost_price
+              const retry = await supabase.from('products').upsert(dbPayload).select()
+              upsertErr = retry.error
+            }
 
             if (upsertErr) {
               console.error('[Menu API POST] Error upserting product in Supabase:', {
