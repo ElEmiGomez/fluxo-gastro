@@ -38,6 +38,7 @@ flowchart TD
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🏛️ 1. ORGANIZACIÓN GENERAL (COO / Coordinación General)                 │
 │  ├─ [x] Registro DEC-25: Erradicación Total de Eventos Ficticios        │
+│  ├─ [x] Registro DEC-26: Refactorización Modular SOLID (Fluxo 1.2)       │
 │  ├─ [x] Sincronización de acuerdos técnicos Guillermo F. Gómez & Nacho   │
 │  ├─ [x] Actualización de prioridades: Standby en Menú del Día y Ventas │
 │  └─ [x] Adopción de metodología Spec-Driven Development & Git Branching │
@@ -65,8 +66,8 @@ flowchart TD
 │  ├─ [x] Punto 8: Notificación persistente de servicio en mesa funcional │
 │  ├─ [x] Punto 5: Alérgenos UE (Reglamento 1169/2011) en catálogo/admin  │
 │  ├─ [x] Punto 4: Cláusula de exención fiscal Veri*Factu / Ley Antifraude│
-│  ├─ [⏳ En Curso] Punto 7: Pulir detalles del Admin de Cartas In Situ   │
-│  ├─ [⏳ En Curso] Punto 6: Mantenimiento y validación continua flujo E2E│
+│  ├─ [x] Punto 7: Admin de Cartas e In Situ consolidado y testeado        │
+│  ├─ [x] Punto 6: Validación integral E2E y suites Playwright al 100%    │
 │  ├─ [📋 Pendiente #1 - Crítico] Ejecutar migraciones en Supabase Cloud  │
 │  │     (catálogo canónico, stock RLS y clave foránea de llamadas)       │
 │  ├─ [x] Punto 2: Aislamiento de secretos y chequeo Vercel certificado   │
