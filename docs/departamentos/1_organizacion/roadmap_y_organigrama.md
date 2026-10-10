@@ -68,8 +68,7 @@ flowchart TD
 │  ├─ [x] Punto 4: Cláusula de exención fiscal Veri*Factu / Ley Antifraude│
 │  ├─ [x] Punto 7: Admin de Cartas e In Situ consolidado y testeado        │
 │  ├─ [x] Punto 6: Validación integral E2E y suites Playwright al 100%    │
-│  ├─ [📋 Pendiente #1 - Crítico] Ejecutar migraciones en Supabase Cloud  │
-│  │     (catálogo canónico, stock RLS y clave foránea de llamadas)       │
+│  ├─ [x] Punto 1: Migraciones en Supabase Cloud ejecutadas y verificadas │
 │  ├─ [x] Punto 2: Aislamiento de secretos y chequeo Vercel certificado   │
 │  ├─ [📋 Pendiente #3.1] LSSI-CE: Datos fiscales del titular en /legal   │
 │  ├─ [x] Punto 3.2: Correo contactofluxosystem@gmail.com configurado     │

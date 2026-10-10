@@ -6,6 +6,18 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-10 19:10] — Certificación DB Aprobada: Migraciones de Supabase Cloud Ejecutadas (Punto 1 Check)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
+* **Acciones Realizadas:**
+  - **Punto 1 [COMPLETADO & CERTIFICADO]:** Ejecutada y verificada la migración unificada en Supabase Cloud PostgreSQL.
+  - Se confirmó la existencia de la clave foránea `fk_service_calls_tables` (`service_calls` -> `tables`) eliminando el riesgo de alertas huérfanas.
+  - Habilitadas y activadas las 3 políticas de Row Level Security (RLS) en la tabla `products` (`Permitir actualizacion de disponibilidad de productos`, `Permitir insercion de productos para administracion`, `Permitir gestion de productos para administracion`).
+  - Catálogo canónico con UUIDs deterministas sincronizado para `burger-gourmet`.
+  - Columnas `allergens` (Reglamento UE 1169/2011) y `original_price` integradas activamente.
+  - **Todas las tareas técnicas del MVP de Program Data (Puntos 1, 2, 4, 5, 6, 7 y 8) están formalmente completadas [x].**
+
+---
+
 ### [2026-10-10 16:56] — Sincronización Interdepartamental: Consolidación de Fluxo 1.2 y Registro de DEC-26
 * **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
 * **Temas Consolidados:**
