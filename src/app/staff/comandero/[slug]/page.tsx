@@ -89,6 +89,8 @@ export default function WaiterComanderoPage() {
   const attendedValidationOrderIdsRef = useRef<Set<string>>(new Set())
   // Órdenes que llegaron sin items en el ciclo anterior (race condition) — para backfill en el siguiente ciclo
   const pendingOrdersWithoutItemsRef = useRef<Map<string, Order>>(new Map())
+  // Bloqueo temporal anti-flicker para platos recién conmutados (evita que un poll rezagado revierta el estado)
+  const recentTogglesRef = useRef<Map<string, { status: boolean; until: number }>>(new Map())
 
   // Estados no-optimistas con spinner de carga durante transiciones en vuelo
   const [validatingOrderIds, setValidatingOrderIds] = useState<Set<string>>(new Set())
@@ -167,6 +169,17 @@ export default function WaiterComanderoPage() {
           const next = prev.map(p => {
             const canonical = resolveCanonicalProductId(p.id) || p.id
             const normName = (p.name || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+
+            // Si el plato fue conmutado localmente hace menos de 3.5 segundos, protegerlo del poll rezagado
+            const recentToggle = recentTogglesRef.current.get(p.id) || recentTogglesRef.current.get(canonical)
+            if (recentToggle && Date.now() < recentToggle.until) {
+              if (p.is_available !== recentToggle.status) {
+                hasDiff = true
+                return { ...p, is_available: recentToggle.status }
+              }
+              return p
+            }
+
             const serverAvail = ordersRes.product_availability[canonical] ?? ordersRes.product_availability[p.id] ?? ordersRes.product_availability[normName]
             if (serverAvail !== undefined && p.is_available !== serverAvail) {
               hasDiff = true
@@ -703,8 +716,10 @@ export default function WaiterComanderoPage() {
             if (data.type === 'connected') return
 
             if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
-              if (data.productId) {
+              if (data.productId && data.isAvailable !== undefined) {
                 const canonical = resolveCanonicalProductId(data.productId) || data.productId
+                recentTogglesRef.current.set(data.productId, { status: data.isAvailable, until: Date.now() + 3500 })
+                if (canonical) recentTogglesRef.current.set(canonical, { status: data.isAvailable, until: Date.now() + 3500 })
                 setProducts(prev => prev.map(p => {
                   const pCanon = resolveCanonicalProductId(p.id) || p.id
                   if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
@@ -712,6 +727,7 @@ export default function WaiterComanderoPage() {
                   }
                   return p
                 }))
+                return
               }
               fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
                 .then(r => r.json())
@@ -754,8 +770,10 @@ export default function WaiterComanderoPage() {
         menuBc.onmessage = (event) => {
           const { type, slug: evtSlug, productId, isAvailable } = event.data || {}
           if (type === 'menu_updated' && (!evtSlug || evtSlug === slug)) {
-            if (productId) {
+            if (productId && isAvailable !== undefined) {
               const canonical = resolveCanonicalProductId(productId) || productId
+              recentTogglesRef.current.set(productId, { status: isAvailable, until: Date.now() + 3500 })
+              if (canonical) recentTogglesRef.current.set(canonical, { status: isAvailable, until: Date.now() + 3500 })
               setProducts(prev => prev.map(p => {
                 const pCanon = resolveCanonicalProductId(p.id) || p.id
                 if (p.id === productId || p.id === canonical || pCanon === canonical) {
@@ -763,8 +781,9 @@ export default function WaiterComanderoPage() {
                 }
                 return p
               }))
+              return
             }
-            fetch(`/api/admin/menu?slug=${slug}`)
+            fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
               .then(r => r.json())
               .then(d => {
                 if (d?.products && d.products.length > 0) setProducts(d.products)
@@ -788,8 +807,10 @@ export default function WaiterComanderoPage() {
     const handleMenuUpdated = (e: any) => {
       const { slug: evtSlug, productId, isAvailable } = e?.detail || {}
       if (!evtSlug || evtSlug === slug) {
-        if (productId) {
+        if (productId && isAvailable !== undefined) {
           const canonical = resolveCanonicalProductId(productId) || productId
+          recentTogglesRef.current.set(productId, { status: isAvailable, until: Date.now() + 3500 })
+          if (canonical) recentTogglesRef.current.set(canonical, { status: isAvailable, until: Date.now() + 3500 })
           setProducts(prev => prev.map(p => {
             const pCanon = resolveCanonicalProductId(p.id) || p.id
             if (p.id === productId || p.id === canonical || pCanon === canonical) {
@@ -797,15 +818,16 @@ export default function WaiterComanderoPage() {
             }
             return p
           }))
+          return
         }
+        fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
+          .then(r => r.json())
+          .then(data => {
+            if (data?.products && data.products.length > 0) setProducts(data.products)
+            if (data?.categories && data.categories.length > 0) setCategories(data.categories)
+          })
+          .catch(() => {})
       }
-      fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
-        .then(r => r.json())
-        .then(data => {
-          if (data?.products && data.products.length > 0) setProducts(data.products)
-          if (data?.categories && data.categories.length > 0) setCategories(data.categories)
-        })
-        .catch(() => {})
     }
     window.addEventListener('fluxo_menu_updated', handleMenuUpdated)
 
@@ -1851,6 +1873,11 @@ export default function WaiterComanderoPage() {
                           e.stopPropagation()
                           const nextStatus = isUnavailable ? true : false
                           const canonicalId = resolveCanonicalProductId(prod.id) || prod.id
+
+                          recentTogglesRef.current.set(prod.id, { status: nextStatus, until: Date.now() + 3500 })
+                          if (canonicalId) recentTogglesRef.current.set(canonicalId, { status: nextStatus, until: Date.now() + 3500 })
+
+                          // 1. Actualización optimista inmediata
                           setProducts(prev =>
                             prev.map(p =>
                               (p.id === prod.id || p.id === canonicalId || resolveCanonicalProductId(p.id) === canonicalId)
@@ -1858,14 +1885,8 @@ export default function WaiterComanderoPage() {
                                 : p
                             )
                           )
-                          try {
-                            if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-                              const bc = new BroadcastChannel('fluxo_menu_channel')
-                              bc.postMessage({ type: 'menu_updated', slug, productId: canonicalId, isAvailable: nextStatus })
-                              bc.close()
-                            }
-                          } catch {}
-                          // Mutación opcional directa a Supabase (aislada sin bloquear la API)
+
+                          // 2. Mutación opcional directa a Supabase
                           try {
                             const isProdUuid = Boolean(canonicalId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(canonicalId))
                             const supabase = createBrowserClient()
@@ -1879,19 +1900,29 @@ export default function WaiterComanderoPage() {
                             console.warn('Direct Supabase update skipped:', supaErr)
                           }
 
-                          // Mutación en la API del servidor (Fuente única de verdad)
+                          // 3. Mutación en la API del servidor (Fuente única de verdad)
                           try {
-                            await fetch('/api/admin/menu', {
+                            const res = await fetch('/api/admin/menu', {
                               method: 'PATCH',
                               credentials: 'include',
                               headers: { 'Content-Type': 'application/json', 'x-staff-pin': '1234' },
                               body: JSON.stringify({ slug, product_id: canonicalId, name: prod.name, is_available: nextStatus }),
                             })
-                            window.dispatchEvent(
-                              new CustomEvent('fluxo_menu_updated', {
-                                detail: { slug, productId: canonicalId, isAvailable: nextStatus },
-                              })
-                            )
+                            const json = await res.json().catch(() => ({}))
+                            if (json.success) {
+                              try {
+                                if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+                                  const bc = new BroadcastChannel('fluxo_menu_channel')
+                                  bc.postMessage({ type: 'menu_updated', slug, productId: canonicalId, isAvailable: nextStatus })
+                                  bc.close()
+                                }
+                              } catch {}
+                              window.dispatchEvent(
+                                new CustomEvent('fluxo_menu_updated', {
+                                  detail: { slug, productId: canonicalId, isAvailable: nextStatus },
+                                })
+                              )
+                            }
                           } catch (err) {
                             console.error('Error al cambiar disponibilidad del plato en API:', err)
                           }
@@ -2115,13 +2146,19 @@ export default function WaiterComanderoPage() {
           isOpen={showQuickStockModal}
           onClose={() => setShowQuickStockModal(false)}
           slug={slug}
-          onStockChanged={() => {
-            fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
-              .then(r => r.json())
-              .then(data => {
-                if (data?.products && data.products.length > 0) setProducts(data.products)
-              })
-              .catch(() => {})
+          onStockChanged={(changedId, changedAvail) => {
+            if (changedId && changedAvail !== undefined) {
+              const canonical = resolveCanonicalProductId(changedId) || changedId
+              recentTogglesRef.current.set(changedId, { status: changedAvail, until: Date.now() + 3500 })
+              if (canonical) recentTogglesRef.current.set(canonical, { status: changedAvail, until: Date.now() + 3500 })
+              setProducts(prev => prev.map(p => {
+                const pCanon = resolveCanonicalProductId(p.id) || p.id
+                if (p.id === changedId || p.id === canonical || pCanon === canonical) {
+                  return { ...p, is_available: changedAvail }
+                }
+                return p
+              }))
+            }
           }}
         />
 

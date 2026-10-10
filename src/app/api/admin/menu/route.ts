@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
               })
             }
             categories = normalizedCats
-            setServerCategories(slug, normalizedCats)
+            setServerCategories(slug, normalizedCats, false)
           }
 
           const { data: dbProds } = await supabase
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
             const overriddenDbProds = applyProductAvailabilityOverrides(slug, dbProds)
             products = deduplicateProducts([...products, ...overriddenDbProds])
             products = applyProductAvailabilityOverrides(slug, products)
-            setServerProducts(slug, products)
+            setServerProducts(slug, products, false)
           }
         }
       } catch (dbErr) {
@@ -363,7 +363,7 @@ export async function PATCH(req: NextRequest) {
       }
       return p
     })
-    setServerProducts(slug, updated)
+    setServerProducts(slug, updated, false)
 
     // 3. Notificar en vivo a todos los clientes (SSE)
     broadcastEvent({

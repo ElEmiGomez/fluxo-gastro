@@ -26,6 +26,7 @@ import { Product, Category, Restaurant } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
 import { MANDATORY_EU_ALLERGENS } from '@/lib/allergens'
+import { resolveCanonicalProductId } from '@/lib/category-matcher'
 
 export default function AdminMenuPage() {
   const params = useParams()
@@ -79,55 +80,165 @@ export default function AdminMenuPage() {
 
   useEffect(() => {
     fetchMenuData()
+
+    // 1. Sincronización SSE en vivo
+    let sse: EventSource | null = null
+    try {
+      sse = new EventSource('/api/events')
+      sse.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
+            if (data.productId && data.isAvailable !== undefined) {
+              const canonical = resolveCanonicalProductId(data.productId) || data.productId
+              setProducts(prev =>
+                prev.map(p => {
+                  const pCanon = resolveCanonicalProductId(p.id) || p.id
+                  if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
+                    return { ...p, is_available: data.isAvailable }
+                  }
+                  return p
+                })
+              )
+            } else {
+              fetchMenuData()
+            }
+          }
+        } catch {}
+      }
+    } catch {}
+
+    // 2. BroadcastChannel cross-tab
+    let bc: BroadcastChannel | null = null
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('fluxo_menu_channel')
+        bc.onmessage = (event) => {
+          const { type, slug: evtSlug, productId, isAvailable } = event.data || {}
+          if (type === 'menu_updated' && (!evtSlug || evtSlug === slug)) {
+            if (productId && isAvailable !== undefined) {
+              const canonical = resolveCanonicalProductId(productId) || productId
+              setProducts(prev =>
+                prev.map(p => {
+                  const pCanon = resolveCanonicalProductId(p.id) || p.id
+                  if (p.id === productId || p.id === canonical || pCanon === canonical) {
+                    return { ...p, is_available: isAvailable }
+                  }
+                  return p
+                })
+              )
+            } else {
+              fetchMenuData()
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // 3. CustomEvent en la misma ventana
+    const handleMenuUpdated = (e: any) => {
+      const { slug: evtSlug, productId, isAvailable } = e?.detail || {}
+      if (!evtSlug || evtSlug === slug) {
+        if (productId && isAvailable !== undefined) {
+          const canonical = resolveCanonicalProductId(productId) || productId
+          setProducts(prev =>
+            prev.map(p => {
+              const pCanon = resolveCanonicalProductId(p.id) || p.id
+              if (p.id === productId || p.id === canonical || pCanon === canonical) {
+                return { ...p, is_available: isAvailable }
+              }
+              return p
+            })
+          )
+        } else {
+          fetchMenuData()
+        }
+      }
+    }
+    window.addEventListener('fluxo_menu_updated', handleMenuUpdated)
+
+    return () => {
+      if (sse) sse.close()
+      if (bc) try { bc.close() } catch {}
+      window.removeEventListener('fluxo_menu_updated', handleMenuUpdated)
+    }
   }, [slug])
 
   // Toggle Inmediato de Disponibilidad ("Se Agotó")
   const handleToggleAvailability = async (productId: string, currentAvailable: boolean) => {
     const nextState = !currentAvailable
     const targetProd = products.find(p => p.id === productId)
+    const canonicalId = resolveCanonicalProductId(productId) || productId
 
+    // Actualización optimista inmediata
     setProducts(prev =>
-      prev.map(p => (p.id === productId ? { ...p, is_available: nextState } : p))
+      prev.map(p => {
+        const pCanon = resolveCanonicalProductId(p.id) || p.id
+        if (p.id === productId || p.id === canonicalId || pCanon === canonicalId) {
+          return { ...p, is_available: nextState }
+        }
+        return p
+      })
     )
 
     try {
       const res = await fetch('/api/admin/menu', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-staff-pin': '1234',
+        },
         credentials: 'include',
         body: JSON.stringify({
           slug,
-          product_id: productId,
+          product_id: canonicalId,
           name: targetProd?.name,
           is_available: nextState,
         }),
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (data.success) {
-        showToast(data.is_available ? '✅ Plato marcado como DISPONIBLE' : '⚠️ Plato marcado como AGOTADO')
+        showToast(nextState ? '✅ Plato marcado como DISPONIBLE' : '⚠️ Plato marcado como AGOTADO')
         try {
           if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
             const bc = new BroadcastChannel('fluxo_menu_channel')
-            bc.postMessage({ type: 'menu_updated', slug, productId, isAvailable: nextState })
+            bc.postMessage({ type: 'menu_updated', slug, productId: canonicalId, isAvailable: nextState })
             bc.close()
           }
         } catch {}
         if (typeof window !== 'undefined') {
           window.dispatchEvent(
             new CustomEvent('fluxo_menu_updated', {
-              detail: { slug, productId, isAvailable: nextState },
+              detail: { slug, productId: canonicalId, isAvailable: nextState },
             })
           )
         }
       } else {
         console.error('[Admin Menu Panel] Error al actualizar disponibilidad:', data)
         showToast(data.error || 'Error al actualizar disponibilidad')
-        fetchMenuData()
+        // Revertir optimismo
+        setProducts(prev =>
+          prev.map(p => {
+            const pCanon = resolveCanonicalProductId(p.id) || p.id
+            if (p.id === productId || p.id === canonicalId || pCanon === canonicalId) {
+              return { ...p, is_available: currentAvailable }
+            }
+            return p
+          })
+        )
       }
     } catch (err) {
       console.error('[Admin Menu Panel] Excepción al actualizar disponibilidad:', err)
       showToast('Error de conexión al actualizar disponibilidad')
-      fetchMenuData()
+      setProducts(prev =>
+        prev.map(p => {
+          const pCanon = resolveCanonicalProductId(p.id) || p.id
+          if (p.id === productId || p.id === canonicalId || pCanon === canonicalId) {
+            return { ...p, is_available: currentAvailable }
+          }
+          return p
+        })
+      )
     }
   }
 

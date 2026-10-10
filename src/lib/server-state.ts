@@ -859,10 +859,12 @@ export function getServerCategories(slug: string): Category[] {
   return globalStore.__GASTRO_CATEGORIES__[slug]
 }
 
-export function setServerCategories(slug: string, categories: Category[]): void {
+export function setServerCategories(slug: string, categories: Category[], broadcast: boolean = true): void {
   if (!globalStore.__GASTRO_CATEGORIES__) globalStore.__GASTRO_CATEGORIES__ = {}
   globalStore.__GASTRO_CATEGORIES__[slug] = categories
-  broadcastEvent({ type: 'menu_updated', slug })
+  if (broadcast) {
+    broadcastEvent({ type: 'menu_updated', slug })
+  }
 }
 
 export function upsertServerCategory(slug: string, category: Category): Category {
@@ -937,12 +939,14 @@ export function getServerProducts(slug: string): Product[] {
   return applyProductAvailabilityOverrides(slug, rawProds)
 }
 
-export function setServerProducts(slug: string, products: Product[]): void {
+export function setServerProducts(slug: string, products: Product[], broadcast: boolean = true): void {
   if (!globalStore.__GASTRO_PRODUCTS__) globalStore.__GASTRO_PRODUCTS__ = {}
   const deduplicated = deduplicateProducts(products)
   const overridden = applyProductAvailabilityOverrides(slug, deduplicated)
   globalStore.__GASTRO_PRODUCTS__[slug] = overridden
-  broadcastEvent({ type: 'menu_updated', slug })
+  if (broadcast) {
+    broadcastEvent({ type: 'menu_updated', slug })
+  }
 }
 
 export function upsertServerProduct(slug: string, product: Product): Product {

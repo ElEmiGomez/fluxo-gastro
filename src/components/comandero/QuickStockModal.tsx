@@ -23,7 +23,7 @@ interface QuickStockModalProps {
   isOpen: boolean
   onClose: () => void
   slug: string
-  onStockChanged?: () => void
+  onStockChanged?: (productId?: string, isAvailable?: boolean) => void
 }
 
 export function QuickStockModal({
@@ -154,7 +154,7 @@ export function QuickStockModal({
           })
         )
       }
-      if (onStockChanged) onStockChanged()
+      if (onStockChanged) onStockChanged(canonicalId, newStatus)
     } catch (err: any) {
       // Revertir estado optimista si falla
       setProducts(prev =>

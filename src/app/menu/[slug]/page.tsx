@@ -467,7 +467,7 @@ function DinerMenuContent() {
         menuBc.onmessage = (event) => {
           const { type, slug: evtSlug, productId, isAvailable } = event.data || {}
           if (type === 'menu_updated' && (!evtSlug || evtSlug === slug)) {
-            if (productId) {
+            if (productId && isAvailable !== undefined) {
               const canonical = resolveCanonicalProductId(productId) || productId
               setProducts(prev => prev.map(p => {
                 const pCanon = resolveCanonicalProductId(p.id) || p.id
@@ -476,6 +476,7 @@ function DinerMenuContent() {
                 }
                 return p
               }))
+              return
             }
             loadData()
           }
@@ -486,7 +487,7 @@ function DinerMenuContent() {
     const handleMenuUpdated = (e: any) => {
       const { slug: updatedSlug, productId, isAvailable } = e?.detail || {}
       if (!updatedSlug || updatedSlug === slug) {
-        if (productId) {
+        if (productId && isAvailable !== undefined) {
           const canonical = resolveCanonicalProductId(productId) || productId
           setProducts(prev => prev.map(p => {
             const pCanon = resolveCanonicalProductId(p.id) || p.id
@@ -495,6 +496,7 @@ function DinerMenuContent() {
             }
             return p
           }))
+          return
         }
         loadData()
       }
@@ -837,7 +839,7 @@ function DinerMenuContent() {
           }
 
           if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
-            if (data.productId) {
+            if (data.productId && data.isAvailable !== undefined) {
               const canonical = resolveCanonicalProductId(data.productId) || data.productId
               setProducts(prev => prev.map(p => {
                 const pCanon = resolveCanonicalProductId(p.id) || p.id
@@ -846,6 +848,7 @@ function DinerMenuContent() {
                 }
                 return p
               }))
+              return
             }
             loadData()
             return
