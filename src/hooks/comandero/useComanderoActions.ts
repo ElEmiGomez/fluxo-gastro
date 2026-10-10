@@ -263,12 +263,24 @@ export function useComanderoActions({
   }
 
   // Marcar mesa como cobrada y liberarla
-  const executeCloseAndFreeTable = async (tableNum: number | string) => {
+  const executeCloseAndFreeTable = async (
+    tableNum: number | string,
+    paymentMethod: 'card' | 'cash' = 'card',
+    finalAmount?: number,
+    ordersCount?: number
+  ) => {
     try {
       await fetch('/api/tables', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, table_number: tableNum, action: 'free' }),
+        body: JSON.stringify({
+          slug,
+          table_number: tableNum,
+          action: 'free',
+          payment_method: paymentMethod,
+          final_amount: finalAmount,
+          orders_count: ordersCount,
+        }),
       })
 
       setTableCarts(prev => {

@@ -65,6 +65,9 @@ export interface TableSession {
   table_number: number | string
   session_token: string // UUID de visita temporal
   status: 'active' | 'closed' | 'expired' | 'free' | 'busy' | 'calling' | 'ready'
+  payment_method?: 'card' | 'cash' | 'mixed' | null
+  final_amount?: number | null
+  orders_count?: number | null
   created_at?: string
   closed_at?: string | null
   last_updated_at?: string

@@ -145,19 +145,67 @@ export async function validateSessionToken(
 export async function closeTableSession(
   restaurantId: string,
   slug: string,
-  tableNumber: number
+  tableNumber: number,
+  paymentMethod: 'card' | 'cash' | 'mixed' = 'card',
+  finalAmount?: number | null,
+  ordersCount?: number | null
 ): Promise<void> {
   const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
-      // Invocación a función SQL atómica o update directo
-      await supabase
+      // Si finalAmount u ordersCount no se proveyeron explícitamente, calcular desde órdenes activas
+      let calculatedAmount = finalAmount
+      let calculatedCount = ordersCount
+
+      if (calculatedAmount === undefined || calculatedAmount === null || calculatedCount === undefined || calculatedCount === null) {
+        const { data: activeOrders } = await supabase
+          .from('orders')
+          .select('id, total_amount')
+          .eq('restaurant_id', targetRestaurantId)
+          .eq('table_number', tableNumber)
+          .neq('status', 'cancelled')
+          .neq('status', 'paid')
+
+        if (activeOrders && activeOrders.length > 0) {
+          if (calculatedAmount === undefined || calculatedAmount === null) {
+            calculatedAmount = activeOrders.reduce((acc: number, o: { total_amount?: number | string | null }) => acc + (Number(o.total_amount) || 0), 0)
+          }
+          if (calculatedCount === undefined || calculatedCount === null) {
+            calculatedCount = activeOrders.length
+          }
+        } else {
+          if (calculatedAmount === undefined || calculatedAmount === null) calculatedAmount = 0
+          if (calculatedCount === undefined || calculatedCount === null) calculatedCount = 1
+        }
+      }
+
+      // Intentar actualización completa con columnas de resumen
+      const updateData: Record<string, any> = {
+        status: 'closed',
+        closed_at: new Date().toISOString(),
+        payment_method: paymentMethod,
+        final_amount: calculatedAmount,
+        orders_count: calculatedCount,
+      }
+
+      const { error: sessionUpdateErr } = await supabase
         .from('table_sessions')
-        .update({ status: 'closed', closed_at: new Date().toISOString() })
+        .update(updateData)
         .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', tableNumber)
         .eq('status', 'active')
+
+      // Fallback si las nuevas columnas aún no existen en la base de datos remota
+      if (sessionUpdateErr) {
+        console.warn('[closeTableSession] Fallback a columnas estándar de table_sessions:', sessionUpdateErr.message)
+        await supabase
+          .from('table_sessions')
+          .update({ status: 'closed', closed_at: new Date().toISOString() })
+          .eq('restaurant_id', targetRestaurantId)
+          .eq('table_number', tableNumber)
+          .eq('status', 'active')
+      }
 
       // Marcar órdenes no canceladas de esta mesa como paid en Supabase para preservar el historial
       await supabase

@@ -22,6 +22,7 @@ interface ComanderoTaskQueueProps {
   onCancelValidationOrder: (orderId: string, tblNum?: any) => void
   onSelectTable: (table: Table) => void
   onDismissReadyBanner: (orderId: string) => void
+  onOpenFreeTableModal?: (tblNum: string | number) => void
 }
 
 export function ComanderoTaskQueue({
@@ -40,6 +41,7 @@ export function ComanderoTaskQueue({
   onCancelValidationOrder,
   onSelectTable,
   onDismissReadyBanner,
+  onOpenFreeTableModal,
 }: ComanderoTaskQueueProps) {
   const totalPendingTasks = readyOrdersList.length + validationOrdersList.length + pendingCalls.length
 
@@ -299,7 +301,13 @@ export function ComanderoTaskQueue({
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           <button
                             type="button"
-                            onClick={() => onAttendCall(call.id)}
+                            onClick={() => {
+                              if (isBill && onOpenFreeTableModal) {
+                                onOpenFreeTableModal(call.table_number)
+                              } else {
+                                onAttendCall(call.id)
+                              }
+                            }}
                             aria-label={isBill ? `Confirmar cobro de Mesa #${call.table_number}` : `Marcar aviso atendido de Mesa #${call.table_number}`}
                             className={`px-3 py-2 rounded-xl text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1 cursor-pointer ${
                               isBill

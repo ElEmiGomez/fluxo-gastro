@@ -193,6 +193,7 @@ export default function WaiterComanderoPage() {
             onCancelValidationOrder={handleCancelValidationOrder}
             onSelectTable={setSelectedTable}
             onDismissReadyBanner={(ordId) => setDismissedReadyBannerOrderIds(prev => new Set(prev).add(ordId))}
+            onOpenFreeTableModal={(tbl) => setShowFreeConfirmTable(tbl)}
           />
 
           {/* Toast de confirmación de envío */}
@@ -292,6 +293,7 @@ export default function WaiterComanderoPage() {
             tablePax={tablePax[currentTableNum] || 2}
             tableDiscount={tableDiscounts[currentTableNum] || 0}
             serverOrders={serverOrders}
+            pendingCalls={pendingCalls}
             recentTogglesRef={recentTogglesRef}
             onAddItemToComanda={handleAddItemToComanda}
             onSendOrderToKitchen={() => handleSendOrderToKitchen(selectedTable, cart, tableDiscounts[currentTableNum] || 0)}

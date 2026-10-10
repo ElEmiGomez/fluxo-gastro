@@ -8,8 +8,10 @@ import { OrderSummaryBar } from '@/components/comandero/OrderSummaryBar'
 import { CartDrawer } from '@/components/menu/CartDrawer'
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { PreBillModal } from '@/components/comandero/PreBillModal'
+import { CloseTableModal } from '@/components/comandero/CloseTableModal'
 import { QuickStockModal } from '@/components/comandero/QuickStockModal'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
+import { PendingServiceCall } from '@/types/comandero.types'
 
 interface ComanderoModalsProps {
   slug: string
@@ -37,6 +39,7 @@ interface ComanderoModalsProps {
   tablePax: number
   tableDiscount: number
   serverOrders: Order[]
+  pendingCalls?: PendingServiceCall[]
   recentTogglesRef: React.MutableRefObject<Map<string, { status: boolean; until: number }>>
   onAddItemToComanda: (
     product: Product,
@@ -51,7 +54,12 @@ interface ComanderoModalsProps {
   onUpdateCartQuantity: (idx: number, q: number) => void
   onRemoveCartItem: (idx: number) => void
   onClearCurrentCart: () => void
-  onExecuteCloseAndFreeTable: (tblNum: number | string) => void
+  onExecuteCloseAndFreeTable: (
+    tblNum: number | string,
+    paymentMethod?: 'card' | 'cash',
+    finalAmount?: number,
+    ordersCount?: number
+  ) => void
   onTransferTable: (toTableNum: string | number) => void
 }
 
@@ -81,6 +89,7 @@ export function ComanderoModals({
   tablePax,
   tableDiscount,
   serverOrders,
+  pendingCalls = [],
   recentTogglesRef,
   onAddItemToComanda,
   onSendOrderToKitchen,
@@ -135,21 +144,18 @@ export function ComanderoModals({
         }}
       />
 
-      {/* 4. Modal Confirmación de Liberar Mesa */}
-      <ConfirmModal
+      {/* 4. Modal de Cobro y Cierre Inteligente de Mesa (Smart Default & 1-Tap) */}
+      <CloseTableModal
         isOpen={Boolean(showFreeConfirmTable)}
-        title={`¿Liberar Mesa #${showFreeConfirmTable}?`}
-        message="Se marcará la mesa como libre, se cerrarán los pedidos y se limpiará la sesión para los próximos comensales."
-        confirmText="Sí, liberar mesa"
-        cancelText="Cancelar"
-        variant="success"
-        onConfirm={() => {
-          if (showFreeConfirmTable) {
-            onExecuteCloseAndFreeTable(showFreeConfirmTable)
-          }
+        onClose={() => setShowFreeConfirmTable(null)}
+        tableNumber={showFreeConfirmTable}
+        pendingCalls={pendingCalls}
+        serverOrders={serverOrders}
+        discountPercentage={tableDiscount}
+        onConfirm={(tblNum, paymentMethod, finalAmount, ordersCount) => {
+          onExecuteCloseAndFreeTable(tblNum, paymentMethod, finalAmount, ordersCount)
           setShowFreeConfirmTable(null)
         }}
-        onCancel={() => setShowFreeConfirmTable(null)}
       />
 
       {/* 5. Modal de Pre-Cuenta Digital */}

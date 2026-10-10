@@ -80,7 +80,15 @@ export async function POST(req: NextRequest) {
       })
       return res
     } else if (action === 'free') {
-      await closeTableSession(restaurantId, slug, parsedTableNum)
+      const { payment_method, final_amount, orders_count } = body
+      await closeTableSession(
+        restaurantId,
+        slug,
+        parsedTableNum,
+        payment_method || 'card',
+        typeof final_amount === 'number' ? final_amount : undefined,
+        typeof orders_count === 'number' ? orders_count : undefined
+      )
       const res = NextResponse.json({
         success: true,
         message: `Mesa #${table_number} liberada y token UUID revocado`,
