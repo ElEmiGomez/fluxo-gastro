@@ -194,8 +194,8 @@ export default function KitchenKDSPage() {
         .subscribe()
     }
 
-    // B. SSE de respaldo para modo offline/local (solo si no hay canal de Supabase)
-    if (!supabase) {
+    // B. SSE de respaldo para modo offline/local (solo si no hay canal de Supabase y en desarrollo local)
+    if (!supabase && process.env.NODE_ENV === 'development') {
       try {
         let sseDebounceTimer: any = null
         const triggerDebouncedFetch = () => {
@@ -227,7 +227,12 @@ export default function KitchenKDSPage() {
     }
 
     // C. Soft Polling de Respaldo cada 4.5 segundos (R4 de Interface Contracts)
-    pollInterval = setInterval(fetchServerOrders, 4500)
+    pollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return
+      }
+      fetchServerOrders()
+    }, 4500)
 
     // D. Reconciliación inmediata en visibilitychange y window.focus
     const handleVisibilityChange = () => {

@@ -325,62 +325,69 @@ export function useComanderoData(slug: string) {
           .subscribe()
       }
 
-      // SSE
-      try {
-        let sseDebounceTimer: any = null
-        const triggerDebouncedSync = () => {
-          if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
-          sseDebounceTimer = setTimeout(() => {
-            syncServerData()
-          }, 300)
-        }
+      // SSE (Solo en desarrollo local offline para no quemar recursos en serverless)
+      if (process.env.NODE_ENV === 'development') {
+        try {
+          let sseDebounceTimer: any = null
+          const triggerDebouncedSync = () => {
+            if (sseDebounceTimer) clearTimeout(sseDebounceTimer)
+            sseDebounceTimer = setTimeout(() => {
+              syncServerData()
+            }, 300)
+          }
 
-        sseEventSource = new EventSource('/api/events')
-        sseEventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
-            if (data.type === 'connected') return
+          sseEventSource = new EventSource('/api/events')
+          sseEventSource.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data)
+              if (data.type === 'connected') return
 
-            if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
-              if (data.productId && data.isAvailable !== undefined) {
-                const canonical = resolveCanonicalProductId(data.productId) || data.productId
-                recentTogglesRef.current.set(data.productId, { status: data.isAvailable, until: Date.now() + 3500 })
-                if (canonical) recentTogglesRef.current.set(canonical, { status: data.isAvailable, until: Date.now() + 3500 })
-                setProducts(prev => prev.map(p => {
-                  const pCanon = resolveCanonicalProductId(p.id) || p.id
-                  if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
-                    return { ...p, is_available: data.isAvailable }
-                  }
-                  return p
-                }))
+              if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
+                if (data.productId && data.isAvailable !== undefined) {
+                  const canonical = resolveCanonicalProductId(data.productId) || data.productId
+                  recentTogglesRef.current.set(data.productId, { status: data.isAvailable, until: Date.now() + 3500 })
+                  if (canonical) recentTogglesRef.current.set(canonical, { status: data.isAvailable, until: Date.now() + 3500 })
+                  setProducts(prev => prev.map(p => {
+                    const pCanon = resolveCanonicalProductId(p.id) || p.id
+                    if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
+                      return { ...p, is_available: data.isAvailable }
+                    }
+                    return p
+                  }))
+                  return
+                }
+                fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
+                  .then(r => r.json())
+                  .then(d => {
+                    if (d?.products && d.products.length > 0) setProducts(d.products)
+                    if (d?.categories && d.categories.length > 0) setCategories(d.categories)
+                  })
+                  .catch(() => {})
                 return
               }
-              fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
-                .then(r => r.json())
-                .then(d => {
-                  if (d?.products && d.products.length > 0) setProducts(d.products)
-                  if (d?.categories && d.categories.length > 0) setCategories(d.categories)
-                })
-                .catch(() => {})
-              return
-            }
 
-            if (!data.slug || data.slug === slug) {
-              triggerDebouncedSync()
-            }
-          } catch {}
-        }
-        sseEventSource.onerror = () => {
-          if (sseEventSource) {
-            sseEventSource.close()
-            sseEventSource = null
+              if (!data.slug || data.slug === slug) {
+                triggerDebouncedSync()
+              }
+            } catch {}
           }
+          sseEventSource.onerror = () => {
+            if (sseEventSource) {
+              sseEventSource.close()
+              sseEventSource = null
+            }
+          }
+        } catch (err) {
+          console.log('SSE connection error:', err)
         }
-      } catch (err) {
-        console.log('SSE connection error:', err)
       }
 
-      pollInterval = setInterval(syncServerData, 4500)
+      pollInterval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+          return
+        }
+        syncServerData()
+      }, 4500)
     }
 
     loadInitialData()

@@ -291,87 +291,95 @@ export function useMenuOrderSync({
         .subscribe()
     }
 
-    try {
-      sseEventSource = new EventSource('/api/events')
-      sseEventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
+    // SSE (Solo en desarrollo local offline para evitar consumo continuo en Vercel)
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        sseEventSource = new EventSource('/api/events')
+        sseEventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
 
-          if (
-            data.type === 'table_freed' &&
-            (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
-          ) {
-            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
+            if (
+              data.type === 'table_freed' &&
+              (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
+            ) {
+              if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
+                handleTableMarkedPaid()
+                return
+              }
+              setCart([])
+              setTableOrderStatus(null)
+              setIsTablePaid(false)
+              setIsPaidBannerDismissed(false)
+              setIsReviewBoosterDismissed(false)
+              setHasRequestedBill(false)
+              hasRequestedBillRef.current = false
+              userRequestedBillTimeRef.current = null
+              if (typeof window !== 'undefined') {
+                localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
+                localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
+                sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+                sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+                sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
+                sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
+              }
+              if (data.new_session_id) {
+                setSessionId(data.new_session_id)
+              }
+              return
+            }
+
+            if (
+              ((data.type === 'table_bill_paid') || (data.type === 'service_call_attended' && data.is_bill)) &&
+              (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
+            ) {
               handleTableMarkedPaid()
               return
             }
-            setCart([])
-            setTableOrderStatus(null)
-            setIsTablePaid(false)
-            setIsPaidBannerDismissed(false)
-            setIsReviewBoosterDismissed(false)
-            setHasRequestedBill(false)
-            hasRequestedBillRef.current = false
-            userRequestedBillTimeRef.current = null
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
-              localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
-            }
-            if (data.new_session_id) {
-              setSessionId(data.new_session_id)
-            }
-            return
-          }
 
-          if (
-            ((data.type === 'table_bill_paid') || (data.type === 'service_call_attended' && data.is_bill)) &&
-            (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
-          ) {
-            handleTableMarkedPaid()
-            return
-          }
-
-          if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
-            if (data.productId && data.isAvailable !== undefined) {
-              const canonical = resolveCanonicalProductId(data.productId) || data.productId
-              setProducts(prev => prev.map(p => {
-                const pCanon = resolveCanonicalProductId(p.id) || p.id
-                if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
-                  return { ...p, is_available: data.isAvailable }
-                }
-                return p
-              }))
+            if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
+              if (data.productId && data.isAvailable !== undefined) {
+                const canonical = resolveCanonicalProductId(data.productId) || data.productId
+                setProducts(prev => prev.map(p => {
+                  const pCanon = resolveCanonicalProductId(p.id) || p.id
+                  if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
+                    return { ...p, is_available: data.isAvailable }
+                  }
+                  return p
+                }))
+                return
+              }
+              loadData()
               return
             }
-            loadData()
-            return
-          }
 
-          if (data.type === 'connected') return
+            if (data.type === 'connected') return
 
-          if (
-            data.tableNumber?.toString() === tableNumber?.toString() ||
-            data.table_number?.toString() === tableNumber?.toString() ||
-            data.type?.startsWith('order_') ||
-            data.type?.startsWith('service_')
-          ) {
-            triggerDebouncedCheck()
-          }
-        } catch {}
-      }
-      sseEventSource.onerror = () => {
-        if (sseEventSource) {
-          sseEventSource.close()
-          sseEventSource = null
+            if (
+              data.tableNumber?.toString() === tableNumber?.toString() ||
+              data.table_number?.toString() === tableNumber?.toString() ||
+              data.type?.startsWith('order_') ||
+              data.type?.startsWith('service_')
+            ) {
+              triggerDebouncedCheck()
+            }
+          } catch {}
         }
-      }
-    } catch {}
+        sseEventSource.onerror = () => {
+          if (sseEventSource) {
+            sseEventSource.close()
+            sseEventSource = null
+          }
+        }
+      } catch {}
+    }
 
-    pollInterval = setInterval(checkOrderStatus, 4500)
+    pollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return
+      }
+      checkOrderStatus()
+    }, 4500)
 
     const handleLocalTableFreed = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
