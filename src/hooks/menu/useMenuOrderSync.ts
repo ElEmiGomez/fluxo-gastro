@@ -246,8 +246,9 @@ export function useMenuOrderSync({
     let realtimeChannel: any = null
 
     if (supabase) {
+      const channelId = `diner-orders-${slug}-${tableNumber}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
       realtimeChannel = supabase
-        .channel(`diner-orders-${slug}-${tableNumber}`)
+        .channel(channelId)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload: any) => {
           const newOrder = payload?.new
           const matchesTable = newOrder && (

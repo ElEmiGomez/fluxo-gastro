@@ -317,8 +317,9 @@ export function useComanderoData(slug: string) {
           }, 400)
         }
 
+        const channelId = `comandero-orders-${slug}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
         realtimeChannel = supabase
-          .channel(`comandero-orders-${slug}`)
+          .channel(channelId)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, triggerDebouncedRealtimeSync)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'order_events' }, triggerDebouncedRealtimeSync)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'service_calls' }, triggerDebouncedRealtimeSync)

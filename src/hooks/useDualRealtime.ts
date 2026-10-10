@@ -75,7 +75,7 @@ export function useDualRealtime({
 
     // 1. PRIMARY: Supabase Realtime Push via WebSocket
     if (supabase) {
-      const channelId = `dual-realtime-${slug}-${targetRestaurantId}`
+      const channelId = `dual-realtime-${slug}-${targetRestaurantId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
       const ordersFilter = targetRestaurantId ? `restaurant_id=eq.${targetRestaurantId}` : undefined
       
       const ordersConfig: any = {

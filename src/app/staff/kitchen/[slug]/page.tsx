@@ -167,8 +167,9 @@ export default function KitchenKDSPage() {
 
     // A. Canal Nativo Supabase Realtime (postgres_changes en orders y order_events)
     if (supabase) {
+      const channelId = `kds-orders-${slug}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
       realtimeChannel = supabase
-        .channel(`kds-orders-${slug}`)
+        .channel(channelId)
         .on(
           'postgres_changes',
           {
