@@ -227,7 +227,10 @@ export default function KitchenKDSPage() {
     }
 
     // C. Soft Polling de Respaldo cada 4.5 segundos (R4 de Interface Contracts)
-    pollInterval = setInterval(fetchServerOrders, 4500)
+    pollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      fetchServerOrders()
+    }, 4500)
 
     // D. Reconciliación inmediata en visibilitychange y window.focus
     const handleVisibilityChange = () => {

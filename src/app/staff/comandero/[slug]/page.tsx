@@ -757,7 +757,10 @@ export default function WaiterComanderoPage() {
       }
 
       // 3. Soft Polling de respaldo cada 4.5s
-      pollInterval = setInterval(syncServerData, 4500)
+      pollInterval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+        syncServerData()
+      }, 4500)
     }
 
     loadInitialData()

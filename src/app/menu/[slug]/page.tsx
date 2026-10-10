@@ -879,7 +879,10 @@ function DinerMenuContent() {
       }
 
     // Soft Polling de respaldo cada 4.5s
-    pollInterval = setInterval(checkOrderStatus, 4500)
+    pollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      checkOrderStatus()
+    }, 4500)
 
     // Manejar eventos locales emitidos en el cliente para sincronización inmediata
     const handleLocalTableFreed = (e: any) => {

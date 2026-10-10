@@ -56,7 +56,10 @@ export function CallWaiterButton({
     }
 
     checkActiveCalls()
-    const interval = setInterval(checkActiveCalls, 3000)
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      checkActiveCalls()
+    }, 3000)
 
     let sse: EventSource | null = null
     try {

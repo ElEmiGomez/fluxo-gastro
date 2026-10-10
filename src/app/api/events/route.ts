@@ -4,6 +4,16 @@ import { registerSSEClient } from '@/lib/server-state'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
+  // En producción (Vercel) un stream abierto mantiene la función activa y consume cuota.
+  // La sincronización en producción la hace Supabase Realtime directamente desde el navegador.
+  // Al responder con JSON (no text/event-stream), el EventSource del cliente se cierra y no reconecta.
+  if (process.env.NODE_ENV === 'production') {
+    return new Response(JSON.stringify({ status: 'disabled' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
