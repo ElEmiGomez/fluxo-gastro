@@ -4,6 +4,7 @@
 - Responde siempre de forma directa, simple y concreta, sin rodeos, sin introducciones vacías, sin analogías extensas y sin diagramas innecesarios.
 - Explica qué estaba fallando, qué archivo se tocó y cómo funciona la solución.
 - **Accesibilidad en Redacción y Terminología Culinaria:** Queda prohibido el empleo de jerga técnica gastronómica o regionalismos no universales en interfaces y reportes de dirección. Usar siempre equivalentes directos y comprensibles: "preparación previa" (en lugar de "mise en place"), "tarde y picoteo" (en lugar de "tardeo"), y "coste de ingredientes / materia prima" (en lugar de "escandallos").
+- **Recordatorio Permanente de Despliegue en Vercel:** Siempre que el usuario mencione despliegues, Vercel, leads, emails o producción, recordarle que debe actualizar en Vercel (`Project Settings -> Environment Variables`) la variable `LEAD_NOTIFICATION_EMAIL=contactofluxosystem@gmail.com` para que los avisos de la landing pública no vayan al correo anterior.
 
 ## 2. Invariantes de Arquitectura (Cero Regresiones)
 - **Aislamiento por Order ID:** Todos los estados y mutaciones de comandas deben gestionarse exclusivamente por su `order.id` único (UUID). Queda prohibido usar overrides globales por número de mesa que puedan alterar pedidos futuros o nuevas rondas.

@@ -26,7 +26,8 @@ flowchart TD
 ---
 
 ## ☀️ Tablero Diario de Tareas (Standup de Estabilidad & Calidad — 04/10/2026)
-> **Directiva Ejecutiva de la Startup:** Prioridad operativa absoluta: **Fixear Fluxo en su totalidad**. Toda expansión comercial o nuevas funcionalidades quedan en segundo plano hasta certificar estabilidad punta a punta, eliminación de fallos silenciosos y tolerancia cero a datos ficticios en memoria.
+> **Directiva Ejecutiva de la Startup:** Prioridad operativa absoluta: **Fixear Fluxo en su totalidad**. Toda expansión comercial o nuevas funcionalidades quedan en segundo plano hasta certificar estabilidad punta a punta, eliminación de fallos silenciosos y tolerancia cero a datos ficticios en memoria.  
+> 🔔 **RECORDATORIO PENDIENTE EN VERCEL:** En Vercel (`Project Settings -> Environment Variables`), actualizar la variable `LEAD_NOTIFICATION_EMAIL` a `contactofluxosystem@gmail.com` para que los leads de la landing page en producción lleguen a la cuenta nueva.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -70,8 +71,8 @@ flowchart TD
 │  │     (catálogo canónico, stock RLS y clave foránea de llamadas)       │
 │  ├─ [x] Punto 2: Aislamiento de secretos y chequeo Vercel certificado   │
 │  ├─ [📋 Pendiente #3.1] LSSI-CE: Datos fiscales del titular en /legal   │
-│  ├─ [📋 Pendiente #3.2] Correo Corporativo Fluxo & Landing Leads        │
-│  │     (creación de email empresarial y enlace en LEAD_NOTIFICATION)    │
+│  ├─ [x] Punto 3.2: Correo contactofluxosystem@gmail.com configurado     │
+│  │     (enlace activo en LEAD_NOTIFICATION_EMAIL y página legal)        │
 │  └─ [ ] Certificación integral y refactorización modular SOLID          │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │

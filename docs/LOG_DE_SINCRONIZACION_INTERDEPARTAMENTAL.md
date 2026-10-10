@@ -6,6 +6,16 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-10 16:22] — Conexión Operativa: Correo Oficial contactofluxosystem@gmail.com Configurado (Punto 3.2 Check)
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Acciones Realizadas:**
+  - Configurada la variable `LEAD_NOTIFICATION_EMAIL=contactofluxosystem@gmail.com` en `.env.local` para que las solicitudes de piloto de la Landing Page lleguen de forma centralizada al nuevo correo.
+  - Actualizada la página legal ([`src/app/legal/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/legal/page.tsx)) integrando el correo `contactofluxosystem@gmail.com` tanto en el ejercicio de derechos RGPD como en la cláusula de soporte y atención comercial oficial.
+  - **Punto 3.2 marcado como COMPLETADO [x].**
+  - 🔔 **Recordatorio Permanente:** Pendiente actualizar en el panel web de Vercel (`Project Settings -> Environment Variables`) el valor `LEAD_NOTIFICATION_EMAIL=contactofluxosystem@gmail.com`. El sistema mantendrá activo este recordatorio para avisar al usuario cada vez que se aborden temas de despliegue, Vercel o emails.
+
+---
+
 ### [2026-10-10 00:17] — Desglose Operativo: Correo Corporativo Formal de Fluxo y Recepción de Leads (Punto 3.2)
 * **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
 * **Definición de Nuevas Tareas:**

@@ -1,55 +1,25 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react'
-import Image from 'next/image'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useParams, useSearchParams, usePathname } from 'next/navigation'
-import {
-  ShoppingBag,
-  Plus,
-  Minus,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  UtensilsCrossed,
-  Sparkles,
-  Utensils,
-  Search,
-  Loader2,
-  Bell,
-  X,
-  Flame,
-  LayoutList,
-  LayoutGrid,
-  Receipt,
-  Clock,
-  Edit2,
-  Power,
-  Lock,
-} from 'lucide-react'
+import { Check, Loader2 } from 'lucide-react'
+import { CartItem, Product } from '@/types/database.types'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
-import { TenantHeader } from '@/components/tenant/TenantHeader'
-import { CallWaiterButton } from '@/components/menu/CallWaiterButton'
-import { CartDrawer } from '@/components/menu/CartDrawer'
-import { Product3DModal } from '@/components/menu/Product3DModal'
-import { ProductModifierModal } from '@/components/comandero/ProductModifierModal'
-import { OrderTimelineModal } from '@/components/menu/OrderTimelineModal'
-import { BillModal } from '@/components/menu/BillModal'
-import { GoogleReviewBooster } from '@/components/menu/GoogleReviewBooster'
-import { RestaurantJsonLd } from '@/components/seo/RestaurantJsonLd'
-import { LegalModal } from '@/components/legal/LegalModal'
-import { InSituAdminAuthModal } from '@/components/menu/InSituAdminAuthModal'
-import { InSituEditProductModal } from '@/components/menu/InSituEditProductModal'
-import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
-import { Product, Category, CartItem, Restaurant, Table, OrderStatus, Order } from '@/types/database.types'
-import { formatCurrency } from '@/lib/utils'
-import { createBrowserClient } from '@/lib/supabase/client'
-import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
-import { TOP_LANGUAGES, getTranslation, translateCategoryName, translateProductName, translateProductDescription } from '@/lib/i18n'
-import { getAllergen, getAllergenName } from '@/lib/allergens'
-import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
-import { isProductInCategory, deduplicateProducts, resolveCanonicalProductId } from '@/lib/category-matcher'
+import { MenuHeader } from '@/components/menu/MenuHeader'
+import { MenuLiveTracker } from '@/components/menu/MenuLiveTracker'
+import { MenuCategoryBar } from '@/components/menu/MenuCategoryBar'
+import { MenuListCatalog } from '@/components/menu/MenuListCatalog'
+import { MenuGridCatalog } from '@/components/menu/MenuGridCatalog'
+import { MenuFloatingCartBar } from '@/components/menu/MenuFloatingCartBar'
+import { MenuFooterLegal } from '@/components/menu/MenuFooterLegal'
+import { MenuModals } from '@/components/menu/MenuModals'
+import { useMenuCatalog } from '@/hooks/menu/useMenuCatalog'
+import { useTableSession } from '@/hooks/menu/useTableSession'
+import { useMenuOrderSync } from '@/hooks/menu/useMenuOrderSync'
+import { useInSituAdmin } from '@/hooks/menu/useInSituAdmin'
+import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
+import { getTranslation, translateProductName } from '@/lib/i18n'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 
@@ -59,6 +29,7 @@ function DinerMenuContent() {
   const pathname = usePathname()
   const slug = (params?.slug as string) || 'burger-gourmet'
   const tableParam = searchParams?.get('table') || '4'
+  const urlSession = searchParams?.get('session')
 
   const isFixedMenu = searchParams?.get('mode') === 'fija' || 
     searchParams?.get('fija') === 'true' || 
@@ -66,161 +37,142 @@ function DinerMenuContent() {
     searchParams?.get('plan') === 'carta' ||
     Boolean(pathname?.startsWith('/carta'))
 
-  const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
-  const [categories, setCategories] = useState<Category[]>(() => MOCK_CATEGORIES[slug] || [])
-  const [products, setProducts] = useState<Product[]>(() => deduplicateProducts(MOCK_PRODUCTS[slug] || []))
-  const [tables, setTables] = useState<Table[]>(() => MOCK_TABLES[slug] || [])
-  
-  const [currentLang, setCurrentLang] = useState<string>('gl') // Por defecto Galego
-  const [showLangDropdown, setShowLangDropdown] = useState(false)
-  const t = (key: string) => getTranslation(currentLang, key)
-
-  const [selectedCategory, setSelectedCategory] = useState<string>(() => MOCK_CATEGORIES[slug]?.[0]?.id || 'cat-1')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [dietaryFilter, setDietaryFilter] = useState<'all' | 'sintacc' | 'veggie'>('all')
-  const [tableNumber, setTableNumber] = useState<string>(tableParam)
-
-  // Navegación horizontal de categorías con flechas (PC / Desktop y Accesibilidad)
-  const categoryTabsRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-
-  const updateScrollButtons = useCallback(() => {
-    const el = categoryTabsRef.current
-    if (!el) return
-    const { scrollLeft, scrollWidth, clientWidth } = el
-    setCanScrollLeft(scrollLeft > 6)
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6)
-  }, [])
-
-  const handleScrollCategories = useCallback((direction: 'left' | 'right') => {
-    const el = categoryTabsRef.current
-    if (!el) return
-    const scrollAmount = 220
-    const maxScroll = el.scrollWidth - el.clientWidth
-
-    if (direction === 'left') {
-      const target = el.scrollLeft - scrollAmount
-      if (target <= 40) {
-        el.scrollTo({ left: 0, behavior: 'smooth' })
-      } else {
-        el.scrollBy({ left: -scrollAmount, behavior: 'smooth' })
-      }
-    } else {
-      const target = el.scrollLeft + scrollAmount
-      if (target >= maxScroll - 40) {
-        el.scrollTo({ left: maxScroll, behavior: 'smooth' })
-      } else {
-        el.scrollBy({ left: scrollAmount, behavior: 'smooth' })
-      }
-    }
-    triggerHaptic(HAPTIC_PATTERNS.TAP)
-    setTimeout(updateScrollButtons, 350)
-  }, [updateScrollButtons])
-
-  useEffect(() => {
-    updateScrollButtons()
-    const timer = setTimeout(updateScrollButtons, 400)
-    window.addEventListener('resize', updateScrollButtons)
-    return () => {
-      clearTimeout(timer)
-      window.removeEventListener('resize', updateScrollButtons)
-    }
-  }, [categories, updateScrollButtons])
-
-  // Vistas: 'list' (Carta Detallada Desplegable) o 'grid' (Galería de Fotos)
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
-  const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({})
-
-  // Carrito persistente
+  // 1. Carrito local
   const [cart, setCart] = useState<CartItem[]>([])
   const [isCartOpen, setIsCartOpen] = useState(false)
-  const [selected3DProduct, setSelected3DProduct] = useState<Product | null>(null)
+  const [addedToast, setAddedToast] = useState<string | null>(null)
   const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null)
+  const [selected3DProduct, setSelected3DProduct] = useState<Product | null>(null)
   const [showTimelineModal, setShowTimelineModal] = useState(false)
   const [showDirectBillModal, setShowDirectBillModal] = useState(false)
-  const [isTablePaid, setIsTablePaid] = useState<boolean>(false)
-  const [isPaidBannerDismissed, setIsPaidBannerDismissed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`) === 'true'
-    }
-    return false
-  })
-  const [isReviewBoosterDismissed, setIsReviewBoosterDismissed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`fluxo_review_dismissed_${slug}`) === 'true'
-    }
-    return false
-  })
-  const [hasRequestedBill, setHasRequestedBill] = useState<boolean>(false)
-  const hasRequestedBillRef = useRef<boolean>(false)
-  const userRequestedBillTimeRef = useRef<number | null>(null)
-
-  const handleTableMarkedPaid = useCallback(() => {
-    setIsTablePaid(true)
-    setIsPaidBannerDismissed(false)
-    setIsReviewBoosterDismissed(false)
-    setTableOrderStatus(null)
-    setTableOrders([])
-    setHasRequestedBill(false)
-    hasRequestedBillRef.current = false
-    userRequestedBillTimeRef.current = null
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem(`fluxo_table_paid_${slug}_${tableNumber}`, 'true')
-        sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
-        sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
-        sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
-      } catch {}
-    }
-  }, [slug, tableNumber])
-
-  const handleBillRequested = () => {
-    userRequestedBillTimeRef.current = Date.now()
-    hasRequestedBillRef.current = true
-    setHasRequestedBill(true)
-    if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.setItem(`fluxo_bill_requested_${slug}_${tableNumber}`, 'true')
-      } catch {}
-    }
-  }
-  const [tableTotalAmount, setTableTotalAmount] = useState<number>(0)
-  const [addedToast, setAddedToast] = useState<string | null>(null)
-
-  // Microservicios
   const [showServiceModal, setShowServiceModal] = useState(false)
-  const [serviceRequestedToast, setServiceRequestedToast] = useState<string | null>(null)
-  const [pendingServiceCalls, setPendingServiceCalls] = useState<Set<string>>(new Set())
-
-  // Tracker en vivo de estado en cocina
-  const [tableOrderStatus, setTableOrderStatus] = useState<OrderStatus | null>(null)
-  const [tableOrders, setTableOrders] = useState<Order[]>([])
-  const [sessionId, setSessionId] = useState<string | null>(null)
   const [showLegalModal, setShowLegalModal] = useState(false)
-  const prevTableOrdersMapRef = useRef<Map<string, any>>(new Map())
 
-  // Administrador de Carta In-Situ
-  const [isInSituAdmin, setIsInSituAdmin] = useState(false)
-  const [adminSessionToken, setAdminSessionToken] = useState<string | null>(null)
-  const [showAdminAuthModal, setShowAdminAuthModal] = useState(false)
-  const [editingInSituProduct, setEditingInSituProduct] = useState<Product | null>(null)
-  const [isInSituEditModalOpen, setIsInSituEditModalOpen] = useState(false)
-  const [inSituTargetCategoryId, setInSituTargetCategoryId] = useState<string | undefined>(undefined)
-  const [inSituFeedbackToast, setInSituFeedbackToast] = useState<string | null>(null)
-  const logoPressTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null)
+  // 2. Sesión de mesa y micro-servicios
+  const {
+    tableNumber,
+    sessionId,
+    setSessionId,
+    isTablePaid,
+    setIsTablePaid,
+    isPaidBannerDismissed,
+    setIsPaidBannerDismissed,
+    isReviewBoosterDismissed,
+    setIsReviewBoosterDismissed,
+    hasRequestedBill,
+    setHasRequestedBill,
+    hasRequestedBillRef,
+    userRequestedBillTimeRef,
+    handleBillRequested,
+    handleTableMarkedPaid,
+    pendingServiceCalls,
+    setPendingServiceCalls,
+    serviceRequestedToast,
+    handleRequestMicroService,
+  } = useTableSession({ slug, initialTable: tableParam, urlSession })
 
-  // 1. Carga inicial y recuperación de persistencia
+  // 3. Catálogo de productos y filtros
+  // Inicializamos temporalmente el hook in-situ placeholder
+  const [isInSituAdminState, setIsInSituAdminState] = useState(false)
+  const {
+    restaurant,
+    categories,
+    products,
+    setProducts,
+    currentLang,
+    setCurrentLang,
+    showLangDropdown,
+    setShowLangDropdown,
+    selectedCategory,
+    setSelectedCategory,
+    searchQuery,
+    setSearchQuery,
+    dietaryFilter,
+    setDietaryFilter,
+    viewMode,
+    setViewMode,
+    expandedProductIds,
+    toggleExpand,
+    filteredProducts,
+    loadData,
+    categoryTabsRef,
+    canScrollLeft,
+    canScrollRight,
+    handleScrollCategories,
+    updateScrollButtons,
+  } = useMenuCatalog({ slug, isInSituAdmin: isInSituAdminState })
+
+  // 4. Modo Administrador In-Situ
+  const {
+    isInSituAdmin,
+    adminSessionToken,
+    showAdminAuthModal,
+    setShowAdminAuthModal,
+    editingInSituProduct,
+    setEditingInSituProduct,
+    isInSituEditModalOpen,
+    setIsInSituEditModalOpen,
+    inSituTargetCategoryId,
+    inSituFeedbackToast,
+    setInSituFeedbackToast,
+    handleAdminAuthSuccess,
+    handleExitAdminMode,
+    handleToggleAvailability,
+    handleOpenEditProductModal,
+    handleOpenAddProductModal,
+    handleSaveInSituProduct,
+    handleDeleteInSituProduct,
+    handleLogoPointerDown,
+    handleLogoPointerUp,
+    handleLogoTouchStart,
+    handleLogoTouchMove,
+  } = useInSituAdmin({
+    slug,
+    products,
+    setProducts,
+    setCart,
+    selectedCategory,
+    setSelectedCategory,
+    categories,
+    loadData,
+  })
+
+  // Sincronizar estado booleano para el catálogo
+  useEffect(() => {
+    setIsInSituAdminState(isInSituAdmin)
+  }, [isInSituAdmin])
+
+  // 5. Sincronización en tiempo real de órdenes con Cocina y Mozo
+  const {
+    tableOrderStatus,
+    setTableOrderStatus,
+    tableOrders,
+    tableTotalAmount,
+    setTableTotalAmount,
+    prevTableOrdersMapRef,
+  } = useMenuOrderSync({
+    slug,
+    tableNumber,
+    sessionId,
+    setSessionId,
+    isFixedMenu,
+    isTablePaid,
+    setIsTablePaid,
+    setIsPaidBannerDismissed,
+    setIsReviewBoosterDismissed,
+    setHasRequestedBill,
+    hasRequestedBillRef,
+    userRequestedBillTimeRef,
+    setPendingServiceCalls,
+    setProducts,
+    loadData,
+    setCart,
+    handleTableMarkedPaid,
+  })
+
+  // 6. Persistencia y recuperación del carrito en localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try {
-        sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-        sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
-        sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
-        localStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-      } catch {}
-
       try {
         const savedCart = localStorage.getItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
         if (savedCart) {
@@ -246,699 +198,9 @@ function DinerMenuContent() {
       } catch (err) {
         console.error('Error recovering cart from localStorage:', err)
       }
-
-      // Registro anónimo de visualización de carta para estadísticas del restaurante (RGPD Compliant)
-      try {
-        fetch('/api/analytics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug, type: 'page_view', table_number: tableNumber }),
-        }).catch(() => {})
-      } catch {
-        // ignore
-      }
-
-      // Inicializar o recuperar sesión temporal UUID (Resiliente a Safari iOS ITP)
-      // SIEMPRE validamos/creamos sesión contra el servidor para evitar tokens stale
-      // que causan SESSION_EXPIRED al enviar comanda (ej: servidor reiniciado, mesa liberada).
-      const urlSession = searchParams?.get('session')
-      const localStoredSession = typeof window !== 'undefined' ? localStorage.getItem(`gastro_session_${slug}_${tableNumber}`) : null
-
-      // Helper: iniciar o recuperar sesión activa en el servidor (idempotente)
-      const ensureServerSession = () => {
-        fetch('/api/tables', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug, table_number: tableNumber, action: 'start_session' }),
-        })
-          .then(r => r.json())
-          .then(startData => {
-            if (startData.session_token) {
-              setSessionId(startData.session_token)
-              localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, startData.session_token)
-            }
-          })
-          .catch(() => {})
-      }
-
-      if (urlSession) {
-        setSessionId(urlSession)
-        localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, urlSession)
-        // Aún así asegurar que el servidor conozca esta sesión
-        ensureServerSession()
-      } else if (localStoredSession) {
-        // Temporalmente usar el token de localStorage mientras validamos con el servidor
-        setSessionId(localStoredSession)
-        // Validar contra el servidor: si el token de localStorage ya no es válido,
-        // start_session creará uno nuevo y lo actualizará
-        ensureServerSession()
-      } else {
-        // Sin token en URL ni localStorage: intentar cookie HTTP-Only (Safari ITP), luego start_session
-        fetch(`/api/session/restore?slug=${slug}&table=${tableNumber}`)
-          .then(r => r.json())
-          .then(data => {
-            if (data.restored && data.session_token) {
-              setSessionId(data.session_token)
-              localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, data.session_token)
-              if (data.orders && data.orders.length > 0) {
-                const total = data.orders.reduce((sum: number, o: any) => sum + (Number(o.total_amount) || 0), 0)
-                setTableTotalAmount(total)
-              }
-            } else {
-              ensureServerSession()
-            }
-          })
-          .catch(() => {
-            ensureServerSession()
-          })
-      }
-
-      // Detección automática inteligente de idioma (Fase 3 UX)
-      try {
-        const storedLang = localStorage.getItem('gastro_lang')
-        if (storedLang && ['es', 'gl', 'en'].includes(storedLang)) {
-          setCurrentLang(storedLang)
-        } else if (typeof navigator !== 'undefined' && navigator.language) {
-          const navLang = navigator.language.toLowerCase()
-          if (navLang.startsWith('en')) {
-            setCurrentLang('en')
-          } else if (navLang.startsWith('gl')) {
-            setCurrentLang('gl')
-          } else {
-            setCurrentLang('es')
-          }
-        }
-      } catch {
-        // ignore
-      }
-
-      // Recuperar sesión de Administrador In-Situ si está activa en la pestaña
-      try {
-        const savedAdmin = sessionStorage.getItem(`fluxo_insitu_admin_${slug}`)
-        if (savedAdmin) {
-          const parsedAdmin = JSON.parse(savedAdmin)
-          if (parsedAdmin?.token && Date.now() - parsedAdmin.timestamp < 12 * 60 * 60 * 1000) {
-            setIsInSituAdmin(true)
-            setAdminSessionToken(parsedAdmin.token)
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }, [slug, tableNumber, searchParams])
-
-  const loadData = useCallback(async () => {
-    // 0. Cargar menú dinámico actualizado desde la API en tiempo real
-    try {
-      const menuRes = await fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json())
-      if (menuRes.success) {
-        if (menuRes.restaurant) setRestaurant(menuRes.restaurant)
-        if (menuRes.categories && menuRes.categories.length > 0) {
-          setCategories(menuRes.categories)
-          setSelectedCategory(prev => {
-            if (prev === 'all') return 'all'
-            const exists = menuRes.categories.some((c: Category) => c.id === prev)
-            return exists ? prev : menuRes.categories[0].id
-          })
-        }
-        if (Array.isArray(menuRes.products)) {
-          setProducts(deduplicateProducts(menuRes.products))
-        }
-        const tablesFallback = MOCK_TABLES[slug] || []
-        setTables(tablesFallback)
-        return
-      }
-    } catch (e) {
-      console.log('Error fetching dynamic menu, checking Supabase/mock:', e)
-    }
-
-    const supabase = createBrowserClient()
-    if (supabase) {
-      try {
-        const { data: restData } = await supabase
-          .from('restaurants')
-          .select('*')
-          .eq('slug', slug)
-          .single()
-
-        if (restData) {
-          setRestaurant(restData)
-
-          const { data: catData } = await supabase
-            .from('categories')
-            .select('*')
-            .eq('restaurant_id', restData.id)
-            .order('order_index')
-
-          if (catData && catData.length > 0) {
-            const normalizedCats = catData.map(c => ({
-              ...c,
-              name: c.name?.toUpperCase().trim() === 'GIN & BEBIDAS' ? 'Bebidas' : c.name,
-            }))
-            const hasDesserts = normalizedCats.some((c: any) => {
-              const u = (c.name || '').toUpperCase()
-              return u.includes('POSTRE') || u.includes('CAFÉ') || c.id === 'c0000000-0000-0000-0000-000000000006'
-            })
-            if (!hasDesserts) {
-              normalizedCats.push({
-                id: 'c0000000-0000-0000-0000-000000000006',
-                restaurant_id: restData.id,
-                name: 'POSTRES & CAFÉ',
-                order_index: normalizedCats.length + 1,
-              })
-            }
-            setCategories(normalizedCats)
-            setSelectedCategory(normalizedCats[0].id)
-          }
-
-          const { data: prodData } = await supabase
-            .from('products')
-            .select('*')
-            .eq('restaurant_id', restData.id)
-
-          if (prodData && prodData.length > 0) {
-            setProducts(prev => {
-              const deduped = deduplicateProducts(prodData)
-              const prevPausedMap = new Map(prev.map(p => [resolveCanonicalProductId(p.id) || p.id, p.is_available]))
-              return deduped.map(p => {
-                const canon = resolveCanonicalProductId(p.id) || p.id
-                if (prevPausedMap.get(canon) === false || prevPausedMap.get(p.id) === false) {
-                  return { ...p, is_available: false }
-                }
-                return p
-              })
-            })
-          }
-
-          const { data: tableData } = await supabase
-            .from('tables')
-            .select('*')
-            .eq('restaurant_id', restData.id)
-            .order('table_number')
-
-          if (tableData) setTables(tableData)
-          return
-        }
-      } catch (e) {
-        console.log('Using local fallback data:', e)
-      }
-    }
-
-    if (MOCK_RESTAURANTS[slug]) {
-      setRestaurant(MOCK_RESTAURANTS[slug])
-      const cats = MOCK_CATEGORIES[slug] || []
-      setCategories(cats)
-      if (cats.length > 0) {
-        setSelectedCategory(cats[0].id)
-      }
-      setProducts(MOCK_PRODUCTS[slug] || [])
-      setTables(MOCK_TABLES[slug] || [])
-    }
-  }, [slug])
-
-  useEffect(() => {
-    loadData()
-
-    let menuBc: BroadcastChannel | null = null
-    try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        menuBc = new BroadcastChannel('fluxo_menu_channel')
-        menuBc.onmessage = (event) => {
-          const { type, slug: evtSlug, productId, isAvailable } = event.data || {}
-          if (type === 'menu_updated' && (!evtSlug || evtSlug === slug)) {
-            if (productId && isAvailable !== undefined) {
-              const canonical = resolveCanonicalProductId(productId) || productId
-              setProducts(prev => prev.map(p => {
-                const pCanon = resolveCanonicalProductId(p.id) || p.id
-                if (p.id === productId || p.id === canonical || pCanon === canonical) {
-                  return { ...p, is_available: isAvailable }
-                }
-                return p
-              }))
-              return
-            }
-            loadData()
-          }
-        }
-      }
-    } catch {}
-
-    const handleMenuUpdated = (e: any) => {
-      const { slug: updatedSlug, productId, isAvailable } = e?.detail || {}
-      if (!updatedSlug || updatedSlug === slug) {
-        if (productId && isAvailable !== undefined) {
-          const canonical = resolveCanonicalProductId(productId) || productId
-          setProducts(prev => prev.map(p => {
-            const pCanon = resolveCanonicalProductId(p.id) || p.id
-            if (p.id === productId || p.id === canonical || pCanon === canonical) {
-              return { ...p, is_available: isAvailable }
-            }
-            return p
-          }))
-          return
-        }
-        loadData()
-      }
-    }
-
-    window.addEventListener('fluxo_menu_updated', handleMenuUpdated)
-    return () => {
-      if (menuBc) {
-        try { menuBc.close() } catch {}
-      }
-      window.removeEventListener('fluxo_menu_updated', handleMenuUpdated)
-    }
-  }, [loadData, slug])
-
-  // 2. Sincronización en vivo del estado del pedido en Cocina para el comensal
-  useEffect(() => {
-    let sseEventSource: EventSource | null = null
-    let pollInterval: any = null
-
-    let isChecking = false
-    let debounceTimer: any = null
-    const triggerDebouncedCheck = () => {
-      if (debounceTimer) clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => {
-        checkOrderStatus()
-      }, 300)
-    }
-
-    const checkOrderStatus = async () => {
-      if (isChecking || isFixedMenu) return
-      isChecking = true
-      try {
-        const [ordersRes, callsRes, tablesRes] = await Promise.all([
-          fetch(`/api/orders?slug=${slug}`).then(r => r.json()).catch(() => ({ orders: [] })),
-          fetch(`/api/service-calls?slug=${slug}`).then(r => r.json()).catch(() => ({ calls: [] })),
-          fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
-        ])
-
-        // Sincronización reactiva de disponibilidad de platos en sala
-        if (ordersRes?.product_availability) {
-          setProducts(prev => {
-            let hasDiff = false
-            const next = prev.map(p => {
-              const canonical = resolveCanonicalProductId(p.id) || p.id
-              const normName = (p.name || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
-              const serverAvail = ordersRes.product_availability[canonical] ?? ordersRes.product_availability[p.id] ?? ordersRes.product_availability[normName]
-              if (serverAvail !== undefined && p.is_available !== serverAvail) {
-                hasDiff = true
-                return { ...p, is_available: serverAvail }
-              }
-              return p
-            })
-            return hasDiff ? next : prev
-          })
-        }
-
-        const sessions = tablesRes.sessions || {}
-        const thisTableSession = sessions[tableNumber]
-
-        if (thisTableSession?.session_id) {
-          setSessionId(thisTableSession.session_id)
-        }
-
-        const currentSessionId = thisTableSession?.session_id || sessionId
-
-        const rawOrders: any[] = ordersRes.orders || []
-        const serverOrdersList: any[] = rawOrders.map((ord: any) => {
-          if (!ord.order_items || ord.order_items.length === 0) {
-            const prevOrd = prevTableOrdersMapRef.current.get(ord.id)
-            if (prevOrd?.order_items && prevOrd.order_items.length > 0) {
-              return { ...ord, order_items: prevOrd.order_items }
-            }
-          }
-          return ord
-        })
-
-        // Evaluar todas las órdenes de la mesa bajo la sesión activa para sincronización reactiva con Cocina y Mozo.
-        const allTableOrders = serverOrdersList.filter(o => {
-          const matchesTable = (
-            o.table_number?.toString() === tableNumber?.toString() ||
-            o.table?.table_number?.toString() === tableNumber?.toString() ||
-            o.table_id === `table-${tableNumber}`
-          )
-          if (!matchesTable) return false
-
-          const isActive = ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
-          // Las órdenes activas de esta mesa en curso se preservan firmemente sin oscilaciones de sesión
-          if (isActive) return true
-
-          // Para historial cerrado/pagado, validar sesión estricta para NO adoptar pedidos de turnos anteriores
-          if (!currentSessionId || !o.session_token) return false
-          const isCurrentSessionOrder = 
-            o.session_token === currentSessionId || 
-            (sessionId && o.session_token === sessionId) || 
-            (thisTableSession?.session_id && o.session_token === thisTableSession.session_id)
-          return Boolean(isCurrentSessionOrder)
-        })
-
-        // Guardar órdenes activas conocidas en ref para persistencia resiliente
-        allTableOrders.forEach(ord => {
-          prevTableOrdersMapRef.current.set(ord.id, ord)
-        })
-
-        const activeTableOrders = allTableOrders.filter(
-          o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
-        )
-
-        // Si la mesa ya fue confirmada como pagada en esta sesión, preservar ese estado
-        if (isTablePaid) {
-          return
-        }
-
-        // Si la mesa fue liberada por el mozo y no quedan pedidos activos pendientes
-        if (thisTableSession && thisTableSession.status === 'free' && activeTableOrders.length === 0) {
-          prevTableOrdersMapRef.current.clear()
-          setTableOrderStatus(null)
-          if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-            handleTableMarkedPaid()
-            return
-          }
-          setIsTablePaid(false)
-          setHasRequestedBill(false)
-          hasRequestedBillRef.current = false
-          return
-        }
-
-        const calls: any[] = callsRes.calls || []
-
-        // Extraer micro-servicios pendientes para esta mesa (SSOT Supabase)
-        const activeMicroServices = new Set<string>()
-        calls.forEach((c: any) => {
-          if (
-            c.table_number?.toString() === tableNumber?.toString() &&
-            c.status === 'pending' &&
-            c.call_type?.startsWith('service_')
-          ) {
-            const servName = c.call_type.replace('service_', '')
-            if (servName) activeMicroServices.add(servName)
-          }
-        })
-        setPendingServiceCalls(activeMicroServices)
-
-        // Verificar si las órdenes de la mesa ya fueron cobradas ('paid')
-        const hasPaidOrder = serverOrdersList.some(o => {
-          const matchesTable = (
-            o.table_number?.toString() === tableNumber?.toString() ||
-            o.table?.table_number?.toString() === tableNumber?.toString() ||
-            o.table_id === `table-${tableNumber}`
-          )
-          return matchesTable && o.status === 'paid'
-        })
-
-        if ((hasRequestedBillRef.current || userRequestedBillTimeRef.current) && activeTableOrders.length === 0 && hasPaidOrder) {
-          handleTableMarkedPaid()
-          return
-        }
-
-        // Cobro de mesa: SOLO se activa tras confirmar el pago de la cuenta
-        // Exige estrictamente que el comensal haya solicitado la cuenta en esta sesión (userRequestedBillTimeRef.current)
-        // y el mozo haya confirmado el cobro ('attended') con fecha posterior o coincidente con dicha solicitud
-        const isBillPaidCall = Boolean(
-          userRequestedBillTimeRef.current &&
-          calls.some(
-            (c: any) =>
-              c.table_number?.toString() === tableNumber?.toString() &&
-              c.status === 'attended' &&
-              c.call_type?.startsWith('bill_') &&
-              c.created_at &&
-              new Date(c.created_at).getTime() >= (userRequestedBillTimeRef.current || 0) - 10000
-          )
-        )
-
-        if (isBillPaidCall) {
-          handleTableMarkedPaid()
-          return
-        }
-
-        // Ordenar comandas activas de la mesa por fecha descendente
-        const tableOrders = [...activeTableOrders].sort(
-          (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-        )
-
-        if (tableOrders.length > 0) {
-          setTableOrders(tableOrders)
-          const total = tableOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
-          setTableTotalAmount(total)
-
-          // Evaluar jerarquía reactiva de estados activos de la mesa
-          const activeOrders = tableOrders.filter(o =>
-            ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
-          )
-
-          if (activeOrders.length > 0) {
-            let nextStatus: OrderStatus = 'pending_validation'
-            if (activeOrders.some(o => o.status === 'ready')) {
-              nextStatus = 'ready'
-            } else if (activeOrders.some(o => o.status === 'preparing')) {
-              nextStatus = 'preparing'
-            } else if (activeOrders.some(o => o.status === 'confirmed' || o.status === 'pending')) {
-              nextStatus = 'pending'
-            } else {
-              nextStatus = 'pending_validation'
-            }
-            setTableOrderStatus(prev => prev === nextStatus ? prev : nextStatus)
-          } else if (tableOrders.some(o => o.status === 'delivered')) {
-            // Todas las comandas activas fueron entregadas -> Sobremesa (Café/Postre y Cuenta)
-            setTableOrderStatus(prev => prev === 'delivered' ? prev : 'delivered')
-          } else {
-            if (prevTableOrdersMapRef.current.size === 0) {
-              setTableOrderStatus(null)
-              setTableOrders([])
-            }
-          }
-        } else {
-          if (prevTableOrdersMapRef.current.size === 0) {
-            setTableOrderStatus(null)
-            setTableOrders([])
-          }
-        }
-      } catch (e) {
-        console.log('Error checking order status for diner:', e)
-      } finally {
-        isChecking = false
-      }
-    }
-
-    checkOrderStatus()
-
-    const supabase = createBrowserClient()
-    let realtimeChannel: any = null
-
-    // Canal Nativo Supabase Realtime (postgres_changes en orders, order_events, service_calls, table_sessions)
-    if (supabase) {
-      realtimeChannel = supabase
-        .channel(`diner-orders-${slug}-${tableNumber}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'orders' },
-          (payload: any) => {
-            const newOrder = payload?.new
-            const matchesTable = newOrder && (
-              newOrder.table_number?.toString() === tableNumber?.toString() ||
-              newOrder.table_id === `table-${tableNumber}`
-            )
-            if (matchesTable && newOrder.status === 'paid') {
-              handleTableMarkedPaid()
-              return
-            }
-            checkOrderStatus()
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'order_events' },
-          (payload: any) => {
-            const newEvt = payload?.new
-            if (newEvt && (newEvt.event_type === 'order_paid' || newEvt.new_status === 'paid')) {
-              handleTableMarkedPaid()
-              return
-            }
-            checkOrderStatus()
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'service_calls' },
-          (payload: any) => {
-            const newCall = payload?.new
-            const matchesTable = newCall && newCall.table_number?.toString() === tableNumber?.toString()
-            if (matchesTable && newCall.status === 'attended' && newCall.call_type?.startsWith('bill_')) {
-              handleTableMarkedPaid()
-              return
-            }
-            checkOrderStatus()
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'table_sessions' },
-          (payload: any) => {
-            const newSession = payload?.new
-            const matchesTable = newSession && newSession.table_number?.toString() === tableNumber?.toString()
-            if (matchesTable && (newSession.status === 'closed' || newSession.status === 'free')) {
-              if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-                handleTableMarkedPaid()
-                return
-              }
-            }
-            checkOrderStatus()
-          }
-        )
-        .subscribe()
-    }
-
-    // Conexión SSE en vivo para recibir avisos del mozo y actualizaciones de carta al instante
-    try {
-      sseEventSource = new EventSource('/api/events')
-      sseEventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-
-          // Si el mozo liberó esta mesa específica, limpiar estado y carrito residual
-          if (
-            data.type === 'table_freed' &&
-            (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
-          ) {
-            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-              handleTableMarkedPaid()
-              return
-            }
-            setCart([])
-            setTableOrderStatus(null)
-            setIsTablePaid(false)
-            setIsPaidBannerDismissed(false)
-            setIsReviewBoosterDismissed(false)
-            setHasRequestedBill(false)
-            hasRequestedBillRef.current = false
-            userRequestedBillTimeRef.current = null
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
-              localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
-            }
-            if (data.new_session_id) {
-              setSessionId(data.new_session_id)
-            }
-            return
-          }
-
-          // Notificación en vivo de cuenta pagada / mesa cobrada
-          if (
-            ((data.type === 'table_bill_paid') || (data.type === 'service_call_attended' && data.is_bill)) &&
-            (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
-          ) {
-            handleTableMarkedPaid()
-            return
-          }
-
-          if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
-            if (data.productId && data.isAvailable !== undefined) {
-              const canonical = resolveCanonicalProductId(data.productId) || data.productId
-              setProducts(prev => prev.map(p => {
-                const pCanon = resolveCanonicalProductId(p.id) || p.id
-                if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
-                  return { ...p, is_available: data.isAvailable }
-                }
-                return p
-              }))
-              return
-            }
-            loadData()
-            return
-          }
-
-          if (data.type === 'connected') return
-
-            if (
-              data.tableNumber?.toString() === tableNumber?.toString() ||
-              data.table_number?.toString() === tableNumber?.toString() ||
-              data.type?.startsWith('order_') ||
-              data.type?.startsWith('service_')
-            ) {
-              triggerDebouncedCheck()
-            }
-          } catch {
-            // ignore
-          }
-        }
-        sseEventSource.onerror = () => {
-          if (sseEventSource) {
-            sseEventSource.close()
-            sseEventSource = null
-          }
-        }
-      } catch {
-        // fallback
-      }
-
-    // Soft Polling de respaldo cada 4.5s
-    pollInterval = setInterval(checkOrderStatus, 4500)
-
-    // Manejar eventos locales emitidos en el cliente para sincronización inmediata
-    const handleLocalTableFreed = (e: any) => {
-      if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-          handleTableMarkedPaid()
-          return
-        }
-        setCart([])
-        setTableOrderStatus(null)
-        setIsTablePaid(false)
-        setIsPaidBannerDismissed(false)
-        setIsReviewBoosterDismissed(false)
-        setHasRequestedBill(false)
-        hasRequestedBillRef.current = false
-        userRequestedBillTimeRef.current = null
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(`${STORAGE_CART_PREFIX}${slug}_${tableNumber}`)
-          localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
-          sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-          sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
-          sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
-          sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
-        }
-      }
-    }
-
-    const handleLocalTableBillPaid = (e: any) => {
-      if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        handleTableMarkedPaid()
-      }
-    }
-
-    window.addEventListener('fluxo_table_freed', handleLocalTableFreed)
-    window.addEventListener('fluxo_table_bill_paid', handleLocalTableBillPaid)
-
-    // Manejar desbloqueo de móvil / retorno a pestaña
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkOrderStatus()
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('focus', handleVisibilityChange)
-
-    return () => {
-      if (realtimeChannel && supabase) {
-        supabase.removeChannel(realtimeChannel)
-      }
-      if (sseEventSource) sseEventSource.close()
-      if (pollInterval) clearInterval(pollInterval)
-      window.removeEventListener('fluxo_table_freed', handleLocalTableFreed)
-      window.removeEventListener('fluxo_table_bill_paid', handleLocalTableBillPaid)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('focus', handleVisibilityChange)
     }
   }, [slug, tableNumber])
 
-  // Guardar carrito automáticamente
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if (cart.length > 0) {
@@ -949,227 +211,7 @@ function DinerMenuContent() {
     }
   }, [cart, slug, tableNumber])
 
-  // Toggle expandir plato con animación suave
-  const toggleExpand = (productId: string) => {
-    setExpandedProductIds(prev => ({
-      ...prev,
-      [productId]: !prev[productId]
-    }))
-  }
-
-  // Handlers para Administrador de Carta In-Situ
-  const handleAdminAuthSuccess = (token: string) => {
-    setIsInSituAdmin(true)
-    setAdminSessionToken(token)
-    try {
-      sessionStorage.setItem(
-        `fluxo_insitu_admin_${slug}`,
-        JSON.stringify({ token, timestamp: Date.now() })
-      )
-    } catch {}
-    setInSituFeedbackToast('✨ Modo Edición In-Situ activado')
-    setTimeout(() => setInSituFeedbackToast(null), 3000)
-    loadData()
-  }
-
-  const handleExitAdminMode = () => {
-    setIsInSituAdmin(false)
-    setAdminSessionToken(null)
-    setIsInSituEditModalOpen(false)
-    setEditingInSituProduct(null)
-    setShowAdminAuthModal(false)
-    try {
-      sessionStorage.removeItem(`fluxo_insitu_admin_${slug}`)
-    } catch {}
-    setInSituFeedbackToast('🔒 Modo Edición finalizado')
-    setTimeout(() => setInSituFeedbackToast(null), 3000)
-  }
-
-  const handleToggleAvailability = async (productId: string, currentAvailable: boolean) => {
-    triggerHaptic(HAPTIC_PATTERNS.TAP)
-    const nextState = !currentAvailable
-    // Actualización optimista inmediata
-    setProducts(prev =>
-      prev.map(p => (p.id === productId ? { ...p, is_available: nextState } : p))
-    )
-
-    try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-      if (adminSessionToken) {
-        headers['Authorization'] = `Bearer ${adminSessionToken}`
-      }
-
-      const res = await fetch('/api/admin/menu', {
-        method: 'PATCH',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({
-          slug,
-          product_id: productId,
-          name: products.find(p => p.id === productId)?.name,
-          is_available: nextState,
-        }),
-      })
-
-      const data = await res.json()
-      if (data.success) {
-        setInSituFeedbackToast(
-          data.is_available ? '✅ Plato marcado como DISPONIBLE' : '⚠️ Plato marcado como AGOTADO'
-        )
-        setTimeout(() => setInSituFeedbackToast(null), 3000)
-        try {
-          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-            const bc = new BroadcastChannel('fluxo_menu_channel')
-            bc.postMessage({ type: 'menu_updated', slug, productId, isAvailable: nextState })
-            bc.close()
-          }
-        } catch {}
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('fluxo_menu_updated', {
-              detail: { slug, productId, isAvailable: nextState },
-            })
-          )
-        }
-      } else {
-        console.error('[Menu InSitu] Error en actualización de disponibilidad:', data)
-        // Rollback
-        setProducts(prev =>
-          prev.map(p => (p.id === productId ? { ...p, is_available: currentAvailable } : p))
-        )
-        if (res.status === 401) {
-          handleExitAdminMode()
-          setInSituFeedbackToast('⚠️ Sesión expirada. Por favor identifícate de nuevo.')
-          setShowAdminAuthModal(true)
-        } else {
-          setInSituFeedbackToast(data.error || 'Error al actualizar disponibilidad')
-          setTimeout(() => setInSituFeedbackToast(null), 3000)
-        }
-      }
-    } catch (toggleErr) {
-      console.error('[Menu InSitu] Excepción de conexión al alternar disponibilidad:', toggleErr)
-      // Rollback
-      setProducts(prev =>
-        prev.map(p => (p.id === productId ? { ...p, is_available: currentAvailable } : p))
-      )
-      setInSituFeedbackToast('Error de conexión al actualizar la disponibilidad.')
-      setTimeout(() => setInSituFeedbackToast(null), 3000)
-    }
-  }
-
-  const handleOpenEditProductModal = (product: Product) => {
-    setEditingInSituProduct(product)
-    setIsInSituEditModalOpen(true)
-  }
-
-  const handleOpenAddProductModal = (catId?: string) => {
-    setEditingInSituProduct(null)
-    setInSituTargetCategoryId(catId || (selectedCategory !== 'all' ? selectedCategory : categories[0]?.id))
-    setIsInSituEditModalOpen(true)
-  }
-
-  const handleSaveInSituProduct = (savedProduct: Product) => {
-    setProducts(prev => {
-      const idx = prev.findIndex(p => p.id === savedProduct.id)
-      if (idx >= 0) {
-        return prev.map(p => (p.id === savedProduct.id ? savedProduct : p))
-      }
-      return [savedProduct, ...prev]
-    })
-    // Sincronizar items activos del carrito si se editó el precio o nombre del plato
-    setCart(prev =>
-      prev.map(item =>
-        item.product?.id === savedProduct.id
-          ? { ...item, product: { ...item.product, ...savedProduct } }
-          : item
-      )
-    )
-    // Si la categoría visualizada no coincide con la del nuevo plato, cambiar para darle visibilidad inmediata
-    if (savedProduct.category_id && selectedCategory !== 'all' && selectedCategory !== savedProduct.category_id) {
-      setSelectedCategory(savedProduct.category_id)
-    }
-    setInSituFeedbackToast('✅ Plato guardado en la carta')
-    setTimeout(() => setInSituFeedbackToast(null), 3000)
-  }
-
-  const handleDeleteInSituProduct = (productId: string) => {
-    setProducts(prev => prev.filter(p => p.id !== productId))
-    setCart(prev => prev.filter(item => item.product?.id !== productId))
-    setInSituFeedbackToast('🗑️ Plato eliminado de la carta')
-    setTimeout(() => setInSituFeedbackToast(null), 3000)
-  }
-
-  const handleLogoPointerDown = () => {
-    if (logoPressTimerRef.current) clearTimeout(logoPressTimerRef.current)
-    logoPressTimerRef.current = setTimeout(() => {
-      triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
-      if (!isInSituAdmin) {
-        setShowAdminAuthModal(true)
-      }
-    }, 800)
-  }
-
-  const handleLogoPointerUp = () => {
-    if (logoPressTimerRef.current) {
-      clearTimeout(logoPressTimerRef.current)
-      logoPressTimerRef.current = null
-    }
-    touchStartPosRef.current = null
-  }
-
-  const handleLogoTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
-      touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-    }
-    handleLogoPointerDown()
-  }
-
-  const handleLogoTouchMove = (e: React.TouchEvent) => {
-    if (touchStartPosRef.current && e.touches.length > 0) {
-      const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x)
-      const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y)
-      // Cancelar long-press de inmediato si el usuario está haciendo scroll (> 10px)
-      if (dx > 10 || dy > 10) {
-        handleLogoPointerUp()
-      }
-    }
-  }
-
-  // Filtrado de productos
-  const filteredProducts = products.filter(prod => {
-    // Si no está en modo administrador in-situ, ocultar productos agotados para comensales
-    if (!isInSituAdmin && prod.is_available === false) {
-      return false
-    }
-
-    const matchesCategory = isProductInCategory(prod, selectedCategory, categories)
-    const matchesSearch = searchQuery === '' || 
-      prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (prod.description && prod.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    
-    const matchesDietary = dietaryFilter === 'all'
-      ? true
-      : dietaryFilter === 'sintacc'
-      ? (
-          prod.name.toLowerCase().includes('sin tacc') ||
-          prod.name.toLowerCase().includes('celíac') ||
-          prod.name.toLowerCase().includes('celiac') ||
-          (prod.description && (prod.description.toLowerCase().includes('sin tacc') || prod.description.toLowerCase().includes('sin gluten'))) ||
-          prod.category_id === 'cat-11' || prod.category_id === 'cat-12' || prod.category_id === 'cat-13' || prod.category_id === 'cat-14' || prod.category_id === 'cat-15'
-        )
-      : (
-          prod.name.toLowerCase().includes('veggie') ||
-          prod.name.toLowerCase().includes('vegano') ||
-          prod.name.toLowerCase().includes('vegetar') ||
-          (prod.description && (prod.description.toLowerCase().includes('veggie') || prod.description.toLowerCase().includes('vegetal') || prod.description.toLowerCase().includes('vegano') || prod.description.toLowerCase().includes('vegetariano')))
-        )
-
-    return matchesCategory && matchesSearch && matchesDietary
-  })
-
-  // Obtener cantidad de un producto básico en el carrito
+  // Obtener cantidad de producto básico en el carrito
   const getProductQuantityInCart = (productId: string): number => {
     const match = cart.find(
       item => item.product?.id === productId && (!item.selectedPills || item.selectedPills.length === 0) && (!item.notes || item.notes === '')
@@ -1177,10 +219,9 @@ function DinerMenuContent() {
     return match ? match.quantity : 0
   }
 
-  // Actualizar cantidad inline (+ / -) con Haptic Feedback
+  // Modificar cantidad inline (+ / -) con haptic feedback
   const handleUpdateProductQuantity = (product: Product, delta: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
-    // Modo Vista Previa: No permitir añadir ni modificar comanda
     if (isInSituAdmin) return
 
     triggerHaptic(delta > 0 ? HAPTIC_PATTERNS.QUANTITY : HAPTIC_PATTERNS.TAP)
@@ -1210,7 +251,7 @@ function DinerMenuContent() {
     }
   }
 
-  // Agregar configurado (modal con píldoras)
+  // Agregar producto configurado (modal con modificadores)
   const handleAddCustomized = (product: Product, quantity: number, selectedPills: string[], notes: string) => {
     triggerHaptic(HAPTIC_PATTERNS.ADD_CART)
     setCart(prev => {
@@ -1233,165 +274,31 @@ function DinerMenuContent() {
     setTimeout(() => setAddedToast(null), 2500)
   }
 
-  // Solicitar microservicio con Haptic Feedback
-  const handleRequestMicroService = async (serviceName: string) => {
-    triggerHaptic(HAPTIC_PATTERNS.SERVICE_CALL)
-    try {
-      const res = await fetch('/api/service-calls', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug: restaurant.slug,
-          table_number: tableNumber,
-          call_type: `service_${serviceName}`,
-        }),
-      })
-
-      if (!res.ok) {
-        throw new Error('Error al solicitar servicio')
-      }
-
-      // Marcar de inmediato como solicitado en la UI
-      setPendingServiceCalls(prev => new Set(prev).add(serviceName))
-      setServiceRequestedToast(serviceName)
-      setTimeout(() => {
-        setServiceRequestedToast(null)
-      }, 3000)
-    } catch {
-      alert('Hubo un inconveniente al solicitar el servicio. Por favor avisa directamente al camarero o intenta nuevamente.')
-    }
-  }
-
   const totalCartCount = cart.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0)
   const totalCartAmount = cart.reduce((sum, item) => sum + (Number(item?.product?.price) || 0) * (Number(item?.quantity) || 1), 0)
+  const t = (key: string) => getTranslation(currentLang, key)
 
   return (
     <TenantProvider restaurant={restaurant} initialTable={tableNumber}>
       <div className="min-h-screen bg-slate-50 text-slate-900 pb-36 font-sans antialiased selection:bg-blue-100 selection:text-blue-900" style={{ touchAction: 'manipulation' }}>
         
-        {/* 1. Header Móvil Ergonómico y Espacioso */}
-        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-          <div className="max-w-3xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2">
-            
-            {/* Logo y Datos de Mesa (Prioridad de espacio en móvil) */}
-            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-              <div
-                className="flex-shrink-0 cursor-pointer select-none [-webkit-touch-callout:none]"
-                onMouseDown={handleLogoPointerDown}
-                onMouseUp={handleLogoPointerUp}
-                onMouseLeave={handleLogoPointerUp}
-                onTouchStart={handleLogoTouchStart}
-                onTouchMove={handleLogoTouchMove}
-                onTouchEnd={handleLogoPointerUp}
-                onTouchCancel={handleLogoPointerUp}
-                onContextMenu={(e) => e.preventDefault()}
-                title="Fluxo Gastronomic System"
-              >
-                <FluxoLogo size={32} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight truncate">
-                  {searchParams?.get('local') || restaurant.name || 'Nombre del Local'}
-                </h1>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {isFixedMenu ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/80 uppercase whitespace-nowrap">
-                      <span>Carta Digital Informativa</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 flex-shrink-0" />
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/80 uppercase whitespace-nowrap">
-                      <span>{t('tableNumberLabel')} #{tableNumber}</span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Botones de Acción Rápida (Compactos y Adaptativos) */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              
-              {/* Selector de Idiomas Desplegable */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowLangDropdown(prev => !prev)}
-                  className="px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
-                  title="Cambiar idioma / Change language"
-                >
-                  <span className="text-xs">{TOP_LANGUAGES.find(l => l.code === currentLang)?.flag || '🌐'}</span>
-                  <span className="uppercase text-[11px] font-black tracking-tight hidden min-[360px]:inline">{currentLang}</span>
-                  <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${showLangDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showLangDropdown && (
-                  <>
-                    <div 
-                      className="fixed inset-0 z-40" 
-                      onClick={() => setShowLangDropdown(false)} 
-                    />
-                    <div className="absolute right-0 mt-1.5 w-36 bg-white rounded-2xl shadow-xl border border-slate-200 py-1 z-50 animate-in fade-in zoom-in-95 overflow-hidden">
-                      {TOP_LANGUAGES.map((langOpt) => {
-                        const isSelected = currentLang === langOpt.code
-                        return (
-                          <button
-                            key={langOpt.code}
-                            type="button"
-                            onClick={() => {
-                              setCurrentLang(langOpt.code)
-                              setShowLangDropdown(false)
-                            }}
-                            className={`w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors ${
-                              isSelected
-                                ? 'bg-blue-50 text-blue-900 font-extrabold'
-                                : 'text-slate-700 hover:bg-slate-50'
-                            }`}
-                          >
-                            <span className="flex items-center gap-2">
-                              <span>{langOpt.flag}</span>
-                              <span>{langOpt.name}</span>
-                            </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-blue-900 stroke-[3]" />}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {!isFixedMenu && (
-                <>
-                  {/* Botón de Microservicios */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!isInSituAdmin) setShowServiceModal(true)
-                    }}
-                    disabled={isInSituAdmin}
-                    className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1 shadow-xs transition-all ${
-                      isInSituAdmin
-                        ? 'opacity-50 cursor-not-allowed pointer-events-none'
-                        : 'hover:bg-slate-200 active:scale-95 cursor-pointer'
-                    }`}
-                    title={isInSituAdmin ? 'Servicios bloqueados en Modo Vista Previa' : 'Pedir servilletas, hielo, condimentos'}
-                  >
-                    <Bell className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                    <span className="text-[11px] font-bold hidden min-[400px]:inline">{t('services')}</span>
-                  </button>
-
-                  {/* Botón de Llamar al Mozo */}
-                  <CallWaiterButton
-                    tableNumber={tableNumber}
-                    lang={currentLang}
-                    isPreviewMode={isInSituAdmin}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </header>
+        {/* Cabecera Ergonómica */}
+        <MenuHeader
+          restaurant={restaurant}
+          restaurantDisplayName={searchParams?.get('local') || undefined}
+          tableNumber={tableNumber}
+          isFixedMenu={isFixedMenu}
+          currentLang={currentLang}
+          setCurrentLang={setCurrentLang}
+          showLangDropdown={showLangDropdown}
+          setShowLangDropdown={setShowLangDropdown}
+          isInSituAdmin={isInSituAdmin}
+          onOpenServiceModal={() => setShowServiceModal(true)}
+          onLogoPointerDown={handleLogoPointerDown}
+          onLogoPointerUp={handleLogoPointerUp}
+          onLogoTouchStart={handleLogoTouchStart}
+          onLogoTouchMove={handleLogoTouchMove}
+        />
 
         {/* Notificación Toast Flotante */}
         {addedToast && (
@@ -1410,7 +317,7 @@ function DinerMenuContent() {
           </div>
         )}
 
-        {/* GUÍA VISUAL INTERACTIVA (MICRO-ONBOARDING DE 4 PASOS ACCIONABLES) */}
+        {/* Guía Visual Interactiva (Micro-Onboarding de 4 Pasos) */}
         {!isFixedMenu && (
           <MicroOnboardingBanner
             lang={currentLang}
@@ -1427,1235 +334,173 @@ function DinerMenuContent() {
           />
         )}
 
-        {/* TRACKER EN VIVO DE ESTADO EN COCINA (Clickeable para ver el camino del pedido) */}
-        {!isFixedMenu && !isTablePaid && !hasRequestedBill && tableOrderStatus && (
-          <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full">
-            {tableOrderStatus === 'preparing' && (
-              <div
-                onClick={() => setShowTimelineModal(true)}
-                className="p-3 rounded-2xl bg-amber-500/10 border border-amber-400/40 text-amber-950 shadow-xs flex items-center justify-between gap-3 animate-in fade-in cursor-pointer hover:bg-amber-500/15 transition-all"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                    <Flame className="w-4 h-4 animate-pulse" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">
-                        {t('tableNumberLabel')} #{tableNumber}
-                      </span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                    </div>
-                    <h4 className="font-extrabold text-xs text-slate-900 leading-tight truncate">
-                      {t('orderInKitchenTitle')}
-                    </h4>
-                    <p className="text-[10px] text-slate-600 mt-0.5 leading-snug">
-                      {t('orderPreparingSubtitle')}
-                    </p>
-                  </div>
-                </div>
-                <div className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-[11px] font-black text-amber-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
-                  <span>{t('viewPhases')}</span>
-                  <ChevronRight size={12} />
-                </div>
-              </div>
-            )}
-
-            {tableOrderStatus === 'ready' && (
-              <div
-                onClick={() => setShowTimelineModal(true)}
-                className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-400/40 text-emerald-950 shadow-xs flex items-center justify-between gap-3 animate-bounce cursor-pointer hover:bg-emerald-500/15 transition-all"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
-                        {t('tableNumberLabel')} #{tableNumber}
-                      </span>
-                    </div>
-                    <h4 className="font-extrabold text-xs text-emerald-950 leading-tight truncate">
-                      {t('orderReadyTitle')}
-                    </h4>
-                    <p className="text-[10px] text-emerald-800 mt-0.5 leading-snug">
-                      {t('orderReadySubtitle')}
-                    </p>
-                  </div>
-                </div>
-                <div className="px-2.5 py-1 rounded-xl bg-white border border-emerald-300 text-[11px] font-black text-emerald-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
-                  <span>{t('viewPhases')}</span>
-                  <ChevronRight size={12} />
-                </div>
-              </div>
-            )}
-
-            {tableOrderStatus === 'pending_validation' && (
-              <div
-                onClick={() => setShowTimelineModal(true)}
-                className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs font-semibold flex items-center justify-between gap-2 shadow-xs cursor-pointer hover:bg-amber-100/70 transition-all animate-in fade-in"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
-                  <span className="text-[11px]">Comanda enviada &middot; Pendiente de validación en mesa</span>
-                </div>
-                <div className="flex items-center gap-0.5 text-[10px] font-bold text-amber-800">
-                  <span>{t('viewPhases')}</span>
-                  <ChevronRight size={12} />
-                </div>
-              </div>
-            )}
-
-            {tableOrderStatus === 'pending' && (
-              <div
-                onClick={() => setShowTimelineModal(true)}
-                className="p-2.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-950 text-xs font-semibold flex items-center justify-between gap-2 shadow-xs cursor-pointer hover:bg-blue-100/70 transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse flex-shrink-0" />
-                  <span className="text-[11px]">Comanda validada &middot; En cola de cocina</span>
-                </div>
-                <div className="flex items-center gap-0.5 text-[10px] font-bold text-blue-800">
-                  <span>{t('viewPhases')}</span>
-                  <ChevronRight size={12} />
-                </div>
-              </div>
-            )}
-
-            {tableOrderStatus === 'delivered' && (
-              <div className="space-y-3 animate-in fade-in duration-300">
-                {/* OPCIÓN UNIFICADA COMPACTA: PEDIDO ENTREGADO + ACCIONES RÁPIDAS (CAFÉ/POSTRES Y CUENTA) */}
-                <div className="p-3.5 bg-slate-900 text-white rounded-2xl border border-slate-700/80 shadow-md space-y-3">
-                  {/* Cabecera compacta con estado entregado */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                        <UtensilsCrossed className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
-                            {t('tableNumberLabel')} #{tableNumber}
-                          </span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        </div>
-                        <h4 className="font-extrabold text-xs text-white leading-tight truncate">
-                          {t('orderDeliveredTitle')} · ¡Buen provecho!
-                        </h4>
-                      </div>
-                    </div>
-
-                    {/* Botón para ver fases de comanda */}
-                    <button
-                      type="button"
-                      onClick={() => setShowTimelineModal(true)}
-                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
-                    >
-                      <span>{t('viewPhases')}</span>
-                      <ChevronRight size={11} />
-                    </button>
-                  </div>
-
-                  {/* Mensaje de tranquilidad / sobremesa */}
-                  <p className="text-[11px] text-slate-300 leading-snug">
-                    ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
-                  </p>
-
-                  {/* 2 Botoncitos en la misma fila sin sobrecargar verticalmente */}
-                  <div className="grid grid-cols-2 gap-2 pt-0.5">
-                    {/* Botón 1: Café o Postres */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const dessertCat = categories.find(c => {
-                          const n = (c.name || '').toUpperCase()
-                          return n.includes('POSTRE') || n.includes('CAFÉ') || n.includes('CAFE') || n.includes('DULCE') || n.includes('SOBREMESA')
-                        }) || categories.find(c => c.id === 'c0000000-0000-0000-0000-000000000006' || c.id === 'cat-10' || c.id === 'cat-tca-7' || c.id === 'cat-tm-7') || categories[0]
-                        if (dessertCat) {
-                          setSelectedCategory(dessertCat.id)
-                        }
-                        const catEl = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
-                        if (catEl) {
-                          catEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                        }
-                        triggerHaptic(HAPTIC_PATTERNS.TAP)
-                      }}
-                      className="p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                    >
-                      <span className="text-sm">☕🍰</span>
-                      <span>Café / Postres</span>
-                    </button>
-
-                    {/* Botón 2: Pedir la Cuenta */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowDirectBillModal(true)
-                        triggerHaptic(HAPTIC_PATTERNS.TAP)
-                      }}
-                      className="p-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                    >
-                      <Receipt className="w-3.5 h-3.5" />
-                      <span>{t('billButton')}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* VISTA TRAS PEDIR LA CUENTA: AVISO AL MOZO */}
-        {!isFixedMenu && !isTablePaid && hasRequestedBill && (
-          <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
-            <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                <Receipt className="w-5 h-5 animate-pulse" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                    Mesa #{tableNumber} &middot; Cuenta Solicitada
-                  </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                </div>
-                <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
-                  El mozo ya va hacia tu mesa para realizar el cobro
-                </h4>
-                <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
-                  El personal se acerca a tu mesa con el desglose para abonar en efectivo o con tarjeta.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* VISTA CUANDO LA MESA YA HA SIDO COBRADA (CONFIRMACIÓN DE COBRO + GOOGLE REVIEWS) */}
-        {!isFixedMenu && isTablePaid && (!isPaidBannerDismissed || !isReviewBoosterDismissed) && (
-          <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full space-y-3 animate-in fade-in duration-300">
-            {!isPaidBannerDismissed && (
-              <div className="p-3.5 bg-emerald-950 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                    <Receipt className="w-5 h-5 text-slate-950" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                      Mesa #{tableNumber} &middot; Pago Confirmado
-                    </span>
-                    <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
-                      ¡Pago confirmado! Gracias por tu visita
-                    </h4>
-                    <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
-                      Tu comanda ha sido cobrada correctamente en mesa.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPaidBannerDismissed(true)
-                    if (typeof window !== 'undefined') {
-                      sessionStorage.setItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`, 'true')
-                    }
-                  }}
-                  className="p-1 rounded-full text-emerald-400 hover:text-white hover:bg-emerald-900/50 transition-colors flex-shrink-0 cursor-pointer"
-                  title="Cerrar aviso"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-            {!isReviewBoosterDismissed && (
-              <GoogleReviewBooster
-                restaurantName={restaurant.name}
-                restaurantSlug={restaurant.slug}
-                googleReviewUrl={restaurant.google_review_url}
-                googlePlaceId={restaurant.google_place_id}
-                variant="card"
-                onDismiss={() => {
-                  setIsReviewBoosterDismissed(true)
-                  if (typeof window !== 'undefined') {
-                    sessionStorage.setItem(`fluxo_review_dismissed_${slug}`, 'true')
-                  }
-                }}
-              />
-            )}
-          </div>
-        )}
-
-        {/* 2. CARTA GASTRONÓMICA */}
-        <main className="max-w-2xl mx-auto px-3.5 pt-3 space-y-3.5">
-
-          {/* Buscador & Controles de Vista */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('searchPlaceholder')}
-                className="w-full pl-9 pr-9 py-2 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 shadow-xs transition-all"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Borrar búsqueda"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                aria-label="Vista Carta Detallada"
-                className={`p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl transition-all cursor-pointer ${
-                  viewMode === 'list' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-                }`}
-                title="Vista Carta Detallada"
-              >
-                <LayoutList className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                aria-label="Vista Galería de Fotos"
-                className={`p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl transition-all cursor-pointer ${
-                  viewMode === 'grid' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-                }`}
-                title="Vista Galería de Fotos"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Carrusel de Categorías Gastronómicas con Filtros Dietéticos Sutiles */}
-          <div id="menu-category-tabs" className="space-y-1.5 scroll-mt-16">
-            <div className="flex items-center gap-1.5 w-full">
-              {/* Flecha Izquierda (Navegación Desktop / PC y Accesibilidad) */}
-              <button
-                type="button"
-                onClick={() => handleScrollCategories('left')}
-                disabled={!canScrollLeft}
-                aria-label="Ver categorías anteriores"
-                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all border ${
-                  canScrollLeft
-                    ? 'bg-white text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 border-slate-200 shadow-xs cursor-pointer active:scale-95'
-                    : 'bg-slate-100/60 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-30'
-                }`}
-                title="Categorías anteriores"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              {/* Contenedor deslizable de Categorías */}
-              <div
-                ref={categoryTabsRef}
-                onScroll={updateScrollButtons}
-                className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 touch-pan-x scroll-smooth overscroll-x-contain"
-                onWheel={(e) => {
-                  if (e.deltaY !== 0 && e.currentTarget.scrollWidth > e.currentTarget.clientWidth) {
-                    e.currentTarget.scrollLeft += e.deltaY
-                  }
-                }}
-              >
-                <button
-                  onClick={(e) => {
-                    setSelectedCategory('all')
-                    setSearchQuery('')
-                    if (categoryTabsRef.current) {
-                      categoryTabsRef.current.scrollTo({ left: 0, behavior: 'smooth' })
-                    }
-                    setTimeout(updateScrollButtons, 350)
-                  }}
-                  className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
-                    selectedCategory === 'all'
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-200 shadow-xs'
-                  }`}
-                >
-                  {t('allCategories')}
-                </button>
-                {categories.map((category) => {
-                  const isSelected = selectedCategory === category.id
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={(e) => {
-                        setSelectedCategory(category.id)
-                        setSearchQuery('')
-                        e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' })
-                        setTimeout(updateScrollButtons, 350)
-                      }}
-                      className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
-                        isSelected
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-200 shadow-xs'
-                      }`}
-                    >
-                      {translateCategoryName(currentLang, category.name)}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {/* Flecha Derecha (Navegación Desktop / PC y Accesibilidad) */}
-              <button
-                type="button"
-                onClick={() => handleScrollCategories('right')}
-                disabled={!canScrollRight}
-                aria-label="Ver más categorías"
-                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all border ${
-                  canScrollRight
-                    ? 'bg-white text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:border-blue-200 border-slate-200 shadow-xs cursor-pointer active:scale-95'
-                    : 'bg-slate-100/60 text-slate-300 border-slate-200/60 cursor-not-allowed opacity-30'
-                }`}
-                title="Más categorías"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Píldoras Dietéticas Ultra-Discretas (Sin sobrecargar pantalla) */}
-            <div className="flex items-center gap-1.5 px-0.5">
-              <span className="text-[10px] text-slate-400 font-semibold">Filtros:</span>
-              <button
-                type="button"
-                onClick={() => setDietaryFilter(prev => prev === 'sintacc' ? 'all' : 'sintacc')}
-                aria-label={dietaryFilter === 'sintacc' ? 'Quitar filtro Sin TACC' : 'Filtrar platos aptos Sin TACC'}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
-                  dietaryFilter === 'sintacc'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-white text-slate-500 border border-slate-200 hover:text-slate-800'
-                }`}
-                title="Filtrar platos aptos Sin TACC"
-              >
-                <span>🌾 {t('sinTacc')}</span>
-                {dietaryFilter === 'sintacc' && <span className="font-black">&times;</span>}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDietaryFilter(prev => prev === 'veggie' ? 'all' : 'veggie')}
-                aria-label={dietaryFilter === 'veggie' ? 'Quitar filtro Vegetariano' : 'Filtrar platos vegetarianos'}
-                className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
-                  dietaryFilter === 'veggie'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white text-slate-500 border border-slate-200 hover:text-slate-800'
-                }`}
-                title="Filtrar platos vegetarianos"
-              >
-                <span>🌱 {t('veggie')}</span>
-                {dietaryFilter === 'veggie' && <span className="font-black">&times;</span>}
-              </button>
-            </div>
-
-            {/* Botón Discreto Añadir Plato en la Categoría (Solo Modo Administrador In-Situ) */}
-            {isInSituAdmin && (
-              <div className="flex items-center justify-between gap-2 bg-purple-50 border border-purple-200/80 rounded-2xl p-2.5 px-3.5 shadow-xs animate-in fade-in">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Utensils className="w-4 h-4 text-purple-700 flex-shrink-0" />
-                  <span className="text-xs font-black text-purple-900 truncate">
-                    {selectedCategory === 'all'
-                      ? 'Todas las categorías'
-                      : translateCategoryName(currentLang, categories.find(c => c.id === selectedCategory)?.name || 'Categoría actual')}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
-                  className="px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-black flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer flex-shrink-0"
-                >
-                  <Plus size={14} className="stroke-[3]" />
-                  <span>Añadir plato</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* SUGERENCIA INTELIGENTE DEL CHEF SEGÚN CATEGORÍA */}
-          {(() => {
-            const isInitialSection =
-              selectedCategory === 'all' ||
-              !selectedCategory ||
-              selectedCategory === 'cat-1' ||
-              selectedCategory === 'c0000000-0000-0000-0000-000000000001' ||
-              (categories.length > 0 && selectedCategory === categories[0]?.id) ||
-              Boolean(categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('PROMO'))
-
-            const isBurgerCategory = Boolean(
-              selectedCategory === 'cat-7' ||
-              selectedCategory === 'c0000000-0000-0000-0000-000000000003' ||
-              categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('BURGER') ||
-              categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('HAMBURGUESA')
-            )
-
-            if (isInitialSection) {
-              return (
-                <div className="p-3 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl shadow-xs flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                    <Sparkles size={16} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 block">
-                      Recomendado para Comenzar
-                    </span>
-                    <p className="text-xs text-slate-100 font-semibold leading-tight mt-0.5">
-                      Prueba nuestro Combo Pareja con 2 Dobles Monster y 2 Pintas bien frías.
-                    </p>
-                  </div>
-                </div>
-              )
-            }
-
-            if (isBurgerCategory) {
-              return (
-                <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl shadow-xs flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-white text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                    <Flame size={16} className="text-orange-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-950 block">
-                      Tip del Chef para Burgers
-                    </span>
-                    <p className="text-xs text-white font-bold leading-tight mt-0.5">
-                      Pídela a Punto y acompáñala con Bastones de Mozzarella o una IPA Tirada.
-                    </p>
-                  </div>
-                </div>
-              )
-            }
-
-            return null
-          })()}
-
-          {/* Listado de Platos con Skeleton Screens de Carga */}
-          {products.length === 0 ? (
-            <div className="space-y-3 animate-pulse">
-              {[1, 2, 3, 4].map(idx => (
-                <div key={idx} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-xs flex items-center justify-between gap-3">
-                  <div className="w-14 h-14 bg-slate-200 rounded-xl flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3.5 bg-slate-200 rounded w-3/4" />
-                    <div className="h-3 bg-slate-100 rounded w-1/3" />
-                  </div>
-                  <div className="w-8 h-8 bg-slate-100 rounded-xl flex-shrink-0" />
-                </div>
-              ))}
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 space-y-3 bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
-              <Utensils className="w-12 h-12 mx-auto stroke-[1.2] text-slate-300" />
-              <p className="text-sm font-semibold text-slate-600">
-                {searchQuery ? 'No encontramos platos con esa búsqueda' : 'No hay platos en esta categoría'}
-              </p>
-              {isInSituAdmin && !searchQuery && (
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
-                  >
-                    <Plus size={14} className="stroke-[3]" />
-                    <span>Añadir primer plato a esta categoría</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : viewMode === 'list' ? (
-            /* VISTA 1: LISTADO MODERNO CON JERARQUÍA ELEGANTE Y ESPACIO HOLGADO */
-            <div className="space-y-2.5">
-              {filteredProducts.map((product, idx) => {
-                const qty = getProductQuantityInCart(product.id)
-                const isExpanded = Boolean(expandedProductIds[product.id])
-
-                return (
-                  <div
-                    key={product.id}
-                    className="bg-white rounded-2xl ambient-card gpu-layer smooth-spring overflow-hidden"
-                  >
-                    {/* FILA PRINCIPAL */}
-                    <div
-                      onClick={() => toggleExpand(product.id)}
-                      className="p-3.5 flex items-center justify-between gap-3 cursor-pointer select-none"
-                    >
-                      {/* Miniatura si no está expandido */}
-                      {product.image_url && !isExpanded && (
-                        <div className="relative w-14 h-14 min-w-[3.5rem] min-h-[3.5rem] aspect-square overflow-hidden rounded-xl bg-slate-100 shimmer-loading flex-shrink-0 border border-slate-100 transition-opacity duration-300">
-                          <Image
-                            src={product.image_url}
-                            alt={product.name}
-                            fill
-                            className="w-full h-full object-cover"
-                            sizes="56px"
-                            priority={idx < 2}
-                            loading={idx < 2 ? undefined : 'lazy'}
-                          />
-                        </div>
-                      )}
-
-                      {/* TÍTULO Y PRECIO EN LÍNEAS SEPARADAS (ESPACIO HOLGADO) */}
-                      <div className="flex-1 min-w-0 pr-1 space-y-0.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h3 className="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2">
-                            {translateProductName(currentLang, product.id, product.name)}
-                          </h3>
-                          {isInSituAdmin && product.is_available === false && (
-                            <span className="text-[9px] font-black text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md">
-                              AGOTADO
-                            </span>
-                          )}
-                          {!isFixedMenu && idx === 0 && totalCartCount === 0 && (
-                            <span className="text-[9px] font-extrabold text-blue-700 bg-blue-100/90 px-1.5 py-0.5 rounded-md animate-pulse">
-                              ✨ Toca + para pedir
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {product.original_price != null && product.original_price > product.price && (
-                            <span className="line-through text-slate-400 text-xs font-bold tabular-nums">
-                              {formatCurrency(product.original_price)}
-                            </span>
-                          )}
-                          <span className="font-black text-xs sm:text-sm text-blue-700 tabular-nums">
-                            {product.price_type === 'weight'
-                              ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
-                              : formatCurrency(product.price)}
-                          </span>
-                          {product.original_price != null && product.original_price > product.price && (
-                            <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md">
-                              OFERTA -{Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
-                            </span>
-                          )}
-                          {product.price_type === 'weight' && (
-                            <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-900 text-[10px] font-extrabold border border-blue-200">
-                              ⚖️ {t('byWeight')}
-                            </span>
-                          )}
-                        </div>
-                        {product.description && (
-                          <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
-                            {translateProductDescription(currentLang, product.id, product.description)}
-                          </p>
-                        )}
-                        {/* Badges de Alérgenos UE */}
-                        {product.allergens && product.allergens.length > 0 && (
-                          <div className="flex items-center gap-1 flex-wrap pt-1">
-                            {product.allergens.map((aId) => {
-                              const al = getAllergen(aId)
-                              if (!al) return null
-                              return (
-                                <span
-                                  key={aId}
-                                  title={getAllergenName(aId, currentLang as any)}
-                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/80 text-[10px] font-bold"
-                                >
-                                  <span>{al.icon}</span>
-                                  <span className="hidden min-[420px]:inline">{getAllergenName(aId, currentLang as any).split(' ')[0]}</span>
-                                </span>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Control de Cantidad Inline o Botón Detalles en Modo Fijo */}
-                      <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                        {/* Controles de Administración In-Situ */}
-                        {isInSituAdmin && (
-                          <div className="flex items-center gap-1 mr-1">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleAvailability(product.id, product.is_available !== false)}
-                              title={product.is_available !== false ? 'Marcar como agotado' : 'Marcar como disponible'}
-                              className={`px-2 py-1 rounded-xl text-[10px] font-black border transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
-                                product.is_available !== false
-                                  ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20'
-                                  : 'bg-rose-500/15 text-rose-700 border-rose-500/40 hover:bg-rose-500/25'
-                              }`}
-                            >
-                              <Power size={11} className={product.is_available !== false ? 'text-emerald-600' : 'text-rose-600'} />
-                              <span>{product.is_available !== false ? 'Disponible' : 'Agotado'}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditProductModal(product)}
-                              title="Editar plato"
-                              className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer active:scale-95"
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                          </div>
-                        )}
-                        {!isFixedMenu ? (
-                          <>
-                            {isInSituAdmin ? (
-                              <div
-                                className="w-8 h-8 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center opacity-50 cursor-not-allowed pointer-events-none select-none"
-                                title="Añadir a comanda bloqueado en Modo Vista Previa"
-                              >
-                                <Plus size={16} />
-                              </div>
-                            ) : qty === 0 ? (
-                              <button
-                                type="button"
-                                onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                                aria-label={`Añadir ${product.name} a la comanda`}
-                                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 smooth-press shadow-xs cursor-pointer ${
-                                  idx === 0 && totalCartCount === 0 ? 'ring-2 ring-blue-500/60 ring-offset-1 animate-pulse' : ''
-                                }`}
-                                title="Añadir a la comanda"
-                              >
-                                <Plus size={16} />
-                              </button>
-                            ) : (
-                              <div className="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100 animate-in zoom-in-95 duration-150">
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleUpdateProductQuantity(product, -1, e)}
-                                  aria-label={`Disminuir ${product.name}`}
-                                  className="w-7 h-7 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs hover:bg-blue-100 transition-colors smooth-press cursor-pointer"
-                                >
-                                  <Minus size={13} />
-                                </button>
-                                <span className="text-xs font-black text-blue-900 px-1 animate-pop tabular-nums">{qty}</span>
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                                  aria-label={`Aumentar ${product.name}`}
-                                  className="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-xs hover:bg-blue-800 transition-colors smooth-press cursor-pointer"
-                                >
-                                  <Plus size={13} />
-                                </button>
-                              </div>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => toggleExpand(product.id)}
-                              aria-label={isExpanded ? `Ocultar foto y detalles de ${product.name}` : `Ver foto y detalles de ${product.name}`}
-                              className={`p-1.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-slate-700 transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] cursor-pointer ${
-                                isExpanded ? 'rotate-180 text-blue-700' : ''
-                              }`}
-                              title="Ver foto y detalles"
-                            >
-                              <ChevronDown size={18} />
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => toggleExpand(product.id)}
-                            className={`p-2 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-500 hover:text-blue-700 border border-slate-200/80 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                              isExpanded ? 'rotate-180 text-blue-700 bg-blue-50 border-blue-200' : ''
-                            }`}
-                            title="Ver foto y detalles"
-                          >
-                            <ChevronDown size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* SECCIÓN DESPLEGABLE CON ANIMACIÓN SUAVE Y FLUIDA */}
-                    <div
-                      className={`grid transition-all duration-350 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                        isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                      }`}
-                    >
-                      <div className="overflow-hidden">
-                        <div className="px-3.5 pb-3.5 pt-1 border-t border-slate-100 space-y-3 bg-slate-50/50">
-                          {product.image_url && (
-                            <div className="relative w-full aspect-[4/3] overflow-hidden rounded-2xl bg-slate-100 border border-slate-200 shadow-inner shimmer-loading">
-                              <Image
-                                src={product.image_url}
-                                alt={product.name}
-                                fill
-                                className="w-full h-full object-cover"
-                                sizes="(max-width: 768px) 100vw, 600px"
-                              />
-                            </div>
-                          )}
-
-                          {!isFixedMenu ? (
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                              <button
-                                onClick={() => {
-                                  if (!isInSituAdmin) setCustomizingProduct(product)
-                                }}
-                                disabled={isInSituAdmin}
-                                className={`w-full sm:w-auto px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold transition-all shadow-xs text-center ${
-                                  isInSituAdmin
-                                    ? 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed pointer-events-none'
-                                    : 'bg-white text-slate-700 hover:bg-slate-50'
-                                }`}
-                              >
-                                {t('customize')}
-                              </button>
-
-                              <button
-                                onClick={() => handleUpdateProductQuantity(product, 1)}
-                                disabled={isInSituAdmin}
-                                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl text-white text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition-transform ${
-                                  isInSituAdmin
-                                    ? 'bg-slate-400 opacity-50 cursor-not-allowed pointer-events-none'
-                                    : 'bg-blue-700 hover:bg-blue-800 active:scale-95'
-                                }`}
-                              >
-                                <Plus size={14} className="stroke-[3]" />
-                                <span>{t('addToCart')}</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between text-xs text-slate-600">
-                              <span className="font-semibold flex items-center gap-1.5 text-slate-700">
-                                <Sparkles size={14} className="text-amber-500 flex-shrink-0" />
-                                Plato elaborado al momento con ingredientes frescos
-                              </span>
-                              <span className="font-black text-blue-700 text-sm">
-                                {formatCurrency(product.price)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            /* VISTA 2: GALERÍA DE FOTOS */
-            <div className="grid grid-cols-2 gap-3">
-              {filteredProducts.map((product, idx) => {
-                const qty = getProductQuantityInCart(product.id)
-                return (
-                  <div
-                    key={product.id}
-                    className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
-                  >
-                    <div>
-                      {product.image_url && (
-                        <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-100 shimmer-loading">
-                          <Image
-                            src={product.image_url}
-                            alt={product.name}
-                            fill
-                            className="w-full h-full object-cover"
-                            sizes="(max-width: 768px) 50vw, 300px"
-                            priority={idx < 2}
-                            loading={idx < 2 ? undefined : 'lazy'}
-                          />
-                        </div>
-                      )}
-                      <div className="p-3.5 space-y-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <h3 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug">
-                              {translateProductName(currentLang, product.id, product.name)}
-                            </h3>
-                            {isInSituAdmin && product.is_available === false && (
-                              <span className="inline-block mt-0.5 text-[9px] font-black text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md">
-                                AGOTADO
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
-                            {product.original_price != null && product.original_price > product.price && (
-                              <span className="line-through text-slate-400 text-xs font-bold tabular-nums">
-                                {formatCurrency(product.original_price)}
-                              </span>
-                            )}
-                            <span className="font-black text-xs sm:text-sm text-blue-700 tabular-nums">
-                              {product.price_type === 'weight'
-                                ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
-                                : formatCurrency(product.price)}
-                            </span>
-                          </div>
-                        </div>
-                        {product.description && (
-                          <p className="text-[11px] text-slate-500 font-normal line-clamp-2 leading-relaxed">
-                            {translateProductDescription(currentLang, product.id, product.description)}
-                          </p>
-                        )}
-                        {/* Badges de Alérgenos UE en Grid */}
-                        {product.allergens && product.allergens.length > 0 && (
-                          <div className="flex items-center gap-1 flex-wrap pt-1">
-                            {product.allergens.map((aId) => {
-                              const al = getAllergen(aId)
-                              if (!al) return null
-                              return (
-                                <span
-                                  key={aId}
-                                  title={getAllergenName(aId, currentLang as any)}
-                                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/80 text-[10px] font-bold"
-                                >
-                                  <span>{al.icon}</span>
-                                  <span className="hidden min-[420px]:inline">{getAllergenName(aId, currentLang as any).split(' ')[0]}</span>
-                                </span>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Controles de Administración In-Situ en Grid */}
-                    {isInSituAdmin && (
-                      <div className="p-3.5 pt-0 pb-2 flex items-center justify-between gap-1 border-b border-slate-100 mb-2" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleAvailability(product.id, product.is_available !== false)}
-                          title={product.is_available !== false ? 'Marcar como agotado' : 'Marcar como disponible'}
-                          className={`px-2 py-1 rounded-xl text-[10px] font-black border transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
-                            product.is_available !== false
-                              ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20'
-                              : 'bg-rose-500/15 text-rose-700 border-rose-500/40 hover:bg-rose-500/25'
-                          }`}
-                        >
-                          <Power size={10} className={product.is_available !== false ? 'text-emerald-600' : 'text-rose-600'} />
-                          <span>{product.is_available !== false ? 'Disponible' : 'Agotado'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditProductModal(product)}
-                          title="Editar plato"
-                          className="p-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors cursor-pointer active:scale-95"
-                        >
-                          <Edit2 size={12} />
-                        </button>
-                      </div>
-                    )}
-
-                    {!isFixedMenu ? (
-                      <div className="p-3.5 pt-0 flex items-center justify-between gap-2">
-                        <button
-                          onClick={() => {
-                            if (!isInSituAdmin) setCustomizingProduct(product)
-                          }}
-                          disabled={isInSituAdmin}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                            isInSituAdmin
-                              ? 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed pointer-events-none'
-                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                          }`}
-                        >
-                          {t('customize')}
-                        </button>
-
-                        <div className="flex items-center">
-                          {isInSituAdmin ? (
-                            <div
-                              className="w-8 h-8 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 flex items-center justify-center opacity-50 cursor-not-allowed pointer-events-none select-none"
-                              title="Añadir a comanda bloqueado en Modo Vista Previa"
-                            >
-                              <Plus size={16} />
-                            </div>
-                          ) : qty === 0 ? (
-                            <button
-                              type="button"
-                              onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                              aria-label={`Añadir ${product.name} a la comanda`}
-                              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs cursor-pointer"
-                            >
-                              <Plus size={16} />
-                            </button>
-                          ) : (
-                            <div className="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100">
-                              <button
-                                type="button"
-                                onClick={(e) => handleUpdateProductQuantity(product, -1, e)}
-                                aria-label={`Disminuir ${product.name}`}
-                                className="w-7 h-7 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs hover:bg-blue-100 transition-colors cursor-pointer"
-                              >
-                                <Minus size={13} />
-                              </button>
-                              <span className="text-xs font-black text-blue-900 px-1 tabular-nums">{qty}</span>
-                              <button
-                                type="button"
-                                onClick={(e) => handleUpdateProductQuantity(product, 1, e)}
-                                aria-label={`Aumentar ${product.name}`}
-                                className="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-xs hover:bg-blue-800 transition-colors cursor-pointer"
-                              >
-                                <Plus size={13} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-3.5 pt-0">
-                        <div className="py-2 px-3 bg-blue-50/70 rounded-xl border border-blue-100 text-center text-xs font-black text-blue-700">
-                          {formatCurrency(product.price)}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Footer Legal Informativo: Alérgenos, Precios con IVA y Aviso Sanitario Anisakis */}
-          <footer className="pt-6 pb-24 text-center space-y-2">
-            <div className="p-3.5 bg-white rounded-2xl border border-slate-200/80 text-[11px] text-slate-500 shadow-xs space-y-1.5 text-left">
-              <p className="font-bold text-slate-800 flex items-center gap-1.5">
-                <span>ℹ️</span> <span>Información al Consumidor</span>
-              </p>
-              <p className="text-[10px] text-slate-500 leading-relaxed">
-                {t('legalNotice')}
-              </p>
-              <div className="pt-1.5 border-t border-slate-100">
-                <p className="text-[9px] text-slate-400 leading-relaxed">
-                  🐟 <span className="font-semibold">{t('anisakisNotice')}</span>
-                </p>
-              </div>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowLegalModal(true)}
-                  className="text-[10px] font-bold text-blue-900 hover:text-blue-700 underline flex items-center gap-1"
-                >
-                  🔒 Aviso Legal, Privacidad (RGPD) y Cookies
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isInSituAdmin) {
-                      handleExitAdminMode()
-                    } else {
-                      setShowAdminAuthModal(true)
-                    }
-                  }}
-                  className="text-[9px] text-slate-400 hover:text-slate-600 font-medium transition-colors cursor-pointer flex items-center gap-1"
-                  title="Acceso para el personal del restaurante"
-                >
-                  <Lock className="w-2.5 h-2.5" />
-                  <span>{isInSituAdmin ? 'Salir de Edición' : 'Acceso Personal / Administrar Carta'}</span>
-                </button>
-                <span className="text-[9px] text-slate-400 font-medium">Fluxo &mdash; Sistema Gastronómico</span>
-              </div>
-            </div>
-          </footer>
-        </main>
-
-        {/* 3. Barra Flotante Inferior de Comanda o Aviso Informativo */}
-        {isFixedMenu ? (
-          !isInSituAdmin && (
-            <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 pointer-events-auto">
-              <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 border border-slate-800">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 flex items-center justify-center flex-shrink-0 border border-blue-500/20">
-                    <Utensils className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-400 block leading-tight">
-                      Carta Digital Informativa
-                    </span>
-                    <p className="text-xs text-slate-200 font-medium leading-tight truncate sm:whitespace-normal">
-                      Para realizar tu pedido o consultar dudas sobre alérgenos, avisa a tu camarero.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        ) : (
-          totalCartCount > 0 && !isInSituAdmin && (
-            <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 gpu-layer">
-              {/* Tooltip contextual animado discreto */}
-              <div className="flex justify-end pr-2 pb-1.5 animate-in fade-in">
-                <div className="bg-slate-900/95 text-white border border-blue-400/40 text-[10px] sm:text-[11px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 animate-bounce backdrop-blur-md">
-                  <Sparkles size={11} className="text-amber-300 flex-shrink-0" />
-                  <span>{t('tooltipAddToCartNotice')}</span>
-                </div>
-              </div>
-
-              <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.35)] flex items-center justify-between border border-slate-800 animate-in slide-in-from-bottom duration-350 ease-[cubic-bezier(0.16,1,0.3,1)]">
-                <div className="flex items-center space-x-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-600/30 flex-shrink-0 animate-pop">
-                    <ShoppingBag size={16} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[11px] text-slate-400 font-medium truncate">
-                      {totalCartCount} {totalCartCount === 1 ? (t('itemSingle') || 'ítem') : (t('items') || 'ítems')} &middot; {t('tableNumberLabel')} #{tableNumber}
-                    </div>
-                    <div className="text-sm sm:text-base font-black text-amber-300 tabular-nums">
-                      {formatCurrency(totalCartAmount)}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setIsCartOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-extrabold flex items-center space-x-1 transition-all shadow-md shadow-blue-600/30 smooth-press flex-shrink-0 cursor-pointer"
-                >
-                  <span>{t('viewCart')}</span>
-                  <ChevronRight size={15} />
-                </button>
-              </div>
-            </div>
-          )
-        )}
-
-        {/* Barra Flotante de Administrador In-Situ */}
-        {isInSituAdmin && (
-          <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 gpu-layer animate-in slide-in-from-bottom duration-300">
-            <div className="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-2xl border border-purple-500/40 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-purple-600/30 text-purple-300 flex items-center justify-center flex-shrink-0 border border-purple-500/30">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-white leading-tight">Modo Edición Activo</span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  </div>
-                  <p className="text-[10px] text-slate-300 truncate">
-                    Edición de carta en vivo &middot; Modificaciones en tiempo real
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
-                  className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold flex items-center gap-1 transition-all shadow-xs cursor-pointer active:scale-95"
-                >
-                  <Plus size={13} className="stroke-[3]" />
-                  <span className="hidden sm:inline">Añadir plato</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExitAdminMode}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                  title="Salir del modo de edición"
-                >
-                  <Lock className="w-3.5 h-3.5 text-rose-400" />
-                  <span>Salir de Edición</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal de Personalización (Píldoras + Notas libres) */}
-        <ProductModifierModal
-          product={customizingProduct}
-          onClose={() => setCustomizingProduct(null)}
-          onConfirm={handleAddCustomized}
-          lang={currentLang}
-          isStaff={false}
-        />
-
-        {/* Visor 3D */}
-        <Product3DModal
-          product={selected3DProduct}
-          onClose={() => setSelected3DProduct(null)}
-        />
-
-        {/* Modal de Micro-Servicios a la Mesa */}
-        {showServiceModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
-            <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-extrabold text-sm text-slate-900">
-                    Micro-Servicios para Mesa #{tableNumber}
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setShowServiceModal(false)}
-                  className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <p className="text-xs text-slate-500 font-medium">
-                Toca lo que necesitas y el mozo lo acercará directamente a tu mesa:
-              </p>
-
-              <div className="grid grid-cols-2 gap-2.5">
-                {[
-                  { name: t('iceLemon'), icon: '🍋' },
-                  { name: t('tapWater'), icon: '💧' },
-                  { name: t('breadSauces'), icon: '🥖' },
-                  { name: t('extraCutlery'), icon: '🍴' },
-                  { name: t('saltCondiments'), icon: '🧂' },
-                  { name: t('napkins'), icon: '🧻' },
-                ].map((serv) => {
-                  const isRequested = pendingServiceCalls.has(serv.name)
-
-                  return (
-                    <button
-                      key={serv.name}
-                      disabled={isRequested}
-                      onClick={() => handleRequestMicroService(serv.name)}
-                      className={`p-3 rounded-2xl border text-left transition-all flex flex-col justify-between gap-1 shadow-xs ${
-                        isRequested
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-950 cursor-not-allowed shadow-emerald-500/10'
-                          : 'bg-slate-50 hover:bg-blue-50 border-slate-200/80 hover:border-blue-300 text-slate-900 active:scale-95 cursor-pointer'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xl">{serv.icon}</span>
-                        {isRequested && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-600 text-[10px] font-black text-white shadow-xs animate-in fade-in">
-                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                            Solicitado
-                          </span>
-                        )}
-                      </div>
-                      <span className={`font-bold text-xs ${isRequested ? 'text-emerald-950' : 'text-slate-900'}`}>
-                        {serv.name}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Toast de Micro-Servicio Enviado */}
-        {serviceRequestedToast && (
-          <div className="fixed top-16 inset-x-3 z-50 max-w-md mx-auto p-3 rounded-2xl bg-emerald-700 text-white font-bold shadow-2xl flex items-center justify-between animate-in slide-in-from-top duration-300 border border-emerald-600">
-            <div className="flex items-center gap-2">
-              <Check className="w-4 h-4 text-emerald-200 stroke-[3]" />
-              <span className="text-xs">¡Solicitado {serviceRequestedToast} para Mesa #{tableNumber}!</span>
-            </div>
-          </div>
-        )}
-
-        {/* Drawer del Carrito */}
-        <CartDrawer
-          isOpen={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
-          cart={cart}
-          onUpdateQuantity={(index, newQty) => {
-            if (newQty <= 0) {
-              setCart(prev => prev.filter((_, idx) => idx !== index))
-            } else {
-              setCart(prev => {
-                const copy = [...prev]
-                copy[index].quantity = newQty
-                return copy
-              })
+        {/* Tracker en Vivo del Estado de Cocina y Avisos de Cobro */}
+        <MenuLiveTracker
+          isFixedMenu={isFixedMenu}
+          isTablePaid={isTablePaid}
+          hasRequestedBill={hasRequestedBill}
+          tableOrderStatus={tableOrderStatus}
+          tableNumber={tableNumber}
+          currentLang={currentLang}
+          isPaidBannerDismissed={isPaidBannerDismissed}
+          onDismissPaidBanner={() => {
+            setIsPaidBannerDismissed(true)
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`, 'true')
             }
           }}
-          onRemoveItem={(index) => setCart(prev => prev.filter((_, idx) => idx !== index))}
-          onClearCart={() => setCart([])}
+          isReviewBoosterDismissed={isReviewBoosterDismissed}
+          onDismissReviewBooster={() => {
+            setIsReviewBoosterDismissed(true)
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem(`fluxo_review_dismissed_${slug}`, 'true')
+            }
+          }}
+          restaurant={restaurant}
+          onOpenTimelineModal={() => setShowTimelineModal(true)}
+          onOpenDirectBillModal={() => {
+            setShowDirectBillModal(true)
+            triggerHaptic(HAPTIC_PATTERNS.TAP)
+          }}
+          onGoToDesserts={() => {
+            const dessertCat = categories.find(c => {
+              const n = (c.name || '').toUpperCase()
+              return n.includes('POSTRE') || n.includes('CAFÉ') || n.includes('CAFE') || n.includes('DULCE') || n.includes('SOBREMESA')
+            }) || categories[0]
+            if (dessertCat) setSelectedCategory(dessertCat.id)
+            const catEl = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
+            if (catEl) catEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            triggerHaptic(HAPTIC_PATTERNS.TAP)
+          }}
+        />
+
+        {/* Carta Gastronómica Principal */}
+        <main className="max-w-2xl mx-auto px-3.5 pt-3 space-y-3.5">
+          {/* Barra de Categorías, Filtros y Buscador */}
+          <MenuCategoryBar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onClearSearch={() => setSearchQuery('')}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            dietaryFilter={dietaryFilter}
+            onDietaryFilterChange={setDietaryFilter}
+            currentLang={currentLang}
+            categoryTabsRef={categoryTabsRef as any}
+            canScrollLeft={canScrollLeft}
+            canScrollRight={canScrollRight}
+            onScrollCategories={handleScrollCategories}
+            updateScrollButtons={updateScrollButtons}
+            isInSituAdmin={isInSituAdmin}
+            onOpenAddProductModal={handleOpenAddProductModal}
+          />
+
+          {/* Listado de Platos: Vista Lista vs Vista Galería */}
+          {viewMode === 'list' ? (
+            <MenuListCatalog
+              products={products}
+              filteredProducts={filteredProducts}
+              currentLang={currentLang}
+              isFixedMenu={isFixedMenu}
+              isInSituAdmin={isInSituAdmin}
+              totalCartCount={totalCartCount}
+              expandedProductIds={expandedProductIds}
+              onToggleExpand={toggleExpand}
+              getProductQuantity={getProductQuantityInCart}
+              onUpdateQuantity={handleUpdateProductQuantity}
+              onToggleAvailability={handleToggleAvailability}
+              onOpenEditModal={handleOpenEditProductModal}
+              onOpenAddProductModal={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
+              onCustomizeProduct={(prod) => setCustomizingProduct(prod)}
+              searchQuery={searchQuery}
+            />
+          ) : (
+            <MenuGridCatalog
+              filteredProducts={filteredProducts}
+              currentLang={currentLang}
+              isFixedMenu={isFixedMenu}
+              isInSituAdmin={isInSituAdmin}
+              getProductQuantity={getProductQuantityInCart}
+              onUpdateQuantity={handleUpdateProductQuantity}
+              onToggleAvailability={handleToggleAvailability}
+              onOpenEditModal={handleOpenEditProductModal}
+              onCustomizeProduct={(prod) => setCustomizingProduct(prod)}
+            />
+          )}
+
+          {/* Footer Legal Informativo */}
+          <MenuFooterLegal
+            currentLang={currentLang}
+            isInSituAdmin={isInSituAdmin}
+            onOpenLegalModal={() => setShowLegalModal(true)}
+            onOpenAdminAuthModal={() => setShowAdminAuthModal(true)}
+            onExitAdminMode={handleExitAdminMode}
+          />
+        </main>
+
+        {/* Barra Flotante Inferior de Comanda */}
+        <MenuFloatingCartBar
+          isFixedMenu={isFixedMenu}
+          isInSituAdmin={isInSituAdmin}
+          totalCartCount={totalCartCount}
+          totalCartAmount={totalCartAmount}
           tableNumber={tableNumber}
+          currentLang={currentLang}
+          onOpenCart={() => setIsCartOpen(true)}
+          onOpenAddProductModal={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
+          onExitAdminMode={handleExitAdminMode}
+        />
+
+        {/* Modales y Visores Secundarios */}
+        <MenuModals
+          slug={slug}
+          tableNumber={tableNumber}
+          restaurant={restaurant}
+          categories={categories}
+          products={products}
+          cart={cart}
+          currentLang={currentLang}
           sessionId={sessionId}
-          onSessionUpdate={(newSession) => setSessionId(newSession)}
+          setSessionId={setSessionId}
+          tableOrderStatus={tableOrderStatus}
+          tableOrders={tableOrders}
+          tableTotalAmount={tableTotalAmount}
+          isTablePaid={isTablePaid}
+          customizingProduct={customizingProduct}
+          setCustomizingProduct={setCustomizingProduct}
+          selected3DProduct={selected3DProduct}
+          setSelected3DProduct={setSelected3DProduct}
+          showServiceModal={showServiceModal}
+          setShowServiceModal={setShowServiceModal}
+          isCartOpen={isCartOpen}
+          setIsCartOpen={setIsCartOpen}
+          showTimelineModal={showTimelineModal}
+          setShowTimelineModal={setShowTimelineModal}
+          showDirectBillModal={showDirectBillModal}
+          setShowDirectBillModal={setShowDirectBillModal}
+          showLegalModal={showLegalModal}
+          setShowLegalModal={setShowLegalModal}
+          showAdminAuthModal={showAdminAuthModal}
+          setShowAdminAuthModal={setShowAdminAuthModal}
+          isInSituEditModalOpen={isInSituEditModalOpen}
+          setIsInSituEditModalOpen={setIsInSituEditModalOpen}
+          editingInSituProduct={editingInSituProduct}
+          setEditingInSituProduct={setEditingInSituProduct}
+          inSituTargetCategoryId={inSituTargetCategoryId}
+          adminSessionToken={adminSessionToken}
+          pendingServiceCalls={pendingServiceCalls}
+          serviceRequestedToast={serviceRequestedToast}
+          inSituFeedbackToast={inSituFeedbackToast}
+          setInSituFeedbackToast={setInSituFeedbackToast}
+          onAddCustomized={handleAddCustomized}
+          onRequestMicroService={handleRequestMicroService}
+          onBillRequested={handleBillRequested}
+          onAdminAuthSuccess={handleAdminAuthSuccess}
+          onSaveInSituProduct={handleSaveInSituProduct}
+          onDeleteInSituProduct={handleDeleteInSituProduct}
           onOrderSubmitted={(newOrder) => {
             if (newOrder) {
               setIsTablePaid(false)
@@ -2678,103 +523,20 @@ function DinerMenuContent() {
               }
             }
           }}
-          lang={currentLang}
-          products={products}
-          onAddProduct={(product) => {
-            handleUpdateProductQuantity(product, 1)
-          }}
-          canRequestBill={Boolean(tableOrderStatus && !isTablePaid)}
-          onAddSuggestedDrink={(drinkId) => {
-            const drink = products.find(p => p.id === drinkId)
-            if (drink) {
-              handleUpdateProductQuantity(drink, 1)
+          onUpdateCartQuantity={(index, newQty) => {
+            if (newQty <= 0) {
+              setCart(prev => prev.filter((_, idx) => idx !== index))
+            } else {
+              setCart(prev => {
+                const copy = [...prev]
+                copy[index].quantity = newQty
+                return copy
+              })
             }
           }}
-          onAddSuggestedDessert={(dessertId) => {
-            const dessert = products.find(p => p.id === dessertId)
-            if (dessert) {
-              handleUpdateProductQuantity(dessert, 1)
-            }
-          }}
-        />
-
-        {/* Modal de Seguimiento / Timeline del Pedido */}
-        <OrderTimelineModal
-          isOpen={showTimelineModal}
-          onClose={() => setShowTimelineModal(false)}
-          tableNumber={tableNumber}
-          status={tableOrderStatus}
-          orders={tableOrders}
-          onRequestService={() => setShowServiceModal(true)}
-          onRequestBill={() => setShowDirectBillModal(true)}
-        />
-
-        {/* Modal Directo de Pedir la Cuenta */}
-        <BillModal
-          isOpen={showDirectBillModal}
-          onClose={() => setShowDirectBillModal(false)}
-          onBillRequested={handleBillRequested}
-          tableNumber={tableNumber}
-          slug={restaurant.slug}
-          restaurantName={restaurant.name}
-          googleReviewUrl={restaurant.google_review_url}
-          googlePlaceId={restaurant.google_place_id}
-          totalAmount={tableTotalAmount}
-        />
-
-        {/* Modal Legal y RGPD */}
-        <LegalModal
-          isOpen={showLegalModal}
-          onClose={() => setShowLegalModal(false)}
-          restaurantName={restaurant.name}
-        />
-
-        {/* Modal de Autenticación de Administrador In-Situ */}
-        <InSituAdminAuthModal
-          isOpen={showAdminAuthModal}
-          onClose={() => setShowAdminAuthModal(false)}
-          slug={slug}
-          onSuccess={handleAdminAuthSuccess}
-        />
-
-        {/* Modal de Crear / Editar Plato In-Situ */}
-        <InSituEditProductModal
-          isOpen={isInSituEditModalOpen}
-          onClose={() => {
-            setIsInSituEditModalOpen(false)
-            setEditingInSituProduct(null)
-          }}
-          product={editingInSituProduct}
-          categories={categories}
-          defaultCategoryId={inSituTargetCategoryId}
-          slug={slug}
-          adminToken={adminSessionToken}
-          onSave={handleSaveInSituProduct}
-          onDelete={handleDeleteInSituProduct}
-        />
-
-        {/* Toast de Feedback In-Situ */}
-        {inSituFeedbackToast && (
-          <div className="fixed top-16 inset-x-3 z-50 max-w-md mx-auto p-3 rounded-2xl bg-purple-900 text-white font-bold shadow-2xl flex items-center justify-between gap-2 animate-in slide-in-from-top duration-300 border border-purple-700">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <Sparkles className="w-4 h-4 text-purple-300 flex-shrink-0" />
-              <span className="text-xs font-extrabold truncate">{inSituFeedbackToast}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setInSituFeedbackToast(null)}
-              className="p-1 rounded-full text-purple-300 hover:text-white"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-
-        {/* SEO Semántico Gastronómico Schema.org/Restaurant + Menu */}
-        <RestaurantJsonLd
-          restaurant={restaurant}
-          categories={categories}
-          products={products}
+          onRemoveCartItem={(index) => setCart(prev => prev.filter((_, idx) => idx !== index))}
+          onClearCart={() => setCart([])}
+          onAddProductInline={(prod) => handleUpdateProductQuantity(prod, 1)}
         />
 
       </div>

@@ -145,10 +145,10 @@ export default function LegalPage() {
               <div className="space-y-2">
                 <h2 className="text-lg font-black text-white flex items-center gap-2">
                   <span className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-400 inline-flex items-center justify-center text-xs">4</span>
-                  Ejercicio de Derechos RGPD
+                  Ejercicio de Derechos RGPD y Contacto
                 </h2>
                 <p className="text-slate-400">
-                  Los comensales y clientes pueden ejercer sus derechos de acceso, rectificación y supresión dirigiéndose directamente al responsable del establecimiento físico en cualquier momento.
+                  Los comensales y clientes pueden ejercer sus derechos de acceso, rectificación y supresión dirigiéndose directamente al responsable del establecimiento físico o comunicándose con el soporte técnico de la plataforma en <a href="mailto:contactofluxosystem@gmail.com" className="text-cyan-400 hover:underline font-mono">contactofluxosystem@gmail.com</a>.
                 </p>
               </div>
             </div>
@@ -209,6 +209,16 @@ export default function LegalPage() {
                     Fluxo <strong>NO constituye un Sistema Informático de Facturación (SIF)</strong> con arreglo al artículo 29.2.j de la Ley 58/2003 (General Tributaria), la Ley 11/2021 de medidas de prevención y lucha contra el fraude fiscal y el Real Decreto 1007/2023 (Reglamento Veri*Factu). Las vistas previas de cuenta o simulaciones de ticket de mesa son notas informativas de servicio interno. La expedición obligatoria de la factura simplificada o ticket fiscal oficial legalmente vinculante recae única y exclusivamente en el titular del establecimiento hostelero a través de su TPV homologado en el instante del cobro.
                   </p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-lg font-black text-white flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-cyan-500/20 text-cyan-400 inline-flex items-center justify-center text-xs">6</span>
+                  Atención Comercial y Notificaciones de Plataforma
+                </h2>
+                <p className="text-slate-400">
+                  Para cualquier consulta comercial, solicitud de piloto o notificación formal dirigida al equipo de desarrollo y administración de Fluxo, los interesados pueden escribir a <a href="mailto:contactofluxosystem@gmail.com" className="text-cyan-400 hover:underline font-mono">contactofluxosystem@gmail.com</a>.
+                </p>
               </div>
             </div>
           )}
