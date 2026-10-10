@@ -98,23 +98,22 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
       viewport: { width: 412, height: 915 },
       locale: 'es-ES',
     })
-    // Pre-autenticar sesión del mozo en localStorage para omitir pantalla de PIN
+    // Pre-autenticar sesión del mozo en sessionStorage para omitir pantalla de PIN
     await waiterContext.addInitScript(({ slug }) => {
       localStorage.setItem('gastro_cookie_consent_v1', 'accepted_essential')
-      localStorage.setItem(`fluxo_staff_auth_comandero_${slug}`, JSON.stringify({ auth: true, timestamp: Date.now() }))
+      sessionStorage.setItem(`fluxo_staff_auth_comandero_${slug}`, JSON.stringify({ auth: true, timestamp: Date.now() }))
     }, { slug: SLUG })
 
     const waiterPage = await waiterContext.newPage()
     await waiterPage.goto(`/staff/comandero/${SLUG}`, { waitUntil: 'domcontentloaded' })
 
-    // Si aún aparece el modal de PIN, ingresar el PIN autorizado '4154928'
-    const pinInput = waiterPage.locator('input[type="password"], input[inputmode="numeric"]')
-    if (await pinInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await pinInput.fill('4154928')
-      const enterBtn = waiterPage.locator('button:has-text("Acceder"), button:has-text("Ingresar"), button:has(svg.lucide-arrow-right)')
-      if (await enterBtn.isVisible().catch(() => false)) {
-        await enterBtn.first().click()
-      }
+    // Si aún aparece el teclado de PIN de mozo, ingresar PIN '1234'
+    const pinPad1 = waiterPage.getByRole('button', { name: '1', exact: true })
+    if (await pinPad1.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await pinPad1.click()
+      await waiterPage.getByRole('button', { name: '2', exact: true }).click()
+      await waiterPage.getByRole('button', { name: '3', exact: true }).click()
+      await waiterPage.getByRole('button', { name: '4', exact: true }).click()
     }
 
     // El mozo ve la comanda en pending_validation de la mesa del test
@@ -144,23 +143,22 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
       viewport: { width: 1280, height: 800 },
       locale: 'es-ES',
     })
-    // Pre-autenticar sesión de cocina en localStorage
+    // Pre-autenticar sesión de cocina en sessionStorage
     await kitchenContext.addInitScript(({ slug }) => {
       localStorage.setItem('gastro_cookie_consent_v1', 'accepted_essential')
-      localStorage.setItem(`fluxo_staff_auth_kitchen_${slug}`, JSON.stringify({ auth: true, timestamp: Date.now() }))
+      sessionStorage.setItem(`fluxo_staff_auth_kitchen_${slug}`, JSON.stringify({ auth: true, timestamp: Date.now() }))
     }, { slug: SLUG })
 
     const kitchenPage = await kitchenContext.newPage()
     await kitchenPage.goto(`/staff/kitchen/${SLUG}`, { waitUntil: 'domcontentloaded' })
 
-    // Si aparece PIN en cocina, ingresar PIN autorizado '4154928'
-    const kitchenPinInput = kitchenPage.locator('input[type="password"], input[inputmode="numeric"]')
-    if (await kitchenPinInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await kitchenPinInput.fill('4154928')
-      const enterBtn = kitchenPage.locator('button:has-text("Acceder"), button:has-text("Ingresar"), button:has(svg.lucide-arrow-right)')
-      if (await enterBtn.isVisible().catch(() => false)) {
-        await enterBtn.first().click()
-      }
+    // Si aparece PIN en cocina, ingresar PIN '5678'
+    const kitchenPin5 = kitchenPage.getByRole('button', { name: '5', exact: true })
+    if (await kitchenPin5.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await kitchenPin5.click()
+      await kitchenPage.getByRole('button', { name: '6', exact: true }).click()
+      await kitchenPage.getByRole('button', { name: '7', exact: true }).click()
+      await kitchenPage.getByRole('button', { name: '8', exact: true }).click()
     }
 
     // La cocina ve el ticket de la comanda con botón "INICIAR PREPARACIÓN"
@@ -183,9 +181,15 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
     await readyButton.click()
     await readyPromise
 
-    // Verificar transición a 'ready' y botón "MARCAR SERVIDO Y ENTREGADO"
+    // Cambiar a pestaña "Listas" o "Todas" para localizar el ticket listo
+    const listasTab = kitchenPage.getByRole('button', { name: /Listas/i }).first()
+    if (await listasTab.isVisible()) {
+      await listasTab.click()
+    }
+
+    // Verificar transición a 'ready' y botón "MARCAR ENTREGADO"
     const readyTicket = kitchenPage.locator('div.rounded-3xl').filter({ hasText: `Mesa ${selectedTableNum}` }).first()
-    const deliverButton = readyTicket.locator('button:has-text("MARCAR SERVIDO Y ENTREGADO")')
+    const deliverButton = readyTicket.locator('button:has-text("MARCAR ENTREGADO")')
     await expect(deliverButton).toBeVisible({ timeout: 15000 })
     const deliverPromise = kitchenPage.waitForResponse(
       response => response.url().includes('/api/orders') && (response.request().method() === 'PATCH' || response.request().method() === 'POST')
@@ -297,10 +301,10 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
     const data = await res.json()
     expect(data.success).toBe(true)
 
-    // El servidor debe forzar el precio real de catálogo (13.90€ x 2 = 27.80€), rechazando el 0.01€
+    // El servidor debe forzar el precio real de catálogo (14.20€ x 2 = 28.40€), rechazando el 0.01€
     expect(data.order.total_amount).toBeGreaterThanOrEqual(25)
     const items = data.order.order_items || data.order.items
-    expect(items[0].product.price).toBe(13.90)
+    expect(items[0].product.price).toBe(14.20)
     expect(items[0].product.price).not.toBe(0.01)
   })
 
