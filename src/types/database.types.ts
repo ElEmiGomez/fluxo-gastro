@@ -163,6 +163,10 @@ export interface DailyMenu {
   title: string
   fixed_price: number
   is_active: boolean
+  schedule_enabled?: boolean
+  schedule_days?: string[]
+  schedule_start_time?: string
+  schedule_end_time?: string
   created_at: string
   updated_at: string
   sections?: DailyMenuSection[]

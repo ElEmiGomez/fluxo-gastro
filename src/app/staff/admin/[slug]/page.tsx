@@ -12,6 +12,7 @@ import { AdminProductCatalog } from '@/components/admin/AdminProductCatalog'
 import { AdminCategoryManager } from '@/components/admin/AdminCategoryManager'
 import { AdminAiImporter } from '@/components/admin/AdminAiImporter'
 import { AdminProductModal } from '@/components/admin/AdminProductModal'
+import { AdminDailyMenuManager } from '@/components/admin/AdminDailyMenuManager'
 
 export default function AdminMenuPage() {
   const params = useParams()
@@ -24,6 +25,7 @@ export default function AdminMenuPage() {
     categories,
     products,
     toastMsg,
+    showToast,
     selectedCategoryFilter,
     setSelectedCategoryFilter,
     searchQuery,
@@ -125,6 +127,13 @@ export default function AdminMenuPage() {
                 onRenameCategory={handleRenameCategory}
                 onMoveCategory={handleMoveCategory}
                 onDeleteCategory={handleDeleteCategory}
+              />
+            )}
+
+            {activeTab === 'daily_menu' && (
+              <AdminDailyMenuManager
+                slug={slug}
+                onToast={showToast}
               />
             )}
 

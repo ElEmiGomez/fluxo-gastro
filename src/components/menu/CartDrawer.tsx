@@ -342,6 +342,7 @@ export function CartDrawer({
             price: Number(item.product?.price ?? (item as any).price ?? 0),
             quantity: item.quantity,
             notes: item.notes || (item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : null),
+            course: item.course,
           }
         }),
       }

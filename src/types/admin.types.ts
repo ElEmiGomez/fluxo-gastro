@@ -1,6 +1,6 @@
 import { Product, Category } from '@/types/database.types'
 
-export type AdminTab = 'products' | 'categories' | 'ai_import'
+export type AdminTab = 'products' | 'categories' | 'ai_import' | 'daily_menu'
 
 export interface AiParsedDish {
   id: string

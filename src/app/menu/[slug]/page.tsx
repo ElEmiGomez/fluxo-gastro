@@ -3,12 +3,15 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import { useParams, useSearchParams, usePathname } from 'next/navigation'
 import { Check, Loader2 } from 'lucide-react'
-import { CartItem, Product } from '@/types/database.types'
+import { CartItem, Product, DailyMenu } from '@/types/database.types'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
 import { MenuHeader } from '@/components/menu/MenuHeader'
 import { MenuLiveTracker } from '@/components/menu/MenuLiveTracker'
 import { MenuCategoryBar } from '@/components/menu/MenuCategoryBar'
+import { DailyMenuCard } from '@/components/menu/DailyMenuCard'
+import { DailyMenuModal, DailyMenuSelectionItem } from '@/components/menu/DailyMenuModal'
+import { isDailyMenuActive } from '@/lib/daily-menu-utils'
 import { MenuListCatalog } from '@/components/menu/MenuListCatalog'
 import { MenuGridCatalog } from '@/components/menu/MenuGridCatalog'
 import { MenuFloatingCartBar } from '@/components/menu/MenuFloatingCartBar'
@@ -47,6 +50,32 @@ function DinerMenuContent() {
   const [showDirectBillModal, setShowDirectBillModal] = useState(false)
   const [showServiceModal, setShowServiceModal] = useState(false)
   const [showLegalModal, setShowLegalModal] = useState(false)
+  const [dailyMenu, setDailyMenu] = useState<DailyMenu | null>(null)
+  const [isDailyMenuModalOpen, setIsDailyMenuModalOpen] = useState(false)
+
+  // 1.1 Carga del Menú del Día Dinámico
+  useEffect(() => {
+    let isMounted = true
+    const fetchDailyMenu = async () => {
+      try {
+        const res = await fetch(`/api/daily-menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          if (isMounted && data.dailyMenu) {
+            setDailyMenu(data.dailyMenu)
+          }
+        }
+      } catch (err) {
+        console.warn('[DinerMenuContent] Error fetching daily menu:', err)
+      }
+    }
+    fetchDailyMenu()
+    return () => {
+      isMounted = false
+    }
+  }, [slug])
+
+  const hasActiveDailyMenu = isDailyMenuActive(dailyMenu)
 
   // 2. Sesión de mesa y micro-servicios
   const {
@@ -274,6 +303,41 @@ function DinerMenuContent() {
     setTimeout(() => setAddedToast(null), 2500)
   }
 
+  // Agregar Menú del Día configurado de 4 pasos
+  const handleAddDailyMenuToCart = (menuPayload: {
+    title: string
+    price: number
+    selections: DailyMenuSelectionItem[]
+  }) => {
+    triggerHaptic(HAPTIC_PATTERNS.ADD_CART)
+    const notesParts = menuPayload.selections.map(s => {
+      const coursePrefix = s.course === 'first' ? '1º' : s.course === 'second' ? '2º' : s.course === 'dessert' ? 'Postre' : 'Bebida'
+      return `${coursePrefix}: ${s.product.name}${s.notes ? ` (${s.notes})` : ''}`
+    })
+    const compiledNotes = notesParts.join(' · ')
+
+    const menuCartItem: CartItem = {
+      product: {
+        id: `daily-menu-${dailyMenu?.id || 'standard'}`,
+        restaurant_id: restaurant?.id || '',
+        category_id: 'cat-menu-del-dia',
+        name: menuPayload.title,
+        description: 'Menú del Día (1º, 2º, Postre/Café, Bebida)',
+        price: menuPayload.price,
+        image_url: null,
+        model_3d_url: null,
+        is_available: true,
+      },
+      quantity: 1,
+      selectedPills: [],
+      notes: compiledNotes,
+    }
+
+    setCart(prev => [...prev, menuCartItem])
+    setAddedToast(menuPayload.title)
+    setTimeout(() => setAddedToast(null), 2500)
+  }
+
   const totalCartCount = cart.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0)
   const totalCartAmount = cart.reduce((sum, item) => sum + (Number(item?.product?.price) || 0) * (Number(item?.quantity) || 1), 0)
   const t = (key: string) => getTranslation(currentLang, key)
@@ -396,7 +460,18 @@ function DinerMenuContent() {
             updateScrollButtons={updateScrollButtons}
             isInSituAdmin={isInSituAdmin}
             onOpenAddProductModal={handleOpenAddProductModal}
+            hasActiveDailyMenu={hasActiveDailyMenu}
           />
+
+          {/* Menú del Día Dinámico (Visible sólo si está activo y en horario, con prioridad absoluta) */}
+          {hasActiveDailyMenu && dailyMenu && !isFixedMenu && (
+            <div className="pt-0.5 animate-in fade-in duration-300">
+              <DailyMenuCard
+                dailyMenu={dailyMenu}
+                onOpenModal={() => setIsDailyMenuModalOpen(true)}
+              />
+            </div>
+          )}
 
           {/* Listado de Platos: Vista Lista vs Vista Galería */}
           {viewMode === 'list' ? (
@@ -538,6 +613,16 @@ function DinerMenuContent() {
           onClearCart={() => setCart([])}
           onAddProductInline={(prod) => handleUpdateProductQuantity(prod, 1)}
         />
+
+        {/* Modal de Configuración Guiada del Menú del Día (4 Pasos) */}
+        {dailyMenu && (
+          <DailyMenuModal
+            isOpen={isDailyMenuModalOpen}
+            onClose={() => setIsDailyMenuModalOpen(false)}
+            dailyMenu={dailyMenu}
+            onAddMenuToCart={handleAddDailyMenuToCart}
+          />
+        )}
 
       </div>
     </TenantProvider>

@@ -1,4 +1,4 @@
-import { Restaurant, Category, Product, Table, Order, OrderItem, OrderStatus } from '@/types/database.types'
+import { Restaurant, Category, Product, Table, Order, OrderItem, OrderStatus, DailyMenu } from '@/types/database.types'
 
 export const MOCK_RESTAURANTS: Record<string, Restaurant> = {
   // ── 1. PERFIL DEMO 1: BURGER GOURMET NOIA ──
@@ -681,4 +681,210 @@ export function updateMockOrderStatus(slug: string, orderId: string, newStatus: 
 
 function getInitialMockOrders(slug: string): Order[] {
   return []
+}
+
+// ==============================================================================
+// MENÚ DEL DÍA DINÁMICO (MOCK COMPLETO CON 4 PASOS)
+// ==============================================================================
+
+export const MOCK_DAILY_MENUS: Record<string, DailyMenu> = {
+  'burger-gourmet': {
+    id: 'dm-bg-001',
+    restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+    title: 'Menú Ejecutivo del Día',
+    fixed_price: 14.50,
+    is_active: true,
+    schedule_enabled: true,
+    schedule_days: ['1', '2', '3', '4', '5'],
+    schedule_start_time: '13:00',
+    schedule_end_time: '16:30',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    sections: [
+      {
+        id: 'sec-1',
+        daily_menu_id: 'dm-bg-001',
+        name: 'Primer Plato',
+        sort_order: 1,
+        items: [
+          {
+            id: 'item-d-1',
+            section_id: 'sec-1',
+            dish_id: 'b0000000-0000-0000-0000-000000000013',
+            is_available: true,
+            product: {
+              id: 'b0000000-0000-0000-0000-000000000013',
+              restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+              category_id: 'c0000000-0000-0000-0000-000000000003',
+              name: 'Ensalada Caesar con Pollo Grillado',
+              description: 'Mix de lechugas, pechuga grillada, croutons dorados, parmesano y aderezo caesar tradicional.',
+              price: 9.40,
+              cost_price: 3.90,
+              image_url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+              model_3d_url: null,
+              is_available: true,
+              allergens: ['gluten', 'dairy', 'eggs'],
+            },
+          },
+          {
+            id: 'item-d-2',
+            section_id: 'sec-1',
+            dish_id: 'b0000000-0000-0000-0000-000000000011',
+            is_available: true,
+            product: {
+              id: 'b0000000-0000-0000-0000-000000000011',
+              restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+              category_id: 'c0000000-0000-0000-0000-000000000002',
+              name: 'Bastones de Mozzarella Crocantes',
+              description: '6 bastones empanados en panko con dip de salsa marinara casera.',
+              price: 7.20,
+              cost_price: 1.80,
+              image_url: 'https://images.unsplash.com/photo-1531749668029-2db88e4276c7?auto=format&fit=crop&w=800&q=80',
+              model_3d_url: null,
+              is_available: true,
+              allergens: ['gluten', 'dairy'],
+            },
+          },
+        ],
+      },
+      {
+        id: 'sec-2',
+        daily_menu_id: 'dm-bg-001',
+        name: 'Segundo Plato',
+        sort_order: 2,
+        items: [
+          {
+            id: 'item-d-3',
+            section_id: 'sec-2',
+            dish_id: 'b0000000-0000-0000-0000-000000000014',
+            is_available: true,
+            product: {
+              id: 'b0000000-0000-0000-0000-000000000014',
+              restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+              category_id: 'c0000000-0000-0000-0000-000000000003',
+              name: 'Milanesa Napolitana con Guarnición',
+              description: 'Suprema o ternera tiernizada con salsa de tomate casera, jamón cocido y queso gratinado.',
+              price: 12.50,
+              cost_price: 4.20,
+              image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+              model_3d_url: null,
+              is_available: true,
+              allergens: ['gluten', 'dairy'],
+            },
+          },
+          {
+            id: 'item-d-4',
+            section_id: 'sec-2',
+            dish_id: 'b0000000-0000-0000-0000-000000000016',
+            is_available: true,
+            product: {
+              id: 'b0000000-0000-0000-0000-000000000016',
+              restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+              category_id: 'c0000000-0000-0000-0000-000000000004',
+              name: 'Burger Clásica del Día con Queso Cheddar',
+              description: 'Carne 100% vacuno gallego con queso cheddar fundido y patatas fritas rústicas.',
+              price: 11.90,
+              cost_price: 3.80,
+              image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
+              model_3d_url: null,
+              is_available: true,
+              allergens: ['gluten', 'dairy'],
+            },
+          },
+        ],
+      },
+      {
+        id: 'sec-3',
+        daily_menu_id: 'dm-bg-001',
+        name: 'Postre o Café',
+        sort_order: 3,
+        items: [
+          {
+            id: 'item-d-5',
+            section_id: 'sec-3',
+            dish_id: 'b0000000-0000-0000-0000-000000000018',
+            is_available: true,
+            product: {
+              id: 'b0000000-0000-0000-0000-000000000018',
+              restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+              category_id: 'c0000000-0000-0000-0000-000000000006',
+              name: 'Tarta de Queso Artesana de la Ría',
+              description: 'Tarta de queso horneada al estilo del norte con coulis de frutos rojos.',
+              price: 5.50,
+              cost_price: 1.50,
+              image_url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80',
+              model_3d_url: null,
+              is_available: true,
+              allergens: ['dairy', 'eggs'],
+            },
+          },
+          {
+            id: 'item-d-6',
+            section_id: 'sec-3',
+            dish_id: 'b0000000-0000-0000-0000-000000000019',
+            is_available: true,
+            product: {
+              id: 'b0000000-0000-0000-0000-000000000019',
+              restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+              category_id: 'c0000000-0000-0000-0000-000000000006',
+              name: 'Café de Especialidad 100% Arábica',
+              description: 'Café solo, cortado o con leche a elección.',
+              price: 1.80,
+              cost_price: 0.30,
+              image_url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80',
+              model_3d_url: null,
+              is_available: true,
+              allergens: [],
+            },
+          },
+        ],
+      },
+      {
+        id: 'sec-4',
+        daily_menu_id: 'dm-bg-001',
+        name: 'Bebida Incluida',
+        sort_order: 4,
+        items: [
+          {
+            id: 'item-d-7',
+            section_id: 'sec-4',
+            dish_id: 'b0000000-0000-0000-0000-000000000020',
+            is_available: true,
+            product: {
+              id: 'b0000000-0000-0000-0000-000000000020',
+              restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+              category_id: 'c0000000-0000-0000-0000-000000000005',
+              name: 'Cerveza Estrella Galicia (Caña)',
+              description: 'Caña bien tirada o botellín de Estrella Galicia especial.',
+              price: 2.80,
+              cost_price: 0.70,
+              image_url: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=80',
+              model_3d_url: null,
+              is_available: true,
+              allergens: ['gluten'],
+            },
+          },
+          {
+            id: 'item-d-8',
+            section_id: 'sec-4',
+            dish_id: 'b0000000-0000-0000-0000-000000000021',
+            is_available: true,
+            product: {
+              id: 'b0000000-0000-0000-0000-000000000021',
+              restaurant_id: 'a0000000-0000-0000-0000-000000000001',
+              category_id: 'c0000000-0000-0000-0000-000000000005',
+              name: 'Agua Mineral / Refresco',
+              description: 'Botella de agua mineral 50cl o refresco a elección.',
+              price: 2.20,
+              cost_price: 0.50,
+              image_url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80',
+              model_3d_url: null,
+              is_available: true,
+              allergens: [],
+            },
+          },
+        ],
+      },
+    ],
+  },
 }

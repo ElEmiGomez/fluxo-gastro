@@ -74,6 +74,17 @@ export function AdminHeader({
             Categorías ({categoriesCount})
           </button>
           <button
+            onClick={() => onTabChange('daily_menu')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'daily_menu'
+                ? 'bg-amber-400 text-slate-950 shadow-md'
+                : 'text-amber-400 hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Menú del Día</span>
+          </button>
+          <button
             onClick={() => onTabChange('ai_import')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1 ${
               activeTab === 'ai_import'

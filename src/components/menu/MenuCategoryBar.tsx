@@ -25,6 +25,7 @@ interface MenuCategoryBarProps {
   updateScrollButtons: () => void
   isInSituAdmin: boolean
   onOpenAddProductModal: (catId?: string) => void
+  hasActiveDailyMenu?: boolean
 }
 
 export function MenuCategoryBar({
@@ -46,6 +47,7 @@ export function MenuCategoryBar({
   updateScrollButtons,
   isInSituAdmin,
   onOpenAddProductModal,
+  hasActiveDailyMenu = false,
 }: MenuCategoryBarProps) {
   const t = (key: string) => getTranslation(currentLang, key)
 
@@ -258,8 +260,8 @@ export function MenuCategoryBar({
         )}
       </div>
 
-      {/* Sugerencia Inteligente del Chef */}
-      {isInitialSection && (
+      {/* Sugerencia Inteligente del Chef (Oculta si el Menú del Día está activo y vigente) */}
+      {isInitialSection && !hasActiveDailyMenu && (
         <div className="p-3 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl shadow-xs flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
             <Sparkles size={16} />
