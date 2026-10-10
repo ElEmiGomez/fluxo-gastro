@@ -6,6 +6,21 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-10 16:50] — Refactorización Modular SOLID Concluida: Desacoplamiento de Repositorios y Rutas API (Fluxo 1.2)
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Acciones Realizadas:**
+  - **Fase 4 Backend & Capa de Datos:** Descompuesto el monolito `src/lib/supabase/repository.ts` (+990 líneas) en repositorios especializados bajo responsabilidad única (SRP):
+    - [`restaurants.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/restaurants.repository.ts)
+    - [`tables.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/tables.repository.ts)
+    - [`orders.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/orders.repository.ts)
+    - [`service-calls.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/service-calls.repository.ts)
+    - [`menu.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/menu.repository.ts)
+  - **Patrón Fachada Unificada:** `src/lib/supabase/repository.ts` actúa como facade re-exportando el 100% de los métodos para garantizar cero regresiones y retrocompatibilidad total en los endpoints existentes.
+  - **Servicio de Validación de Pedidos y Precios:** Extraída la lógica de validación de catálogo, productos canónicos y forzado de precios oficiales en [`src/lib/orders/order-validator.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/orders/order-validator.ts), reduciendo `src/app/api/orders/route.ts` de 586 a ~300 líneas.
+  - **Certificación de Calidad:** 0 errores en tipado estricto (`npx.cmd tsc --noEmit`) y 12/12 rutas compiladas limpiamente en `npm.cmd run build`.
+
+---
+
 ### [2026-10-10 16:22] — Conexión Operativa: Correo Oficial contactofluxosystem@gmail.com Configurado (Punto 3.2 Check)
 * **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
 * **Acciones Realizadas:**
