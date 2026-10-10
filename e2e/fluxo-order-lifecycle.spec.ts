@@ -108,12 +108,11 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
     await waiterPage.goto(`/staff/comandero/${SLUG}`, { waitUntil: 'domcontentloaded' })
 
     // Si aún aparece el teclado de PIN de mozo, ingresar PIN '1234'
-    const pinPad1 = waiterPage.getByRole('button', { name: '1', exact: true })
-    if (await pinPad1.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await pinPad1.click()
-      await waiterPage.getByRole('button', { name: '2', exact: true }).click()
-      await waiterPage.getByRole('button', { name: '3', exact: true }).click()
-      await waiterPage.getByRole('button', { name: '4', exact: true }).click()
+    const pinModal = waiterPage.locator('text=Acceso Comandero Mozo')
+    if (await pinModal.isVisible({ timeout: 1500 }).catch(() => false)) {
+      for (const digit of ['1', '2', '3', '4']) {
+        await waiterPage.locator('button', { hasText: new RegExp(`^${digit}$`) }).click()
+      }
     }
 
     // El mozo ve la comanda en pending_validation de la mesa del test
@@ -153,12 +152,11 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
     await kitchenPage.goto(`/staff/kitchen/${SLUG}`, { waitUntil: 'domcontentloaded' })
 
     // Si aparece PIN en cocina, ingresar PIN '5678'
-    const kitchenPin5 = kitchenPage.getByRole('button', { name: '5', exact: true })
-    if (await kitchenPin5.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await kitchenPin5.click()
-      await kitchenPage.getByRole('button', { name: '6', exact: true }).click()
-      await kitchenPage.getByRole('button', { name: '7', exact: true }).click()
-      await kitchenPage.getByRole('button', { name: '8', exact: true }).click()
+    const kitchenPinModal = kitchenPage.locator('text=Acceso Monitor Cocina (KDS)')
+    if (await kitchenPinModal.isVisible({ timeout: 1500 }).catch(() => false)) {
+      for (const digit of ['5', '6', '7', '8']) {
+        await kitchenPage.locator('button', { hasText: new RegExp(`^${digit}$`) }).click()
+      }
     }
 
     // La cocina ve el ticket de la comanda con botón "INICIAR PREPARACIÓN"
