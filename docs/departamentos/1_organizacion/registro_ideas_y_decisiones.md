@@ -44,7 +44,28 @@
 * [ ] **Flujo de Trabajo Spec-Driven Development (SDD) & Git Branching:** Trabajar como arquitectos definiendo especificaciones antes de codear, validando unit tests focalizados y usando ramas de Git para mantener `main` 100% estable.
 * [ ] **Control de Stock Dinámico ("Se Agotó"):** Botón rápido en el comandero del mozo para ocultar un plato de la carta cuando se acabe el ingrediente.
 * [ ] **Recomendación Inteligente de Postre/Café:** Al pasar la comanda a estado `delivered`, sugerir sutilmente cafés o postres caseros para aumentar el ticket medio.
-* [ ] **Tarjeta de Fidelización Digital & Sistema de Puntos / Recompensas:** Programa de lealtad para comensales frecuentes sin requerir descarga de apps pesadas (vía número de teléfono o enlace en la PWA / Apple o Google Wallet). Permite acumular puntos por visita o volumen consumido (€), canjear regalos directos en sala (platos de cortesía, postre/café de regalo) o aplicar descuentos en la siguiente visita. Brinda al restaurante un CRM gastronómico propio para elevar la recurrencia y el ticket medio de clientes habituales.
+* [ ] **Tarjeta de Fidelización Digital & Sistema de Puntos con Saldo Retenido (Escrow):**
+  - **Identificación Zero-Fricción:** Nombre de pila + Correo electrónico (e-mail marketing/promociones) guardado en `localStorage` de la PWA sin contraseñas ni apps externas.
+  - **Indicador Superior:** Píldora compacta en el encabezado de la carta (`[ ⭐ X pts disponibles ]` o `[ ⭐ Puntos ]` si no ha iniciado sesión).
+  - **Patrón de Saldo Retenido (Escrow Antifraude):**
+    `Puntos Disponibles = Puntos Totales - Puntos Retenidos en Comandas Activas`.
+    Al añadir un plato del catálogo de puntos (ej. café por 20 pts), los puntos se retienen inmediatamente para evitar sobregastos o doble canje en mesas activas. Si cocina o mozo cancelan el plato, los puntos se liberan. Al cobrar la mesa y cerrar la sesión (`closeTableSession`), los puntos retenidos se descuentan definitivamente y se suman los puntos nuevos por consumo en una transacción atómica.
+  - **Visibilidad en Cocina y Comandero:** Los platos canjeados se marcan como cortesía (`is_complimentary: true`, 0,00 €) con la etiqueta visual `[🎁 Canje Fidelización: -X pts]`.
+  - **Sinergia con Google Review Booster:** En la pantalla post-pago (recuadro verde de despedida), resaltar un banner dorado: *«⭐ Deja tu reseña en Google Maps y suma +50 PUNTOS EXTRA al instante»* (un solo uso por cliente).
+  - **Reparto en Mesa Multicomensal:** Por defecto, los puntos se acreditan al cliente que solicita la precuenta/identificado en la sesión.
+* [ ] **Soporte Multilingüe Top 10 Idiomas de Europa y la Península Ibérica:**
+  - Ampliación del motor de traducción y catálogo digital para turismo internacional y regional en Galicia/España:
+    1. Galego (nativo)
+    2. Español (nativo)
+    3. English (internacional)
+    4. Français
+    5. Deutsch
+    6. Português
+    7. Italiano
+    8. Nederlands
+    9. Català
+    10. Euskara
+  - Selector ágil de idioma en la cabecera de la carta con traducción reactiva de categorías, descripciones de platos, alérgenos y avisos de sala.
 * [ ] **Telemetría de Tiempos de Pase:** Detección de cuellos de botella entre comanda confirmada y entrega en mesa para optimizar cocina en Plan Suite.
 * [ ] **Integración de Impresión Automática en Cocina vía Webhooks:** Disparo directo a tiqueteras térmicas sin depender de pantalla física.
 
