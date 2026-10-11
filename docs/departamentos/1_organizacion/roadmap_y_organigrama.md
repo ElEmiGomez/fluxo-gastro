@@ -73,6 +73,8 @@ flowchart TD
 │  ├─ [📋 Pendiente #3.1] LSSI-CE: Datos fiscales del titular en /legal   │
 │  ├─ [x] Punto 3.2: Correo contactofluxosystem@gmail.com configurado     │
 │  │     (enlace activo en LEAD_NOTIFICATION_EMAIL y página legal)        │
+│  ├─ [📋 Pendiente #9] Multilenguaje: Ampliación a Top 10 idiomas globales  │
+│  │     (gl, es, en, fr, de, it, pt, zh, ja, ar con banderas y selector)    │
 │  └─ [x] Arquitectura funcional modular y desacoplamiento por dominio    │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │

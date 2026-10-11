@@ -6,6 +6,24 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-11 11:05] — Nueva Tarea Técnica: Expansión de Multilenguaje a Top 10 Idiomas Más Hablados (Punto 9)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
+* **Definición de Tarea:**
+  - **Objetivo:** Ampliar el soporte actual de 3 lenguas (`gl`, `es`, `en`) al **Top 10 de idiomas de mayor impacto global y turístico** en [`src/lib/i18n.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/i18n.ts):
+    1. Galego (`gl`) 🔵 (Lengua oficial local / turismo comarcal)
+    2. Español (`es`) 🇪🇸
+    3. English (`en`) 🇬🇧
+    4. Français (`fr`) 🇫🇷
+    5. Deutsch (`de`) 🇩🇪
+    6. Italiano (`it`) 🇮🇹
+    7. Português (`pt`) 🇵🇹
+    8. 中文 (Chino Mandarín) (`zh`) 🇨🇳
+    9. 日本語 (Japonés) (`ja`) 🇯🇵
+    10. العربية (Árabe estándar) (`ar`) 🇸🇦
+  - **Alcance Operativo:** Diccionarios de UI (botones, estados de comanda, llamadas de mozo, cuenta, alérgenos), nombres y descripciones de categorías en carta digital y selector responsivo con banderas/nombres nativos.
+
+---
+
 ### [2026-10-10 22:15] — Inteligencia de Mercado B2B: Posicionamiento Anti-Hardware (BYOD) y Nuevas Battle Cards
 * **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Organización General e Ingeniería.
 * **Acciones Realizadas:**
