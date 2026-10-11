@@ -34,6 +34,7 @@
 | **DEC-24** | 08/09/2026 | Ingeniería & QA | **Certificación Integral Multi-Agente (132/132 Checks - VICTORY CONFIRMED)**. | Verificación unánime con auditoría forense independiente: Playwright E2E, Strix Scanner (8/8), RLS Auditor (30/30), OCC Concurrencia (42/42) y Certificación en Vivo (24/24). |
 | **DEC-25** | 04/10/2026 | Mesa Técnica (Emiliano, Guillermo F. Gómez & Ignacio Cerutti) | **Erradicación Total de Eventos Ficticios en Memoria y SSOT Estricto en Supabase**. | Queda terminantemente prohibido generar pedidos o llamadas sintéticas provisionales (`call-...`, `ord-...`) ante fallos de inserción o Foreign Key. El sistema debe fallar de forma ruidosa y controlada: mostrar modal de error con reintento en la UI del cliente, registrar el fallo con stack trace en la tabla `system_error_logs` de Supabase, y mantener la base de datos como Fuente Única de Verdad (SSOT). |
 | **DEC-26** | 10/10/2026 | Organización & Program Data | **Refactorización Arquitectónica Modular SOLID y Desacoplamiento de Monolitos (Fluxo 1.2)**. | Descomposición de pantallas monolíticas (+6.000 líneas) en React Custom Hooks especializados y componentes presentacionales puros (Comandero, Carta Comensal, Admin de Menú y Repositorios de Dominio). Reducción del 84% de líneas en orquestadores, 0 regresiones en suites E2E (Playwright 10/10 PASS, Strix 8/8 PASS, RLS 33/33 PASS) y mecanismo de rollback inmutable garantizado en Git (`v1.0.0-stable`). |
+| **DEC-27** | 11/10/2026 | UI/UX, Producto & Dirección | **Soporte Multilingüe Oficial Top 10 Idiomas de Europa y Península Ibérica (Fluxo 1.2)**. | Despliegue del motor de internacionalización con 10 idiomas oficiales nativos: Galego (gl), Español (es), English (en), Français (fr), Deutsch (de), Português (pt), Italiano (it), Nederlands (nl), Català (ca) y Euskara (eu). Cobertura del 100% en: selector de cabecera con scroll suave y nombres nativos, 20 categorías gastronómicas, 22 platos con nombres y descripciones completas, 90+ claves de UI y micro-onboarding, 14 alérgenos de declaración obligatoria UE (Reglamento 1169/2011) y validación server-side de comandas en `/api/orders`. 79/79 y 1013/1013 tests automatizados superados con 0 errores. |
 
 ---
 
@@ -53,7 +54,7 @@
   - **Visibilidad en Cocina y Comandero:** Los platos canjeados se marcan como cortesía (`is_complimentary: true`, 0,00 €) con la etiqueta visual `[🎁 Canje Fidelización: -X pts]`.
   - **Sinergia con Google Review Booster:** En la pantalla post-pago (recuadro verde de despedida), resaltar un banner dorado: *«⭐ Deja tu reseña en Google Maps y suma +50 PUNTOS EXTRA al instante»* (un solo uso por cliente).
   - **Reparto en Mesa Multicomensal:** Por defecto, los puntos se acreditan al cliente que solicita la precuenta/identificado en la sesión.
-* [ ] **Soporte Multilingüe Top 10 Idiomas de Europa y la Península Ibérica:**
+* [x] **Soporte Multilingüe Top 10 Idiomas de Europa y la Península Ibérica [IMPLEMENTADO FLUXO 1.2]:**
   - Ampliación del motor de traducción y catálogo digital para turismo internacional y regional en Galicia/España:
     1. Galego (nativo)
     2. Español (nativo)

@@ -6,6 +6,20 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-11 17:05] — Implementación Completa: Soporte Oficial Top 10 Idiomas de Europa y Península (Fluxo 1.2)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), UI/UX y Dirección General.
+* **Acciones Realizadas:**
+  - **Ampliación Integral del Motor de Internacionalización (`src/lib/i18n.ts`):** Cobertura del 100% en los 10 idiomas oficiales: Galego (`gl`), Español (`es`), English (`en`), Français (`fr`), Deutsch (`de`), Português (`pt`), Italiano (`it`), Nederlands (`nl`), Català (`ca`) y Euskara (`eu`).
+  - **20 Categorías Gastronómicas:** Traducidas con precisión y coherencia en las 10 lenguas.
+  - **22 Platos Canónicos:** Nombres y descripciones completas en cada idioma.
+  - **90+ Claves UI:** Botonera superior, llamadas de servicio, micro-onboarding de 4 pasos, comanda, seguimiento en tiempo real y menú del día.
+  - **14 Alérgenos UE (`src/lib/allergens.ts`):** Catálogo canónico oficial con nomenclatura regulada (Reglamento UE 1169/2011) en los 10 idiomas.
+  - **Selector Responsivo (`src/components/menu/MenuHeader.tsx`):** Menú desplegable optimizado con scroll suave (`w-48 max-h-80 overflow-y-auto scrollbar-thin`), banderas y nombres nativos.
+  - **Validación de Pedidos (`src/app/api/orders/route.ts`):** Reconocimiento server-side de nombres de platos ordenados en cualquiera de los 10 idiomas oficiales.
+  - **Certificación Automatizada:** `scripts/test_top_10_languages.mjs` (79/79 PASS) y `scripts/test_1000_multilang_exhaustivo.mjs` (1013/1013 PASS) 100% verdes con 0 fallos. Type check (`tsc --noEmit`) 100% limpio.
+
+---
+
 ### [2026-10-11 11:05] — Nueva Tarea Técnica: Expansión de Multilenguaje a Top 10 Idiomas Más Hablados (Punto 9)
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
 * **Definición de Tarea:**

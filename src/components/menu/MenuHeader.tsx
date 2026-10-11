@@ -102,31 +102,36 @@ export function MenuHeader({
                   className="fixed inset-0 z-40" 
                   onClick={() => setShowLangDropdown(false)} 
                 />
-                <div className="absolute right-0 mt-1.5 w-36 bg-white rounded-2xl shadow-xl border border-slate-200 py-1 z-50 animate-in fade-in zoom-in-95 overflow-hidden">
-                  {TOP_LANGUAGES.map((langOpt) => {
-                    const isSelected = currentLang === langOpt.code
-                    return (
-                      <button
-                        key={langOpt.code}
-                        type="button"
-                        onClick={() => {
-                          setCurrentLang(langOpt.code)
-                          setShowLangDropdown(false)
-                        }}
-                        className={`w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors ${
-                          isSelected
-                            ? 'bg-blue-50 text-blue-900 font-extrabold'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span>{langOpt.flag}</span>
-                          <span>{langOpt.name}</span>
-                        </span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-blue-900 stroke-[3]" />}
-                      </button>
-                    )
-                  })}
+                <div className="absolute right-0 mt-1.5 w-48 max-h-80 overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 scrollbar-thin divide-y divide-slate-100">
+                  <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/80">
+                    Idiomas / Languages
+                  </div>
+                  <div className="py-1">
+                    {TOP_LANGUAGES.map((langOpt) => {
+                      const isSelected = currentLang === langOpt.code
+                      return (
+                        <button
+                          key={langOpt.code}
+                          type="button"
+                          onClick={() => {
+                            setCurrentLang(langOpt.code)
+                            setShowLangDropdown(false)
+                          }}
+                          className={`w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors ${
+                            isSelected
+                              ? 'bg-blue-50 text-blue-900 font-extrabold'
+                              : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <span className="text-sm">{langOpt.flag}</span>
+                            <span className="truncate">{langOpt.nativeName}</span>
+                          </span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-blue-900 stroke-[3] flex-shrink-0" />}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </>
             )}
