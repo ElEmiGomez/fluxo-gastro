@@ -26,7 +26,8 @@ flowchart TD
 ---
 
 ## ☀️ Tablero Diario de Tareas (Standup de Estabilidad & Calidad — 04/10/2026)
-> **Directiva Ejecutiva de la Startup:** Prioridad operativa absoluta: **Fixear Fluxo en su totalidad**. Toda expansión comercial o nuevas funcionalidades quedan en segundo plano hasta certificar estabilidad punta a punta, eliminación de fallos silenciosos y tolerancia cero a datos ficticios en memoria.
+> **Directiva Ejecutiva de la Startup:** Prioridad operativa absoluta: **Fixear Fluxo en su totalidad**. Toda expansión comercial o nuevas funcionalidades quedan en segundo plano hasta certificar estabilidad punta a punta, eliminación de fallos silenciosos y tolerancia cero a datos ficticios en memoria.  
+> 🔔 **RECORDATORIO PENDIENTE EN VERCEL:** En Vercel (`Project Settings -> Environment Variables`), actualizar la variable `LEAD_NOTIFICATION_EMAIL` a `contactofluxosystem@gmail.com` para que los leads de la landing page en producción lleguen a la cuenta nueva.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -37,6 +38,7 @@ flowchart TD
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ 🏛️ 1. ORGANIZACIÓN GENERAL (COO / Coordinación General)                 │
 │  ├─ [x] Registro DEC-25: Erradicación Total de Eventos Ficticios        │
+│  ├─ [x] Registro DEC-26: Refactorización Modular SOLID (Fluxo 1.2)       │
 │  ├─ [x] Sincronización de acuerdos técnicos Guillermo F. Gómez & Nacho   │
 │  ├─ [x] Actualización de prioridades: Standby en Menú del Día y Ventas │
 │  └─ [x] Adopción de metodología Spec-Driven Development & Git Branching │
@@ -64,15 +66,18 @@ flowchart TD
 │  ├─ [x] Punto 8: Notificación persistente de servicio en mesa funcional │
 │  ├─ [x] Punto 5: Alérgenos UE (Reglamento 1169/2011) en catálogo/admin  │
 │  ├─ [x] Punto 4: Cláusula de exención fiscal Veri*Factu / Ley Antifraude│
-│  ├─ [⏳ En Curso] Punto 7: Pulir detalles del Admin de Cartas In Situ   │
-│  ├─ [⏳ En Curso] Punto 6: Mantenimiento y validación continua flujo E2E│
-│  ├─ [📋 Pendiente #1 - Crítico] Ejecutar migraciones en Supabase Cloud  │
-│  │     (catálogo canónico, stock RLS y clave foránea de llamadas)       │
+│  ├─ [x] Punto 7: Admin de Cartas e In Situ consolidado y testeado        │
+│  ├─ [x] Punto 6: Validación integral E2E y suites Playwright al 100%    │
+│  ├─ [x] Punto 1: Migraciones en Supabase Cloud ejecutadas y verificadas │
 │  ├─ [x] Punto 2: Aislamiento de secretos y chequeo Vercel certificado   │
 │  ├─ [📋 Pendiente #3.1] LSSI-CE: Datos fiscales del titular en /legal   │
-│  ├─ [📋 Pendiente #3.2] Correo Corporativo Fluxo & Landing Leads        │
-│  │     (creación de email empresarial y enlace en LEAD_NOTIFICATION)    │
-│  └─ [ ] Certificación integral y refactorización modular SOLID          │
+│  ├─ [x] Punto 3.2: Correo contactofluxosystem@gmail.com configurado     │
+│  │     (enlace activo en LEAD_NOTIFICATION_EMAIL y página legal)        │
+│  ├─ [📋 Pendiente #9] Multilenguaje: Ampliación a Top 10 idiomas globales  │
+│  │     (gl, es, en, fr, de, it, pt, zh, ja, ar con banderas y selector)    │
+│  ├─ [📋 Pendiente #10] Generación Masiva de Códigos QR para Mesas (25-30+) │
+│  │     (Integrar selector de rango/lote e impresión en /staff/qr/[slug])    │
+│  └─ [x] Arquitectura funcional modular y desacoplamiento por dominio    │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐

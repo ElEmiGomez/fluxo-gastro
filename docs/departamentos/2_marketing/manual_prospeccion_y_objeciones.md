@@ -136,3 +136,36 @@ Pásame por aquí una foto o el PDF de tu carta actual y mañana por la mañana 
 * **Cierre al Piloto ("Desafío Terraza de 14 días"):**
   > "Probémoslo este viernes en solo 5 mesas de tu terraza. Si no te gusta o tus camareros no trabajan más descansados, me llevo los QR y te ha costado cero euros."
 * **Plan Recomendado:** `Full_99` | **Foco Táctico:** Aclarar a los clientes gallegos que TicketBAI es foral vasco y que en Galicia solo rige Veri*Factu.
+
+---
+
+### 🥊 Battle Card 4: Frente a los Gigantes del Hardware TPV (Turbopos, Shift4, Epos Now)
+
+* **Disparador de Campo (Lo que dice el hostelero):**
+  > "Ya tengo un TPV con pantallas fijas táctiles en cocina y comanderas que me costaron más de 1.500€."
+* **Por qué lo dice (Raíz psicológica):** Miedo a tirar a la basura una inversión previa o contratar hardware nuevo con mantenimiento mensual abusivo.
+* **Respuesta Táctica Quirúrgica (30 segundos a pie de calle):**
+  > "Conserva tu TPV de siempre, no lo toques para nada. Fluxo es 100% web y BYOD (Trae Tu Propio Dispositivo): se monta en los móviles que tus camareros ya llevan en el bolsillo. Si tu pantalla de cocina de 1.000€ se rompe un sábado a las diez de la noche, estás paralizado. Con Fluxo sacas una tablet de 80€ o cualquier móvil del cajón, abres el enlace y en 10 segundos tu cocina sigue despachando sin pagar cuotas de mantenimiento técnico."
+* **La Cuenta de la Servilleta (ROI Demostrable):**
+  - Cero euros en pantallas propietarias nuevas.
+  - Plan Sala (69€) o Full (99€) plano.
+  - Retorno inmediato: el servicio no se interrumpe jamás por fallo de hardware propietario.
+* **Cierre al Piloto ("Desafío Terraza de 14 días"):**
+  > "No toques tu TPV central. Pongamos 5 peanas QR en las mesas más lejanas de la terraza este fin de semana. Si tus camareros no cobran el doble de rápido, retiramos las peanas el lunes a coste cero."
+* **Plan Recomendado:** `Sala_69` o `Full_99` | **Foco Táctico:** Presentar a Fluxo como una 'capa de aceleración exterior', no como un sustituto del TPV.
+
+---
+
+### 🥊 Battle Card 5: Frente a la Nueva Escuela de Order & Pay con Comisión (Honei, Sunday, Forkpi)
+
+* **Disparador de Campo (Lo que dice el hostelero):**
+  > "He visto aplicaciones donde el cliente pide y paga directamente con su tarjeta desde el código QR."
+* **Por qué lo dice (Raíz psicológica):** Le atrae la idea de que el cliente pague solo, pero desconoce el impacto del cobro de comisiones bancarias y los pedidos fantasma.
+* **Respuesta Táctica Quirúrgica (30 segundos a pie de calle):**
+  > "Ojo con esas plataformas: te cobran entre un 1.5% y un 2% de comisión sobre cada euro que pasa por la mesa. En una terraza que facture 8.000€ al mes, ¡te están quitando más de 160€ solo en comisiones de pasarela! Además, si un cliente hace una broma desde la calle, la comanda va directa a cocina y pierdes materia prima. En Fluxo cobramos 0% de comisiones (sigues cobrando en tu datáfono de siempre) y tenemos el filtro Mozo Gatekeeper: a cocina no va nada hasta que tu camarero lo aprueba con un toque."
+* **La Cuenta de la Servilleta (ROI Demostrable):**
+  - Plataformas con 2% de comisión: 160€ de comisiones + 40€ cuota = 200€/mes.
+  - Fluxo Plan Sala: 69€/mes fijos, 0% de comisiones. Ahorro directo: **+131€/mes limpios**.
+* **Cierre al Piloto ("Desafío Terraza de 14 días"):**
+  > "Prueba el sistema con 0% de comisión y control de comandas en tus 5 mesas exteriores. Tu dinero sigue entrando íntegro a tu banco."
+* **Plan Recomendado:** `Sala_69` | **Foco Táctico:** Destacar la protección de margen y el filtro antifraude Gatekeeper.

@@ -53,7 +53,7 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
   // Estado para filtros internos
   const [granularity, setGranularity] = useState<GranularityOption>('month')
   const [bcgFilter, setBcgFilter] = useState<BCGFilterOption>('all')
-  const [showEscandallos, setShowEscandallos] = useState(false)
+  const [showCostMargins, setShowCostMargins] = useState(false)
   const [showIncidents, setShowIncidents] = useState(false)
   const [expandedDishId, setExpandedDishId] = useState<string | null>(null)
 
@@ -308,8 +308,12 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
     { day: 30, date: 'Lun 30 Sep', status: 'optimal', badge: 'Servicio Óptimo', desc: 'Cierre de mes con pase medio de 11.0 min.', pase: '11.0 min', orders: '15 pedidos' }
   ]
 
-  // Catálogo completo de platos para la tabla ejecutiva BCG
-  const allDishes = useMemo(() => [
+  // Catálogo completo de platos para la tabla ejecutiva BCG (datos reales o calibrados)
+  const allDishes = useMemo(() => {
+    if (bcg.all_dishes && Array.isArray(bcg.all_dishes) && bcg.all_dishes.length > 0) {
+      return bcg.all_dishes
+    }
+    return [
     {
       id: 'smash-burger',
       name: 'Smash Burger Doble Queso',
@@ -323,7 +327,7 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
       marginPct: 74,
       action: 'Mantener precio',
       actionClass: 'bg-blue-50 text-blue-700 border-blue-200',
-      reasoning: 'Alta demanda y excelente margen. No tocar receta; optimizar velocidad de plancha en pase para picos de viernes noche.'
+      reasoning: 'Alta demanda y excelente margen. No tocar receta; optimizar velocidad de preparación previa para picos de servicio.'
     },
     {
       id: 'pulpo-brasa',
@@ -430,12 +434,12 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
       actionClass: 'bg-purple-50 text-purple-700 border-purple-200',
       reasoning: 'Margen del 76%. Emparejarlo con copa de Ribera del Duero en el menú digital eleva el ticket medio de la comanda en +4,50 €.'
     }
-  ], [])
+  ]}, [bcg.all_dishes])
 
   // Filtrado reactivo de platos
   const filteredDishes = useMemo(() => {
     if (bcgFilter === 'all') return allDishes
-    return allDishes.filter(d => d.type === bcgFilter)
+    return allDishes.filter((d: any) => d.type === bcgFilter)
   }, [allDishes, bcgFilter])
 
   // Derivados reactivos para los hovers interactivos
@@ -1278,16 +1282,16 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
               <div className="pt-2 border-t border-slate-100 text-xs">
                 <button
                   type="button"
-                  onClick={() => setShowEscandallos(!showEscandallos)}
+                  onClick={() => setShowCostMargins(!showCostMargins)}
                   className="no-print w-full flex items-center justify-between font-bold text-blue-600 hover:text-blue-700 cursor-pointer py-1 select-none text-left"
                 >
                   <span className="flex items-center gap-1.5">
                     <Layers className="w-3.5 h-3.5 text-blue-600" />
-                    {showEscandallos ? 'Ocultar Costes & Márgenes' : 'Desplegar desglose de costes de producto y márgenes'}
+                    {showCostMargins ? 'Ocultar Costes & Márgenes' : 'Desplegar desglose de costes de producto y márgenes'}
                   </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showEscandallos ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showCostMargins ? 'rotate-180' : ''}`} />
                 </button>
-                <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${showEscandallos ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
+                <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${showCostMargins ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
                   <div className="overflow-hidden">
                     <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2 text-[11px] text-slate-600">
                       <div className="flex justify-between border-b border-slate-200 pb-1">
@@ -1600,7 +1604,9 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
                       </div>
                       <div>
                         <span className="text-[10px] text-slate-400 uppercase font-semibold block">Pase Medio</span>
-                        <span className="font-bold text-slate-900 font-mono">11.4 min</span>
+                        <span className="font-bold text-slate-900 font-mono">
+                          {tableTimes.avg_kitchen_prep_sec ? `${(tableTimes.avg_kitchen_prep_sec / 60).toFixed(1)} min` : '11.4 min'}
+                        </span>
                       </div>
                     </div>
                     <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
@@ -1751,7 +1757,7 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
-                    {filteredDishes.map((dish) => {
+                    {filteredDishes.map((dish: any) => {
                       const isExpanded = expandedDishId === dish.id
 
                       return (

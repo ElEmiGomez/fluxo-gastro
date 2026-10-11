@@ -167,8 +167,9 @@ export default function KitchenKDSPage() {
 
     // A. Canal Nativo Supabase Realtime (postgres_changes en orders y order_events)
     if (supabase) {
+      const channelId = `kds-orders-${slug}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
       realtimeChannel = supabase
-        .channel(`kds-orders-${slug}`)
+        .channel(channelId)
         .on(
           'postgres_changes',
           {
@@ -194,8 +195,8 @@ export default function KitchenKDSPage() {
         .subscribe()
     }
 
-    // B. SSE de respaldo para modo offline/local (solo si no hay canal de Supabase)
-    if (!supabase) {
+    // B. SSE de respaldo para modo offline/local (solo si no hay canal de Supabase y en desarrollo local)
+    if (!supabase && process.env.NODE_ENV === 'development') {
       try {
         let sseDebounceTimer: any = null
         const triggerDebouncedFetch = () => {
@@ -228,7 +229,9 @@ export default function KitchenKDSPage() {
 
     // C. Soft Polling de Respaldo cada 4.5 segundos (R4 de Interface Contracts)
     pollInterval = setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return
+      }
       fetchServerOrders()
     }, 4500)
 

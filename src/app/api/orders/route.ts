@@ -32,6 +32,7 @@ import { PRODUCT_NAMES } from '@/lib/i18n'
 import { deduplicateProducts } from '@/lib/category-matcher'
 import { Order, OrderItem, OrderStatus, Product } from '@/types/database.types'
 import { verifyStaffRequest } from '@/lib/auth/pin-security'
+import { getDailyMenu, isDailyMenuActive } from '@/lib/supabase/repositories/daily-menu.repository'
 
 const isUuid = (str?: string | null): boolean =>
   Boolean(str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str))
@@ -53,6 +54,14 @@ export async function GET(req: NextRequest) {
     const restaurant = await getRestaurantBySlug(slug)
     const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
     const orders = await getRestaurantOrders(restaurantId, slug)
+    const tableParam = searchParams.get('table') || searchParams.get('table_number')
+    let returnedOrders = orders
+    if (tableParam) {
+      const parsedT = parseInt(tableParam, 10)
+      if (!isNaN(parsedT)) {
+        returnedOrders = orders.filter(o => Number(o.table_number) === parsedT || Number(o.table?.table_number) === parsedT)
+      }
+    }
     const catalogProducts = getServerProducts(slug)
     const overrides = getProductAvailabilityOverrides(slug)
 
@@ -90,7 +99,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       {
-        orders,
+        orders: returnedOrders,
         paused_product_ids: pausedProductIds,
         product_availability: productAvailability,
       },
@@ -353,6 +362,28 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // 6.5. Validación de Menú del Día Dinámico con precio cerrado oficial
+      if (!catalogProduct && (productId?.startsWith('daily-menu-') || rawProductId?.startsWith('daily-menu-') || targetClean.includes('menu del dia') || targetClean.includes('menú del día'))) {
+        try {
+          const dailyMenuData = await getDailyMenu(restaurantId, slug)
+          if (dailyMenuData && isDailyMenuActive(dailyMenuData)) {
+            catalogProduct = {
+              id: productId || `daily-menu-${dailyMenuData.id}`,
+              restaurant_id: restaurantId,
+              category_id: 'cat-menu-del-dia',
+              name: dailyMenuData.title,
+              description: 'Menú del Día (4 pasos incluidos)',
+              price: Number(dailyMenuData.fixed_price) || 14.5,
+              image_url: null,
+              model_3d_url: null,
+              is_available: true,
+            }
+          }
+        } catch (dmErr) {
+          console.warn('[Orders POST] Error resolving daily menu:', dmErr)
+        }
+      }
+
       // 7. Fallback dinámico resiliente: plato in-situ / plato personalizado / plato de carta activa
       if (!catalogProduct && (itemName || productId)) {
         const resolvedPrice = itemPrice > 0 ? itemPrice : 0
@@ -388,9 +419,16 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      // Cortesía ("Invita la casa"): Solo autorizada para personal de sala autenticado
+      // Cortesía ("Invita la casa" o Canje de Puntos de Fidelización)
       const isStaffSender = verifyStaffRequest(req, slug, ['comandero', 'admin', 'kitchen'])
-      const isComplimentary = Boolean(isStaffSender && (item.is_complimentary || (item.notes && item.notes.includes('[🎁 INVITACIÓN DE LA CASA]'))))
+      const isLoyaltyRedeemed = Boolean(
+        (Number(item.loyalty_points_redeemed) > 0) ||
+        (item.notes && item.notes.includes('[🎁 Canje Fidelización'))
+      )
+      const isComplimentary = Boolean(
+        (isStaffSender && (item.is_complimentary || (item.notes && item.notes.includes('[🎁 INVITACIÓN DE LA CASA]')))) ||
+        isLoyaltyRedeemed
+      )
 
       const itemPriceToCharge = isComplimentary ? 0 : (Number(catalogProduct.price) || 0)
       computedTotal += itemPriceToCharge * quantity
@@ -410,6 +448,7 @@ export async function POST(req: NextRequest) {
           id: canonicalProdId,
         },
         is_complimentary: isComplimentary,
+        loyalty_points_redeemed: item.loyalty_points_redeemed ? Number(item.loyalty_points_redeemed) : undefined,
         course: item.course || 'first',
       })
     }
@@ -433,6 +472,30 @@ export async function POST(req: NextRequest) {
       total_amount: computedTotal,
       items: validItems,
     })
+
+    // Si la comanda incluye canjes de puntos y se indicó loyalty_email, asegurar el escrow sin duplicar
+    if (body.loyalty_email && validItems.some(i => (i.loyalty_points_redeemed || 0) > 0)) {
+      try {
+        const totalPointsToHold = validItems.reduce((acc, i) => acc + (Number(i.loyalty_points_redeemed) || 0) * (i.quantity || 1), 0)
+        if (totalPointsToHold > 0) {
+          const { holdLoyaltyPoints, getLoyaltyProfile } = await import('@/lib/supabase/repositories/loyalty.repository')
+          const profile = await getLoyaltyProfile(slug, body.loyalty_email)
+          const currentlyHeld = profile?.held_points || 0
+          if (currentlyHeld < totalPointsToHold) {
+            const deltaPoints = totalPointsToHold - currentlyHeld
+            await holdLoyaltyPoints(slug, {
+              email: body.loyalty_email,
+              points: deltaPoints,
+              tableNumber: assignedTableNum,
+              sessionToken: finalSessionToken,
+            })
+          }
+        }
+      } catch (escrowErr) {
+        console.warn('[Orders POST] Error registrando retención de puntos:', escrowErr)
+      }
+    }
+
 
     if (idempotencyKeyStr && idempotencyLocked) {
       completeIdempotencyLock(idempotencyKeyStr, saved)

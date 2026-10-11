@@ -1,8 +1,9 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Star, Sparkles, X, ExternalLink, HeartHandshake } from 'lucide-react'
+import { Star, Sparkles, X, ExternalLink, HeartHandshake, Award } from 'lucide-react'
 import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
+import { LoyaltyProfile } from '@/types/loyalty.types'
 
 interface GoogleReviewBoosterProps {
   restaurantName: string
@@ -12,6 +13,8 @@ interface GoogleReviewBoosterProps {
   variant?: 'inline' | 'card' | 'compact'
   onReviewOpened?: () => void
   onDismiss?: () => void
+  loyaltyProfile?: LoyaltyProfile | null
+  onClaimLoyaltyBonus?: () => void
 }
 
 export function GoogleReviewBooster({
@@ -22,6 +25,8 @@ export function GoogleReviewBooster({
   variant = 'card',
   onReviewOpened,
   onDismiss,
+  loyaltyProfile,
+  onClaimLoyaltyBonus,
 }: GoogleReviewBoosterProps) {
   const storageKey = `fluxo_review_dismissed_${restaurantSlug}`
   const [isDismissed, setIsDismissed] = useState<boolean>(() => {
@@ -56,6 +61,11 @@ export function GoogleReviewBooster({
     triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
 
     if (stars >= 4) {
+      if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
+        try {
+          onClaimLoyaltyBonus()
+        } catch (_) {}
+      }
       setTimeout(() => {
         onReviewOpened?.()
         window.open(directReviewLink, '_blank', 'noopener,noreferrer')
@@ -145,6 +155,22 @@ export function GoogleReviewBooster({
       <p className="text-[11px] text-slate-600 leading-snug">
         Una reseña de <strong>5 estrellas</strong> apoya directamente a nuestros camareros y cocineros en Google Maps.
       </p>
+
+      {loyaltyProfile && !loyaltyProfile.google_review_bonus_awarded && (
+        <div className="p-2.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/5 border border-amber-300 text-amber-950 flex items-center gap-2 shadow-2xs">
+          <Award className="w-4 h-4 text-amber-700 flex-shrink-0" />
+          <span className="text-[11px] font-black leading-tight">
+            ⭐ ¡Gana +50 PUNTOS EXTRA al instante en tu tarjeta al valorar el servicio!
+          </span>
+        </div>
+      )}
+
+      {loyaltyProfile?.google_review_bonus_awarded && (
+        <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+          <span>Bonus de +50 puntos de fidelización concedido con éxito.</span>
+        </div>
+      )}
 
       <div className="flex items-center justify-center gap-2 py-1 bg-amber-50/60 rounded-2xl border border-amber-100">
         {[1, 2, 3, 4, 5].map((star) => (

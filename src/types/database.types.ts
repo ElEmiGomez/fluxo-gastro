@@ -38,6 +38,7 @@ export interface Product {
   name: string
   description: string | null
   price: number
+  cost_price?: number | null // Coste de ingredientes / materia prima
   image_url: string | null
   model_3d_url: string | null // Campo opcional preparado para Realidad Aumentada
   is_available: boolean
@@ -64,6 +65,9 @@ export interface TableSession {
   table_number: number | string
   session_token: string // UUID de visita temporal
   status: 'active' | 'closed' | 'expired' | 'free' | 'busy' | 'calling' | 'ready'
+  payment_method?: 'card' | 'cash' | 'mixed' | null
+  final_amount?: number | null
+  orders_count?: number | null
   created_at?: string
   closed_at?: string | null
   last_updated_at?: string
@@ -137,6 +141,7 @@ export interface OrderItem {
   course?: CourseType // 'first' (1º marchando), 'second' (2º en espera), 'dessert', 'drink'
   is_complimentary?: boolean // Invitación de la casa / 0,00 €
   weight_grams?: number // Gramos reales en productos al peso
+  loyalty_points_redeemed?: number // Puntos de fidelización canjeados en este ítem
 }
 
 export interface CartItem {
@@ -147,6 +152,7 @@ export interface CartItem {
   course?: CourseType
   is_complimentary?: boolean
   weight_grams?: number
+  loyalty_points_redeemed?: number
 }
 
 // ==============================================================================
@@ -159,6 +165,10 @@ export interface DailyMenu {
   title: string
   fixed_price: number
   is_active: boolean
+  schedule_enabled?: boolean
+  schedule_days?: string[]
+  schedule_start_time?: string
+  schedule_end_time?: string
   created_at: string
   updated_at: string
   sections?: DailyMenuSection[]

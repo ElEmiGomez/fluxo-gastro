@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
-  title: "Fluxo — Sistema Gastronómico Inteligente",
+  title: "Fluxo 1.2 Test",
   description: "Plataforma web interactiva para comensales, comandero de mozos y monitor de cocina KDS en tiempo real.",
   manifest: "/manifest.json",
   icons: {

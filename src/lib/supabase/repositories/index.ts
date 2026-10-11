@@ -1,0 +1,7 @@
+export * from './restaurants.repository'
+export * from './tables.repository'
+export * from './orders.repository'
+export * from './service-calls.repository'
+export * from './menu.repository'
+export * from './daily-menu.repository'
+export * from './loyalty.repository'

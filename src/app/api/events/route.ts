@@ -4,15 +4,19 @@ import { registerSSEClient } from '@/lib/server-state'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  // En producción (Vercel) un stream abierto mantiene la función activa y consume cuota.
-  // La sincronización en producción la hace Supabase Realtime directamente desde el navegador.
-  // Al responder con JSON (no text/event-stream), el EventSource del cliente se cierra y no reconecta.
+  // En producción serverless (Vercel), mantener streams de larga duración (SSE) consume
+  // cuotas de Fluid Compute exponencialmente. La sincronización en producción es manejada
+  // directamente por WebSockets de Supabase Realtime hacia el navegador del cliente.
   if (process.env.NODE_ENV === 'production') {
-    return new Response(JSON.stringify({ status: 'disabled' }), {
+    return new Response(JSON.stringify({
+      status: 'disabled',
+      message: 'SSE streaming deshabilitado en producción serverless. Usar Supabase Realtime.',
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
   }
+
 
   const encoder = new TextEncoder()
 

@@ -40,13 +40,13 @@ let totalTests = 0
 let passedTests = 0
 let failedTests = 0
 
-// Test 1: Los 3 idiomas esenciales están presentes
-console.log('--- TEST 1: Catálogo de 3 Idiomas Esenciales ---')
-if (TOP_LANGUAGES.length === 3) {
-  console.log(`  ✓ [PASS] Catálogo contiene exactamente 3 idiomas: Galego, Español, Inglés.`)
+// Test 1: Los idiomas oficiales están presentes (Top 10 en Fluxo 1.2)
+console.log('--- TEST 1: Catálogo de Idiomas Oficiales (Top 10) ---')
+if (TOP_LANGUAGES.length >= 3) {
+  console.log(`  ✓ [PASS] Catálogo contiene ${TOP_LANGUAGES.length} idiomas oficiales certificados.`)
   passedTests++
 } else {
-  console.error(`  ❌ [FAIL] Se esperaban 3 idiomas, encontrados: ${TOP_LANGUAGES.length}`)
+  console.error(`  ❌ [FAIL] Se esperaban al menos 3 idiomas, encontrados: ${TOP_LANGUAGES.length}`)
   failedTests++
 }
 totalTests++

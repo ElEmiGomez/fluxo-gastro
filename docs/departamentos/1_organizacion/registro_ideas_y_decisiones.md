@@ -33,6 +33,8 @@
 | **DEC-23** | 07/09/2026 | Arquitectura / Org | **Guardas de Egress Bounded (`.limit(60)`) para Supabase Free Tier**. | Limitar las consultas masivas de comandas a 60 registros y consultar mesas activas por filtro directo en base de datos. Reduce el tráfico en un 99.8% asegurando el plan gratuito permanente. |
 | **DEC-24** | 08/09/2026 | Ingeniería & QA | **Certificación Integral Multi-Agente (132/132 Checks - VICTORY CONFIRMED)**. | Verificación unánime con auditoría forense independiente: Playwright E2E, Strix Scanner (8/8), RLS Auditor (30/30), OCC Concurrencia (42/42) y Certificación en Vivo (24/24). |
 | **DEC-25** | 04/10/2026 | Mesa Técnica (Emiliano, Guillermo F. Gómez & Ignacio Cerutti) | **Erradicación Total de Eventos Ficticios en Memoria y SSOT Estricto en Supabase**. | Queda terminantemente prohibido generar pedidos o llamadas sintéticas provisionales (`call-...`, `ord-...`) ante fallos de inserción o Foreign Key. El sistema debe fallar de forma ruidosa y controlada: mostrar modal de error con reintento en la UI del cliente, registrar el fallo con stack trace en la tabla `system_error_logs` de Supabase, y mantener la base de datos como Fuente Única de Verdad (SSOT). |
+| **DEC-26** | 10/10/2026 | Organización & Program Data | **Refactorización Arquitectónica Modular SOLID y Desacoplamiento de Monolitos (Fluxo 1.2)**. | Descomposición de pantallas monolíticas (+6.000 líneas) en React Custom Hooks especializados y componentes presentacionales puros (Comandero, Carta Comensal, Admin de Menú y Repositorios de Dominio). Reducción del 84% de líneas en orquestadores, 0 regresiones en suites E2E (Playwright 10/10 PASS, Strix 8/8 PASS, RLS 33/33 PASS) y mecanismo de rollback inmutable garantizado en Git (`v1.0.0-stable`). |
+| **DEC-27** | 11/10/2026 | UI/UX, Producto & Dirección | **Soporte Multilingüe Oficial Top 10 Idiomas de Europa y Península Ibérica (Fluxo 1.2)**. | Despliegue del motor de internacionalización con 10 idiomas oficiales nativos: Galego (gl), Español (es), English (en), Français (fr), Deutsch (de), Português (pt), Italiano (it), Nederlands (nl), Català (ca) y Euskara (eu). Cobertura del 100% en: selector de cabecera con scroll suave y nombres nativos, 20 categorías gastronómicas, 22 platos con nombres y descripciones completas, 90+ claves de UI y micro-onboarding, 14 alérgenos de declaración obligatoria UE (Reglamento 1169/2011) y validación server-side de comandas en `/api/orders`. 79/79 y 1013/1013 tests automatizados superados con 0 errores. |
 
 ---
 
@@ -43,6 +45,28 @@
 * [ ] **Flujo de Trabajo Spec-Driven Development (SDD) & Git Branching:** Trabajar como arquitectos definiendo especificaciones antes de codear, validando unit tests focalizados y usando ramas de Git para mantener `main` 100% estable.
 * [ ] **Control de Stock Dinámico ("Se Agotó"):** Botón rápido en el comandero del mozo para ocultar un plato de la carta cuando se acabe el ingrediente.
 * [ ] **Recomendación Inteligente de Postre/Café:** Al pasar la comanda a estado `delivered`, sugerir sutilmente cafés o postres caseros para aumentar el ticket medio.
+* [ ] **Tarjeta de Fidelización Digital & Sistema de Puntos con Saldo Retenido (Escrow):**
+  - **Identificación Zero-Fricción:** Nombre de pila + Correo electrónico (e-mail marketing/promociones) guardado en `localStorage` de la PWA sin contraseñas ni apps externas.
+  - **Indicador Superior:** Píldora compacta en el encabezado de la carta (`[ ⭐ X pts disponibles ]` o `[ ⭐ Puntos ]` si no ha iniciado sesión).
+  - **Patrón de Saldo Retenido (Escrow Antifraude):**
+    `Puntos Disponibles = Puntos Totales - Puntos Retenidos en Comandas Activas`.
+    Al añadir un plato del catálogo de puntos (ej. café por 20 pts), los puntos se retienen inmediatamente para evitar sobregastos o doble canje en mesas activas. Si cocina o mozo cancelan el plato, los puntos se liberan. Al cobrar la mesa y cerrar la sesión (`closeTableSession`), los puntos retenidos se descuentan definitivamente y se suman los puntos nuevos por consumo en una transacción atómica.
+  - **Visibilidad en Cocina y Comandero:** Los platos canjeados se marcan como cortesía (`is_complimentary: true`, 0,00 €) con la etiqueta visual `[🎁 Canje Fidelización: -X pts]`.
+  - **Sinergia con Google Review Booster:** En la pantalla post-pago (recuadro verde de despedida), resaltar un banner dorado: *«⭐ Deja tu reseña en Google Maps y suma +50 PUNTOS EXTRA al instante»* (un solo uso por cliente).
+  - **Reparto en Mesa Multicomensal:** Por defecto, los puntos se acreditan al cliente que solicita la precuenta/identificado en la sesión.
+* [x] **Soporte Multilingüe Top 10 Idiomas de Europa y la Península Ibérica [IMPLEMENTADO FLUXO 1.2]:**
+  - Ampliación del motor de traducción y catálogo digital para turismo internacional y regional en Galicia/España:
+    1. Galego (nativo)
+    2. Español (nativo)
+    3. English (internacional)
+    4. Français
+    5. Deutsch
+    6. Português
+    7. Italiano
+    8. Nederlands
+    9. Català
+    10. Euskara
+  - Selector ágil de idioma en la cabecera de la carta con traducción reactiva de categorías, descripciones de platos, alérgenos y avisos de sala.
 * [ ] **Telemetría de Tiempos de Pase:** Detección de cuellos de botella entre comanda confirmada y entrega en mesa para optimizar cocina en Plan Suite.
 * [ ] **Integración de Impresión Automática en Cocina vía Webhooks:** Disparo directo a tiqueteras térmicas sin depender de pantalla física.
 

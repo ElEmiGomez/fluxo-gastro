@@ -75,7 +75,7 @@ export function useDualRealtime({
 
     // 1. PRIMARY: Supabase Realtime Push via WebSocket
     if (supabase) {
-      const channelId = `dual-realtime-${slug}-${targetRestaurantId}`
+      const channelId = `dual-realtime-${slug}-${targetRestaurantId}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
       const ordersFilter = targetRestaurantId ? `restaurant_id=eq.${targetRestaurantId}` : undefined
       
       const ordersConfig: any = {
@@ -129,8 +129,8 @@ export function useDualRealtime({
             triggerSync()
           }
         })
-    } else {
-      // 2. OFFLINE / LOCAL DEV FALLBACK: Server-Sent Events (SSE)
+    } else if (process.env.NODE_ENV === 'development') {
+      // 2. OFFLINE / LOCAL DEV FALLBACK: Server-Sent Events (SSE) solo en desarrollo local
       try {
         sseEventSource = new EventSource('/api/events')
         sseEventSource.onmessage = (event) => {
@@ -159,7 +159,10 @@ export function useDualRealtime({
 
     // 3. RESILIENT SOFT POLLING FALLBACK (4.5s)
     pollInterval = setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+      // Optimización de recursos: Pausar polling si la pestaña está oculta o el móvil bloqueado
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return
+      }
       triggerSync()
     }, pollingIntervalMs)
 

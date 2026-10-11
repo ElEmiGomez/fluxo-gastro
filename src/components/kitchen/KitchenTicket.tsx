@@ -313,11 +313,16 @@ export function KitchenTicket({
                                 <span>🍰 POSTRE</span>
                               </span>
                             )}
-                            {item.is_complimentary && (
+                            {Boolean(item.loyalty_points_redeemed || (item.notes && item.notes.includes('[🎁 Canje Fidelización'))) ? (
+                              <span className="px-1.5 py-0.2 rounded-md bg-amber-600 text-white font-black text-[9px] shadow-xs flex items-center gap-1">
+                                <span>⭐ CANJE FIDELIZACIÓN</span>
+                                {item.loyalty_points_redeemed ? <span>(-{item.loyalty_points_redeemed} pts)</span> : null}
+                              </span>
+                            ) : item.is_complimentary ? (
                               <span className="px-1.5 py-0.2 rounded-md bg-purple-600 text-white font-black text-[9px] shadow-xs">
                                 🎁 CORTESÍA / INVITA CASA
                               </span>
-                            )}
+                            ) : null}
                             {item.weight_grams && (
                               <span className="px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-950 font-black text-[9px] border border-blue-200">
                                 ⚖️ {item.weight_grams}g

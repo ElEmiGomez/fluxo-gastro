@@ -39,7 +39,8 @@ const PRODUCT_DESCRIPTIONS = eval(`(${prodDescMatch[1]})`)
 const TRANSLATIONS = eval(`(${transMatch[1]})`)
 
 function resolveLang(lang) {
-  if (lang === 'es' || lang === 'gl' || lang === 'en') {
+  const supported = ['es', 'gl', 'en', 'fr', 'de', 'pt', 'it', 'nl', 'ca', 'eu']
+  if (supported.includes(lang)) {
     return lang
   }
   return 'es'
@@ -66,14 +67,14 @@ function translateProductDescription(lang, productId, fallback) {
 
 const ALL_PRODUCT_IDS = Object.keys(PRODUCT_DESCRIPTIONS)
 const ALL_CATEGORIES = Object.keys(CATEGORY_TRANSLATIONS.es)
-const ALL_LANGUAGES = ['es', 'gl', 'en']
+const ALL_LANGUAGES = ['gl', 'es', 'en', 'fr', 'de', 'pt', 'it', 'nl', 'ca', 'eu']
 
 let totalPassed = 0
 let totalFailed = 0
 
-// Test 1: Botonera Superior de la Cabecera Móvil (Servicio & Llamar al Mozo)
-console.log('--- TEST 1: Botonera Superior ("Servicio" y "Llamar al Mozo") ---')
-;['es', 'gl', 'en'].forEach((l) => {
+// Test 1: Botonera Superior de la Cabecera Móvil (Servicio & Llamar al Mozo en 10 Idiomas)
+console.log('--- TEST 1: Botonera Superior ("Servicio" y "Llamar al Mozo" en los 10 Idiomas) ---')
+ALL_LANGUAGES.forEach((l) => {
   const serv = getTranslation(l, 'services')
   const waiter = getTranslation(l, 'callWaiter')
   const table = getTranslation(l, 'tableNumberLabel')

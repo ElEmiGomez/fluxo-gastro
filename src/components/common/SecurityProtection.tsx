@@ -4,6 +4,10 @@ import { useEffect } from 'react'
 
 export function SecurityProtection() {
   useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.title = 'Fluxo 1.2 Test'
+    }
+
     // 1. Advertencia disuasoria en consola contra ataques Self-XSS e ingeniería inversa (Similar a Facebook/Discord)
     const printSecurityWarning = () => {
       const bannerStyle = 'color: #38bdf8; font-size: 26px; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.5);'

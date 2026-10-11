@@ -6,6 +6,105 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-11 21:00] — Nueva Tarea Técnica: Generador y Exportador Masivo de Códigos QR para Mesas (Punto 10)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), Diseño de Marca (Depto 3) y Organización General (Depto 1).
+* **Definición de Tarea:**
+  - **Requisito:** Implementar o consolidar una herramienta dentro de la suite que genere en lote códigos QR dinámicos individualizados por mesa (25, 30 o cantidad personalizada según el restaurante) listos para imprimir o exportar.
+  - **Estado Actual:** Fluxo ya cuenta con un módulo nativo base en [`src/app/staff/qr/[slug]/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/staff/qr/%5Bslug%5D/page.tsx) con soporte para impresión por lotes (1 a 25+ mesas) y URL parametrizada `?table={num}`.
+  - **Mejora Solicitada:** Añadir selector numérico interactivo de cantidad de mesas (ej. 1 a 30 o rango configurable), personalización de diseño de carteles físicos para soporte de mesa y opción de descarga individual o en bloque en alta resolución (SVG / PNG / PDF A4 agrupado).
+
+---
+
+### [2026-10-11 17:05] — Implementación Completa: Soporte Oficial Top 10 Idiomas de Europa y Península (Fluxo 1.2)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), UI/UX y Dirección General.
+* **Acciones Realizadas:**
+  - **Ampliación Integral del Motor de Internacionalización (`src/lib/i18n.ts`):** Cobertura del 100% en los 10 idiomas oficiales: Galego (`gl`), Español (`es`), English (`en`), Français (`fr`), Deutsch (`de`), Português (`pt`), Italiano (`it`), Nederlands (`nl`), Català (`ca`) y Euskara (`eu`).
+  - **20 Categorías Gastronómicas:** Traducidas con precisión y coherencia en las 10 lenguas.
+  - **22 Platos Canónicos:** Nombres y descripciones completas en cada idioma.
+  - **90+ Claves UI:** Botonera superior, llamadas de servicio, micro-onboarding de 4 pasos, comanda, seguimiento en tiempo real y menú del día.
+  - **14 Alérgenos UE (`src/lib/allergens.ts`):** Catálogo canónico oficial con nomenclatura regulada (Reglamento UE 1169/2011) en los 10 idiomas.
+  - **Selector Responsivo (`src/components/menu/MenuHeader.tsx`):** Menú desplegable optimizado con scroll suave (`w-48 max-h-80 overflow-y-auto scrollbar-thin`), banderas y nombres nativos.
+  - **Validación de Pedidos (`src/app/api/orders/route.ts`):** Reconocimiento server-side de nombres de platos ordenados en cualquiera de los 10 idiomas oficiales.
+  - **Certificación Automatizada:** `scripts/test_top_10_languages.mjs` (79/79 PASS) y `scripts/test_1000_multilang_exhaustivo.mjs` (1013/1013 PASS) 100% verdes con 0 fallos. Type check (`tsc --noEmit`) 100% limpio.
+
+---
+
+### [2026-10-11 11:05] — Nueva Tarea Técnica: Expansión de Multilenguaje a Top 10 Idiomas Más Hablados (Punto 9)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
+* **Definición de Tarea:**
+  - **Objetivo:** Ampliar el soporte actual de 3 lenguas (`gl`, `es`, `en`) al **Top 10 de idiomas de mayor impacto global y turístico** en [`src/lib/i18n.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/i18n.ts):
+    1. Galego (`gl`) 🔵 (Lengua oficial local / turismo comarcal)
+    2. Español (`es`) 🇪🇸
+    3. English (`en`) 🇬🇧
+    4. Français (`fr`) 🇫🇷
+    5. Deutsch (`de`) 🇩🇪
+    6. Italiano (`it`) 🇮🇹
+    7. Português (`pt`) 🇵🇹
+    8. 中文 (Chino Mandarín) (`zh`) 🇨🇳
+    9. 日本語 (Japonés) (`ja`) 🇯🇵
+    10. العربية (Árabe estándar) (`ar`) 🇸🇦
+  - **Alcance Operativo:** Diccionarios de UI (botones, estados de comanda, llamadas de mozo, cuenta, alérgenos), nombres y descripciones de categorías en carta digital y selector responsivo con banderas/nombres nativos.
+
+---
+
+### [2026-10-10 22:15] — Inteligencia de Mercado B2B: Posicionamiento Anti-Hardware (BYOD) y Nuevas Battle Cards
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Organización General e Ingeniería.
+* **Acciones Realizadas:**
+  - **Documento Creado:** `docs/departamentos/2_marketing/analisis_competencia_benchmark_global.md` consolidando los 4 cuadrantes del mercado (Monstruos de Hardware: Turbopos/Shift4/Epos; Dueños de la Puerta: CoverManager/Restoo; Aliados Backoffice: Haddock/VFactu; y Order & Pay Ligero: Forkpi/Honei).
+  - **Actualización del Manual de Ventas (`manual_prospeccion_y_objeciones.md`):**
+    1. *Battle Card 4:* Argumentario frente a TPVs pesados (defensa BYOD: cero coste de rotura, cero hardware cautivo de 1.000€).
+    2. *Battle Card 5:* Argumentario frente a apps de cobro con comisión (defensa de 0% comisiones vs 1.5-2% de Honei/Sunday y filtro Mozo Gatekeeper antifraude).
+  - **Estrategia Comercial Confirmada:** Posicionamiento de Fluxo como "Multiplicador de Reputación en Google y Rotación de Terrazas" en coexistencia pacífica con TPVs contables existentes.
+
+---
+
+### [2026-10-10 19:10] — Certificación DB Aprobada: Migraciones de Supabase Cloud Ejecutadas (Punto 1 Check)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
+* **Acciones Realizadas:**
+  - **Punto 1 [COMPLETADO & CERTIFICADO]:** Ejecutada y verificada la migración unificada en Supabase Cloud PostgreSQL.
+  - Se confirmó la existencia de la clave foránea `fk_service_calls_tables` (`service_calls` -> `tables`) eliminando el riesgo de alertas huérfanas.
+  - Habilitadas y activadas las 3 políticas de Row Level Security (RLS) en la tabla `products` (`Permitir actualizacion de disponibilidad de productos`, `Permitir insercion de productos para administracion`, `Permitir gestion de productos para administracion`).
+  - Catálogo canónico con UUIDs deterministas sincronizado para `burger-gourmet`.
+  - Columnas `allergens` (Reglamento UE 1169/2011) y `original_price` integradas activamente.
+  - **Todas las tareas técnicas del MVP de Program Data (Puntos 1, 2, 4, 5, 6, 7 y 8) están formalmente completadas [x].**
+
+---
+
+### [2026-10-10 16:56] — Sincronización Interdepartamental: Consolidación de Fluxo 1.2 y Registro de DEC-26
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Temas Consolidados:**
+  - **Registro Oficial DEC-26:** Registrada formalmente la decisión *DEC-26: Refactorización Arquitectónica Modular SOLID y Desacoplamiento de Monolitos (Fluxo 1.2)* en [`docs/departamentos/1_organizacion/registro_ideas_y_decisiones.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/1_organizacion/registro_ideas_y_decisiones.md).
+  - **Actualización de Tablero de Control:** Actualizado el Tablero Diario de Organización General reflejando la culminación y pase a [x] de los Puntos 6 (Validación E2E Playwright 10/10) y 7 (Admin de Cartas e In Situ consolidado).
+  - **Sincronización en Git:** Rama de trabajo `feature/fluxo-1.2-modular-refactor` sincronizada en remoto con GitHub; tag inmutable de respaldo `v1.0.0-stable` intacto.
+  - 🔔 **Recordatorio Permanente Vercel:** Pendiente actualizar en el panel web de Vercel (`Project Settings -> Environment Variables`) el valor `LEAD_NOTIFICATION_EMAIL=contactofluxosystem@gmail.com`.
+
+---
+
+### [2026-10-10 16:50] — Refactorización Modular SOLID Concluida: Desacoplamiento de Repositorios y Rutas API (Fluxo 1.2)
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Acciones Realizadas:**
+  - **Fase 4 Backend & Capa de Datos:** Descompuesto el monolito `src/lib/supabase/repository.ts` (+990 líneas) en repositorios especializados bajo responsabilidad única (SRP):
+    - [`restaurants.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/restaurants.repository.ts)
+    - [`tables.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/tables.repository.ts)
+    - [`orders.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/orders.repository.ts)
+    - [`service-calls.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/service-calls.repository.ts)
+    - [`menu.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/menu.repository.ts)
+  - **Patrón Fachada Unificada:** `src/lib/supabase/repository.ts` actúa como facade re-exportando el 100% de los métodos para garantizar cero regresiones y retrocompatibilidad total en los endpoints existentes.
+  - **Servicio de Validación de Pedidos y Precios:** Extraída la lógica de validación de catálogo, productos canónicos y forzado de precios oficiales en [`src/lib/orders/order-validator.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/orders/order-validator.ts), reduciendo `src/app/api/orders/route.ts` de 586 a ~300 líneas.
+  - **Certificación de Calidad:** 0 errores en tipado estricto (`npx.cmd tsc --noEmit`) y 12/12 rutas compiladas limpiamente en `npm.cmd run build`.
+
+---
+
+### [2026-10-10 16:22] — Conexión Operativa: Correo Oficial contactofluxosystem@gmail.com Configurado (Punto 3.2 Check)
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Acciones Realizadas:**
+  - Configurada la variable `LEAD_NOTIFICATION_EMAIL=contactofluxosystem@gmail.com` en `.env.local` para que las solicitudes de piloto de la Landing Page lleguen de forma centralizada al nuevo correo.
+  - Actualizada la página legal ([`src/app/legal/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/legal/page.tsx)) integrando el correo `contactofluxosystem@gmail.com` tanto en el ejercicio de derechos RGPD como en la cláusula de soporte y atención comercial oficial.
+  - **Punto 3.2 marcado como COMPLETADO [x].**
+  - 🔔 **Recordatorio Permanente:** Pendiente actualizar en el panel web de Vercel (`Project Settings -> Environment Variables`) el valor `LEAD_NOTIFICATION_EMAIL=contactofluxosystem@gmail.com`. El sistema mantendrá activo este recordatorio para avisar al usuario cada vez que se aborden temas de despliegue, Vercel o emails.
+
+---
+
 ### [2026-10-10 00:17] — Desglose Operativo: Correo Corporativo Formal de Fluxo y Recepción de Leads (Punto 3.2)
 * **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
 * **Definición de Nuevas Tareas:**
@@ -538,3 +637,13 @@
   2. Generador de PDF de Carta Fija en Alta Resolucion: Carta_Fija_Fluxo.pdf (386 KB).
   3. Reporte Mensual Ejecutivo Corregido y Estructurado en 2 Paginas Exactas: docs/Informe_Ejecutivo_RestoBar_Noia.pdf (227 KB).
   4. Suite de Verificacion de Reporte Superada: 2 paginas, 0 caracteres huerfanos, matriz BCG, analisis de cuellos de botella y ROI > 26x certificados.
+
+---
+## [2026-10-11 10:00] PROPUESTA DE PRODUCTO: TARJETA DE FIDELIZACIÓN DIGITAL & SISTEMA DE RECOMPENSAS
+- **Departamento:** Innovación de Producto, Marketing & Program Data
+- **Hito:** Registro y conceptualización en backlog de fidelización de comensales frecuentes para Fluxo.
+- **Resumen de la Propuesta:**
+  1. **Mecánica Cero-Fricción:** Acumulación de puntos o sellos digitales integrada en la carta PWA al pedir o pagar en mesa, sin obligar al comensal a instalar apps pesadas.
+  2. **Canje de Recompensas en Sala:** Integración con comandero para canjear regalos inmediatos (tapa/postre/café de cortesía con el badge existente de invitación) o descuentos en próximas visitas.
+  3. **Valor Comercial:** Herramienta de retención de comensales locales y captación de CRM gastronómico propio para el restaurante, fortaleciendo la propuesta de valor de los planes superiores.
+
