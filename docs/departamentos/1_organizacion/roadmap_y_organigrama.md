@@ -75,6 +75,8 @@ flowchart TD
 │  │     (enlace activo en LEAD_NOTIFICATION_EMAIL y página legal)        │
 │  ├─ [📋 Pendiente #9] Multilenguaje: Ampliación a Top 10 idiomas globales  │
 │  │     (gl, es, en, fr, de, it, pt, zh, ja, ar con banderas y selector)    │
+│  ├─ [📋 Pendiente #10] Generación Masiva de Códigos QR para Mesas (25-30+) │
+│  │     (Integrar selector de rango/lote e impresión en /staff/qr/[slug])    │
 │  └─ [x] Arquitectura funcional modular y desacoplamiento por dominio    │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │

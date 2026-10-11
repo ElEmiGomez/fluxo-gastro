@@ -6,6 +6,15 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-11 21:00] — Nueva Tarea Técnica: Generador y Exportador Masivo de Códigos QR para Mesas (Punto 10)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), Diseño de Marca (Depto 3) y Organización General (Depto 1).
+* **Definición de Tarea:**
+  - **Requisito:** Implementar o consolidar una herramienta dentro de la suite que genere en lote códigos QR dinámicos individualizados por mesa (25, 30 o cantidad personalizada según el restaurante) listos para imprimir o exportar.
+  - **Estado Actual:** Fluxo ya cuenta con un módulo nativo base en [`src/app/staff/qr/[slug]/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/staff/qr/%5Bslug%5D/page.tsx) con soporte para impresión por lotes (1 a 25+ mesas) y URL parametrizada `?table={num}`.
+  - **Mejora Solicitada:** Añadir selector numérico interactivo de cantidad de mesas (ej. 1 a 30 o rango configurable), personalización de diseño de carteles físicos para soporte de mesa y opción de descarga individual o en bloque en alta resolución (SVG / PNG / PDF A4 agrupado).
+
+---
+
 ### [2026-10-11 17:05] — Implementación Completa: Soporte Oficial Top 10 Idiomas de Europa y Península (Fluxo 1.2)
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), UI/UX y Dirección General.
 * **Acciones Realizadas:**
