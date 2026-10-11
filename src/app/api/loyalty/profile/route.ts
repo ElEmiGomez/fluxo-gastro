@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
     const email = searchParams.get('email')
+    const tableNumber = searchParams.get('table') || searchParams.get('tableNumber')
 
     if (!email) {
       return NextResponse.json(
@@ -17,6 +18,15 @@ export async function GET(req: NextRequest) {
     }
 
     const profile = await getLoyaltyProfile(slug, email)
+    if (profile && tableNumber) {
+      await registerOrGetLoyaltyProfile(slug, {
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        tableNumber,
+      })
+    }
+
     return NextResponse.json({
       success: true,
       profile,
@@ -33,7 +43,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { slug = 'burger-gourmet', name, email, phone } = body
+    const { slug = 'burger-gourmet', name, email, phone, tableNumber } = body
 
     if (!email) {
       return NextResponse.json(
@@ -46,7 +56,9 @@ export async function POST(req: NextRequest) {
       name: name || 'Comensal',
       email,
       phone,
+      tableNumber,
     })
+
 
     return NextResponse.json({
       success: true,

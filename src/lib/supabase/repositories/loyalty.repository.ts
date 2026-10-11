@@ -1,6 +1,13 @@
 import { createServerClient } from '../server'
 import { isSupabaseConfigured } from '../client'
-import { LoyaltyProfile, LoyaltyReward, LoyaltyEscrowHold, LoyaltySettlementResult } from '@/types/loyalty.types'
+import {
+  LoyaltyProfile,
+  LoyaltyReward,
+  LoyaltyEscrowHold,
+  LoyaltySettlementResult,
+  LoyaltyTableMember,
+  LoyaltyDinerSettlement,
+} from '@/types/loyalty.types'
 import { Product } from '@/types/database.types'
 import { MOCK_PRODUCTS } from '../mock-fallback'
 import { getTargetRestaurantId } from './restaurants.repository'
@@ -10,7 +17,13 @@ const globalStore = globalThis as unknown as {
   __GASTRO_LOYALTY_PROFILES__?: Record<string, LoyaltyProfile>
   __GASTRO_LOYALTY_REWARDS__?: Record<string, LoyaltyReward[]>
   __GASTRO_LOYALTY_ESCROW__?: Record<string, LoyaltyEscrowHold>
+  __GASTRO_TABLE_LOYALTY_MEMBERS__?: Record<string, Record<string, LoyaltyTableMember>>
 }
+
+if (!globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__) {
+  globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__ = {}
+}
+
 
 if (!globalStore.__GASTRO_LOYALTY_PROFILES__) {
   globalStore.__GASTRO_LOYALTY_PROFILES__ = {
@@ -148,11 +161,61 @@ export async function getLoyaltyProfile(slug: string, email: string): Promise<Lo
 }
 
 /**
- * 2. REGISTRAR O RECUPERAR PERFIL ZERO-FRICCIÓN (NOMBRE + EMAIL)
+ * GESTIÓN MULTI-COMENSAL: VINCULAR PERFIL A UNA MESA ACTIVA
+ */
+export async function linkLoyaltyProfileToTable(
+  slug: string,
+  tableNumber: number | string,
+  email: string
+): Promise<LoyaltyTableMember | null> {
+  const normEmail = normalizeEmail(email)
+  if (!normEmail) return null
+  const profile = await getLoyaltyProfile(slug, normEmail)
+  if (!profile) return null
+
+  const tableKey = `${slug}:${tableNumber}`
+  if (!globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__) {
+    globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__ = {}
+  }
+  if (!globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__[tableKey]) {
+    globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__[tableKey] = {}
+  }
+
+  const member: LoyaltyTableMember = {
+    profile_id: profile.id,
+    name: profile.name,
+    email: normEmail,
+    joined_at: new Date().toISOString(),
+  }
+  globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__[tableKey][normEmail] = member
+  return member
+}
+
+export async function getTableLoyaltyMembers(
+  slug: string,
+  tableNumber: number | string
+): Promise<LoyaltyTableMember[]> {
+  const tableKey = `${slug}:${tableNumber}`
+  const membersMap = globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__?.[tableKey] || {}
+  return Object.values(membersMap)
+}
+
+export async function clearTableLoyaltyMembers(
+  slug: string,
+  tableNumber: number | string
+): Promise<void> {
+  const tableKey = `${slug}:${tableNumber}`
+  if (globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__?.[tableKey]) {
+    delete globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__[tableKey]
+  }
+}
+
+/**
+ * 2. REGISTRAR O RECUPERAR PERFIL ZERO-FRICCIÓN (NOMBRE + EMAIL + MESA)
  */
 export async function registerOrGetLoyaltyProfile(
   slug: string,
-  params: { name: string; email: string; phone?: string | null }
+  params: { name: string; email: string; phone?: string | null; tableNumber?: number | string }
 ): Promise<LoyaltyProfile> {
   const normEmail = normalizeEmail(params.email)
   const normName = (params.name || '').trim() || 'Comensal'
@@ -162,6 +225,9 @@ export async function registerOrGetLoyaltyProfile(
     if (params.name && params.name.trim() !== '' && profile.name !== normName) {
       profile.name = normName
       profile.updated_at = new Date().toISOString()
+    }
+    if (params.tableNumber) {
+      await linkLoyaltyProfileToTable(slug, params.tableNumber, normEmail)
     }
     return profile
   }
@@ -180,6 +246,7 @@ export async function registerOrGetLoyaltyProfile(
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }
+
 
   const memKey = getMemoryKey(slug, normEmail)
   if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
@@ -209,6 +276,10 @@ export async function registerOrGetLoyaltyProfile(
     } catch (e) {
       console.warn('[registerOrGetLoyaltyProfile] Fallback de inserción a memoria:', e)
     }
+  }
+
+  if (params.tableNumber) {
+    await linkLoyaltyProfileToTable(slug, params.tableNumber, normEmail)
   }
 
   return newProfile
@@ -272,6 +343,11 @@ export async function holdLoyaltyPoints(
     )
   }
 
+  // Asegurar que el comensal está vinculado a la mesa
+  if (params.tableNumber) {
+    await linkLoyaltyProfileToTable(slug, params.tableNumber, params.email)
+  }
+
   const holdId = `lhold-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
   const hold: LoyaltyEscrowHold = {
     id: holdId,
@@ -284,6 +360,7 @@ export async function holdLoyaltyPoints(
     status: 'held',
     created_at: new Date().toISOString(),
   }
+
 
   if (globalStore.__GASTRO_LOYALTY_ESCROW__) {
     globalStore.__GASTRO_LOYALTY_ESCROW__[holdId] = hold
@@ -377,7 +454,7 @@ export async function releaseLoyaltyPoints(
 }
 
 /**
- * 6. CIERRE DE MESA: LIQUIDAR SALDO RETENIDO Y ACREDITAR PUNTOS GANADOS
+ * 6. CIERRE DE MESA: LIQUIDAR SALDO RETENIDO Y ACREDITAR PUNTOS GANADOS (MULTI-COMENSAL)
  */
 export async function settleLoyaltySession(
   slug: string,
@@ -395,86 +472,140 @@ export async function settleLoyaltySession(
     h.status === 'held'
   )
 
-  let profileId = sessionHolds[0]?.profile_id
-  let profile: LoyaltyProfile | null = null
+  // 1. Recopilar todos los perfiles asociados a esta mesa (holds + miembros registrados + param)
+  const profilesMap = new Map<string, LoyaltyProfile>()
 
-  if (profileId) {
-    const found = Object.values(globalStore.__GASTRO_LOYALTY_PROFILES__ || {}).find(p => p.id === profileId)
-    if (found) profile = found
+  // A) Perfiles con canjes retenidos
+  for (const hold of sessionHolds) {
+    const p = Object.values(globalStore.__GASTRO_LOYALTY_PROFILES__ || {}).find(prof => prof.id === hold.profile_id)
+    if (p) profilesMap.set(p.id, p)
   }
 
-  if (!profile && params.email) {
-    profile = await getLoyaltyProfile(slug, params.email)
-    if (profile) profileId = profile.id
+  // B) Perfiles registrados como comensales en la mesa
+  const tableMembers = await getTableLoyaltyMembers(slug, params.tableNumber)
+  for (const member of tableMembers) {
+    if (!profilesMap.has(member.profile_id)) {
+      const p = await getLoyaltyProfile(slug, member.email)
+      if (p) profilesMap.set(p.id, p)
+    }
   }
 
-  if (!profile) {
+  // C) Si se pasó un email explícito por parámetro
+  if (params.email) {
+    const p = await getLoyaltyProfile(slug, params.email)
+    if (p && !profilesMap.has(p.id)) profilesMap.set(p.id, p)
+  }
+
+  const identifiedProfiles = Array.from(profilesMap.values())
+  if (identifiedProfiles.length === 0) {
     // Sesión anónima: sin comensal identificado de fidelización
     return null
   }
 
-  // 1. Puntos canjeados en esta sesión
-  const redeemedPoints = sessionHolds.reduce((acc, h) => acc + (Number(h.points) || 0), 0)
+  // 2. Reparto multi-comensal proporcional
+  const totalBillPoints = Math.max(0, Math.floor(Number(params.finalAmount) || 0))
+  const numDiners = identifiedProfiles.length
+  const basePointsPerDiner = Math.floor(totalBillPoints / numDiners)
+  const remainderPoints = totalBillPoints % numDiners
 
-  // 2. Puntos ganados por consumo real (1 punto por euro abonado)
-  const earnedPoints = Math.max(0, Math.floor(Number(params.finalAmount) || 0))
+  const breakdown: LoyaltyDinerSettlement[] = []
+  let totalRedeemed = 0
+  let totalEarned = 0
 
-  const previousPoints = profile.total_points
-  const newTotal = Math.max(0, previousPoints - redeemedPoints) + earnedPoints
+  const supabase = createServerClient()
 
-  // Actualizar en memoria global
-  const memKey = getMemoryKey(slug, profile.email)
-  const storeProfile = globalStore.__GASTRO_LOYALTY_PROFILES__?.[memKey]
-  if (storeProfile) {
-    storeProfile.total_points = newTotal
-    storeProfile.updated_at = new Date().toISOString()
-  } else if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
-    globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = {
-      ...profile,
-      total_points: newTotal,
-      updated_at: new Date().toISOString(),
+  for (let i = 0; i < identifiedProfiles.length; i++) {
+    const profile = identifiedProfiles[i]
+    // Canjes de este comensal específico en esta mesa
+    const dinerHolds = sessionHolds.filter(h => h.profile_id === profile.id)
+    const dinerRedeemed = dinerHolds.reduce((acc, h) => acc + (Number(h.points) || 0), 0)
+
+    // Reparto equitativo (el primer comensal recibe el remanente si no es divisible)
+    const dinerEarned = basePointsPerDiner + (i === 0 ? remainderPoints : 0)
+
+    const prevPoints = profile.total_points
+    const newTotal = Math.max(0, prevPoints - dinerRedeemed) + dinerEarned
+
+    // Actualizar en memoria global
+    const memKey = getMemoryKey(slug, profile.email)
+    const storeProfile = globalStore.__GASTRO_LOYALTY_PROFILES__?.[memKey]
+    if (storeProfile) {
+      storeProfile.total_points = newTotal
+      storeProfile.updated_at = new Date().toISOString()
+    } else if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
+      globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = {
+        ...profile,
+        total_points: newTotal,
+        updated_at: new Date().toISOString(),
+      }
     }
+
+    // Actualizar en Supabase si está disponible
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase
+          .from('loyalty_profiles')
+          .update({
+            total_points: newTotal,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', profile.id)
+      } catch (e) {
+        console.warn(`[settleLoyaltySession] Error en Supabase para perfil ${profile.id}:`, e)
+      }
+    }
+
+    breakdown.push({
+      profile_id: profile.id,
+      customer_name: profile.name,
+      customer_email: profile.email,
+      redeemed_points: dinerRedeemed,
+      earned_points: dinerEarned,
+      previous_points: prevPoints,
+      new_total_points: newTotal,
+    })
+
+    totalRedeemed += dinerRedeemed
+    totalEarned += dinerEarned
   }
 
-  // Marcar holds como 'settled'
+  // 3. Marcar todos los holds de la mesa como settled
   sessionHolds.forEach(h => {
     h.status = 'settled'
   })
 
-  // Sincronizar en Supabase si está disponible
-  const supabase = createServerClient()
-  if (supabase && isSupabaseConfigured()) {
+  if (supabase && isSupabaseConfigured() && sessionHolds.length > 0) {
     try {
-      await supabase
-        .from('loyalty_profiles')
-        .update({
-          total_points: newTotal,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', profile.id)
-
       await supabase
         .from('loyalty_escrow_holds')
         .update({ status: 'settled' })
-        .eq('profile_id', profile.id)
         .eq('restaurant_slug', slug)
         .eq('table_number', Number(params.tableNumber) || 1)
         .eq('status', 'held')
     } catch (e) {
-      console.warn('[settleLoyaltySession] Error en Supabase, preservado en memoria:', e)
+      console.warn('[settleLoyaltySession] Error actualizando holds en Supabase:', e)
     }
   }
 
+  // Limpiar lista de comensales en la mesa cerrada
+  await clearTableLoyaltyMembers(slug, params.tableNumber)
+
+  // Comensal principal para compatibilidad con llamadas individuales
+  const primary = breakdown[0]
+
   return {
-    redeemed_points: redeemedPoints,
-    earned_points: earnedPoints,
-    previous_points: previousPoints,
-    new_total_points: newTotal,
-    profile_id: profile.id,
-    customer_name: profile.name,
-    customer_email: profile.email,
+    redeemed_points: totalRedeemed,
+    earned_points: totalEarned,
+    previous_points: primary.previous_points,
+    new_total_points: primary.new_total_points,
+    profile_id: primary.profile_id,
+    customer_name: primary.customer_name,
+    customer_email: primary.customer_email,
+    diners_count: numDiners,
+    breakdown,
   }
 }
+
 
 /**
  * 7. BONIFICACIÓN GOOGLE MAPS BOOSTER (+50 PUNTOS DE UN SOLO USO)
@@ -533,3 +664,67 @@ export async function claimGoogleReviewBonus(
     new_total_points: newTotal,
   }
 }
+
+/**
+ * 8. PANEL DE ADMINISTRACIÓN: LISTAR TODOS LOS CLIENTES FIDELIZADOS
+ */
+export async function getAllLoyaltyProfiles(
+  slug: string,
+  query?: string
+): Promise<LoyaltyProfile[]> {
+  const normQuery = (query || '').trim().toLowerCase()
+  let profiles: LoyaltyProfile[] = []
+
+  const supabase = createServerClient()
+  if (supabase && isSupabaseConfigured()) {
+    try {
+      let q = supabase
+        .from('loyalty_profiles')
+        .select('*')
+        .eq('restaurant_slug', slug)
+        .order('total_points', { ascending: false })
+
+      if (normQuery) {
+        q = q.or(`name.ilike.%${normQuery}%,email.ilike.%${normQuery}%`)
+      }
+
+      const { data, error } = await q
+      if (!error && Array.isArray(data)) {
+        profiles = data as LoyaltyProfile[]
+      }
+    } catch (e) {
+      console.warn('[getAllLoyaltyProfiles] Fallback a memoria:', e)
+    }
+  }
+
+  // Si no se obtuvieron de Supabase o estamos en fallback / tests
+  if (profiles.length === 0 && globalStore.__GASTRO_LOYALTY_PROFILES__) {
+    const all = Object.values(globalStore.__GASTRO_LOYALTY_PROFILES__).filter(
+      p => p.restaurant_slug === slug
+    )
+    profiles = all
+  }
+
+  // Filtrar si hay query y estamos usando memoria
+  if (normQuery) {
+    profiles = profiles.filter(
+      p =>
+        (p.name && p.name.toLowerCase().includes(normQuery)) ||
+        (p.email && p.email.toLowerCase().includes(normQuery))
+    )
+  }
+
+  // Calcular saldo disponible descontando holds activos
+  const computed = profiles.map(p => {
+    const held = computeHeldPointsForProfile(p.id, slug)
+    return {
+      ...p,
+      held_points: held,
+      available_points: Math.max(0, p.total_points - held),
+    }
+  })
+
+  // Ordenar por puntos totales descendente
+  return computed.sort((a, b) => b.total_points - a.total_points)
+}
+

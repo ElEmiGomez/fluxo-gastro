@@ -13,6 +13,8 @@ import { AdminCategoryManager } from '@/components/admin/AdminCategoryManager'
 import { AdminAiImporter } from '@/components/admin/AdminAiImporter'
 import { AdminProductModal } from '@/components/admin/AdminProductModal'
 import { AdminDailyMenuManager } from '@/components/admin/AdminDailyMenuManager'
+import { AdminLoyaltyManager } from '@/components/admin/AdminLoyaltyManager'
+
 
 export default function AdminMenuPage() {
   const params = useParams()
@@ -147,7 +149,15 @@ export default function AdminMenuPage() {
                 onApplyAiMenu={handleApplyAiMenu}
               />
             )}
+
+            {activeTab === 'loyalty' && (
+              <AdminLoyaltyManager
+                slug={slug}
+                onToast={showToast}
+              />
+            )}
           </main>
+
 
           {/* MODAL DE CREAR / EDITAR PLATO */}
           <AdminProductModal

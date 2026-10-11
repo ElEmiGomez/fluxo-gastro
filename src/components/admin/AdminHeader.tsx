@@ -2,8 +2,9 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Utensils, Eye, Sparkles } from 'lucide-react'
+import { Utensils, Eye, Sparkles, Award } from 'lucide-react'
 import { AdminTab } from '@/types/admin.types'
+
 
 interface AdminHeaderProps {
   slug: string
@@ -95,7 +96,19 @@ export function AdminHeader({
             <Sparkles className="w-3.5 h-3.5" />
             <span>Importar con IA</span>
           </button>
+          <button
+            onClick={() => onTabChange('loyalty')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'loyalty'
+                ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                : 'text-amber-400 hover:text-white'
+            }`}
+          >
+            <Award className="w-3.5 h-3.5" />
+            <span>Fidelización</span>
+          </button>
         </div>
+
       </div>
     </header>
   )

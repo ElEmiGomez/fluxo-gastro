@@ -473,23 +473,29 @@ export async function POST(req: NextRequest) {
       items: validItems,
     })
 
-    // Si la comanda incluye canjes de puntos y se indicó loyalty_email, asegurar el escrow
+    // Si la comanda incluye canjes de puntos y se indicó loyalty_email, asegurar el escrow sin duplicar
     if (body.loyalty_email && validItems.some(i => (i.loyalty_points_redeemed || 0) > 0)) {
       try {
         const totalPointsToHold = validItems.reduce((acc, i) => acc + (Number(i.loyalty_points_redeemed) || 0) * (i.quantity || 1), 0)
         if (totalPointsToHold > 0) {
-          const { holdLoyaltyPoints } = await import('@/lib/supabase/repositories/loyalty.repository')
-          await holdLoyaltyPoints(slug, {
-            email: body.loyalty_email,
-            points: totalPointsToHold,
-            tableNumber: assignedTableNum,
-            sessionToken: finalSessionToken,
-          })
+          const { holdLoyaltyPoints, getLoyaltyProfile } = await import('@/lib/supabase/repositories/loyalty.repository')
+          const profile = await getLoyaltyProfile(slug, body.loyalty_email)
+          const currentlyHeld = profile?.held_points || 0
+          if (currentlyHeld < totalPointsToHold) {
+            const deltaPoints = totalPointsToHold - currentlyHeld
+            await holdLoyaltyPoints(slug, {
+              email: body.loyalty_email,
+              points: deltaPoints,
+              tableNumber: assignedTableNum,
+              sessionToken: finalSessionToken,
+            })
+          }
         }
       } catch (escrowErr) {
         console.warn('[Orders POST] Error registrando retención de puntos:', escrowErr)
       }
     }
+
 
     if (idempotencyKeyStr && idempotencyLocked) {
       completeIdempotencyLock(idempotencyKeyStr, saved)

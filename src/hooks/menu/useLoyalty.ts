@@ -20,7 +20,8 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
   // 1. Cargar perfil desde localStorage y refrescar desde servidor
   const fetchProfile = useCallback(async (email: string) => {
     try {
-      const res = await fetch(`/api/loyalty/profile?slug=${encodeURIComponent(slug)}&email=${encodeURIComponent(email)}`)
+      const tableQuery = tableNumber ? `&table=${encodeURIComponent(String(tableNumber))}` : ''
+      const res = await fetch(`/api/loyalty/profile?slug=${encodeURIComponent(slug)}&email=${encodeURIComponent(email)}${tableQuery}`)
       if (!res.ok) throw new Error('Error al consultar perfil de fidelización')
       const data = await res.json()
       if (data.success && data.profile) {
@@ -32,7 +33,8 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
     } catch (err: any) {
       console.warn('[useLoyalty] Error sincronizando perfil:', err)
     }
-  }, [slug, storageKey])
+  }, [slug, storageKey, tableNumber])
+
 
   // 2. Cargar catálogo de recompensas
   const fetchRewards = useCallback(async () => {
@@ -85,9 +87,10 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
       const res = await fetch('/api/loyalty/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, name, email, phone }),
+        body: JSON.stringify({ slug, name, email, phone, tableNumber }),
       })
       const data = await res.json()
+
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'No se pudo registrar en el programa de puntos')
       }

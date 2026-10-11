@@ -35,6 +35,16 @@ export interface LoyaltyEscrowHold {
   created_at: string
 }
 
+export interface LoyaltyDinerSettlement {
+  profile_id: string
+  customer_name: string
+  customer_email: string
+  redeemed_points: number
+  earned_points: number
+  previous_points: number
+  new_total_points: number
+}
+
 export interface LoyaltySettlementResult {
   redeemed_points: number
   earned_points: number
@@ -43,4 +53,14 @@ export interface LoyaltySettlementResult {
   profile_id?: string
   customer_name?: string
   customer_email?: string
+  diners_count?: number
+  breakdown?: LoyaltyDinerSettlement[]
 }
+
+export interface LoyaltyTableMember {
+  profile_id: string
+  name: string
+  email: string
+  joined_at: string
+}
+

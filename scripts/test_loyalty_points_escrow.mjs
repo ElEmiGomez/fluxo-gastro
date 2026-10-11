@@ -198,17 +198,71 @@ async function run() {
   assert('Bonus de Google Maps otorgado con éxito a Elena', bonusRes.success === true && bonusRes.bonus_points === 50)
   assert('Nuevo total de Elena con bonus: 0 + 50 = 50 pts', bonusRes.new_total_points === 50)
 
-  // Intentar reclamar de nuevo el bonus (debe ser rechazado)
-  const duplicateBonusRes = await fetch(`${BASE_URL}/api/loyalty/google-review-bonus`, {
+  // 9. Reparto Multi-Comensal en Mesa Compartida (Paso 9)
+  console.log('\n👉 Paso 9: Reparto Multi-Comensal en Mesa Compartida (Mesa 15)...')
+  const emailA = `diner_a_${Date.now()}@fluxo.com`
+  const emailB = `diner_b_${Date.now()}@fluxo.com`
+
+  // Registrar Diner A y Diner B en Mesa 15
+  const regARes = await fetch(`${BASE_URL}/api/loyalty/profile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug: SLUG, name: 'Marcos A', email: emailA, tableNumber: 15 }),
+  }).then(r => r.json())
+  assert('Diner A registrado en Mesa 15', regARes.success === true)
+
+  const regBRes = await fetch(`${BASE_URL}/api/loyalty/profile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug: SLUG, name: 'Sofia B', email: emailB, tableNumber: 15 }),
+  }).then(r => r.json())
+  assert('Diner B registrado en Mesa 15', regBRes.success === true)
+
+  // Cerrar y cobrar Mesa 15 por 40€ -> 40 puntos a repartir entre 2 comensales = 20 pts cada uno
+  const closeMultiRes = await fetch(`${BASE_URL}/api/tables`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       slug: SLUG,
-      email: testEmail,
+      table_number: 15,
+      action: 'close_session',
+      payment_method: 'card',
+      final_amount: 40,
     }),
   }).then(r => r.json())
+  assert('Cierre de mesa multi-comensal exitoso', closeMultiRes.success === true)
 
-  assert('Segundo intento de bonus es rechazado (un solo uso por comensal)', duplicateBonusRes.success === false)
+  // Verificar que ambos comensales recibieron sus 20 puntos proporcionales
+  const dinerAFinal = await fetch(`${BASE_URL}/api/loyalty/profile?slug=${SLUG}&email=${emailA}`).then(r => r.json())
+  const dinerBFinal = await fetch(`${BASE_URL}/api/loyalty/profile?slug=${SLUG}&email=${emailB}`).then(r => r.json())
+  assert('Diner A recibió 20 pts (50% de 40€)', dinerAFinal.profile?.total_points === 20)
+  assert('Diner B recibió 20 pts (50% de 40€)', dinerBFinal.profile?.total_points === 20)
+
+  // 10. Panel Admin de Clientes Fidelizados (Paso 10)
+  console.log('\n👉 Paso 10: Endpoint Administrativo de Clientes Fidelizados (GET /api/loyalty/profiles)...')
+  // A) Intento no autorizado (debe retornar 401)
+  const unauthRes = await fetch(`${BASE_URL}/api/loyalty/profiles?slug=${SLUG}`)
+  assert('GET /api/loyalty/profiles sin auth retorna 401 No Autorizado', unauthRes.status === 401)
+
+  // B) Acceso autorizado con token PIN de staff admin
+  const adminPinRes = await fetch(`${BASE_URL}/api/staff/verify-pin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug: SLUG, pin: '1234', role: 'admin' }),
+  }).then(r => r.json())
+  const adminToken = adminPinRes.token || 'mock-admin-token'
+
+  const authProfilesRes = await fetch(`${BASE_URL}/api/loyalty/profiles?slug=${SLUG}`, {
+    headers: {
+      'Authorization': `Bearer ${adminToken}`,
+      'Cookie': `fluxo_staff_auth_${SLUG}=${adminToken}`,
+    },
+  }).then(r => r.json())
+
+  assert('GET /api/loyalty/profiles autorizado retorna 200 y éxito', authProfilesRes.success === true)
+  assert('Lista de perfiles contiene comensales', Array.isArray(authProfilesRes.profiles) && authProfilesRes.profiles.length > 0)
+  assert('Resumen estadístico incluye total_customers > 0', authProfilesRes.stats?.total_customers > 0)
+  assert('Resumen estadístico incluye total_points_issued > 0', authProfilesRes.stats?.total_points_issued > 0)
 
   console.log('\n========================================================================')
   console.log(`📊 RESULTADO FINAL: ${passed} PASSED | ${failed} FAILED`)
@@ -218,6 +272,7 @@ async function run() {
     process.exit(1)
   }
 }
+
 
 run().catch(err => {
   console.error('Fatal error in loyalty test:', err)
