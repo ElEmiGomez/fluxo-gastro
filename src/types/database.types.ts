@@ -141,6 +141,7 @@ export interface OrderItem {
   course?: CourseType // 'first' (1º marchando), 'second' (2º en espera), 'dessert', 'drink'
   is_complimentary?: boolean // Invitación de la casa / 0,00 €
   weight_grams?: number // Gramos reales en productos al peso
+  loyalty_points_redeemed?: number // Puntos de fidelización canjeados en este ítem
 }
 
 export interface CartItem {
@@ -151,6 +152,7 @@ export interface CartItem {
   course?: CourseType
   is_complimentary?: boolean
   weight_grams?: number
+  loyalty_points_redeemed?: number
 }
 
 // ==============================================================================

@@ -1,8 +1,9 @@
 'use client'
 
 import React from 'react'
-import { Flame, Sparkles, ChevronRight, UtensilsCrossed, Receipt, X } from 'lucide-react'
+import { Flame, Sparkles, ChevronRight, UtensilsCrossed, Receipt, X, Award } from 'lucide-react'
 import { OrderStatus, Restaurant } from '@/types/database.types'
+import { LoyaltyProfile } from '@/types/loyalty.types'
 import { getTranslation } from '@/lib/i18n'
 import { GoogleReviewBooster } from '@/components/menu/GoogleReviewBooster'
 
@@ -21,6 +22,9 @@ interface MenuLiveTrackerProps {
   onOpenTimelineModal: () => void
   onOpenDirectBillModal: () => void
   onGoToDesserts: () => void
+  loyaltyProfile?: LoyaltyProfile | null
+  onClaimLoyaltyBonus?: () => void
+  onOpenLoyaltyModal?: () => void
 }
 
 export function MenuLiveTracker({
@@ -38,6 +42,9 @@ export function MenuLiveTracker({
   onOpenTimelineModal,
   onOpenDirectBillModal,
   onGoToDesserts,
+  loyaltyProfile,
+  onClaimLoyaltyBonus,
+  onOpenLoyaltyModal,
 }: MenuLiveTrackerProps) {
   const t = (key: string) => getTranslation(currentLang, key)
 
@@ -243,8 +250,20 @@ export function MenuLiveTracker({
                     ¡Pago confirmado! Gracias por tu visita
                   </h4>
                   <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
-                    Tu comanda ha sido cobrada correctamente en mesa.
+                    {loyaltyProfile
+                      ? `Has acumulado puntos en tu tarjeta digital con esta consumición.`
+                      : `Puedes consultar y acumular tus puntos de fidelización con esta compra.`}
                   </p>
+                  {onOpenLoyaltyModal && (
+                    <button
+                      type="button"
+                      onClick={onOpenLoyaltyModal}
+                      className="mt-2 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                    >
+                      <Award className="w-3.5 h-3.5" />
+                      <span>{loyaltyProfile ? `Ver mis Puntos (${loyaltyProfile.available_points} pts)` : 'Unirme al Club de Puntos'}</span>
+                    </button>
+                  )}
                 </div>
               </div>
               <button
@@ -265,6 +284,8 @@ export function MenuLiveTracker({
               googlePlaceId={restaurant.google_place_id}
               variant="card"
               onDismiss={onDismissReviewBooster}
+              loyaltyProfile={loyaltyProfile}
+              onClaimLoyaltyBonus={onClaimLoyaltyBonus}
             />
           )}
         </div>

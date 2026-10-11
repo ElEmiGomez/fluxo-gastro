@@ -23,6 +23,9 @@ import { useMenuOrderSync } from '@/hooks/menu/useMenuOrderSync'
 import { useInSituAdmin } from '@/hooks/menu/useInSituAdmin'
 import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
 import { getTranslation, translateProductName } from '@/lib/i18n'
+import { useLoyalty } from '@/hooks/menu/useLoyalty'
+import { LoyaltyModal } from '@/components/menu/LoyaltyModal'
+import { LoyaltyReward } from '@/types/loyalty.types'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 
@@ -99,6 +102,9 @@ function DinerMenuContent() {
     serviceRequestedToast,
     handleRequestMicroService,
   } = useTableSession({ slug, initialTable: tableParam, urlSession })
+
+  // 2.1 Tarjeta de Fidelización Digital y Escrow de Puntos
+  const loyalty = useLoyalty({ slug, tableNumber })
 
   // 3. Catálogo de productos y filtros
   // Inicializamos temporalmente el hook in-situ placeholder
@@ -338,6 +344,55 @@ function DinerMenuContent() {
     setTimeout(() => setAddedToast(null), 2500)
   }
 
+  // Canjear recompensa por puntos de fidelización
+  const handleRedeemLoyaltyReward = async (reward: LoyaltyReward) => {
+    if (!reward.product) return
+
+    triggerHaptic(HAPTIC_PATTERNS.ADD_CART)
+
+    const rewardProduct: Product = {
+      ...reward.product,
+      price: 0,
+    }
+
+    setCart(prev => [
+      ...prev,
+      {
+        product: rewardProduct,
+        quantity: 1,
+        selectedPills: [],
+        notes: `[🎁 Canje Fidelización: -${reward.points_cost} pts]`,
+        is_complimentary: true,
+        loyalty_points_redeemed: reward.points_cost,
+      },
+    ])
+
+    // Retener los puntos inmediatamente en el servidor
+    if (loyalty.profile?.email) {
+      try {
+        await fetch('/api/loyalty/escrow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slug,
+            action: 'hold',
+            email: loyalty.profile.email,
+            points: reward.points_cost,
+            tableNumber,
+            sessionToken: sessionId || `sess_${Date.now()}`,
+            productId: reward.product_id,
+          }),
+        })
+        loyalty.refresh()
+      } catch (e) {
+        console.warn('Error en escrow de fidelización:', e)
+      }
+    }
+
+    setAddedToast(`¡${reward.product.name} canjeado!`)
+    setTimeout(() => setAddedToast(null), 2500)
+  }
+
   const totalCartCount = cart.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0)
   const totalCartAmount = cart.reduce((sum, item) => sum + (Number(item?.product?.price) || 0) * (Number(item?.quantity) || 1), 0)
   const t = (key: string) => getTranslation(currentLang, key)
@@ -362,6 +417,8 @@ function DinerMenuContent() {
           onLogoPointerUp={handleLogoPointerUp}
           onLogoTouchStart={handleLogoTouchStart}
           onLogoTouchMove={handleLogoTouchMove}
+          loyaltyPoints={loyalty.profile?.available_points}
+          onOpenLoyaltyModal={() => loyalty.setIsModalOpen(true)}
         />
 
         {/* Notificación Toast Flotante */}
@@ -436,6 +493,9 @@ function DinerMenuContent() {
             if (catEl) catEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
             triggerHaptic(HAPTIC_PATTERNS.TAP)
           }}
+          loyaltyProfile={loyalty.profile}
+          onClaimLoyaltyBonus={loyalty.claimGoogleReviewBonus}
+          onOpenLoyaltyModal={() => loyalty.setIsModalOpen(true)}
         />
 
         {/* Carta Gastronómica Principal */}
@@ -596,6 +656,7 @@ function DinerMenuContent() {
               if (newOrder.total_amount) {
                 setTableTotalAmount(prev => Math.max(prev, Number(newOrder.total_amount) || 0))
               }
+              loyalty.refresh()
             }
           }}
           onUpdateCartQuantity={(index, newQty) => {
@@ -623,6 +684,18 @@ function DinerMenuContent() {
             onAddMenuToCart={handleAddDailyMenuToCart}
           />
         )}
+
+        {/* Modal de Tarjeta de Fidelización y Canje de Puntos */}
+        <LoyaltyModal
+          isOpen={loyalty.isModalOpen}
+          onClose={() => loyalty.setIsModalOpen(false)}
+          profile={loyalty.profile}
+          rewards={loyalty.rewards}
+          isLoading={loyalty.isLoading}
+          onLoginOrRegister={loyalty.loginOrRegister}
+          onLogout={loyalty.logout}
+          onRedeemReward={handleRedeemLoyaltyReward}
+        />
 
       </div>
     </TenantProvider>

@@ -9,6 +9,7 @@ import {
   validateTableSession as memoryValidateSession,
 } from '@/lib/server-state'
 import { getTargetRestaurantId } from './restaurants.repository'
+import { settleLoyaltySession } from './loyalty.repository'
 
 /**
  * 1. SEGURIDAD DE SESIÓN: Iniciar u obtener sesión activa con UUID por visita
@@ -151,33 +152,44 @@ export async function closeTableSession(
   ordersCount?: number | null
 ): Promise<void> {
   const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
+  let calculatedAmount = finalAmount
+  let calculatedCount = ordersCount
+
+  // Si no se proporcionaron montos, calcular desde memoria previa o Supabase
+  if (calculatedAmount === undefined || calculatedAmount === null || calculatedCount === undefined || calculatedCount === null) {
+    const memOrders = (globalThis as any).__GASTRO_ORDERS__?.[slug] || []
+    const tableOrders = memOrders.filter((o: any) =>
+      (o.table_number?.toString() === tableNumber.toString() ||
+       o.table?.table_number?.toString() === tableNumber.toString()) &&
+      o.status !== 'cancelled' && o.status !== 'paid'
+    )
+    if (tableOrders.length > 0) {
+      if (calculatedAmount === undefined || calculatedAmount === null) {
+        calculatedAmount = tableOrders.reduce((acc: number, o: any) => acc + (Number(o.total_amount) || 0), 0)
+      }
+      if (calculatedCount === undefined || calculatedCount === null) {
+        calculatedCount = tableOrders.length
+      }
+    } else {
+      if (calculatedAmount === undefined || calculatedAmount === null) calculatedAmount = 0
+      if (calculatedCount === undefined || calculatedCount === null) calculatedCount = 1
+    }
+  }
+
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
-      // Si finalAmount u ordersCount no se proveyeron explícitamente, calcular desde órdenes activas
-      let calculatedAmount = finalAmount
-      let calculatedCount = ordersCount
+      const { data: activeOrders } = await supabase
+        .from('orders')
+        .select('id, total_amount')
+        .eq('restaurant_id', targetRestaurantId)
+        .eq('table_number', tableNumber)
+        .neq('status', 'cancelled')
+        .neq('status', 'paid')
 
-      if (calculatedAmount === undefined || calculatedAmount === null || calculatedCount === undefined || calculatedCount === null) {
-        const { data: activeOrders } = await supabase
-          .from('orders')
-          .select('id, total_amount')
-          .eq('restaurant_id', targetRestaurantId)
-          .eq('table_number', tableNumber)
-          .neq('status', 'cancelled')
-          .neq('status', 'paid')
-
-        if (activeOrders && activeOrders.length > 0) {
-          if (calculatedAmount === undefined || calculatedAmount === null) {
-            calculatedAmount = activeOrders.reduce((acc: number, o: { total_amount?: number | string | null }) => acc + (Number(o.total_amount) || 0), 0)
-          }
-          if (calculatedCount === undefined || calculatedCount === null) {
-            calculatedCount = activeOrders.length
-          }
-        } else {
-          if (calculatedAmount === undefined || calculatedAmount === null) calculatedAmount = 0
-          if (calculatedCount === undefined || calculatedCount === null) calculatedCount = 1
-        }
+      if (activeOrders && activeOrders.length > 0) {
+        calculatedAmount = activeOrders.reduce((acc: number, o: { total_amount?: number | string | null }) => acc + (Number(o.total_amount) || 0), 0)
+        calculatedCount = activeOrders.length
       }
 
       // Intentar actualización completa con columnas de resumen
@@ -225,6 +237,17 @@ export async function closeTableSession(
     } catch (e) {
       console.warn('Error closing session in Supabase:', e)
     }
+  }
+
+  // 4. Liquidar puntos canjeados y acreditar puntos ganados en el sistema de fidelización
+  try {
+    const finalBillAmount = Number(calculatedAmount) || 0
+    await settleLoyaltySession(slug, {
+      tableNumber,
+      finalAmount: finalBillAmount,
+    })
+  } catch (loyaltyErr) {
+    console.warn('[closeTableSession] Error liquidando fidelización:', loyaltyErr)
   }
 
   // Sincronizar en memoria y emitir evento SSE

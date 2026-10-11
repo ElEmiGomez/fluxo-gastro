@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ChevronDown, Check, Bell } from 'lucide-react'
+import { ChevronDown, Check, Bell, Award } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { CallWaiterButton } from '@/components/menu/CallWaiterButton'
 import { TOP_LANGUAGES, getTranslation } from '@/lib/i18n'
@@ -22,6 +22,8 @@ interface MenuHeaderProps {
   onLogoPointerUp: () => void
   onLogoTouchStart: (e: React.TouchEvent) => void
   onLogoTouchMove: (e: React.TouchEvent) => void
+  loyaltyPoints?: number
+  onOpenLoyaltyModal?: () => void
 }
 
 export function MenuHeader({
@@ -39,6 +41,8 @@ export function MenuHeader({
   onLogoPointerUp,
   onLogoTouchStart,
   onLogoTouchMove,
+  loyaltyPoints,
+  onOpenLoyaltyModal,
 }: MenuHeaderProps) {
   const t = (key: string) => getTranslation(currentLang, key)
 
@@ -139,6 +143,21 @@ export function MenuHeader({
 
           {!isFixedMenu && (
             <>
+              {/* Botón de Fidelización / Puntos */}
+              {onOpenLoyaltyModal && (
+                <button
+                  type="button"
+                  onClick={onOpenLoyaltyModal}
+                  className="px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/90 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+                  title="Consultar saldo y canjear puntos de fidelización"
+                >
+                  <Award className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                  <span className="text-[11px] font-black">
+                    {loyaltyPoints !== undefined && loyaltyPoints !== null ? `${loyaltyPoints} pts` : 'Puntos'}
+                  </span>
+                </button>
+              )}
+
               {/* Botón de Microservicios */}
               <button
                 type="button"

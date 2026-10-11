@@ -419,9 +419,16 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      // Cortesía ("Invita la casa"): Solo autorizada para personal de sala autenticado
+      // Cortesía ("Invita la casa" o Canje de Puntos de Fidelización)
       const isStaffSender = verifyStaffRequest(req, slug, ['comandero', 'admin', 'kitchen'])
-      const isComplimentary = Boolean(isStaffSender && (item.is_complimentary || (item.notes && item.notes.includes('[🎁 INVITACIÓN DE LA CASA]'))))
+      const isLoyaltyRedeemed = Boolean(
+        (Number(item.loyalty_points_redeemed) > 0) ||
+        (item.notes && item.notes.includes('[🎁 Canje Fidelización'))
+      )
+      const isComplimentary = Boolean(
+        (isStaffSender && (item.is_complimentary || (item.notes && item.notes.includes('[🎁 INVITACIÓN DE LA CASA]')))) ||
+        isLoyaltyRedeemed
+      )
 
       const itemPriceToCharge = isComplimentary ? 0 : (Number(catalogProduct.price) || 0)
       computedTotal += itemPriceToCharge * quantity
@@ -441,6 +448,7 @@ export async function POST(req: NextRequest) {
           id: canonicalProdId,
         },
         is_complimentary: isComplimentary,
+        loyalty_points_redeemed: item.loyalty_points_redeemed ? Number(item.loyalty_points_redeemed) : undefined,
         course: item.course || 'first',
       })
     }
@@ -464,6 +472,24 @@ export async function POST(req: NextRequest) {
       total_amount: computedTotal,
       items: validItems,
     })
+
+    // Si la comanda incluye canjes de puntos y se indicó loyalty_email, asegurar el escrow
+    if (body.loyalty_email && validItems.some(i => (i.loyalty_points_redeemed || 0) > 0)) {
+      try {
+        const totalPointsToHold = validItems.reduce((acc, i) => acc + (Number(i.loyalty_points_redeemed) || 0) * (i.quantity || 1), 0)
+        if (totalPointsToHold > 0) {
+          const { holdLoyaltyPoints } = await import('@/lib/supabase/repositories/loyalty.repository')
+          await holdLoyaltyPoints(slug, {
+            email: body.loyalty_email,
+            points: totalPointsToHold,
+            tableNumber: assignedTableNum,
+            sessionToken: finalSessionToken,
+          })
+        }
+      } catch (escrowErr) {
+        console.warn('[Orders POST] Error registrando retención de puntos:', escrowErr)
+      }
+    }
 
     if (idempotencyKeyStr && idempotencyLocked) {
       completeIdempotencyLock(idempotencyKeyStr, saved)

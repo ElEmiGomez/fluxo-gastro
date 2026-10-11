@@ -343,8 +343,18 @@ export function CartDrawer({
             quantity: item.quantity,
             notes: item.notes || (item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : null),
             course: item.course,
+            is_complimentary: item.is_complimentary,
+            loyalty_points_redeemed: item.loyalty_points_redeemed,
           }
         }),
+        loyalty_email: (() => {
+          try {
+            const raw = typeof window !== 'undefined' ? localStorage.getItem(`fluxo_loyalty_user_${currentSlug}`) : null
+            return raw ? JSON.parse(raw).email : undefined
+          } catch {
+            return undefined
+          }
+        })(),
       }
 
 

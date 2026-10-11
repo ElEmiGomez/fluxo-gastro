@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
         maxAge: 24 * 60 * 60, // 24 horas
       })
       return res
-    } else if (action === 'free') {
+    } else if (action === 'free' || action === 'close_session') {
       const { payment_method, final_amount, orders_count } = body
       await closeTableSession(
         restaurantId,
