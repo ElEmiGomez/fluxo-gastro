@@ -596,3 +596,13 @@
   2. Generador de PDF de Carta Fija en Alta Resolucion: Carta_Fija_Fluxo.pdf (386 KB).
   3. Reporte Mensual Ejecutivo Corregido y Estructurado en 2 Paginas Exactas: docs/Informe_Ejecutivo_RestoBar_Noia.pdf (227 KB).
   4. Suite de Verificacion de Reporte Superada: 2 paginas, 0 caracteres huerfanos, matriz BCG, analisis de cuellos de botella y ROI > 26x certificados.
+
+---
+## [2026-10-11 10:00] PROPUESTA DE PRODUCTO: TARJETA DE FIDELIZACIÓN DIGITAL & SISTEMA DE RECOMPENSAS
+- **Departamento:** Innovación de Producto, Marketing & Program Data
+- **Hito:** Registro y conceptualización en backlog de fidelización de comensales frecuentes para Fluxo.
+- **Resumen de la Propuesta:**
+  1. **Mecánica Cero-Fricción:** Acumulación de puntos o sellos digitales integrada en la carta PWA al pedir o pagar en mesa, sin obligar al comensal a instalar apps pesadas.
+  2. **Canje de Recompensas en Sala:** Integración con comandero para canjear regalos inmediatos (tapa/postre/café de cortesía con el badge existente de invitación) o descuentos en próximas visitas.
+  3. **Valor Comercial:** Herramienta de retención de comensales locales y captación de CRM gastronómico propio para el restaurante, fortaleciendo la propuesta de valor de los planes superiores.
+

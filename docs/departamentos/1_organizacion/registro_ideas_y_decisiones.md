@@ -44,6 +44,7 @@
 * [ ] **Flujo de Trabajo Spec-Driven Development (SDD) & Git Branching:** Trabajar como arquitectos definiendo especificaciones antes de codear, validando unit tests focalizados y usando ramas de Git para mantener `main` 100% estable.
 * [ ] **Control de Stock Dinámico ("Se Agotó"):** Botón rápido en el comandero del mozo para ocultar un plato de la carta cuando se acabe el ingrediente.
 * [ ] **Recomendación Inteligente de Postre/Café:** Al pasar la comanda a estado `delivered`, sugerir sutilmente cafés o postres caseros para aumentar el ticket medio.
+* [ ] **Tarjeta de Fidelización Digital & Sistema de Puntos / Recompensas:** Programa de lealtad para comensales frecuentes sin requerir descarga de apps pesadas (vía número de teléfono o enlace en la PWA / Apple o Google Wallet). Permite acumular puntos por visita o volumen consumido (€), canjear regalos directos en sala (platos de cortesía, postre/café de regalo) o aplicar descuentos en la siguiente visita. Brinda al restaurante un CRM gastronómico propio para elevar la recurrencia y el ticket medio de clientes habituales.
 * [ ] **Telemetría de Tiempos de Pase:** Detección de cuellos de botella entre comanda confirmada y entrega en mesa para optimizar cocina en Plan Suite.
 * [ ] **Integración de Impresión Automática en Cocina vía Webhooks:** Disparo directo a tiqueteras térmicas sin depender de pantalla física.
 
