@@ -742,3 +742,15 @@
   2. **Canje de Recompensas en Sala:** Integración con comandero para canjear regalos inmediatos (tapa/postre/café de cortesía con el badge existente de invitación) o descuentos en próximas visitas.
   3. **Valor Comercial:** Herramienta de retención de comensales locales y captación de CRM gastronómico propio para el restaurante, fortaleciendo la propuesta de valor de los planes superiores.
 
+---
+## [2026-10-13 23:45] CIERRE DE SESIÓN: REFINAMIENTO DE FIDELIZACIÓN DIGITAL & REGISTRO DE TAREAS OPERATIVAS
+- **Departamento:** Organización General (COO), Ingeniería & Producto (Program Data)
+- **Hitos Completados:**
+  1. **Corrección Visual de Recompensas (`LoyaltyModal.tsx`):** Solucionado el quiebre de línea en los badges de puntos (`⭐ 20 pts`) mediante `whitespace-nowrap shrink-0 inline-flex items-center gap-1`.
+  2. **Acreditación Retroactiva de Puntos Post-Servicio (`loyalty.repository.ts`, `/api/loyalty/profile`):** Al unirse al club de puntos tras consumir, el sistema consulta las comandas no premiadas de la mesa en el servicio actual (`getUncreditedServiceOrdersForTable`) y acredita automáticamente los puntos acumulados al nuevo socio, previniendo duplicaciones en `settleLoyaltySession`.
+  3. **Bonificación Google Review Booster (+50 pts) (`GoogleReviewBooster.tsx`, `useLoyalty.ts`):** Acreditación inmediata tanto al calificar con estrellas como al pulsar "Abrir Google Maps", con retención de bandera pendiente si el usuario aún no había iniciado sesión.
+- **Tareas Operativas Pendientes en Backlog (Ajustes de Sala y Cocina para Mañana):**
+  1. **Refinamiento de Estación de Bebidas (Barra/Sala):** Ajustar la visualización y despacho de bebidas en Comandero para que el personal de barra/sala las atienda con agilidad sin sobrecargar la pantalla de cocina y manteniendo el seguimiento en mesa.
+  2. **Refinamiento de Pase en Cocina en 2 Tiempos (Postres Retenidos):** Ajustar la retención y marcha de postres para que queden claramente separados de los principales y el cocinero o mozo pueda activar su preparación cuando la mesa termine la comida.
+
+

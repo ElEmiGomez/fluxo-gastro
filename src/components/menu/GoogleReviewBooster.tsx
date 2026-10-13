@@ -56,21 +56,29 @@ export function GoogleReviewBooster({
     }
   }
 
-  const handleSelectStar = (stars: number) => {
+  const handleSelectStar = async (stars: number) => {
     setSelectedRating(stars)
     triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
 
-    if (stars >= 4) {
-      if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
-        try {
-          onClaimLoyaltyBonus()
-        } catch (_) {}
+    if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
+      try {
+        await onClaimLoyaltyBonus()
+      } catch (e) {
+        console.warn('[GoogleReviewBooster] Error reclamando bonus:', e)
       }
+    } else if (!loyaltyProfile) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+        localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+      }
+    }
+
+    if (stars >= 4) {
       setTimeout(() => {
         onReviewOpened?.()
         window.open(directReviewLink, '_blank', 'noopener,noreferrer')
         handleDismiss()
-      }, 400)
+      }, 500)
     } else {
       setFeedbackSent(true)
       setTimeout(() => {
@@ -156,7 +164,7 @@ export function GoogleReviewBooster({
         Una reseña de <strong>5 estrellas</strong> apoya directamente a nuestros camareros y cocineros en Google Maps.
       </p>
 
-      {loyaltyProfile && !loyaltyProfile.google_review_bonus_awarded && (
+      {!loyaltyProfile?.google_review_bonus_awarded && (
         <div className="p-2.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/5 border border-amber-300 text-amber-950 flex items-center gap-2 shadow-2xs">
           <Award className="w-4 h-4 text-amber-700 flex-shrink-0" />
           <span className="text-[11px] font-black leading-tight">
@@ -199,10 +207,25 @@ export function GoogleReviewBooster({
           href={directReviewLink}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={() => handleDismiss()}
-          className="text-amber-700 font-bold hover:underline flex items-center gap-1"
+          onClick={async () => {
+            if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
+              try {
+                await onClaimLoyaltyBonus()
+              } catch (e) {
+                console.warn('[GoogleReviewBooster] Error reclamando bonus:', e)
+              }
+            } else if (!loyaltyProfile) {
+              if (typeof window !== 'undefined') {
+                sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+                localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+              }
+            }
+            onReviewOpened?.()
+            handleDismiss()
+          }}
+          className="text-amber-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
         >
-          <span>Abrir Google Maps</span>
+          <span>Abrir Google Maps (+50 pts)</span>
           <ExternalLink size={10} />
         </a>
       </div>

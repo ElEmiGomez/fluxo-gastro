@@ -261,7 +261,7 @@ export function MenuLiveTracker({
                       className="mt-2 px-3.5 py-1.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-emerald-950 border border-emerald-300/80 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm shadow-emerald-900/40 cursor-pointer"
                     >
                       <Award className="w-3.5 h-3.5 text-emerald-900" />
-                      <span>{loyaltyProfile ? `Ver mis Puntos (${loyaltyProfile.available_points} pts)` : 'Unirme al Club de Puntos'}</span>
+                      <span>{loyaltyProfile ? `🎁 Premios y Puntos (${loyaltyProfile.available_points} pts)` : 'Unirme al Club de Puntos'}</span>
                     </button>
                   )}
                 </div>

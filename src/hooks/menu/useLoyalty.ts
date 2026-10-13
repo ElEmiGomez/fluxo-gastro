@@ -84,19 +84,36 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
     setError(null)
     setIsLoading(true)
     try {
+      const hasPendingReviewBonus =
+        typeof window !== 'undefined' &&
+        (sessionStorage.getItem('fluxo_pending_google_review_bonus') === 'true' ||
+          localStorage.getItem('fluxo_pending_google_review_bonus') === 'true')
+
       const res = await fetch('/api/loyalty/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, name, email, phone, tableNumber }),
+        body: JSON.stringify({
+          slug,
+          name,
+          email,
+          phone,
+          tableNumber,
+          claimGoogleReviewBonus: hasPendingReviewBonus,
+        }),
       })
       const data = await res.json()
 
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'No se pudo registrar en el programa de puntos')
       }
+
       setProfile(data.profile)
       if (typeof window !== 'undefined') {
         localStorage.setItem(storageKey, JSON.stringify({ email: data.profile.email, name: data.profile.name }))
+        if (data.profile.google_review_bonus_awarded) {
+          sessionStorage.removeItem('fluxo_pending_google_review_bonus')
+          localStorage.removeItem('fluxo_pending_google_review_bonus')
+        }
       }
       return data.profile
     } catch (err: any) {
@@ -115,29 +132,42 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
     }
   }
 
-  // 5. Reclamar bonus de Google Maps (+50 Puntos de un solo uso)
-  const claimGoogleReviewBonus = async () => {
+  // 5. Reclamar bonus de Google Maps (+50 Puntos de un solo uso o configurable)
+  const claimGoogleReviewBonus = async (bonusPoints: number = 50) => {
     if (!profile?.email) {
-      throw new Error('Debes iniciar sesión con tu email para recibir el bonus.')
+      // Si el comensal aún no inició sesión, guardar en almacenamiento para acreditar al registrarse
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+        localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+      }
+      return { success: true, pending: true, bonus_points: bonusPoints }
     }
+
     setError(null)
     try {
       const res = await fetch('/api/loyalty/google-review-bonus', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, email: profile.email }),
+        body: JSON.stringify({ slug, email: profile.email, bonusPoints }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'No se pudo reclamar el bonus de Google Maps')
       }
-      // Actualizar perfil reactivamente
-      setProfile(prev => prev ? {
-        ...prev,
+
+      const updated = data.profile || {
+        ...profile,
         total_points: data.new_total_points,
-        available_points: Math.max(0, data.new_total_points - prev.held_points),
+        available_points: Math.max(0, data.new_total_points - (profile.held_points || 0)),
         google_review_bonus_awarded: true,
-      } : null)
+      }
+
+      setProfile(updated)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKey, JSON.stringify({ email: updated.email, name: updated.name }))
+        sessionStorage.removeItem('fluxo_pending_google_review_bonus')
+        localStorage.removeItem('fluxo_pending_google_review_bonus')
+      }
       return data
     } catch (err: any) {
       setError(err.message)

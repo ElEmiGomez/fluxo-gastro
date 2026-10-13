@@ -181,6 +181,9 @@ graph TD
   - [x] Certificar flujo integral E2E: Cliente (Carta QR) ➔ Mozo Gatekeeper (`pending_validation`) ➔ Cocina KDS industrial (`confirmed`) ➔ Entrega (`delivered`).
   - [x] Validación de latencia en demo transatlántica en vivo (España - Argentina).
   - [x] Blindaje de seguridad y concurrencia (14/14 tests QA superados, RLS con cookies, transacciones sin TOCTOU, hash bcrypt).
+  - [x] Fidelización digital zero-fricción: saldo retenido (escrow), retroactividad de puntos post-servicio y Google Review Booster.
+  - [ ] **Ajuste Operativo Sala/Barra:** Refinar la estación de bebidas y tareas de mozo para optimizar el despacho independiente en barra/sala sin cargar fogones.
+  - [ ] **Ajuste Operativo Cocina en 2 Tiempos:** Refinar el pase de postres para asegurar separación visual limpia y marcha explícita post-principales.
   - [ ] Recoger feedback operativo final del simulacro de sala antes de congelar build para producción en la nube.
 
 ---

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { slug = 'burger-gourmet', email } = body
+    const { slug = 'burger-gourmet', email, bonusPoints = 50 } = body
 
     if (!email) {
       return NextResponse.json(
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const result = await claimGoogleReviewBonus(slug, email)
+    const result = await claimGoogleReviewBonus(slug, email, Number(bonusPoints) || 50)
 
     return NextResponse.json({
       ...result,

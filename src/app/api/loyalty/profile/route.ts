@@ -17,12 +17,12 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const profile = await getLoyaltyProfile(slug, email)
-    if (profile && tableNumber) {
-      await registerOrGetLoyaltyProfile(slug, {
-        name: profile.name,
-        email: profile.email,
-        phone: profile.phone,
+    let profile = await getLoyaltyProfile(slug, email)
+    if (tableNumber) {
+      profile = await registerOrGetLoyaltyProfile(slug, {
+        name: profile?.name || 'Comensal',
+        email,
+        phone: profile?.phone,
         tableNumber,
       })
     }
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { slug = 'burger-gourmet', name, email, phone, tableNumber } = body
+    const { slug = 'burger-gourmet', name, email, phone, tableNumber, claimGoogleReviewBonus } = body
 
     if (!email) {
       return NextResponse.json(
@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
       email,
       phone,
       tableNumber,
+      claimGoogleReviewBonus: Boolean(claimGoogleReviewBonus),
     })
 
 
