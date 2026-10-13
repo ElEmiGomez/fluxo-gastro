@@ -258,9 +258,9 @@ export function MenuLiveTracker({
                     <button
                       type="button"
                       onClick={onOpenLoyaltyModal}
-                      className="mt-2 px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                      className="mt-2 px-3.5 py-1.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-emerald-950 border border-emerald-300/80 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm shadow-emerald-900/40 cursor-pointer"
                     >
-                      <Award className="w-3.5 h-3.5" />
+                      <Award className="w-3.5 h-3.5 text-emerald-900" />
                       <span>{loyaltyProfile ? `Ver mis Puntos (${loyaltyProfile.available_points} pts)` : 'Unirme al Club de Puntos'}</span>
                     </button>
                   )}
