@@ -14,6 +14,7 @@ import {
   getCachedOrderItems,
 } from '@/lib/server-state'
 import { getTargetRestaurantId } from './restaurants.repository'
+import { inferCourseType } from '@/lib/category-matcher'
 
 export interface TransitionOrderParams {
   orderId: string
@@ -168,7 +169,9 @@ export async function createOrder(
           order_items: (orderData.items || []).map((it: any) => ({
             ...it,
             product: it.product || it.products,
-            course: it.course || 'first',
+            course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
+              ? it.course
+              : inferCourseType(it.product || it.products),
           })) as any,
           table_number: orderData.table_number,
         }
@@ -246,7 +249,9 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
           const normalizedItems = (o.order_items || []).map((it: any) => ({
             ...it,
             product: it.product || it.products,
-            course: it.course || 'first',
+            course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
+              ? it.course
+              : inferCourseType(it.product || it.products),
           }))
           const mem = memOrders.find(m => m.id === o.id)
           const resolvedVersion = (o.version !== undefined && o.version !== null)
@@ -408,7 +413,9 @@ export async function transitionOrderStatus(
           const rpcItems = (data.order?.order_items || []).map((it: any) => ({
             ...it,
             product: it.product || it.products,
-            course: it.course || 'first',
+            course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
+              ? it.course
+              : inferCourseType(it.product || it.products),
           }))
 
           // Backfill desde memoria o caché si el RPC devolvió items vacíos (race condition Supabase)
@@ -500,7 +507,9 @@ export async function transitionOrderStatus(
         const supaItems = (supaOrder.order_items || []).map((it: any) => ({
           ...it,
           product: it.product || it.products,
-          course: it.course || 'first',
+          course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
+            ? it.course
+            : inferCourseType(it.product || it.products),
         }))
         const cached = getCachedOrderItems(orderId)
         const effectiveItems = supaItems.length > 0
@@ -590,3 +599,82 @@ export async function updateOrderStatus(
     version: res.version,
   }
 }
+
+/**
+ * 6.2 Actualiza tags de curso/pase gastronómico en las notas de los ítems de una orden
+ * (ej. [BARRA_SERVIDA], [COCINA_LISTA], [POSTRE_LISTO], [MARCHAR_POSTRE])
+ * garantizando persistencia en PostgreSQL (Supabase) y sincronización Realtime SSE.
+ */
+export async function updateOrderCourseTags(
+  slug: string,
+  orderId: string,
+  tag: string,
+  itemFilter: (item: OrderItem) => boolean
+): Promise<{ success: boolean; order?: Order; error?: string }> {
+  const supabase = createServerClient()
+  const hasSupabase = supabase && isSupabaseConfigured()
+
+  const memOrders = getServerOrders(slug)
+  let order = memOrders.find(o => o.id === orderId)
+
+  if (!order && hasSupabase) {
+    try {
+      const orders = await getRestaurantOrders('', slug)
+      order = orders.find(o => o.id === orderId)
+    } catch (e) {
+      console.warn('[updateOrderCourseTags] Error fetching order from Supabase:', e)
+    }
+  }
+
+  if (!order) {
+    return { success: false, error: 'ORDER_NOT_FOUND' }
+  }
+
+  const updatedItems: OrderItem[] = (order.order_items || []).map(it => {
+    if (itemFilter(it)) {
+      const currentNotes = it.notes || ''
+      if (!currentNotes.includes(tag)) {
+        return {
+          ...it,
+          notes: currentNotes ? `${currentNotes} ${tag}` : tag,
+        }
+      }
+    }
+    return it
+  })
+
+  // Persistir en Supabase (order_items)
+  if (hasSupabase) {
+    try {
+      for (const it of updatedItems) {
+        if (itemFilter(it) && it.id) {
+          await supabase
+            .from('order_items')
+            .update({ notes: it.notes })
+            .eq('id', it.id)
+        }
+      }
+    } catch (dbErr) {
+      console.warn('[updateOrderCourseTags] DB update error:', dbErr)
+    }
+  }
+
+  const updatedOrder: Order = {
+    ...order,
+    order_items: updatedItems,
+  }
+  saveCachedOrderItems(orderId, updatedItems)
+  addServerOrder(slug, updatedOrder, true)
+
+  broadcastEvent({
+    type: 'order_updated',
+    slug,
+    orderId,
+    status: updatedOrder.status,
+    tableNumber: updatedOrder.table_number,
+    order: updatedOrder,
+  })
+
+  return { success: true, order: updatedOrder }
+}
+

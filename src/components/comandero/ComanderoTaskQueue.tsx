@@ -1,17 +1,20 @@
 'use client'
 
 import React from 'react'
-import { BellRing, CheckCircle2, Sparkles, Clock, Loader2, UserCheck, Trash2, Bell, Check, X } from 'lucide-react'
+import { BellRing, CheckCircle2, Sparkles, Clock, Loader2, UserCheck, Trash2, Bell, Check, X, Wine } from 'lucide-react'
 import { Order, Table } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { PendingServiceCall } from '@/types/comandero.types'
+import { cleanItemNotes, getPendingDrinks } from '@/lib/course-utils'
 
 interface ComanderoTaskQueueProps {
   readyOrdersList: Order[]
   validationOrdersList: Order[]
   pendingCalls: PendingServiceCall[]
+  pendingDrinksList?: Order[]
   deliveringOrderIds: Set<string>
   validatingOrderIds: Set<string>
+  servingDrinkOrderIds?: Set<string>
   dismissedReadyBannerOrderIds: Set<string>
   tables: Table[]
   onDeliverSingleOrder: (orderId: string, tblNum?: any) => void
@@ -23,14 +26,18 @@ interface ComanderoTaskQueueProps {
   onSelectTable: (table: Table) => void
   onDismissReadyBanner: (orderId: string) => void
   onOpenFreeTableModal?: (tblNum: string | number) => void
+  onServeDrinks?: (orderId: string) => void
+  onServeAllDrinks?: () => void
 }
 
 export function ComanderoTaskQueue({
   readyOrdersList,
   validationOrdersList,
   pendingCalls,
+  pendingDrinksList = [],
   deliveringOrderIds,
   validatingOrderIds,
+  servingDrinkOrderIds,
   dismissedReadyBannerOrderIds,
   tables,
   onDeliverSingleOrder,
@@ -42,8 +49,14 @@ export function ComanderoTaskQueue({
   onSelectTable,
   onDismissReadyBanner,
   onOpenFreeTableModal,
+  onServeDrinks,
+  onServeAllDrinks,
 }: ComanderoTaskQueueProps) {
-  const totalPendingTasks = readyOrdersList.length + validationOrdersList.length + pendingCalls.length
+  const totalPendingTasks =
+    readyOrdersList.length +
+    validationOrdersList.length +
+    pendingCalls.length +
+    (pendingDrinksList?.length || 0)
 
   return (
     <>
@@ -81,8 +94,109 @@ export function ComanderoTaskQueue({
                     <span>Atender Avisos ({pendingCalls.length})</span>
                   </button>
                 )}
+                {pendingDrinksList.length > 0 && onServeAllDrinks && (
+                  <button
+                    type="button"
+                    onClick={onServeAllDrinks}
+                    className="px-2.5 py-1 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black transition-all shadow-xs flex items-center gap-1 active:scale-95 cursor-pointer"
+                  >
+                    <Wine className="w-3.5 h-3.5" />
+                    <span>Servir Bebidas ({pendingDrinksList.length})</span>
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* SECCIÓN 0: BEBIDAS PENDIENTES DE SERVIR EN SALA / BARRA */}
+            {pendingDrinksList.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+                  <h4 className="text-xs sm:text-sm font-black text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Wine className="w-4 h-4 text-cyan-400 stroke-[2.5]" />
+                    <span>Bebidas por Servir en Sala / Barra ({pendingDrinksList.length})</span>
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {pendingDrinksList.map(ord => {
+                    const tblNum = ord.table_number || ord.table?.table_number || '?'
+                    const pendingDrinks = getPendingDrinks(ord)
+                    const isServing = servingDrinkOrderIds?.has(ord.id)
+
+                    return (
+                      <div
+                        key={`drinks-${ord.id}`}
+                        className="bg-slate-900/90 border-2 border-cyan-400/80 rounded-2xl p-3.5 shadow-lg flex flex-col justify-between space-y-3 relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-cyan-500 via-sky-400 to-cyan-500" />
+                        <div>
+                          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                            <span className="px-3 py-1 rounded-xl bg-cyan-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-xs">
+                              <span>Mesa #{tblNum}</span>
+                            </span>
+                            <span className="text-[11px] font-extrabold text-cyan-300 flex items-center gap-1">
+                              <Wine className="w-3.5 h-3.5" />
+                              <span>{pendingDrinks.reduce((acc, d) => acc + (d.quantity || 1), 0)} pendiente(s)</span>
+                            </span>
+                          </div>
+
+                          <div className="mt-2.5 space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                            {pendingDrinks.map((it, itemIdx) => {
+                              const cleanedNotes = cleanItemNotes(it.notes)
+                              return (
+                                <div key={itemIdx} className="text-xs text-slate-200 leading-tight">
+                                  <span className="font-black text-cyan-400">{it.quantity}x </span>
+                                  <span className="font-bold text-white">{it.product?.name || `Bebida #${itemIdx + 1}`}</span>
+                                  {cleanedNotes && (
+                                    <span className="block text-[10px] text-cyan-200/80 font-bold pl-3 mt-0.5">
+                                      &bull; {cleanedNotes}
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={isServing}
+                            onClick={() => onServeDrinks && onServeDrinks(ord.id)}
+                            className="flex-1 py-2.5 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-700 disabled:opacity-70 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
+                            title="Marcar bebidas como servidas"
+                          >
+                            {isServing ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>Registrando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                                <span>Marcar Servidas</span>
+                              </>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const target = tables.find(t => t.table_number.toString() === tblNum.toString())
+                              if (target) onSelectTable(target)
+                            }}
+                            className="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-black text-xs border border-slate-700 transition-colors cursor-pointer"
+                            title="Ver mesa en comandero"
+                          >
+                            Ver Mesa
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* SECCIÓN A: COMANDAS LISTAS PARA SERVIR EN SALA */}
             {readyOrdersList.length > 0 && (

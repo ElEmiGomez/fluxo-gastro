@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
+import { areOrderDrinksPending } from '@/lib/course-utils'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector } from '@/components/comandero/TableSelector'
@@ -160,9 +161,42 @@ export default function WaiterComanderoPage() {
     return Object.values(drinksMap)
   }, [selectedTable, serverOrders, products, tableStatuses])
 
+  const [servingDrinkOrderIds, setServingDrinkOrderIds] = useState<Set<string>>(new Set())
+
   // Listas de comanda reactivas
   const readyOrdersList = useMemo(() => serverOrders.filter(o => o.status === 'ready'), [serverOrders])
   const validationOrdersList = useMemo(() => serverOrders.filter(o => o.status === 'pending_validation'), [serverOrders])
+  const pendingDrinksList = useMemo(() => serverOrders.filter(areOrderDrinksPending), [serverOrders])
+
+  const handleServeDrinks = useCallback(async (orderId: string) => {
+    setServingDrinkOrderIds(prev => new Set(prev).add(orderId))
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: orderId,
+          action: 'serve_drinks',
+        }),
+      })
+      if (res.ok) {
+        await syncServerData()
+      }
+    } catch (err) {
+      console.error('Error serving drinks:', err)
+    } finally {
+      setServingDrinkOrderIds(prev => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
+    }
+  }, [syncServerData])
+
+  const handleServeAllDrinks = useCallback(async () => {
+    if (pendingDrinksList.length === 0) return
+    await Promise.all(pendingDrinksList.map(ord => handleServeDrinks(ord.id)))
+  }, [pendingDrinksList, handleServeDrinks])
 
   return (
     <StaffPinAuth role="comandero" restaurantSlug={slug}>
@@ -176,8 +210,10 @@ export default function WaiterComanderoPage() {
             readyOrdersList={readyOrdersList}
             validationOrdersList={validationOrdersList}
             pendingCalls={pendingCalls}
+            pendingDrinksList={pendingDrinksList}
             deliveringOrderIds={deliveringOrderIds}
             validatingOrderIds={validatingOrderIds}
+            servingDrinkOrderIds={servingDrinkOrderIds}
             dismissedReadyBannerOrderIds={dismissedReadyBannerOrderIds}
             tables={tables}
             onDeliverSingleOrder={handleDeliverSingleOrder}
@@ -194,6 +230,8 @@ export default function WaiterComanderoPage() {
             onSelectTable={setSelectedTable}
             onDismissReadyBanner={(ordId) => setDismissedReadyBannerOrderIds(prev => new Set(prev).add(ordId))}
             onOpenFreeTableModal={(tbl) => setShowFreeConfirmTable(tbl)}
+            onServeDrinks={handleServeDrinks}
+            onServeAllDrinks={handleServeAllDrinks}
           />
 
           {/* Toast de confirmación de envío */}

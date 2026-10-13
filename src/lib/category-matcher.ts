@@ -1,4 +1,4 @@
-import { Category, Product } from '@/types/database.types'
+import { Category, Product, CourseType } from '@/types/database.types'
 
 export type CategoryGroup =
   | 'promos'
@@ -346,4 +346,27 @@ export function resolveCanonicalProductId(productId?: string | null): string {
   const trimmed = productId.trim()
   return CANONICAL_PRODUCT_MAP[trimmed] || CANONICAL_PRODUCT_MAP[trimmed.toLowerCase()] || trimmed
 }
+
+/**
+ * Infiere automáticamente el CourseType ('first' | 'second' | 'dessert' | 'drink')
+ * para un producto, garantizando la correcta división operativa entre Mozo/Barra y Cocina.
+ */
+export function inferCourseType(product?: Product | null, categories: Category[] = []): CourseType {
+  if (!product) return 'second'
+  const group = getProductGroup(product, categories)
+  switch (group) {
+    case 'bebidas':
+      return 'drink'
+    case 'postres':
+      return 'dessert'
+    case 'entradas':
+      return 'first'
+    case 'principales':
+    case 'burgers':
+    case 'promos':
+    default:
+      return 'second'
+  }
+}
+
 

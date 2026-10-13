@@ -28,6 +28,18 @@ import {
 import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
+import { inferCourseType } from '@/lib/category-matcher'
+import { updateOrderCourseTags } from '@/lib/supabase/repositories/orders.repository'
+import {
+  TAG_DRINK_SERVED,
+  TAG_FOOD_READY,
+  TAG_DESSERT_READY,
+  TAG_DESSERT_FIRED,
+  isDrinkItem,
+  isFoodItem,
+  isDessertItem,
+  orderHasDesserts,
+} from '@/lib/course-utils'
 import { PRODUCT_NAMES } from '@/lib/i18n'
 import { deduplicateProducts } from '@/lib/category-matcher'
 import { Order, OrderItem, OrderStatus, Product } from '@/types/database.types'
@@ -449,7 +461,9 @@ export async function POST(req: NextRequest) {
         },
         is_complimentary: isComplimentary,
         loyalty_points_redeemed: item.loyalty_points_redeemed ? Number(item.loyalty_points_redeemed) : undefined,
-        course: item.course || 'first',
+        course: (item.course && ['first', 'second', 'dessert', 'drink'].includes(item.course))
+          ? item.course
+          : inferCourseType(catalogProduct),
       })
     }
 
@@ -546,7 +560,63 @@ export async function PATCH(req: NextRequest) {
       actorId,
     } = body
 
-    if (!orderId || !status) {
+    const targetOrderId = orderId || body.id || body.order_id
+
+    // GESTIÓN DE ACCIONES DE TIEMPOS GASTRONÓMICOS (ESTACIONES DE SALA Y COCINA)
+    if (body.action === 'serve_drinks') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DRINK_SERVED, isDrinkItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marcar bebidas como servidas' }, { status: 404 })
+      }
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Bebidas marcadas como servidas' })
+    }
+
+    if (body.action === 'ready_food') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_FOOD_READY, isFoodItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marcar comida lista' }, { status: 404 })
+      }
+      await transitionOrderStatus({
+        orderId: targetOrderId,
+        slug,
+        nextStatus: 'ready',
+        actorType: 'kitchen',
+      })
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Comida salada marcada como lista' })
+    }
+
+    if (body.action === 'ready_desserts') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_READY, isDessertItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marcar postres listos' }, { status: 404 })
+      }
+      const transRes = await transitionOrderStatus({
+        orderId: targetOrderId,
+        slug,
+        nextStatus: 'ready',
+        actorType: 'kitchen',
+      })
+      return NextResponse.json({ success: true, order: transRes.order || tagRes.order, message: 'Postres listos para servir' })
+    }
+
+    if (body.action === 'fire_desserts') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_FIRED, isDessertItem)
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Postres marchados a cocina' })
+    }
+
+    if (!targetOrderId || !status) {
       return NextResponse.json({ error: 'Faltan parámetros orderId o status' }, { status: 400 })
     }
 
