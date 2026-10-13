@@ -389,8 +389,11 @@ function DinerMenuContent() {
       }
     }
 
-    setAddedToast(`¡${reward.product.name} canjeado!`)
-    setTimeout(() => setAddedToast(null), 2500)
+    // Cerrar modal de puntos y abrir comanda para que el comensal lo vea reflejado al instante
+    loyalty.setIsModalOpen(false)
+    setIsCartOpen(true)
+    setAddedToast(`¡${reward.product.name} canjeado gratis en tu comanda!`)
+    setTimeout(() => setAddedToast(null), 3000)
   }
 
   const totalCartCount = cart.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0)
@@ -523,8 +526,8 @@ function DinerMenuContent() {
             hasActiveDailyMenu={hasActiveDailyMenu}
           />
 
-          {/* Menú del Día Dinámico (Visible sólo si está activo y en horario, con prioridad absoluta) */}
-          {hasActiveDailyMenu && dailyMenu && !isFixedMenu && (
+          {/* Menú del Día Dinámico (Visible exclusivamente en la categoría Nuestras Promos, si está activo y en horario) */}
+          {hasActiveDailyMenu && dailyMenu && !isFixedMenu && Boolean(selectedCategory !== 'all' && categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('PROMO')) && (
             <div className="pt-0.5 animate-in fade-in duration-300">
               <DailyMenuCard
                 dailyMenu={dailyMenu}

@@ -59,28 +59,28 @@ if (!globalStore.__GASTRO_LOYALTY_PROFILES__) {
 // Catálogo base de recompensas por puntos
 const DEFAULT_REWARDS: Record<string, Array<{ product_id: string; points_cost: number }>> = {
   'burger-gourmet': [
-    { product_id: 'p-caf-1', points_cost: 20 }, // Café de Especialidad: 20 pts
-    { product_id: 'p-bsa-1', points_cost: 15 }, // Limonada Casera: 15 pts
-    { product_id: 'p-bca-1', points_cost: 25 }, // Cerveza Artesanal IPA: 25 pts
-    { product_id: 'p-ent-1', points_cost: 30 }, // Bastones de Mozzarella: 30 pts
-    { product_id: 'p-pos-1', points_cost: 35 }, // Volcán de Chocolate: 35 pts
-    { product_id: 'p-pos-2', points_cost: 35 }, // Tarta de Queso Artesana: 35 pts
-    { product_id: 'p-bur-2', points_cost: 75 }, // Oklahoma Smash Burger: 75 pts
+    { product_id: 'b0000000-0000-0000-0000-000000000008', points_cost: 20 }, // Café de Especialidad: 20 pts
+    { product_id: 'b0000000-0000-0000-0000-000000000009', points_cost: 25 }, // Cerveza Artesanal 1906: 25 pts
+    { product_id: 'b0000000-0000-0000-0000-000000000011', points_cost: 30 }, // Bastones de Mozzarella: 30 pts
+    { product_id: 'b0000000-0000-0000-0000-000000000007', points_cost: 35 }, // Tarta de Queso Artesana: 35 pts
+    { product_id: 'b0000000-0000-0000-0000-000000000006', points_cost: 35 }, // Volcán de Chocolate: 35 pts
+    { product_id: 'b0000000-0000-0000-0000-000000000002', points_cost: 75 }, // Bacon Cheese Doble Monster: 75 pts
   ],
 }
 
 if (!globalStore.__GASTRO_LOYALTY_REWARDS__) {
   globalStore.__GASTRO_LOYALTY_REWARDS__ = {}
-  Object.entries(DEFAULT_REWARDS).forEach(([slug, rewardsList]) => {
-    globalStore.__GASTRO_LOYALTY_REWARDS__![slug] = rewardsList.map((r, idx) => ({
-      id: `lrew-${slug}-${idx + 1}`,
-      restaurant_slug: slug,
-      product_id: r.product_id,
-      points_cost: r.points_cost,
-      is_active: true,
-    }))
-  })
 }
+// Inicializar siempre con catálogo fresco y válido
+Object.entries(DEFAULT_REWARDS).forEach(([slug, rewardsList]) => {
+  globalStore.__GASTRO_LOYALTY_REWARDS__![slug] = rewardsList.map((r, idx) => ({
+    id: `lrew-${slug}-${idx + 1}`,
+    restaurant_slug: slug,
+    product_id: r.product_id,
+    points_cost: r.points_cost,
+    is_active: true,
+  }))
+})
 
 if (!globalStore.__GASTRO_LOYALTY_ESCROW__) {
   globalStore.__GASTRO_LOYALTY_ESCROW__ = {}
@@ -309,9 +309,20 @@ export async function getLoyaltyRewards(slug: string): Promise<LoyaltyReward[]> 
   }
 
   // Hidratar con datos de productos del restaurante
-  const productsList = MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || []
+  const { getServerProducts, resolveCanonicalProductId } = await import('@/lib/server-state')
+  const memProducts = getServerProducts(slug)
+  const productsList = [
+    ...memProducts,
+    ...(MOCK_PRODUCTS[slug] || []),
+    ...(MOCK_PRODUCTS['burger-gourmet'] || [])
+  ]
+
   return rewards.map(r => {
-    const prod = productsList.find(p => p.id === r.product_id)
+    const canonicalRId = resolveCanonicalProductId(r.product_id) || r.product_id
+    let prod = productsList.find(p => p.id === r.product_id || p.id === canonicalRId)
+    if (!prod) {
+      prod = productsList.find(p => (resolveCanonicalProductId(p.id) || p.id) === canonicalRId)
+    }
     return {
       ...r,
       product: prod,

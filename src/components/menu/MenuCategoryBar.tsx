@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, X, LayoutList, LayoutGrid, ChevronLeft, ChevronRight, Utensils, Plus, Sparkles, Flame } from 'lucide-react'
+import { Search, X, LayoutList, LayoutGrid, ChevronLeft, ChevronRight, Utensils, Plus, Sparkles } from 'lucide-react'
 import { Category } from '@/types/database.types'
 import { getTranslation, translateCategoryName } from '@/lib/i18n'
 import { DietaryFilter, ViewMode } from '@/types/menu.types'
@@ -59,12 +59,7 @@ export function MenuCategoryBar({
     (categories.length > 0 && selectedCategory === categories[0]?.id) ||
     Boolean(categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('PROMO'))
 
-  const isBurgerCategory = Boolean(
-    selectedCategory === 'cat-7' ||
-    selectedCategory === 'c0000000-0000-0000-0000-000000000003' ||
-    categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('BURGER') ||
-    categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('HAMBURGUESA')
-  )
+
 
   return (
     <div className="space-y-3.5">
@@ -272,22 +267,6 @@ export function MenuCategoryBar({
             </span>
             <p className="text-xs text-slate-100 font-semibold leading-tight mt-0.5">
               Prueba nuestro Combo Pareja con 2 Dobles Monster y 2 Pintas bien frías.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {isBurgerCategory && !isInitialSection && (
-        <div className="p-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl shadow-xs flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-white text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-            <Flame size={16} className="text-orange-600" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-950 block">
-              Tip del Chef para Burgers
-            </span>
-            <p className="text-xs text-white font-bold leading-tight mt-0.5">
-              Pídela a Punto y acompáñala con Bastones de Mozzarella o una IPA Tirada.
             </p>
           </div>
         </div>

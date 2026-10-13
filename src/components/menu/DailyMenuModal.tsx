@@ -121,17 +121,17 @@ export function DailyMenuModal({
     >
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
         {/* Cabecera */}
-        <div className="p-4 sm:p-5 bg-slate-900 text-white flex-shrink-0 flex items-center justify-between border-b border-slate-800">
+        <div className="p-4 sm:p-5 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white flex-shrink-0 flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shadow-md flex-shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-white text-blue-700 flex items-center justify-center font-black shadow-md flex-shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase font-black tracking-widest text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                <span className="text-[10px] uppercase font-black tracking-widest text-white bg-white/20 px-2 py-0.5 rounded-full border border-white/30">
                   Menú del Día
                 </span>
-                <span className="text-xs font-black text-emerald-400 tabular-nums">
+                <span className="text-xs font-black text-emerald-300 tabular-nums">
                   {formatCurrency(dailyMenu.fixed_price)}
                 </span>
               </div>
@@ -144,14 +144,14 @@ export function DailyMenuModal({
             type="button"
             onClick={onClose}
             aria-label="Cerrar menú del día"
-            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 transition-colors cursor-pointer"
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Indicador de 4 Pasos (Navegación horizontal) */}
-        <div className="bg-slate-100 p-2 sm:p-2.5 flex items-center justify-between gap-1.5 border-b border-slate-200 overflow-x-auto flex-shrink-0">
+        <div className="bg-slate-50 p-2 sm:p-2.5 flex items-center justify-between gap-1.5 border-b border-slate-200 overflow-x-auto flex-shrink-0">
           {sections.map((sec, idx) => {
             const isSelected = Boolean(selectedItems[idx])
             const isCurrent = activeStepIndex === idx
@@ -162,14 +162,14 @@ export function DailyMenuModal({
                 onClick={() => setActiveStepIndex(idx)}
                 className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 min-w-[70px] cursor-pointer ${
                   isCurrent
-                    ? 'bg-slate-900 text-white shadow-sm ring-2 ring-blue-500'
+                    ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-300'
                     : isSelected
-                    ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                    : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                    ? 'bg-blue-50 text-blue-900 border border-blue-200'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                 }`}
               >
                 {isSelected ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
                 ) : (
                   <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 text-[10px] flex items-center justify-center font-bold">
                     {idx + 1}

@@ -341,6 +341,13 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
     expect(authData.success).toBe(true)
     expect(authData.product.name).toBe('Plato Autorizado')
 
+    // Limpieza inmediata del plato de prueba para no contaminar la carta real
+    if (authData.product?.id) {
+      await request.delete(`/api/admin/menu?slug=${SLUG}&type=product&id=${authData.product.id}`, {
+        headers: { 'x-staff-pin': '1234' },
+      })
+    }
+
     // 3. Intento no autorizado de borrado masivo de avisos de servicio
     const unauthDelete = await request.delete(`/api/service-calls?slug=${SLUG}`)
     expect(unauthDelete.status()).toBe(401)

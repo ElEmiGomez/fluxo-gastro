@@ -291,6 +291,7 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
       const res = await fetch('/api/admin/menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           slug,
           type: 'category',
@@ -318,6 +319,7 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
     try {
       await fetch(`/api/admin/menu?slug=${slug}&type=category&id=${categoryId}`, {
         method: 'DELETE',
+        credentials: 'include',
       })
       showToast('🗑️ Categoría eliminada')
     } catch {
@@ -340,6 +342,7 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
     await fetch('/api/admin/menu', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         slug,
         type: 'category',
@@ -362,6 +365,7 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
     await fetch('/api/admin/menu', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         slug,
         type: 'categories_reorder',
@@ -396,30 +400,34 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
     }
   }
 
-  // Cargar en Carta con 1 Clic desde IA
-  const handleApplyAiMenu = async () => {
+  // Cargar en Carta desde IA
+  const handleApplyAiMenu = async (mode: 'append' | 'overwrite' = 'append') => {
     if (!aiParsedResult) return
     setIsLoading(true)
     try {
       const res = await fetch('/api/admin/ai-menu-import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           slug,
           raw_text: aiRawText,
           save_to_menu: true,
+          mode,
         }),
       })
       const data = await res.json()
       if (data.success) {
-        showToast('🚀 ¡Carta digitalizada y publicada con éxito!')
+        showToast(mode === 'append' ? '➕ Platos añadidos a la carta con éxito' : '🚀 Carta sobrescrita y publicada con éxito')
         setAiParsedResult(null)
         setAiRawText('')
         if (onSwitchTab) onSwitchTab('products')
         fetchMenuData()
+      } else {
+        showToast(data.error || 'Error al aplicar menú de IA')
       }
     } catch {
-      showToast('Error al aplicar menú de IA')
+      showToast('Error de conexión al aplicar menú de IA')
     } finally {
       setIsLoading(false)
     }

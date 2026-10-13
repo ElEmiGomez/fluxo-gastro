@@ -134,19 +134,70 @@ export async function POST(req: NextRequest) {
     }
 
     if (type === 'category') {
+      const rest = await getRestaurantBySlug(slug)
+      const targetRestId = getTargetRestaurantId(rest?.id, slug)
+      const catId = isUuid(data.id) ? data.id : crypto.randomUUID()
       const category: Category = {
-        id: data.id || `cat-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        restaurant_id: data.restaurant_id || 'a1111111-1111-1111-1111-111111111111',
+        id: catId,
+        restaurant_id: targetRestId,
         name: sanitizeText(data.name || 'Nueva Categoría', 60),
         order_index: typeof data.order_index === 'number' ? data.order_index : 99,
       }
       const saved = upsertServerCategory(slug, category)
+
+      const supabase = createServerClient()
+      if (supabase && isSupabaseConfigured()) {
+        try {
+          const { error: catErr } = await supabase
+            .from('categories')
+            .upsert({
+              id: saved.id,
+              restaurant_id: targetRestId,
+              name: saved.name,
+              order_index: saved.order_index,
+            })
+          if (catErr) {
+            console.error('[Menu API POST] Error upserting category in Supabase:', catErr)
+          }
+        } catch (dbErr) {
+          console.error('[Menu API POST] Exception upserting category in Supabase:', dbErr)
+        }
+      }
+
+      broadcastEvent({
+        type: 'menu_updated',
+        slug,
+      })
+
       return NextResponse.json({ success: true, category: saved })
     }
 
     if (type === 'categories_reorder') {
       if (Array.isArray(data)) {
         setServerCategories(slug, data)
+        const supabase = createServerClient()
+        if (supabase && isSupabaseConfigured()) {
+          try {
+            const rest = await getRestaurantBySlug(slug)
+            const targetRestId = getTargetRestaurantId(rest?.id, slug)
+            for (let i = 0; i < data.length; i++) {
+              const cat = data[i]
+              if (isUuid(cat.id)) {
+                await supabase
+                  .from('categories')
+                  .update({ order_index: i + 1 })
+                  .eq('id', cat.id)
+                  .eq('restaurant_id', targetRestId)
+              }
+            }
+          } catch (dbErr) {
+            console.error('[Menu API POST] Exception reordering categories in Supabase:', dbErr)
+          }
+        }
+        broadcastEvent({
+          type: 'menu_updated',
+          slug,
+        })
         return NextResponse.json({ success: true, categories: data })
       }
     }
@@ -475,6 +526,20 @@ export async function DELETE(req: NextRequest) {
 
     if (type === 'category') {
       deleteServerCategory(slug, id)
+      const supabase = createServerClient()
+      if (supabase && isSupabaseConfigured()) {
+        try {
+          if (isUuid(id)) {
+            await supabase.from('categories').delete().eq('id', id)
+          }
+        } catch (dbErr) {
+          console.warn('Could not delete category in Supabase, local state updated:', dbErr)
+        }
+      }
+      broadcastEvent({
+        type: 'menu_updated',
+        slug,
+      })
       return NextResponse.json({ success: true, deleted_category_id: id })
     }
 
@@ -490,6 +555,11 @@ export async function DELETE(req: NextRequest) {
           console.warn('Could not delete product in Supabase, local state updated:', dbErr)
         }
       }
+      broadcastEvent({
+        type: 'menu_updated',
+        slug,
+        productId: id,
+      })
       return NextResponse.json({ success: true, deleted_product_id: id })
     }
 

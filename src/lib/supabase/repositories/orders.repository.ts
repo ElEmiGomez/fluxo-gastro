@@ -296,14 +296,18 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
             session_token: token,
           } as Order
         })
-        return mappedOrders
+        const seenIds = new Set(mappedOrders.map(o => o.id))
+        const unindexedMemOrders = memOrders.filter(
+          m => !seenIds.has(m.id) && m.status !== 'cancelled' && m.status !== 'paid'
+        )
+        return [...mappedOrders, ...unindexedMemOrders]
       }
     } catch (e) {
       console.warn('Error fetching orders from Supabase:', e)
     }
   }
 
-  return []
+  return getServerOrders(slug)
 }
 
 /**

@@ -8,6 +8,7 @@ export interface AiParsedDish {
   description?: string
   price: number
   category_id: string
+  allergens?: string[]
 }
 
 export interface AiParsedCategory {

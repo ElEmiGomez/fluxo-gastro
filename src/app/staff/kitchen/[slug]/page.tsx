@@ -82,7 +82,7 @@ export default function KitchenKDSPage() {
   // 2. Sincronización con el servidor (Single Source of Truth - PostgreSQL)
   const fetchServerOrders = useCallback(async () => {
     try {
-      const res = await fetch(`/api/orders?slug=${slug}`)
+      const res = await fetch(`/api/orders?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         if (Array.isArray(data.orders)) {

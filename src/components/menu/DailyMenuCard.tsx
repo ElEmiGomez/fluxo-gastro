@@ -14,59 +14,49 @@ export function DailyMenuCard({ dailyMenu, onOpenModal }: DailyMenuCardProps) {
   return (
     <div
       onClick={onOpenModal}
-      className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl border border-indigo-800/60 cursor-pointer transition-all hover:border-indigo-500 active:scale-[0.99] group select-none"
+      className="relative overflow-hidden rounded-2xl p-3 sm:p-3.5 bg-gradient-to-r from-blue-50/95 via-sky-50/80 to-blue-50/95 text-slate-900 shadow-xs border border-blue-200/90 hover:border-blue-400 hover:shadow-md cursor-pointer transition-all active:scale-[0.99] group select-none"
     >
-      {/* Resplandor decorativo de fondo */}
-      <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-48 h-48 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="relative z-10 space-y-3">
-        {/* Fila superior: Badges */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 shadow-xs">
-              <Sparkles size={12} className="stroke-[2.5]" />
+      <div className="relative z-10 space-y-2">
+        {/* Fila superior: Badges y Precio */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white shadow-xs">
+              <Sparkles size={11} className="stroke-[2.5]" />
               Menú del Día
             </span>
 
             {dailyMenu.schedule_enabled && dailyMenu.schedule_start_time && dailyMenu.schedule_end_time && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-300 bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
-                <Clock size={11} className="text-amber-300" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-800 bg-white/90 px-2 py-0.5 rounded-full border border-blue-200">
+                <Clock size={10} className="text-blue-600" />
                 {dailyMenu.schedule_start_time} - {dailyMenu.schedule_end_time}
               </span>
             )}
           </div>
 
           <div className="text-right">
-            <span className="text-xl sm:text-2xl font-black text-emerald-400 tabular-nums tracking-tight">
+            <span className="text-base sm:text-lg font-black text-blue-700 tabular-nums tracking-tight">
               {formatCurrency(dailyMenu.fixed_price)}
             </span>
           </div>
         </div>
 
-        {/* Fila intermedia: Título y descripción de pasos */}
-        <div>
-          <h3 className="text-base sm:text-lg font-black text-white leading-tight group-hover:text-amber-300 transition-colors">
-            {dailyMenu.title}
-          </h3>
-          <p className="text-xs text-slate-300 font-medium mt-1 leading-snug">
-            Incluye 1er Plato + 2º Plato + Postre o Café + Bebida a tu elección.
-          </p>
-        </div>
-
-        {/* Fila inferior: Botón de llamada a la acción */}
-        <div className="pt-1 flex items-center justify-between border-t border-white/10">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300">
-            <CheckCircle2 size={13} className="text-emerald-400" />
-            <span>Precio cerrado · Preparado al momento</span>
+        {/* Fila intermedia: Título compacto y descripción */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xs sm:text-sm font-black text-slate-900 leading-tight group-hover:text-blue-600 transition-colors truncate">
+              {dailyMenu.title}
+            </h3>
+            <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5 truncate">
+              1º + 2º + Postre/Café + Bebida incluida
+            </p>
           </div>
 
           <button
             type="button"
-            className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center gap-1 transition-all shadow-md group-hover:translate-x-0.5 cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1 transition-all shadow-xs group-hover:translate-x-0.5 cursor-pointer flex-shrink-0"
           >
-            <span>Elegir platos</span>
-            <ChevronRight size={14} className="stroke-[3]" />
+            <span>Elegir</span>
+            <ChevronRight size={13} className="stroke-[3]" />
           </button>
         </div>
       </div>

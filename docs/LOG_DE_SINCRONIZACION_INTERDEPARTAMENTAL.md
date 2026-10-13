@@ -6,6 +6,41 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-13 16:45] — Manual de Neuroventas, Mesas Ciegas, Sellos y Presupuesto de Soportes
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Dirección General y Producto.
+* **Documento Consolidado:** [`docs/departamentos/2_marketing/manual_neuroventas_y_cierre_comercial.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/manual_neuroventas_y_cierre_comercial.md).
+* **Definiciones y Acuerdos Finales del Debate:**
+  1. *El Argumento de la "Mesa Ciega" (Punto 1):* Se amplía el nicho a locales con mesas fuera del campo de visión del camarero (terrazas detrás de toldos/columnas, salones en 'L', altillos). Fluxo resuelve el problema de la mano levantada que nadie ve.
+  2. *Catálogo de Recompensas por Sellos (Punto 2):* Regla de Alto Valor Percibido / Bajo Coste de Materia Prima:
+     - Cafeterías: 8º café o croissant (coste 0,20€ / valor 1,80€).
+     - Cervecerías/Bares: Caña o ración de patatas/tapa casera (coste 0,50€ / valor 3,50€).
+     - Pizzerías/Restaurantes: Postre o entrante en siguiente visita (coste 0,80€ / valor 5,50€).
+  3. *Argumentario de Cierre Asertivo (Punto 3):* Enfoque en organizar el negocio, no depender de la atención inmediata de un solo mozo y ganar más dinero por rotación limpia de mesas.
+  4. *Presupuesto de Soportes Físicos y Kit Piloto Mínimo (Punto 5):* 
+     - Madera tratada o metacrilato + vinilo laminado lavable = ~1,60 €/mesa.
+     - **Kit Piloto Zona Crítica (4 a 5 QRs):** Inversión mínima de solo **~6,40 € a 8,00 €** para testear la zona más lejana o 'mesa ciega' sin comprometer presupuesto.
+     - Amortización inmediata con el primer cliente mensual.
+  5. *Autofinanciación de Higgsfield (Punto 6):* El primer cliente captado (Plan Sala 69€ o Full 99€) financia directamente la herramienta para los vídeos cinematográficos de alto impacto.
+
+---
+
+### [2026-10-13 15:15] — Análisis Forense de 22 Reels Virales (HORECA B2B) y 5 Fórmulas de Contenido
+
+### [2026-10-13 15:15] — Análisis Forense de 22 Reels Virales (HORECA B2B) y 5 Fórmulas de Contenido
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Dirección General y Diseño de Marca.
+* **Documento Creado:** [`docs/departamentos/2_marketing/analisis_reels_benchmark_viral_horeca.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/analisis_reels_benchmark_viral_horeca.md).
+* **Acciones y Conclusiones Principales:**
+  1. *Desglose de los 22 Impactos:* Identificados 5 arquetipos de contenido probados en cuentas líderes (`@coffeefy.app`, `@tapstars.ok`, `@lacarta.app`, `@forkpi`, `@menuly.ar`, `@ordermanager_es`, `@flypaxapp`, `@heydiga`):
+     - **Arquetipo 1 (Fidelización & Reseñas Google):** Comparativa de "dos locales en la misma calle" (sellos digitales sin app + reseñas en Google Maps). Valida el módulo de puntos por email de Fluxo v1.2.
+     - **Arquetipo 2 (El Camarero Atleta):** Cuantificación de los 12-15 km por turno en terraza y eliminación de los paseos vacíos gracias al comandero en móvil (BYOD).
+     - **Arquetipo 3 (La Tortura del PDF):** Fricción visual del zoom en cartas PDF vs carta web ultrarrápida con fotos y alérgenos en regla.
+     - **Arquetipo 4 (Comanda Perdida en Cocina):** Estrés de tickets de papel grasientos vs pantalla de cocina KDS en cualquier tablet o pantalla económica con filtro Mozo Gatekeeper.
+     - **Arquetipo 5 (Anti-Hardware Pesado):** TPVs tradicionales de 2.000€ con permanencia vs solución ligera en la nube desde 39€/69€/mes a 0€ de hardware.
+  2. *Plan Operativo para Galicia:* Grabación con el fundador en locales reales de Noia, Barbanza y Santiago durante horas valle, vinculando cada vídeo al Acuerdo Piloto de 14 Días a 0€.
+* **Invariantes:** Mantenimiento de precios canónicos (39€ Carta, 69€ Sala, 99€ Full, 139€ Suite, 149€ Setup bonificado) y cero jerga corporativa/culinaria.
+
+---
+
 ### [2026-10-13 12:25] — Reordenamiento y Nuevas Tareas Técnicas de Program Data (Tareas 1 a 4)
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
 * **Actualización del Backlog:** Se abandona la nomenclatura histórica (Puntos 1 al 11) y se reinicia la numeración limpia con las 4 tareas pendientes prioritarias:

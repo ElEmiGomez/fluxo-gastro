@@ -33,6 +33,7 @@ export function useComanderoData(slug: string) {
   const attendedCallIdsRef = useRef<Set<string>>(new Set())
   const seenCallIdsRef = useRef<Set<string>>(new Set())
   const seenReadyOrderIdsRef = useRef<Set<string>>(new Set())
+  const seenValidationOrderIdsRef = useRef<Set<string>>(new Set())
   const ordersFingerRef = useRef<string>('')
   const callsFingerRef = useRef<string>('')
   const tableStatusesFingerRef = useRef<string>('')
@@ -64,9 +65,9 @@ export function useComanderoData(slug: string) {
   const syncServerData = useCallback(async () => {
     try {
       const [ordersRes, callsRes, tablesRes] = await Promise.all([
-        fetch(`/api/orders?slug=${slug}`).then(r => r.json()).catch(() => ({ orders: [] })),
-        fetch(`/api/service-calls?slug=${slug}`).then(r => r.json()).catch(() => ({ calls: [] })),
-        fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
+        fetch(`/api/orders?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ orders: [] })),
+        fetch(`/api/service-calls?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ calls: [] })),
+        fetch(`/api/tables?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ sessions: {} })),
       ])
 
       const rawOrders: Order[] = ordersRes.orders || []
@@ -200,7 +201,18 @@ export function useComanderoData(slug: string) {
               setReadyOrderAlert(tblNum)
               playKitchenChime()
             }
-          } else if (!isDelivered && ['pending_validation', 'pending', 'preparing'].includes(ord.status) && !statusMap[tblNum] && !statusMap[numKey]) {
+          } else if (ord.status === 'pending_validation' && !attendedValidationOrderIdsRef.current.has(ord.id)) {
+            // Mesa ocupada con pedido en validación
+            if (!statusMap[tblNum] && !statusMap[numKey]) {
+              statusMap[tblNum] = 'busy'
+              statusMap[numKey] = 'busy'
+              statusMap[strKey] = 'busy'
+            }
+            if (!seenValidationOrderIdsRef.current.has(ord.id)) {
+              seenValidationOrderIdsRef.current.add(ord.id)
+              playKitchenChime()
+            }
+          } else if (!isDelivered && ['pending', 'preparing'].includes(ord.status) && !statusMap[tblNum] && !statusMap[numKey]) {
             statusMap[tblNum] = 'busy'
             statusMap[numKey] = 'busy'
             statusMap[strKey] = 'busy'
