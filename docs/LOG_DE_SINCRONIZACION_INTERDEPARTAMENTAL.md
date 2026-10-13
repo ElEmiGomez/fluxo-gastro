@@ -6,6 +6,56 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-13 12:22] — Nueva Tarea Técnica: Verificación Exhaustiva y Fixeo de Errores v1.0 y v1.2 (Punto 11)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
+* **Definición de Tarea:**
+  - **Requisito:** Llevar a cabo una auditoría integral cruzada de estabilidad técnica entre la versión base estable (v1.0) y la versión modular con soporte multi-idioma (v1.2).
+  - **Alcance Operativo:**
+    1. *Comprobación Estricta de Tipado:* `npx.cmd tsc --noEmit` para erradicar cualquier fallo de interfaz o tipos residuales.
+    2. *Compilación Limpia:* `npm.cmd run build` garantizando generación óptima de rutas estáticas y dinámicas en Vercel.
+    3. *Ciclo de Comanda E2E sin Regresiones:* Carta -> Mozo (Comandero) -> Cocina (KDS) -> Pedido de Cuenta -> Google Review Booster.
+    4. *Cero Errores en Consola y Anti-Phantom Data:* Revisión de trazas en `system_error_logs` y ausencia de eventos provisionales en memoria.
+
+---
+
+### [2026-10-13 12:05] — Cumplimentación Formal LSSI-CE: Identificación Fiscal del Titular (Punto 3.1)
+* **Departamentos Sincronizados:** Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Acciones Realizadas:**
+  - **Página Legal ([`src/app/legal/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/legal/page.tsx)):** Integrada pestaña formal de *Aviso Legal (LSSI-CE)* con los datos identificativos y tributarios del titular de la plataforma:
+    - **Titular:** Emiliano Gomez
+    - **NIF / NIE:** Z5536581A
+    - **Domicilio de notificaciones:** Galicia, España
+    - **Email oficial:** `contactofluxosystem@gmail.com`
+    - **Delimitación de actividad:** Plataforma SaaS de telecomanda, carta interactiva y pantallas de cocina.
+  - Actualizadas las referencias al responsable de tratamiento en la Política de Privacidad (RGPD) y en la cláusula de notificaciones de los Términos de Servicio.
+  - **Punto 3.1 marcado como COMPLETADO [x]** en el roadmap de Organización General.
+
+---
+
+### [2026-10-13 10:45] — Benchmark de Redes Sociales, Contenido Founder-Led y Agentes IA de Voz
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Diseño de Marca y Organización.
+* **Acciones Realizadas:**
+  - **Documento Creado:** `docs/departamentos/2_marketing/analisis_redes_benchmark_instagram.md` analizando los patrones de comunicación de 7 actores clave:
+    1. *El Efecto Founder-Led (@lacarta.app):* Validación del contenido con el fundador a cámara en locales reales desmontando quejas de hosteleros con lenguaje natural, sin jerga corporativa.
+    2. *Inmediatez del Live Workspace (@forkpi, @flypaxapp, @menuly.ar):* Patrón visual de "pantalla dividida" (comensal pidiendo cuenta vs móvil del mozo vibrando en 0.2s) para futuros reels y tiktoks de Fluxo en Galicia.
+    3. *Agente IA de Voz y WhatsApp (HeyDiga / Digalook):* Validación del dolor de "lo que cuesta no coger el teléfono un domingo con el servicio a reventar" para apuntalar el posicionamiento de nuestro futuro Plan Suite (139€/mes).
+    4. *Cultura del ROI (@ordermanager_es, @leadinbusinessmarketing):* Refuerzo de la venta basada en euros limpios recuperados por rotación.
+* **Impacto en el Plan de Contenidos:** Estandarizado el guion de vídeo "cámara en mano" para prospección orgánica de terrazas en Noia y Santiago.
+
+---
+
+### [2026-10-13 10:40] — Plan de Adquisición B2B para el "Cliente Cero" (Piloto Carlos - Terraza)
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Organización General y Dirección.
+* **Acciones Realizadas:**
+  - **Documento Creado:** `docs/departamentos/2_marketing/plan_adquisicion_cliente_cero.md` estructurando los 4 pilares de captación:
+    1. *Pitch de Venta Directa (60 segundos):* Guion presencial en hora valle y mensaje directo para WhatsApp enfocado en el dolor de los kilómetros del camarero en terraza.
+    2. *Propuesta de Valor & Copywriting:* Estructura para Landing / One-Pager (*Menos pasos basura para tus camareros. Más mesas dobladas en terraza*), diferenciadores BYOD y tabla comparativa.
+    3. *Oferta de Lanzamiento Irresistible:* "Desafío Terraza de 14 Días a Coste Cero" en 5 mesas exteriores, digitalización VIP por el fundador y Setup de 149€ 100% bonificado en Plan Full.
+    4. *Matriz de Objeciones Quirúrgicas:* Respuestas directas a caídas de internet/Wi-Fi (PWA offline + 4G/5G), curva de aprendizaje del camarero (2 minutos / 2 colores) e inercia del papel tradicional (cálculo de rotación y reseñas en Google).
+* **Alineación Estratégica:** Preservados al 100% los precios canónicos (Carta 39€, Sala 69€, Full 99€, Suite 139€, Setup 149€ bonificado) y la regla de diagramas estrictamente verticales (`flowchart TD`).
+
+---
+
 ### [2026-10-11 21:00] — Nueva Tarea Técnica: Generador y Exportador Masivo de Códigos QR para Mesas (Punto 10)
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), Diseño de Marca (Depto 3) y Organización General (Depto 1).
 * **Definición de Tarea:**

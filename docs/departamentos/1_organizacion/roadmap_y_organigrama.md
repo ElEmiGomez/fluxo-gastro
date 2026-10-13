@@ -70,13 +70,14 @@ flowchart TD
 │  ├─ [x] Punto 6: Validación integral E2E y suites Playwright al 100%    │
 │  ├─ [x] Punto 1: Migraciones en Supabase Cloud ejecutadas y verificadas │
 │  ├─ [x] Punto 2: Aislamiento de secretos y chequeo Vercel certificado   │
-│  ├─ [📋 Pendiente #3.1] LSSI-CE: Datos fiscales del titular en /legal   │
+│  ├─ [x] Punto 3.1: LSSI-CE: Datos fiscales del titular en /legal        │
 │  ├─ [x] Punto 3.2: Correo contactofluxosystem@gmail.com configurado     │
 │  │     (enlace activo en LEAD_NOTIFICATION_EMAIL y página legal)        │
-│  ├─ [📋 Pendiente #9] Multilenguaje: Ampliación a Top 10 idiomas globales  │
-│  │     (gl, es, en, fr, de, it, pt, zh, ja, ar con banderas y selector)    │
+│  ├─ [x] Punto 9: Multilenguaje Top 10 oficial completado y testeado     │
 │  ├─ [📋 Pendiente #10] Generación Masiva de Códigos QR para Mesas (25-30+) │
 │  │     (Integrar selector de rango/lote e impresión en /staff/qr/[slug])    │
+│  ├─ [📋 Pendiente #11] Verificación y Corrección de Errores v1.0 y v1.2    │
+│  │     (Auditoría cruzada de regresiones, tipado, builds y estabilidad E2E) │
 │  └─ [x] Arquitectura funcional modular y desacoplamiento por dominio    │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
