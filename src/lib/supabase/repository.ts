@@ -31,6 +31,7 @@ import {
   getCachedOrderItems,
 } from '@/lib/server-state'
 import { logServiceCallError } from '@/lib/logger'
+import { inferCourseType } from '@/lib/category-matcher'
 
 /**
  * Obtiene los datos del restaurante a partir del slug
@@ -448,7 +449,7 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
           const normalizedItems = (o.order_items || []).map((it: any) => ({
             ...it,
             product: it.product || it.products,
-            course: it.course || 'first',
+            course: it.course || inferCourseType(it.product || it.products),
           }))
           const mem = memOrders.find(m => m.id === o.id)
           const resolvedVersion = (o.version !== undefined && o.version !== null)
@@ -546,7 +547,7 @@ export async function getActiveOrdersByTable(
           const normalizedItems = (o.order_items || []).map((it: any) => ({
             ...it,
             product: it.product || it.products,
-            course: it.course || 'first',
+            course: it.course || inferCourseType(it.product || it.products),
           }))
           return {
             ...o,
@@ -723,7 +724,7 @@ export async function transitionOrderStatus(
         const supaItems = (supaOrder.order_items || []).map((it: any) => ({
           ...it,
           product: it.product || it.products,
-          course: it.course || 'first',
+          course: it.course || inferCourseType(it.product || it.products),
         }))
         const cached = getCachedOrderItems(orderId)
         const effectiveItems = supaItems.length > 0
@@ -987,4 +988,99 @@ export {
   insertSystemErrorLog,
   type RecordSystemErrorLogParams,
 } from './error-logs'
+
+/**
+ * 10. Actualiza notas con tags de tiempos gastronómicos en los items filtrados.
+ */
+export async function updateOrderCourseTags(
+  slug: string,
+  orderId: string,
+  tagToAppend: string,
+  itemFilter: (item: any) => boolean
+): Promise<{ success: boolean; order?: Order; error?: string }> {
+  const supabase = createServerClient()
+  let targetOrder: Order | null = null
+
+  if (supabase && isSupabaseConfigured()) {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            quantity,
+            notes,
+            products (*)
+          )
+        `)
+        .eq('id', orderId)
+        .maybeSingle()
+
+      if (!error && data) {
+        targetOrder = {
+          ...data,
+          order_items: (data.order_items || []).map((it: any) => ({
+            ...it,
+            product: it.product || it.products,
+            course: it.course || inferCourseType(it.product || it.products),
+          })),
+        } as Order
+      }
+    } catch (e) {
+      console.warn('Error fetching order for course tags:', e)
+    }
+  }
+
+  if (!targetOrder) {
+    const memOrders = getServerOrders(slug)
+    targetOrder = memOrders.find(o => o.id === orderId) || null
+  }
+
+  if (!targetOrder) {
+    return { success: false, error: 'Orden no encontrada' }
+  }
+
+  const updatedItems = (targetOrder.order_items || []).map(it => {
+    if (itemFilter(it)) {
+      const currentNotes = it.notes || ''
+      if (!currentNotes.includes(tagToAppend)) {
+        const nextNotes = currentNotes ? `${currentNotes} ${tagToAppend}` : tagToAppend
+        return { ...it, notes: nextNotes }
+      }
+    }
+    return it
+  })
+
+  targetOrder.order_items = updatedItems
+
+  if (supabase && isSupabaseConfigured()) {
+    try {
+      for (const it of updatedItems) {
+        if (itemFilter(it) && it.id) {
+          await supabase
+            .from('order_items')
+            .update({ notes: it.notes })
+            .eq('id', it.id)
+        }
+      }
+    } catch (e) {
+      console.warn('Error persisting item tags in Supabase:', e)
+    }
+  }
+
+  addServerOrder(slug, targetOrder)
+
+  broadcastEvent({
+    type: 'order_updated',
+    slug,
+    orderId,
+    status: targetOrder.status,
+    tableNumber: targetOrder.table_number,
+    order: targetOrder,
+  })
+
+  return { success: true, order: targetOrder }
+}
 

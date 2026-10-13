@@ -300,6 +300,40 @@ export default function KitchenKDSPage() {
     }
   }
 
+  // Ejecutar acciones de pase gastronómico (Comida lista pase 1 / Postres listos pase 2)
+  const handleKitchenAction = async (orderId: string, action: 'ready_food' | 'ready_desserts' | 'fire_desserts') => {
+    if (updatingOrderIds.has(orderId)) return
+    setUpdatingOrderIds(prev => new Set(prev).add(orderId))
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          orderId,
+          action,
+        }),
+      })
+
+      if (res.ok) {
+        await fetchServerOrders()
+      } else {
+        console.error('[KDS] Error en acción de cocina:', action)
+        await fetchServerOrders()
+      }
+    } catch (err) {
+      console.error('Error executing kitchen action:', err)
+      await fetchServerOrders()
+    } finally {
+      setUpdatingOrderIds(prev => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
+    }
+  }
+
   // Filtrado de comandas por estado
   const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'preparing')
   const readyOrders = orders.filter(o => o.status === 'ready')
@@ -574,6 +608,7 @@ export default function KitchenKDSPage() {
                   orders={group.orders}
                   updatingOrderIds={updatingOrderIds}
                   onUpdateStatus={handleUpdateStatus}
+                  onKitchenAction={handleKitchenAction}
                 />
               ))}
             </div>

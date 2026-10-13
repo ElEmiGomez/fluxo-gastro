@@ -1,4 +1,4 @@
-import { Category, Product } from '@/types/database.types'
+import { Category, Product, CourseType } from '@/types/database.types'
 
 export type CategoryGroup =
   | 'promos'
@@ -345,5 +345,62 @@ export function resolveCanonicalProductId(productId?: string | null): string {
   if (!productId) return ''
   const trimmed = productId.trim()
   return CANONICAL_PRODUCT_MAP[trimmed] || CANONICAL_PRODUCT_MAP[trimmed.toLowerCase()] || trimmed
+}
+
+/**
+ * Infiere el tiempo gastronómico ('drink' | 'first' | 'second' | 'dessert')
+ * de un producto a partir de su categoría o su nombre.
+ */
+export function inferCourseType(product?: Product | { name?: string; category_id?: string } | null, categories?: Category[]): CourseType {
+  if (!product) return 'second'
+
+  let catGroup: CategoryGroup = 'other'
+  if (categories && product.category_id) {
+    const cat = categories.find(c => c.id === product.category_id)
+    if (cat) {
+      catGroup = getCategoryGroup(cat.name || cat.id)
+    }
+  }
+
+  if (catGroup === 'other' && product.category_id) {
+    catGroup = getCategoryGroup(product.category_id)
+  }
+
+  const name = (product.name || '').toLowerCase().trim()
+
+  if (
+    catGroup === 'bebidas' ||
+    name.includes('coca') || name.includes('cerveza') || name.includes('agua') ||
+    name.includes('vino') || name.includes('copa') || name.includes('trago') ||
+    name.includes('gaseosa') || name.includes('sprite') || name.includes('fanta') ||
+    name.includes('zumo') || name.includes('jugo') || name.includes('café') ||
+    name.includes('cafe') || name.includes('infusión') || name.includes('té')
+  ) {
+    if (name.includes('café') || name.includes('cafe') || name.includes('infusión') || name.includes('té')) {
+      return 'dessert'
+    }
+    return 'drink'
+  }
+
+  if (
+    catGroup === 'postres' ||
+    name.includes('postre') || name.includes('tarta') || name.includes('helado') ||
+    name.includes('tiramisu') || name.includes('cheesecake') || name.includes('brownie') ||
+    name.includes('flan') || name.includes('pancake') || name.includes('dulce')
+  ) {
+    return 'dessert'
+  }
+
+  if (
+    catGroup === 'entradas' ||
+    name.includes('entrada') || name.includes('aperitivo') || name.includes('tapa') ||
+    name.includes('tabla') || name.includes('ensalada') || name.includes('patatas') ||
+    name.includes('croquetas') || name.includes('nachos') || name.includes('tequeños') ||
+    name.includes('alitas')
+  ) {
+    return 'first'
+  }
+
+  return 'second'
 }
 
