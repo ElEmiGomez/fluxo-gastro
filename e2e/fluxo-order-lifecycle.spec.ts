@@ -326,26 +326,30 @@ test.describe('Fluxo Gastronomic Order Lifecycle (Comensal -> Mozo -> Cocina)', 
     expect(unauthRes.status()).toBe(401)
 
     // 2. Intento autenticado con cabecera de PIN de administración
-    const authRes = await request.post('/api/admin/menu', {
-      headers: {
-        'x-staff-pin': '1234',
-      },
-      data: {
-        slug: SLUG,
-        type: 'product',
-        data: { name: 'Plato Autorizado', price: 15.5 },
-      },
-    })
-    expect(authRes.status()).toBe(200)
-    const authData = await authRes.json()
-    expect(authData.success).toBe(true)
-    expect(authData.product.name).toBe('Plato Autorizado')
-
-    // Limpieza inmediata del plato de prueba para no contaminar la carta real
-    if (authData.product?.id) {
-      await request.delete(`/api/admin/menu?slug=${SLUG}&type=product&id=${authData.product.id}`, {
-        headers: { 'x-staff-pin': '1234' },
+    let createdTestProductId: string | null = null
+    try {
+      const authRes = await request.post('/api/admin/menu', {
+        headers: {
+          'x-staff-pin': '1234',
+        },
+        data: {
+          slug: SLUG,
+          type: 'product',
+          data: { name: 'Plato Temporal Test E2E', price: 15.5 },
+        },
       })
+      expect(authRes.status()).toBe(200)
+      const authData = await authRes.json()
+      expect(authData.success).toBe(true)
+      createdTestProductId = authData.product?.id
+      expect(authData.product.name).toBe('Plato Temporal Test E2E')
+    } finally {
+      // Limpieza inmediata y garantizada del plato de prueba para no contaminar la carta real
+      if (createdTestProductId) {
+        await request.delete(`/api/admin/menu?slug=${SLUG}&type=product&id=${createdTestProductId}`, {
+          headers: { 'x-staff-pin': '1234' },
+        })
+      }
     }
 
     // 3. Intento no autorizado de borrado masivo de avisos de servicio
