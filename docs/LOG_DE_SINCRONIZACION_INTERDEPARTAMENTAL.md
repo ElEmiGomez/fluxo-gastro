@@ -6,6 +6,16 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-13 12:25] — Reordenamiento y Nuevas Tareas Técnicas de Program Data (Tareas 1 a 4)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
+* **Actualización del Backlog:** Se abandona la nomenclatura histórica (Puntos 1 al 11) y se reinicia la numeración limpia con las 4 tareas pendientes prioritarias:
+  1. **Tarea 1 — Generación Masiva de Códigos QR para Mesas (25-30+):** Selector interactivo de cantidad de mesas y lote para exportación a PDF en [`src/app/staff/qr/[slug]/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/staff/qr/%5Bslug%5D/page.tsx).
+  2. **Tarea 2 — Verificación y Corrección de Errores v1.0 y v1.2:** Auditoría de tipado estricto (`tsc --noEmit`), build limpio en producción (`npm run build`) y blindaje de endpoints.
+  3. **Tarea 3 — Finalizar Estructura de Reporte y Muestra de Estadísticas:** Consolidación de métricas de rendimiento (mesas dobladas, rotación, ticket medio y analítica en `/api/analytics` y visor mensual).
+  4. **Tarea 4 — Simulación Completa del Servicio:** Ensayo integral en vivo del flujo operativo continuo (Mesa Comensal -> Mozo Comandero -> Cocina KDS -> Petición de Cuenta y Cierre).
+
+---
+
 ### [2026-10-13 12:22] — Nueva Tarea Técnica: Verificación Exhaustiva y Fixeo de Errores v1.0 y v1.2 (Punto 11)
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
 * **Definición de Tarea:**

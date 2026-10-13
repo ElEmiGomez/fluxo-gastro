@@ -63,22 +63,15 @@ flowchart TD
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ ⚙️ 4. INGENIERÍA & PRODUCTO — [PROGRAM DATA] (Desarrollo & Software)    │
-│  ├─ [x] Punto 8: Notificación persistente de servicio en mesa funcional │
-│  ├─ [x] Punto 5: Alérgenos UE (Reglamento 1169/2011) en catálogo/admin  │
-│  ├─ [x] Punto 4: Cláusula de exención fiscal Veri*Factu / Ley Antifraude│
-│  ├─ [x] Punto 7: Admin de Cartas e In Situ consolidado y testeado        │
-│  ├─ [x] Punto 6: Validación integral E2E y suites Playwright al 100%    │
-│  ├─ [x] Punto 1: Migraciones en Supabase Cloud ejecutadas y verificadas │
-│  ├─ [x] Punto 2: Aislamiento de secretos y chequeo Vercel certificado   │
-│  ├─ [x] Punto 3.1: LSSI-CE: Datos fiscales del titular en /legal        │
-│  ├─ [x] Punto 3.2: Correo contactofluxosystem@gmail.com configurado     │
-│  │     (enlace activo en LEAD_NOTIFICATION_EMAIL y página legal)        │
-│  ├─ [x] Punto 9: Multilenguaje Top 10 oficial completado y testeado     │
-│  ├─ [📋 Pendiente #10] Generación Masiva de Códigos QR para Mesas (25-30+) │
-│  │     (Integrar selector de rango/lote e impresión en /staff/qr/[slug])    │
-│  ├─ [📋 Pendiente #11] Verificación y Corrección de Errores v1.0 y v1.2    │
-│  │     (Auditoría cruzada de regresiones, tipado, builds y estabilidad E2E) │
-│  └─ [x] Arquitectura funcional modular y desacoplamiento por dominio    │
+│  ├─ [x] Hitos Fundacionales Consolidados (v1.0 & v1.2 completados)         │
+│  ├─ [📋 Tarea 1] Generación Masiva de Códigos QR para Mesas (25-30+)       │
+│  │     (Selector interactivo de rango/lote e impresión en /staff/qr/[slug])│
+│  ├─ [📋 Tarea 2] Verificación y Corrección de Errores v1.0 y v1.2          │
+│  │     (Auditoría cruzada de regresiones, tipado, builds y estabilidad)    │
+│  ├─ [📋 Tarea 3] Finalizar Estructura de Reporte y Muestra de Estadísticas │
+│  │     (Consolidación de métricas de rotación, ticket medio y analítica)   │
+│  └─ [📋 Tarea 4] Simulación Completa del Servicio                          │
+│        (Prueba integral en vivo: Comensal -> Mozo -> Cocina -> Cierre mesa)│
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
