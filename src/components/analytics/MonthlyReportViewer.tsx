@@ -36,7 +36,9 @@ type BCGFilterOption = 'all' | 'stars' | 'cows' | 'dogs' | 'questions'
 export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportViewerProps) {
   // Estado para los acordeones principales paso a paso (todos colapsados de inicio)
   const [openSections, setOpenSections] = useState<{ [key: string]: boolean }>({
-    step1: false,
+    phase2: false,
+    phase3: false,
+    step1: true,
     step2: false,
     step3: false,
     step4: false
@@ -566,14 +568,32 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
             break-inside: avoid !important;
             margin-bottom: 0.35rem !important;
           }
-          #section-recommendations {
+          /* Desglose Fase 2 transparente en print para permitir saltos de página por paso */
+          #item-phase2 {
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          #item-phase2 > button {
+            display: none !important;
+          }
+          #item-phase2 > div {
+            border: none !important;
+            padding: 0 !important;
+          }
+
+          /* Fase 3 de Recomendaciones compacta en print */
+          #item-phase3 {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
             margin-top: 0.4rem !important;
-            padding: 0.45rem 0.65rem !important;
             border: 1px solid #cbd5e1 !important;
           }
-          #section-recommendations .p-4 {
+          #item-phase3 .p-4 {
             padding: 0.35rem 0.5rem !important;
           }
           #certFooter {
@@ -784,24 +804,51 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
       </div>
 
       {/* ========================================================================================= */}
-      {/* 2. DESGLOSE DEL MES: ANALÍTICAS OPERATIVAS, RITMO Y GRÁFICOS INTERACTIVOS                 */}
+      {/* 2. DESGLOSE DEL MES: ANALÍTICAS OPERATIVAS, RITMO Y GRÁFICOS (DESPLEGABLE FASE 2)         */}
       {/* ========================================================================================= */}
-      <div className="pt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 mb-3 border-b border-slate-200/80">
-          <div>
-            <h2 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-              Desglose del Mes &middot; Analíticas Operativas y Gráficos
-            </h2>
-            <p className="text-xs text-slate-500">
-              Auditoría paso a paso de horarios, márgenes por categoría, tiempos de cocina e ingeniería de carta.
-            </p>
+      <div id="item-phase2" className="bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs transition-all duration-200">
+        <button
+          type="button"
+          onClick={() => toggleSection('phase2')}
+          className="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-slate-50/70 transition cursor-pointer select-none"
+        >
+          <div className="flex items-start sm:items-center gap-3">
+            <span className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-mono font-bold text-sm flex items-center justify-center flex-shrink-0 shadow-xs">
+              02
+            </span>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
+                  Desglose de Datos y Analíticas Operativas
+                </h3>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                  Fase 2 &middot; 4 Módulos Detallados
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Auditoría profunda de horarios y turnos, categorías de venta, ritmo de cocina KDS e ingeniería de menú (BCG).
+              </p>
+            </div>
           </div>
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-2.5 py-1 rounded-md self-start sm:self-auto border border-slate-200">
-            4 Módulos Auditados
-          </span>
-        </div>
-      </div>
+
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+            <div className="text-left sm:text-right">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">4 Módulos Auditados</span>
+              <div className="flex items-center gap-1.5 justify-end">
+                <span className="text-xs font-bold text-slate-700 font-sans tracking-tight whitespace-nowrap">11.4 min pase</span>
+                <span className="text-slate-300 font-normal">&middot;</span>
+                <span className="text-xs font-bold text-emerald-600 font-sans tracking-tight whitespace-nowrap">82% margen máx</span>
+              </div>
+            </div>
+            <span className={`no-print w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center transition-transform duration-200 ${effectiveOpen('phase2') ? 'rotate-180 bg-blue-50 text-blue-600' : ''}`}>
+              <ChevronDown className="w-4 h-4" />
+            </span>
+          </div>
+        </button>
+
+        <div className={`print-accordion-open grid transition-[grid-template-rows,opacity] duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] ${effectiveOpen('phase2') ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
+          <div className="overflow-hidden">
+            <div className="p-3 sm:p-5 space-y-4 bg-slate-50/50 border-t border-slate-100">
 
       {/* ========================================================================================= */}
       {/* ACORDEÓN PASO 1: RENDIMIENTO POR TURNOS (Chart Composition) */}
@@ -1905,13 +1952,21 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
           </div>
         </div>
       </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ========================================================================================= */}
-      {/* 3. PLAN DE ACCIÓN: TOP 3 RECOMENDACIONES IA PRIORIZADAS POR URGENCIA                      */}
+      {/* 3. PLAN DE ACCIÓN: TOP 3 RECOMENDACIONES IA PRIORIZADAS POR URGENCIA (DESPLEGABLE FASE 3) */}
       {/* ========================================================================================= */}
-      <section id="section-recommendations" className="bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs p-4 sm:p-5 space-y-4">
-        {/* Encabezado de la Sección de Recomendaciones */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+      <div id="item-phase3" className="bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs transition-all duration-200">
+        {/* Encabezado Desplegable de Recomendaciones */}
+        <button
+          type="button"
+          onClick={() => toggleSection('phase3')}
+          className="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-slate-50/70 transition cursor-pointer select-none"
+        >
           <div className="flex items-start sm:items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
               <Zap className="w-4 h-4" />
@@ -1922,7 +1977,7 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
                   Top 3 Recomendaciones Accionables de la IA
                 </h3>
                 <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">
-                  Plan de Acción &middot; Priorizado por Urgencia
+                  Fase 3 &middot; Plan de Acción Priorizado por Urgencia
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -1930,96 +1985,110 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
               </p>
             </div>
           </div>
-          <div className="self-start sm:self-auto bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold font-mono">
-            Impacto Total Est.: <strong className="text-emerald-700 font-extrabold">+2.510 €/mes</strong>
+
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+            <div className="text-left sm:text-right">
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Impacto Total Est.</span>
+              <div className="flex items-center gap-1.5 justify-end">
+                <span className="text-sm font-extrabold text-emerald-600 font-mono whitespace-nowrap">+2.510 €/mes</span>
+                <span className="text-slate-300 font-normal">&middot;</span>
+                <span className="text-[11px] font-bold text-slate-600 whitespace-nowrap">3 acciones</span>
+              </div>
+            </div>
+            <span className={`no-print w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center transition-transform duration-200 ${effectiveOpen('phase3') ? 'rotate-180 bg-blue-50 text-blue-600' : ''}`}>
+              <ChevronDown className="w-4 h-4" />
+            </span>
+          </div>
+        </button>
+
+        <div className={`print-accordion-open grid transition-[grid-template-rows,opacity] duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] ${effectiveOpen('phase3') ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
+          <div className="overflow-hidden">
+            <div className="p-4 sm:p-5 space-y-3 border-t border-slate-100">
+              {aiSuggestions.map((sug: any) => {
+                const isCritical = sug.priority === 'critical'
+                const isHigh = sug.priority === 'high'
+
+                return (
+                  <div
+                    key={sug.id}
+                    className={`${
+                      isCritical
+                        ? 'bg-rose-50/40 ring-rose-200/80 hover:bg-white'
+                        : isHigh
+                        ? 'bg-amber-50/40 ring-amber-200/80 hover:bg-white'
+                        : 'bg-blue-50/40 ring-blue-200/80 hover:bg-white'
+                    } rounded-xl p-4 ring-1 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
+                  >
+                    <div className="flex items-start gap-3.5 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-lg ${
+                        isCritical
+                          ? 'bg-rose-100 text-rose-700 ring-1 ring-rose-300'
+                          : isHigh
+                          ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300'
+                          : 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
+                      }`}>
+                        {isCritical ? <Zap className="w-5 h-5" /> : isHigh ? <Clock className="w-5 h-5" /> : <Award className="w-5 h-5" />}
+                      </div>
+                      <div className="space-y-1.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-xs ${
+                            isCritical
+                              ? 'bg-rose-600 text-white'
+                              : isHigh
+                              ? 'bg-amber-500 text-slate-950'
+                              : 'bg-blue-600 text-white'
+                          }`}>
+                            {sug.urgencyLabel || (isCritical ? '🔴 Urgencia Crítica · Acción Inmediata' : isHigh ? '🟠 Urgencia Alta · Ajuste Operativo' : '🟡 Urgencia Media · Optimización de Carta')}
+                          </span>
+                          <span className="text-sm font-bold text-slate-900">{sug.title}</span>
+                        </div>
+
+                        <div className="text-xs text-slate-600 leading-relaxed space-y-1">
+                          {sug.problem && (
+                            <p>
+                              <strong className={isCritical ? 'text-rose-950 font-semibold' : isHigh ? 'text-amber-950 font-semibold' : 'text-blue-950 font-semibold'}>
+                                Problema detectado por la app:
+                              </strong>{' '}
+                              {sug.problem}
+                            </p>
+                          )}
+                          {sug.solution && (
+                            <p>
+                              <strong className={isCritical ? 'text-emerald-800 font-semibold' : isHigh ? 'text-blue-800 font-semibold' : 'text-indigo-800 font-semibold'}>
+                                Solución Fluxo 1.0:
+                              </strong>{' '}
+                              {sug.solution}
+                            </p>
+                          )}
+                          {!sug.problem && !sug.solution && (
+                            <p>{sug.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`sm:text-right flex-shrink-0 pl-12 sm:pl-0 border-t sm:border-t-0 pt-2 sm:pt-0 ${
+                      isCritical ? 'border-rose-100' : isHigh ? 'border-amber-100' : 'border-blue-100'
+                    }`}>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Impacto Mensual Est.
+                      </span>
+                      <span className="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">
+                        {sug.estimated_impact_eur}
+                      </span>
+                      {sug.subnote && (
+                        <span className="text-[10px] text-slate-500 block font-medium">
+                          {sug.subnote}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
-
-        {/* Tarjetas de Recomendaciones con Urgencia Visible */}
-        <div className="space-y-3">
-          {aiSuggestions.map((sug: any) => {
-            const isCritical = sug.priority === 'critical'
-            const isHigh = sug.priority === 'high'
-
-            return (
-              <div
-                key={sug.id}
-                className={`${
-                  isCritical
-                    ? 'bg-rose-50/40 ring-rose-200/80 hover:bg-white'
-                    : isHigh
-                    ? 'bg-amber-50/40 ring-amber-200/80 hover:bg-white'
-                    : 'bg-blue-50/40 ring-blue-200/80 hover:bg-white'
-                } rounded-xl p-4 ring-1 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
-              >
-                <div className="flex items-start gap-3.5 min-w-0">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-lg ${
-                    isCritical
-                      ? 'bg-rose-100 text-rose-700 ring-1 ring-rose-300'
-                      : isHigh
-                      ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300'
-                      : 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
-                  }`}>
-                    {isCritical ? <Zap className="w-5 h-5" /> : isHigh ? <Clock className="w-5 h-5" /> : <Award className="w-5 h-5" />}
-                  </div>
-                  <div className="space-y-1.5 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-xs ${
-                        isCritical
-                          ? 'bg-rose-600 text-white'
-                          : isHigh
-                          ? 'bg-amber-500 text-slate-950'
-                          : 'bg-blue-600 text-white'
-                      }`}>
-                        {sug.urgencyLabel || (isCritical ? '🔴 Urgencia Crítica · Acción Inmediata' : isHigh ? '🟠 Urgencia Alta · Ajuste Operativo' : '🟡 Urgencia Media · Optimización de Carta')}
-                      </span>
-                      <span className="text-sm font-bold text-slate-900">{sug.title}</span>
-                    </div>
-
-                    <div className="text-xs text-slate-600 leading-relaxed space-y-1">
-                      {sug.problem && (
-                        <p>
-                          <strong className={isCritical ? 'text-rose-950 font-semibold' : isHigh ? 'text-amber-950 font-semibold' : 'text-blue-950 font-semibold'}>
-                            Problema detectado por la app:
-                          </strong>{' '}
-                          {sug.problem}
-                        </p>
-                      )}
-                      {sug.solution && (
-                        <p>
-                          <strong className={isCritical ? 'text-emerald-800 font-semibold' : isHigh ? 'text-blue-800 font-semibold' : 'text-indigo-800 font-semibold'}>
-                            Solución Fluxo 1.0:
-                          </strong>{' '}
-                          {sug.solution}
-                        </p>
-                      )}
-                      {!sug.problem && !sug.solution && (
-                        <p>{sug.description}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className={`sm:text-right flex-shrink-0 pl-12 sm:pl-0 border-t sm:border-t-0 pt-2 sm:pt-0 ${
-                  isCritical ? 'border-rose-100' : isHigh ? 'border-amber-100' : 'border-blue-100'
-                }`}>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    Impacto Mensual Est.
-                  </span>
-                  <span className="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">
-                    {sug.estimated_impact_eur}
-                  </span>
-                  {sug.subnote && (
-                    <span className="text-[10px] text-slate-500 block font-medium">
-                      {sug.subnote}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
+      </div>
 
       {/* Footer / Legal & Privacy */}
       <footer id="certFooter" className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
