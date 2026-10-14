@@ -13,6 +13,7 @@ import {
   orderHasActiveDesserts,
   areOrderDrinksPending,
   evaluateOrderStations,
+  stripInternalStationTags,
 } from '../src/lib/course-utils'
 import { VALID_ORDER_TRANSITIONS } from '../src/lib/server-state'
 
@@ -179,6 +180,55 @@ async function runTests() {
   assert.strictEqual(settlement.new_total_points, 120, 'Saldo final: 60 - 40 canjeados + 100 ganados = 120')
 
   console.log('  ✔ Liquidación de sesión y consolidación de puntos 100% validada.\n')
+
+  // =========================================================================
+  // 5. ACREDITACIÓN RETROACTIVA POST-PAGO Y SANITIZACIÓN DE ETIQUETAS
+  // =========================================================================
+  console.log('5. Verificando Acreditación Retroactiva Post-Pago y Sanitización de Etiquetas...')
+
+  // 5.1 Sanitización de etiquetas técnicas
+  assert.strictEqual(stripInternalStationTags('[BARRA: SERVIDA]'), '')
+  assert.strictEqual(stripInternalStationTags('[BARRA_SERVIDA]'), '')
+  assert.strictEqual(stripInternalStationTags('[COCINA: LISTA] Sin cebolla'), 'Sin cebolla')
+  assert.strictEqual(stripInternalStationTags('Bien hecha [POSTRE: EN ESPERA]'), 'Bien hecha')
+  assert.strictEqual(stripInternalStationTags('[POSTRE_LISTO]'), '')
+  assert.strictEqual(stripInternalStationTags('↳ ⚠️ [BARRA: SERVIDA]'.replace('↳ ⚠️', '')), '')
+
+  // 5.2 Caso Real del Video: Pago de 53.20€ + Bono Google Maps de 50 pts
+  const globalStore = globalThis as any
+  if (!globalStore.__GASTRO_ORDERS__) {
+    globalStore.__GASTRO_ORDERS__ = {}
+  }
+  const paidOrderId = `ord-paid-video-${Date.now()}`
+  globalStore.__GASTRO_ORDERS__[SLUG] = [
+    {
+      id: paidOrderId,
+      table_number: 7,
+      total_amount: 53.20,
+      status: 'paid', // La mesa ya fue cobrada y liberada por el mozo a las 03:06
+      created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      loyalty_credited: false,
+    },
+  ]
+
+  const rocioEmail = `rocio-torres-${Date.now()}@fluxo-test.com`
+  const rocioProfile = await registerOrGetLoyaltyProfile(SLUG, {
+    name: 'Rocío Torres',
+    email: rocioEmail,
+    tableNumber: 7,
+    claimGoogleReviewBonus: true,
+  })
+
+  // Debe sumar 53 pts (de los 53.20€ cobrados) + 50 pts (Google Maps) = 103 pts directos a disponibles
+  assert.ok(rocioProfile, 'Perfil de Rocío registrado')
+  assert.strictEqual(rocioProfile.total_points, 103, 'Total debe ser 103 puntos (53 comanda cobrada + 50 Maps)')
+  assert.strictEqual(rocioProfile.available_points, 103, 'Disponibles deben ser 103 puntos')
+  assert.strictEqual(rocioProfile.held_points, 0, 'Confirmados en mesa debe ser 0 porque la orden ya fue cobrada')
+
+  const memOrd = globalStore.__GASTRO_ORDERS__[SLUG].find((o: any) => o.id === paidOrderId)
+  assert.strictEqual(memOrd.loyalty_credited, true, 'La orden debe quedar marcada como loyalty_credited = true')
+
+  console.log('  ✔ Acreditación retroactiva post-pago (103 pts disponibles) y sanitización 100% verificada.\n')
 
   console.log('=================================================================')
   console.log('TODAS LAS PRUEBAS DE AUDITORÍA ARGON 4 SUPERADAS CON ÉXITO: 100% PASS')
