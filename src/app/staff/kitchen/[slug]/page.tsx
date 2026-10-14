@@ -16,6 +16,7 @@ import {
   orderHasDesserts,
   isOrderDessertsReady,
   orderHasActiveDesserts,
+  getItemCourse,
 } from '@/lib/course-utils'
 
 type StationFilterType = 'all' | 'kitchen' | 'bar'
@@ -113,7 +114,9 @@ export default function KitchenKDSPage() {
                 order_items: items.map((it: any) => ({
                   ...it,
                   product: it.product || it.products,
-                  course: it.course || 'first',
+                  course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
+                    ? it.course
+                    : getItemCourse(it),
                 })),
               }
             })

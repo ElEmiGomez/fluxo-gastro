@@ -4,6 +4,7 @@ import {
   Order,
   OrderItem,
   OrderStatus,
+  CourseType,
 } from '@/types/database.types'
 import {
   broadcastEvent,
@@ -14,7 +15,8 @@ import {
   getCachedOrderItems,
 } from '@/lib/server-state'
 import { getTargetRestaurantId } from './restaurants.repository'
-import { inferCourseType } from '@/lib/category-matcher'
+import { inferCourseType, resolveCanonicalProductId } from '@/lib/category-matcher'
+import { getItemCourse } from '@/lib/course-utils'
 
 export interface TransitionOrderParams {
   orderId: string
@@ -58,6 +60,12 @@ export async function createOrder(
       quantity: number
       notes?: string | null
       product?: any
+      course?: CourseType
+      is_complimentary?: boolean
+      weight_grams?: number
+      is_pack_header?: boolean
+      is_pack_component?: boolean
+      pack_id?: string
     }>
   }
 ): Promise<Order> {
@@ -95,12 +103,35 @@ export async function createOrder(
       try {
         const { data: dbProductRows } = await supabase
           .from('products')
-          .select('id')
+          .select('id, name')
           .eq('restaurant_id', targetRestaurantId)
         const validDbProductIds = new Set((dbProductRows || []).map((p: any) => p.id))
-        safeItemsForDb = (orderData.items || []).filter(
-          it => uuidRegex.test(it.product_id) && validDbProductIds.has(it.product_id)
-        )
+        const dbProductsList = dbProductRows || []
+
+        safeItemsForDb = (orderData.items || [])
+          .filter(it => !it.is_pack_header && !(it.notes && it.notes.includes('[PACK_HEADER]')))
+          .map(it => {
+            let pid = resolveCanonicalProductId(it.product_id) || it.product_id
+            if (uuidRegex.test(pid) && validDbProductIds.has(pid)) {
+              return { ...it, product_id: pid }
+            }
+            const itName = it.product?.name || (it as any).name || ''
+            if (itName && dbProductsList.length > 0) {
+              const cleanTarget = itName.toLowerCase().trim()
+              const matchedProd = dbProductsList.find((dp: any) => {
+                const dpClean = (dp.name || '').toLowerCase().trim()
+                return dpClean === cleanTarget || (cleanTarget.length >= 5 && (dpClean.includes(cleanTarget) || cleanTarget.includes(dpClean)))
+              })
+              if (matchedProd) {
+                return { ...it, product_id: matchedProd.id }
+              }
+            }
+            if (!validDbProductIds.has(pid) && dbProductsList.length > 0) {
+              return { ...it, product_id: dbProductsList[0].id }
+            }
+            return { ...it, product_id: pid }
+          })
+          .filter(it => uuidRegex.test(it.product_id) && validDbProductIds.has(it.product_id))
       } catch {
         safeItemsForDb = (orderData.items || []).filter(it => uuidRegex.test(it.product_id))
       }
@@ -127,7 +158,9 @@ export async function createOrder(
             order_items: (orderData.items || []).map((it: any) => ({
               ...it,
               product: it.product || it.products,
-              course: it.course || 'first',
+              course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
+                ? it.course
+                : getItemCourse(it),
             })) as any,
             table_number: orderData.table_number,
           }
@@ -171,7 +204,7 @@ export async function createOrder(
             product: it.product || it.products,
             course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
               ? it.course
-              : inferCourseType(it.product || it.products),
+              : getItemCourse(it),
           })) as any,
           table_number: orderData.table_number,
         }
@@ -251,7 +284,7 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
             product: it.product || it.products,
             course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
               ? it.course
-              : inferCourseType(it.product || it.products),
+              : getItemCourse(it),
           }))
           const mem = memOrders.find(m => m.id === o.id)
           const resolvedVersion = (o.version !== undefined && o.version !== null)
@@ -415,7 +448,7 @@ export async function transitionOrderStatus(
             product: it.product || it.products,
             course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
               ? it.course
-              : inferCourseType(it.product || it.products),
+              : getItemCourse(it),
           }))
 
           // Backfill desde memoria o caché si el RPC devolvió items vacíos (race condition Supabase)
@@ -509,7 +542,7 @@ export async function transitionOrderStatus(
           product: it.product || it.products,
           course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
             ? it.course
-            : inferCourseType(it.product || it.products),
+            : getItemCourse(it),
         }))
         const cached = getCachedOrderItems(orderId)
         const effectiveItems = supaItems.length > 0

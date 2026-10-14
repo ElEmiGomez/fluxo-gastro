@@ -439,20 +439,27 @@ export async function POST(req: NextRequest) {
         (Number(item.loyalty_points_redeemed) > 0) ||
         (item.notes && item.notes.includes('[🎁 Canje Fidelización'))
       )
+      const isPackHeader = Boolean(
+        item.is_pack_header ||
+        (item.notes && item.notes.includes('[PACK_HEADER]')) ||
+        (String(item.product_id || '').startsWith('daily-menu-') && !item.is_pack_component)
+      )
       const isPackComponent = Boolean(
-        item.is_pack_component ||
-        (item.notes && (
+        !isPackHeader &&
+        (item.is_pack_component ||
+        (item.notes && !item.notes.includes('[PACK_HEADER]') && (
           item.notes.includes('[Incluido en Menú') ||
           item.notes.includes('[Incluido en Promo') ||
           item.notes.includes('[Menú del Día #') ||
           item.notes.includes('[Promo Pareja') ||
           item.notes.includes('[PACK_SUBITEM]')
-        ))
+        )))
       )
       const isComplimentary = Boolean(
-        (isStaffSender && (item.is_complimentary || (item.notes && item.notes.includes('[🎁 INVITACIÓN DE LA CASA]')))) ||
+        !isPackHeader &&
+        ((isStaffSender && (item.is_complimentary || (item.notes && item.notes.includes('[🎁 INVITACIÓN DE LA CASA]')))) ||
         isLoyaltyRedeemed ||
-        isPackComponent
+        isPackComponent)
       )
 
       const itemPriceToCharge = isComplimentary ? 0 : (Number(catalogProduct.price) || 0)

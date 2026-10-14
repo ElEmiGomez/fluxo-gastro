@@ -14,7 +14,7 @@ export const TAG_PACK_HEADER = '[PACK_HEADER]'
 export function stripInternalStationTags(rawNotes?: string | null): string {
   if (!rawNotes) return ''
   return rawNotes
-    .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|PASE_1|PASE_2|MARCHAR_POSTRE|POSTRE_PENDIENTE_ELECCION|PACK_HEADER|PACK_SUBITEM).*?\]/gi, '')
+    .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|PASE_1|PASE_2|MARCHAR_POSTRE|POSTRE_PENDIENTE_ELECCION|PACK_HEADER|PACK_SUBITEM|COURSE:\s*[a-z]+).*?\]/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim()
 }
@@ -50,23 +50,31 @@ export function isDessertPendingChoice(item: OrderItem): boolean {
 /**
  * Obtiene el tiempo gastronómico efectivo (course) de un ítem.
  */
-export function getItemCourse(item: OrderItem): CourseType {
-  if (item.course && ['first', 'second', 'dessert', 'drink'].includes(item.course)) {
+export function getItemCourse(item: OrderItem | any): CourseType {
+  if (item?.course && ['first', 'second', 'dessert', 'drink'].includes(item.course)) {
     return item.course
   }
-  return inferCourseType(item.product)
+  const notes = item?.notes || ''
+  if (notes.includes('[COURSE:first]')) return 'first'
+  if (notes.includes('[COURSE:second]')) return 'second'
+  if (notes.includes('[COURSE:dessert]') || notes.includes(TAG_DESSERT_PENDING)) return 'dessert'
+  if (notes.includes('[COURSE:drink]')) return 'drink'
+  return inferCourseType(item?.product || item?.products)
 }
 
 export function isDrinkItem(item: OrderItem): boolean {
+  if (isPackHeaderItem(item)) return false
   return getItemCourse(item) === 'drink'
 }
 
 export function isFoodItem(item: OrderItem): boolean {
+  if (isPackHeaderItem(item)) return false
   const c = getItemCourse(item)
   return c === 'first' || c === 'second'
 }
 
 export function isDessertItem(item: OrderItem): boolean {
+  if (isPackHeaderItem(item)) return false
   return getItemCourse(item) === 'dessert'
 }
 

@@ -231,6 +231,14 @@ function DinerMenuContent() {
                 quantity: Math.max(1, parseInt(String(item.quantity || 1), 10) || 1),
                 selectedPills: Array.isArray(item.selectedPills) ? item.selectedPills : [],
                 notes: typeof item.notes === 'string' ? item.notes : '',
+                cartItemId: typeof item.cartItemId === 'string' ? item.cartItemId : undefined,
+                course: item.course,
+                is_complimentary: Boolean(item.is_complimentary),
+                is_pack_header: Boolean(item.is_pack_header),
+                is_pack_component: Boolean(item.is_pack_component),
+                pack_id: typeof item.pack_id === 'string' ? item.pack_id : undefined,
+                pack_tag: typeof item.pack_tag === 'string' ? item.pack_tag : undefined,
+                weight_grams: typeof item.weight_grams === 'number' ? item.weight_grams : undefined,
               }))
             setCart(sanitized)
           }
@@ -373,7 +381,7 @@ function DinerMenuContent() {
       },
       quantity: 1,
       selectedPills: [],
-      notes: `[${packTag}] ${sel.notes || ''}`.trim(),
+      notes: `[${packTag}] [COURSE:${sel.course}] ${sel.notes || ''}`.trim(),
       course: sel.course,
       is_complimentary: true,
       is_pack_component: true,
@@ -417,7 +425,7 @@ function DinerMenuContent() {
       },
       quantity: 1,
       selectedPills: [],
-      notes: `[${packTag}] ${sel.notes || ''}`.trim(),
+      notes: `[${packTag}] [COURSE:${sel.course}] ${sel.notes || ''}`.trim(),
       course: sel.course,
       is_complimentary: true,
       is_pack_component: true,

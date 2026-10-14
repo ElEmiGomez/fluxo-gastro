@@ -88,7 +88,7 @@ export function DailyMenuModal({
   const isLastStep = activeStepIndex === sections.length - 1
   const allStepsComplete = sections.length > 0 && sections.every((_, idx) => Boolean(selectedItems[idx]))
   const isDessertStep = (SECTION_COURSE_MAP[activeStepIndex] === 'dessert') || (currentSection?.name || '').toLowerCase().includes('postre')
-  const PENDING_DESSERT_ID = 'p-dessert-pending-later'
+  const PENDING_DESSERT_ID = 'b0000000-0000-0000-0000-000000000099'
 
   const handleSelectItem = (itemProduct: Product) => {
     setSelectedItems(prev => ({

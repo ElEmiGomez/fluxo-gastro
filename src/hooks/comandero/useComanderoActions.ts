@@ -405,12 +405,17 @@ export function useComanderoActions({
 
         return {
           product_id: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
           quantity: item.quantity,
           notes: formattedNotes || null,
           product: item.product,
           course: item.course || 'first',
           is_complimentary: item.is_complimentary || false,
           weight_grams: item.weight_grams,
+          is_pack_header: item.is_pack_header,
+          is_pack_component: item.is_pack_component,
+          pack_id: item.pack_id,
         }
       })
 

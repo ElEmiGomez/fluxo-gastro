@@ -802,10 +802,10 @@ export const MOCK_DAILY_MENUS: Record<string, DailyMenu> = {
           {
             id: 'item-d-5',
             section_id: 'sec-3',
-            dish_id: 'b0000000-0000-0000-0000-000000000018',
+            dish_id: 'b0000000-0000-0000-0000-000000000007',
             is_available: true,
             product: {
-              id: 'b0000000-0000-0000-0000-000000000018',
+              id: 'b0000000-0000-0000-0000-000000000007',
               restaurant_id: 'a0000000-0000-0000-0000-000000000001',
               category_id: 'c0000000-0000-0000-0000-000000000006',
               name: 'Tarta de Queso Artesana de la Ría',
@@ -821,10 +821,10 @@ export const MOCK_DAILY_MENUS: Record<string, DailyMenu> = {
           {
             id: 'item-d-6',
             section_id: 'sec-3',
-            dish_id: 'b0000000-0000-0000-0000-000000000019',
+            dish_id: 'b0000000-0000-0000-0000-000000000008',
             is_available: true,
             product: {
-              id: 'b0000000-0000-0000-0000-000000000019',
+              id: 'b0000000-0000-0000-0000-000000000008',
               restaurant_id: 'a0000000-0000-0000-0000-000000000001',
               category_id: 'c0000000-0000-0000-0000-000000000006',
               name: 'Café de Especialidad 100% Arábica',
@@ -848,10 +848,10 @@ export const MOCK_DAILY_MENUS: Record<string, DailyMenu> = {
           {
             id: 'item-d-7',
             section_id: 'sec-4',
-            dish_id: 'b0000000-0000-0000-0000-000000000020',
+            dish_id: 'b0000000-0000-0000-0000-000000000009',
             is_available: true,
             product: {
-              id: 'b0000000-0000-0000-0000-000000000020',
+              id: 'b0000000-0000-0000-0000-000000000009',
               restaurant_id: 'a0000000-0000-0000-0000-000000000001',
               category_id: 'c0000000-0000-0000-0000-000000000005',
               name: 'Cerveza Estrella Galicia (Caña)',
