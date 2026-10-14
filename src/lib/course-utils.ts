@@ -84,20 +84,31 @@ export function isDrinkOnlyOrder(input?: Order | OrderItem[] | null): boolean {
 
 /**
  * Retorna true si la orden tiene postres retenidos que aún no han sido marchados a cocina.
+ * REGLA INTELIGENTE DE POSTRES:
+ * - Si el pedido trae comida principal (hamburguesas, etc.) + postres: los postres se RETIENEN (Pase 2).
+ * - Si el pedido es SOLO de postres/café (ej: ronda de postres pedida a posteriori): NO se retienen,
+ *   van DIRECTO a cocina como comanda activa.
  */
 export function orderHasHeldDesserts(order: Order): boolean {
+  if (!orderHasFood(order)) {
+    // Es una orden exclusiva de postres/café -> va directo a preparación, no se retiene
+    return false
+  }
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
   return desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
 }
 
 /**
- * Retorna true si la orden tiene postres que ya fueron marchados y están en preparación en cocina.
+ * Retorna true si la orden tiene postres que ya están activos para preparación en cocina:
+ * 1. O bien fueron marchados explícitamente por el mozo (isDessertFired)
+ * 2. O bien la orden es de postres únicamente (no tiene platos principales que esperar)
  */
 export function orderHasActiveDesserts(order: Order): boolean {
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
-  return desserts.some(d => isDessertFired(d) && !isDessertReady(d))
+  const isSoloDessertOrder = !orderHasFood(order)
+  return desserts.some(d => (isSoloDessertOrder || isDessertFired(d)) && !isDessertReady(d))
 }
 
 export interface OrderStationEvaluation {
@@ -159,14 +170,15 @@ export function evaluateOrderStations(input?: Order | OrderItem[] | null): Order
   const drinks = safeItems.filter(isDrinkItem)
   const kitchenItems = safeItems.filter(i => isFoodItem(i) || isDessertItem(i))
 
+  const isSoloDesserts = safeItems.length > 0 && safeItems.every(isDessertItem)
   const hasKitchenMains = mains.length > 0
-  const hasHeldDesserts = desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
-  const hasReleasedDesserts = desserts.some(d => isDessertFired(d) && !isDessertReady(d))
+  const hasHeldDesserts = !isSoloDesserts && desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
+  const hasReleasedDesserts = desserts.some(d => (isSoloDesserts || isDessertFired(d)) && !isDessertReady(d))
   const hasReadyDesserts = desserts.some(isDessertReady)
   const hasBarDrinks = drinks.length > 0
 
   const isDrinkOnly = safeItems.length > 0 && safeItems.every(isDrinkItem)
-  const isDessertOnly = safeItems.length > 0 && safeItems.every(isDessertItem)
+  const isDessertOnly = isSoloDesserts
 
   // Cocina solo puede dar por finalizada la orden si no quedan postres retenidos sin despachar
   const canKitchenCompleteOrder = !hasHeldDesserts
@@ -192,10 +204,12 @@ export function evaluateOrderStations(input?: Order | OrderItem[] | null): Order
 
 /**
  * Retorna true si la orden tiene bebidas activas y al menos una no ha sido servida por sala/mozo.
- * Invariante anti-cierre prematuro: la entrega de comida salada en mesa NO borra las bebidas pendientes.
+ * REGLA DEL EMBUDO:
+ * Mientras la orden esté en 'pending_validation' (aún no aprobada por el mozo),
+ * NO debe mostrarse la tarjeta de servir bebidas en barra. Primero se aprueba la comanda global.
  */
 export function areOrderDrinksPending(order: Order): boolean {
-  if (order.status === 'paid' || order.status === 'cancelled') {
+  if (order.status === 'pending_validation' || order.status === 'paid' || order.status === 'cancelled') {
     return false
   }
   const drinks = (order.order_items || []).filter(isDrinkItem)

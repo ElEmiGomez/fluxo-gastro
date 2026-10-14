@@ -20,7 +20,16 @@ import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { isProductInCategory, resolveCanonicalProductId } from '@/lib/category-matcher'
-import { areOrderDrinksPending, getPendingDrinks, cleanItemNotes, orderHasDesserts, isOrderDessertsReady, isDessertFired } from '@/lib/course-utils'
+import {
+  areOrderDrinksPending,
+  getPendingDrinks,
+  cleanItemNotes,
+  orderHasDesserts,
+  orderHasHeldDesserts,
+  isOrderDessertsReady,
+  isDessertFired,
+  getItemCourse,
+} from '@/lib/course-utils'
 
 
 interface PendingServiceCall {
@@ -1043,7 +1052,7 @@ export default function WaiterComanderoPage() {
       o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
            o.status !== 'paid' && o.status !== 'cancelled'
     )
-    return tableOrders.filter(o => orderHasDesserts(o) && !isOrderDessertsReady(o))
+    return tableOrders.filter(o => o.status !== 'pending_validation' && orderHasHeldDesserts(o))
   }, [selectedTable, serverOrders, tableStatuses])
 
   // Listas de Tareas y Avisos Pendientes para el Mozo (Reactivo SSOT)
@@ -1154,14 +1163,103 @@ export default function WaiterComanderoPage() {
                 </div>
               </div>
 
-              {/* SECCIÓN 0: BEBIDAS PENDIENTES DE SERVIR EN SALA / BARRA */}
-              {pendingDrinksList.length > 0 && (
+              {/* SECCIÓN 1: COMANDAS PENDIENTES DE VALIDACIÓN EN MESA (REGLA DEL EMBUDO: PASO 1) */}
+              {validationOrdersList.length > 0 && (
                 <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                    <h4 className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <UserCheck className="w-4 h-4 text-amber-400 stroke-[2.5]" />
+                      <span>Validar Comanda en Mesa ({validationOrdersList.length})</span>
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {validationOrdersList.map(valOrder => {
+                      const tblNum = valOrder.table_number || valOrder.table?.table_number
+
+                      return (
+                        <div
+                          key={valOrder.id}
+                          className="bg-slate-900/90 rounded-2xl p-3.5 border-2 border-amber-400 shadow-md flex flex-col justify-between space-y-3 relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-amber-500" />
+                          <div>
+                            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                              <span className="px-2.5 py-0.5 rounded-lg bg-amber-500/30 text-amber-200 border border-amber-400 font-black text-xs">
+                                Mesa #{tblNum}
+                              </span>
+                              <span className="font-black text-xs text-white tabular-nums">
+                                {formatCurrency(valOrder.total_amount)}
+                              </span>
+                            </div>
+
+                            <div className="mt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                              {(valOrder.order_items || []).map((it, idx) => {
+                                const cleanedNotes = cleanItemNotes(it.notes)
+                                return (
+                                  <div key={idx} className="text-xs text-slate-300 leading-tight">
+                                    <span className="font-black text-amber-400">{it.quantity}x </span>
+                                    <span className="font-semibold text-white">{it.product?.name || `Plato #${idx + 1}`}</span>
+                                    {cleanedNotes && (
+                                      <span className="block text-[10px] text-amber-300 font-bold pl-3">
+                                        &bull; {cleanedNotes}
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={validatingOrderIds.has(valOrder.id)}
+                              onClick={() => handleValidateOrder(valOrder.id, tblNum)}
+                              className="flex-1 py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:bg-amber-700 disabled:opacity-70 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
+                              title="Aprobar comanda y marchar platos a cocina/barra"
+                            >
+                              {validatingOrderIds.has(valOrder.id) ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                                  <span>Aprobando...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                                  <span>Aprobar Comanda</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`¿Descartar comanda de Mesa #${tblNum}?`)) {
+                                  handleCancelValidationOrder(valOrder.id, tblNum)
+                                }
+                              }}
+                              className="p-2.5 rounded-xl bg-red-950/60 hover:bg-red-900 text-red-300 font-black text-xs border border-red-800/80 transition-colors cursor-pointer"
+                              title="Descartar comanda falsa o errónea"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* SECCIÓN 2: BEBIDAS PENDIENTES DE SERVIR EN SALA / BARRA (REGLA DEL EMBUDO: PASO 2) */}
+              {pendingDrinksList.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-slate-800">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
                     <h4 className="text-xs sm:text-sm font-black text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
                       <Wine className="w-4 h-4 text-cyan-400 stroke-[2.5]" />
-                      <span>Bebidas por Servir en Sala / Barra ({pendingDrinksList.length})</span>
+                      <span>Barra: Servir Bebidas ({pendingDrinksList.length})</span>
                     </h4>
                   </div>
 
@@ -1212,7 +1310,7 @@ export default function WaiterComanderoPage() {
                               disabled={isServing}
                               onClick={() => handleServeDrinks(ord.id)}
                               className="flex-1 py-2.5 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-700 disabled:opacity-70 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
-                              title="Marcar bebidas como servidas"
+                              title="Marcar bebidas como entregadas"
                             >
                               {isServing ? (
                                 <>
@@ -1222,7 +1320,7 @@ export default function WaiterComanderoPage() {
                               ) : (
                                 <>
                                   <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                                  <span>Marcar Servidas</span>
+                                  <span>Bebidas Entregadas</span>
                                 </>
                               )}
                             </button>
@@ -1245,14 +1343,14 @@ export default function WaiterComanderoPage() {
                 </div>
               )}
 
-              {/* SECCIÓN A: COMANDAS LISTAS PARA SERVIR EN SALA */}
+              {/* SECCIÓN 3: RECOGER EN COCINA — MESA (REGLA DEL EMBUDO: PASO 3, 0% BEBIDAS) */}
               {readyOrdersList.length > 0 && (
-                <div className="space-y-2">
+                <div className="space-y-2 pt-2 border-t border-slate-800">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     <h4 className="text-xs sm:text-sm font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-emerald-400" />
-                      <span>Platos Listos en Cocina para Servir ({readyOrdersList.length})</span>
+                      <span>Recoger en Cocina — Mesa ({readyOrdersList.length})</span>
                     </h4>
                   </div>
 
@@ -1260,6 +1358,8 @@ export default function WaiterComanderoPage() {
                     {readyOrdersList.map((ord, idx) => {
                       const tblNum = ord.table_number || ord.table?.table_number || '?'
                       const waitingMins = ord.created_at ? Math.max(1, Math.floor((Date.now() - new Date(ord.created_at).getTime()) / 60000)) : 1
+                      const kitchenItems = (ord.order_items || []).filter(it => getItemCourse(it) !== 'drink')
+                      const displayItems = kitchenItems.length > 0 ? kitchenItems : (ord.order_items || [])
 
                       return (
                         <div
@@ -1278,19 +1378,22 @@ export default function WaiterComanderoPage() {
                               </span>
                             </div>
 
-                            {/* Desglose completo de platos listos */}
+                            {/* Desglose de comida y postres listos (0% bebidas) */}
                             <div className="mt-2.5 space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                              {(ord.order_items || []).map((it, itemIdx) => (
-                                <div key={itemIdx} className="text-xs text-slate-200 leading-tight">
-                                  <span className="font-black text-emerald-400">{it.quantity}x </span>
-                                  <span className="font-bold text-white">{it.product?.name || `Plato #${itemIdx + 1}`}</span>
-                                  {it.notes && (
-                                    <span className="block text-[10px] text-amber-300 font-extrabold pl-3 mt-0.5">
-                                      &bull; {it.notes}
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
+                              {displayItems.map((it, itemIdx) => {
+                                const cleanedNotes = cleanItemNotes(it.notes)
+                                return (
+                                  <div key={itemIdx} className="text-xs text-slate-200 leading-tight">
+                                    <span className="font-black text-emerald-400">{it.quantity}x </span>
+                                    <span className="font-bold text-white">{it.product?.name || `Plato #${itemIdx + 1}`}</span>
+                                    {cleanedNotes && (
+                                      <span className="block text-[10px] text-amber-300 font-extrabold pl-3 mt-0.5">
+                                        &bull; {cleanedNotes}
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
 
@@ -1300,7 +1403,7 @@ export default function WaiterComanderoPage() {
                               disabled={deliveringOrderIds.has(ord.id)}
                               onClick={() => handleDeliverSingleOrder(ord.id, tblNum)}
                               className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-700 disabled:opacity-70 text-slate-950 disabled:text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
-                              title="Marcar como servido en mesa"
+                              title="Marcar platos como entregados en mesa"
                             >
                               {deliveringOrderIds.has(ord.id) ? (
                                 <>
@@ -1310,7 +1413,7 @@ export default function WaiterComanderoPage() {
                               ) : (
                                 <>
                                   <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                                  <span>Marcar Servido</span>
+                                  <span>Marcar Entregado en Mesa</span>
                                 </>
                               )}
                             </button>
@@ -1324,91 +1427,6 @@ export default function WaiterComanderoPage() {
                               title="Ver mesa en comandero"
                             >
                               Ver Mesa
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* SECCIÓN B: COMANDAS PENDIENTES DE VALIDACIÓN EN MESA */}
-              {validationOrdersList.length > 0 && (
-                <div className="space-y-2 pt-2 border-t border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
-                    <h4 className="text-xs sm:text-sm font-black text-blue-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <UserCheck className="w-4 h-4 text-blue-400 stroke-[2.5]" />
-                      <span>Validación Requerida en Mesa ({validationOrdersList.length})</span>
-                    </h4>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {validationOrdersList.map(valOrder => {
-                      const tblNum = valOrder.table_number || valOrder.table?.table_number
-
-                      return (
-                        <div
-                          key={valOrder.id}
-                          className="bg-slate-900/90 rounded-2xl p-3.5 border-2 border-blue-400/80 shadow-md flex flex-col justify-between space-y-3"
-                        >
-                          <div>
-                            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                              <span className="px-2.5 py-0.5 rounded-lg bg-blue-500/30 text-blue-200 border border-blue-400 font-black text-xs">
-                                Mesa #{tblNum}
-                              </span>
-                              <span className="font-black text-xs text-white tabular-nums">
-                                {formatCurrency(valOrder.total_amount)}
-                              </span>
-                            </div>
-
-                            <div className="mt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                              {(valOrder.order_items || []).map((it, idx) => (
-                                <div key={idx} className="text-xs text-slate-300 leading-tight">
-                                  <span className="font-black text-blue-400">{it.quantity}x </span>
-                                  <span className="font-semibold text-white">{it.product?.name || `Plato #${idx + 1}`}</span>
-                                  {it.notes && (
-                                    <span className="block text-[10px] text-amber-300 font-bold pl-3">
-                                      &bull; {it.notes}
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
-                            <button
-                              type="button"
-                              disabled={validatingOrderIds.has(valOrder.id)}
-                              onClick={() => handleValidateOrder(valOrder.id, tblNum)}
-                              className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-70 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
-                              title="Enviar a cocina tras verificar verbalmente en mesa"
-                            >
-                              {validatingOrderIds.has(valOrder.id) ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                                  <span>Confirmando...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                                  <span>Confirmar a Cocina</span>
-                                </>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (confirm(`¿Descartar comanda de Mesa #${tblNum}?`)) {
-                                  handleCancelValidationOrder(valOrder.id, tblNum)
-                                }
-                              }}
-                              className="p-2.5 rounded-xl bg-red-950/60 hover:bg-red-900 text-red-300 font-black text-xs border border-red-800/80 transition-colors cursor-pointer"
-                              title="Descartar comanda falsa o errónea"
-                            >
-                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>

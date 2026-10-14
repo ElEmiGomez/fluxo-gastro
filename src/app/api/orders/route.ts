@@ -65,6 +65,14 @@ export async function GET(req: NextRequest) {
     const restaurant = await getRestaurantBySlug(slug)
     const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
     const orders = await getRestaurantOrders(restaurantId, slug)
+    const tableParam = searchParams.get('table') || searchParams.get('table_number')
+    let returnedOrders = orders
+    if (tableParam) {
+      const parsedT = parseInt(tableParam, 10)
+      if (!isNaN(parsedT)) {
+        returnedOrders = orders.filter(o => Number(o.table_number) === parsedT || Number(o.table?.table_number) === parsedT)
+      }
+    }
     const catalogProducts = getServerProducts(slug)
     const overrides = getProductAvailabilityOverrides(slug)
 
@@ -102,7 +110,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       {
-        orders,
+        orders: returnedOrders,
         paused_product_ids: pausedProductIds,
         product_availability: productAvailability,
       },
@@ -548,14 +556,23 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
       const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_FIRED, isDessertItem)
-      // Reactivar orden a 'preparing' para que cocina vea el ticket en producción activo
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marchar postres' }, { status: 404 })
+      }
+      const restaurant = await getRestaurantBySlug(slug)
+      const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
       const transRes = await transitionOrderStatus({
         orderId: targetOrderId,
+        restaurantId,
         slug,
         nextStatus: 'preparing',
         actorType: 'waiter',
       })
-      return NextResponse.json({ success: true, order: transRes.order || tagRes.order, message: 'Postres marchados a cocina' })
+      return NextResponse.json({
+        success: true,
+        order: transRes.order || tagRes.order,
+        message: 'Postres marchados a cocina',
+      })
     }
 
     if (!targetOrderId || !status) {
@@ -589,19 +606,17 @@ export async function PATCH(req: NextRequest) {
 
     // Invariante de Estación: Si el mozo confirma comanda (nextStatus === 'pending') pero la orden es 100% bebidas,
     // se enruta automáticamente a 'ready' para entrega directa en barra/sala sin atascarse en KDS de cocina.
-    let targetStatus = status
+    let targetStatus: OrderStatus = status
     if (status === 'pending') {
-      try {
-        const { getServerOrders } = await import('@/lib/server-state')
-        const memOrd = getServerOrders(slug).find(o => o.id === targetOrderId)
-        if (memOrd && isDrinkOnlyOrder(memOrd)) {
-          targetStatus = 'ready'
-        }
-      } catch (_) {}
+      const orders = await getRestaurantOrders(restaurantId, slug)
+      const currentOrd = orders.find(o => o.id === targetOrderId)
+      if (currentOrd?.order_items && currentOrd.order_items.length > 0 && isDrinkOnlyOrder(currentOrd.order_items)) {
+        targetStatus = 'ready'
+      }
     }
 
     const result = await transitionOrderStatus({
-      orderId,
+      orderId: targetOrderId,
       restaurantId,
       slug,
       nextStatus: targetStatus,

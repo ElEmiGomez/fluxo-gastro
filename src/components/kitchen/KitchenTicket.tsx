@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Clock, CheckCircle2, ChefHat, AlertTriangle, Utensils, Sparkles, Loader2, Layers } from 'lucide-react'
+import { Clock, CheckCircle2, ChefHat, AlertTriangle, Utensils, Sparkles, Loader2, Layers, Lock } from 'lucide-react'
 import { Order, OrderStatus } from '@/types/database.types'
 import { getWaitingMinutes } from '@/lib/utils'
 import {
@@ -11,6 +11,8 @@ import {
   getItemCourse,
   orderHasFood,
   orderHasDesserts,
+  orderHasHeldDesserts,
+  orderHasActiveDesserts,
   isOrderFoodReady,
   isOrderDessertsReady,
   isDrinkServed,
@@ -198,14 +200,156 @@ export function KitchenTicket({
             ? new Date(roundOrder.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : '--:--'
 
+          // Regla de Oro Cocina: 0% BEBIDAS (las bebidas se atienden en barra y mozo)
           const allRoundItems = roundOrder.order_items || []
           const kitchenItems = allRoundItems.filter(item => getItemCourse(item) !== 'drink')
-          const barDrinks = allRoundItems.filter(item => getItemCourse(item) === 'drink')
-          const displayItems = kitchenItems.length > 0 ? kitchenItems : barDrinks
+          const mains = kitchenItems.filter(item => getItemCourse(item) === 'first' || getItemCourse(item) === 'second')
+          const desserts = kitchenItems.filter(item => getItemCourse(item) === 'dessert')
+
+          const dessertsHeld = orderHasHeldDesserts(roundOrder)
+          const dessertsActive = orderHasActiveDesserts(roundOrder) || !orderHasFood(roundOrder)
+
+          const renderItemCard = (item: any, idx: number, isHeldItem: boolean) => {
+            const prod = item.product || (item as any).products
+            const productName = prod?.name || `Plato #${item.product_id?.substring?.(0, 6) || idx + 1}`
+            const imageUrl = prod?.image_url
+            const itemKey = item.id || `${item.product_id}-${roundIdx}-${idx}`
+            const isDone = Boolean(completedItemIds[itemKey])
+            const canClick = roundOrder.status !== 'pending' && !isHeldItem
+            const courseType = getItemCourse(item)
+            const cleanedNotes = cleanItemNotes(item.notes)
+
+            return (
+              <div
+                key={itemKey}
+                onClick={canClick ? () => toggleItemCompleted(itemKey) : undefined}
+                className={`p-2.5 rounded-2xl border transition-all duration-200 select-none flex gap-3 items-start ${
+                  isHeldItem
+                    ? 'bg-slate-100/70 border-dashed border-slate-300 opacity-60 cursor-not-allowed'
+                    : !canClick
+                    ? 'bg-white border-slate-200/90 cursor-default'
+                    : isDone
+                    ? 'bg-emerald-50/70 border-emerald-300 opacity-60 cursor-pointer'
+                    : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-xs cursor-pointer'
+                }`}
+                title={
+                  isHeldItem
+                    ? 'Postre retenido en espera de que el mozo lo marche a cocina'
+                    : canClick
+                    ? 'Toca para tachar este plato'
+                    : 'Inicia preparación de la ronda para tachar platos'
+                }
+              >
+                {/* Miniatura visual del plato */}
+                <div
+                  style={{ position: 'relative', width: '56px', height: '56px', minWidth: '56px', minHeight: '56px', overflow: 'hidden', borderRadius: '12px' }}
+                  className="bg-white border border-slate-200 shadow-xs flex-shrink-0"
+                >
+                  {imageUrl ? (
+                    <Image
+                      src={imageUrl}
+                      alt={productName}
+                      fill
+                      className="object-cover"
+                      sizes="60px"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
+                      <Utensils className="w-5 h-5 stroke-[1.2]" />
+                    </div>
+                  )}
+                  {/* Badge de Cantidad */}
+                  <div className="absolute top-0.5 left-0.5 px-1.5 py-0.2 rounded-md text-[11px] font-black text-white bg-blue-900 shadow-md">
+                    {item.quantity}x
+                  </div>
+                </div>
+
+                {/* Detalle */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <h4 className={`font-extrabold text-xs sm:text-sm leading-snug ${
+                      isDone ? 'text-emerald-900 line-through' : 'text-slate-900'
+                    }`}>
+                      {productName}
+                    </h4>
+                    {isDone && (
+                      <span className="px-1.5 py-0.2 rounded-md bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5 flex-shrink-0">
+                        <CheckCircle2 size={10} />
+                        <span>Listo</span>
+                      </span>
+                    )}
+                    {isHeldItem && (
+                      <span className="px-1.5 py-0.2 rounded-md bg-slate-200 text-slate-700 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 flex-shrink-0">
+                        <Lock size={10} />
+                        <span>En Espera</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Badges de Pase de Cocina, Cortesía y Peso */}
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {courseType === 'first' && (
+                      <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-950 font-black text-[9px] border border-emerald-300 flex items-center gap-1">
+                        <span>🥗 1º ENTRADA</span>
+                      </span>
+                    )}
+                    {courseType === 'second' && (
+                      <span className="px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-950 font-black text-[9px] border border-blue-300 flex items-center gap-1">
+                        <span>🍔 2º PRINCIPAL</span>
+                      </span>
+                    )}
+                    {courseType === 'dessert' && (
+                      <span className={`px-1.5 py-0.2 rounded-md font-black text-[9px] border flex items-center gap-1 ${
+                        isDessertReady(item)
+                          ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+                          : isHeldItem
+                          ? 'bg-slate-200 text-slate-800 border-slate-300'
+                          : 'bg-purple-100 text-purple-950 border-purple-300'
+                      }`}>
+                        <span>🍰 {isDessertReady(item) ? 'POSTRE (LISTO)' : isHeldItem ? 'POSTRE (ESPERANDO PASE)' : 'POSTRE (MARCHADO)'}</span>
+                      </span>
+                    )}
+                    {Boolean(item.loyalty_points_redeemed || (item.notes && item.notes.includes('[🎁 Canje Fidelización'))) ? (
+                      <span className="px-1.5 py-0.2 rounded-md bg-amber-600 text-white font-black text-[9px] shadow-xs flex items-center gap-1">
+                        <span>⭐ CANJE FIDELIZACIÓN</span>
+                        {item.loyalty_points_redeemed ? <span>(-{item.loyalty_points_redeemed} pts)</span> : null}
+                      </span>
+                    ) : item.is_complimentary ? (
+                      <span className="px-1.5 py-0.2 rounded-md bg-purple-600 text-white font-black text-[9px] shadow-xs">
+                        🎁 CORTESÍA / INVITA CASA
+                      </span>
+                    ) : null}
+                    {item.weight_grams && (
+                      <span className="px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-950 font-black text-[9px] border border-blue-200">
+                        ⚖️ {item.weight_grams}g
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Aclaración especial (sin etiquetas técnicas del sistema) */}
+                  {cleanedNotes !== '' && (
+                    <div className={`mt-1.5 p-2 rounded-xl border text-xs shadow-xs flex items-start gap-1.5 ${
+                      isDone ? 'bg-emerald-100/50 border-emerald-200 text-emerald-900' : 'bg-red-50 border-red-200 text-red-900'
+                    }`}>
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <span className="font-bold uppercase tracking-wider text-[9px] text-red-600 block leading-none">
+                          Aclaración de Cocina:
+                        </span>
+                        <p className="font-extrabold text-xs leading-tight mt-0.5">
+                          {cleanedNotes}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          }
 
           return (
             <div key={roundOrder.id} className="p-3.5 sm:p-4 space-y-3">
-              {/* Encabezado de Ronda (cuando hay más de 1 ronda o para claridad) */}
+              {/* Encabezado de Ronda */}
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/60">
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 rounded-lg bg-slate-900 text-white font-black text-[11px] uppercase tracking-wide">
@@ -232,26 +376,27 @@ export function KitchenTicket({
                   </span>
 
                   {/* Botón Tachar Todo para esta ronda */}
-                  {roundOrder.status !== 'pending' && displayItems.length > 1 && (
+                  {roundOrder.status !== 'pending' && kitchenItems.length > 1 && (
                     <button
                       type="button"
                       onClick={() => {
-                        const allDone = displayItems.every((item, idx) =>
+                        const activeKitchenItems = kitchenItems.filter(it => !dessertsHeld || getItemCourse(it) !== 'dessert')
+                        const allDone = activeKitchenItems.every((item, idx) =>
                           completedItemIds[item.id || `${item.product_id}-${roundIdx}-${idx}`]
                         )
                         const nextMap: Record<string, boolean> = { ...completedItemIds }
-                        displayItems.forEach((item, idx) => {
+                        activeKitchenItems.forEach((item, idx) => {
                           nextMap[item.id || `${item.product_id}-${roundIdx}-${idx}`] = !allDone
                         })
                         setCompletedItemIds(nextMap)
                       }}
-                      aria-label="Marcar todos los platos de esta comanda como preparados"
+                      aria-label="Marcar platos activos de esta comanda como preparados"
                       className="text-[10px] px-2 py-0.5 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-900 border border-slate-200 hover:border-emerald-300 font-bold flex items-center gap-1 transition-all shadow-2xs active:scale-95 cursor-pointer"
-                      title="Marcar todos los platos de esta ronda como listos"
+                      title="Marcar todos los platos activos de esta ronda como listos"
                     >
                       <CheckCircle2 size={11} className="text-emerald-600" />
                       <span>
-                        {displayItems.every((item, idx) =>
+                        {kitchenItems.filter(it => !dessertsHeld || getItemCourse(it) !== 'dessert').every((item, idx) =>
                           completedItemIds[item.id || `${item.product_id}-${roundIdx}-${idx}`]
                         )
                           ? 'Desmarcar'
@@ -262,160 +407,55 @@ export function KitchenTicket({
                 </div>
               </div>
 
-              {/* Platos de esta Ronda (Ordenados por Estación: Entradas -> Principales -> Postres) */}
-              <div className="space-y-2">
-                {displayItems && displayItems.length > 0 ? (
-                  sortItemsForKitchen(displayItems).map((item, idx) => {
-                    const prod = item.product || (item as any).products
-                    const productName = prod?.name || `Plato #${item.product_id?.substring?.(0, 6) || idx + 1}`
-                    const imageUrl = prod?.image_url
-                    const itemKey = item.id || `${item.product_id}-${roundIdx}-${idx}`
-                    const isDone = Boolean(completedItemIds[itemKey])
-                    const canClick = roundOrder.status !== 'pending'
-                    const courseType = getItemCourse(item)
-                    const cleanedNotes = cleanItemNotes(item.notes)
-
-                    return (
-                      <div
-                        key={itemKey}
-                        onClick={canClick ? () => toggleItemCompleted(itemKey) : undefined}
-                        className={`p-2.5 rounded-2xl border transition-all duration-200 select-none flex gap-3 items-start ${
-                          !canClick
-                            ? 'bg-white border-slate-200/90 cursor-default'
-                            : isDone
-                            ? 'bg-emerald-50/70 border-emerald-300 opacity-60 cursor-pointer'
-                            : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-xs cursor-pointer'
-                        }`}
-                        title={canClick ? "Toca para tachar este plato" : "Inicia preparación de la ronda para tachar platos"}
-                      >
-                        {/* Miniatura visual del plato */}
-                        <div
-                          style={{ position: 'relative', width: '56px', height: '56px', minWidth: '56px', minHeight: '56px', overflow: 'hidden', borderRadius: '12px' }}
-                          className="bg-white border border-slate-200 shadow-xs flex-shrink-0"
-                        >
-                          {imageUrl ? (
-                            <Image
-                              src={imageUrl}
-                              alt={productName}
-                              fill
-                              className="object-cover"
-                              sizes="60px"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
-                              <Utensils className="w-5 h-5 stroke-[1.2]" />
-                            </div>
-                          )}
-                          {/* Badge de Cantidad */}
-                          <div className="absolute top-0.5 left-0.5 px-1.5 py-0.2 rounded-md text-[11px] font-black text-white bg-blue-900 shadow-md">
-                            {item.quantity}x
+              {/* BLOQUES ESTRUCTURADOS EN COCINA: ENTRADAS Y PRINCIPALES ARRIBA, POSTRES ABAJO */}
+              <div className="space-y-3">
+                {kitchenItems.length > 0 ? (
+                  <>
+                    {/* Bloque 1: Entradas y Principales */}
+                    {mains.length > 0 && (
+                      <div className="space-y-2">
+                        {desserts.length > 0 && (
+                          <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-amber-900 tracking-wider">
+                            <span>🍔 Entradas y Principales ({mains.length})</span>
                           </div>
-                        </div>
-
-                        {/* Detalle */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1.5">
-                            <h4 className={`font-extrabold text-xs sm:text-sm leading-snug ${
-                              isDone ? 'text-emerald-900 line-through' : 'text-slate-900'
-                            }`}>
-                              {productName}
-                            </h4>
-                            {isDone && (
-                              <span className="px-1.5 py-0.2 rounded-md bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5 flex-shrink-0">
-                                <CheckCircle2 size={10} />
-                                <span>Listo</span>
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Badges de Pase de Cocina, Cortesía y Peso */}
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            {courseType === 'first' && (
-                              <span className="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-950 font-black text-[9px] border border-emerald-300 flex items-center gap-1">
-                                <span>🥗 1º ENTRADA</span>
-                              </span>
-                            )}
-                            {courseType === 'second' && (
-                              <span className="px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-950 font-black text-[9px] border border-blue-300 flex items-center gap-1">
-                                <span>🍔 2º PRINCIPAL</span>
-                              </span>
-                            )}
-                            {courseType === 'dessert' && (
-                              <span className={`px-1.5 py-0.2 rounded-md font-black text-[9px] border flex items-center gap-1 ${
-                                isDessertReady(item)
-                                  ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
-                                  : 'bg-purple-100 text-purple-950 border-purple-300'
-                              }`}>
-                                <span>🍰 {isDessertReady(item) ? 'POSTRE (LISTO)' : 'POSTRE (EN ESPERA)'}</span>
-                              </span>
-                            )}
-                            {courseType === 'drink' && (
-                              <span className={`px-1.5 py-0.2 rounded-md font-black text-[9px] border flex items-center gap-1 ${
-                                isDrinkServed(item)
-                                  ? 'bg-slate-100 text-slate-500 border-slate-200 line-through'
-                                  : 'bg-cyan-50 text-cyan-900 border-cyan-200'
-                              }`}>
-                                <span>🥤 {isDrinkServed(item) ? 'BEBIDA (SERVIDA EN SALA)' : 'BEBIDA (BARRA / SALA)'}</span>
-                              </span>
-                            )}
-                            {Boolean((item as any).loyalty_points_redeemed || (item.notes && item.notes.includes('[🎁 Canje Fidelización'))) ? (
-                              <span className="px-1.5 py-0.2 rounded-md bg-amber-600 text-white font-black text-[9px] shadow-xs flex items-center gap-1">
-                                <span>⭐ CANJE FIDELIZACIÓN</span>
-                                {(item as any).loyalty_points_redeemed ? <span>(-{(item as any).loyalty_points_redeemed} pts)</span> : null}
-                              </span>
-                            ) : item.is_complimentary ? (
-                              <span className="px-1.5 py-0.2 rounded-md bg-purple-600 text-white font-black text-[9px] shadow-xs">
-                                🎁 CORTESÍA / INVITA CASA
-                              </span>
-                            ) : null}
-                            {item.weight_grams && (
-                              <span className="px-1.5 py-0.2 rounded-md bg-blue-100 text-blue-950 font-black text-[9px] border border-blue-200">
-                                ⚖️ {item.weight_grams}g
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Aclaración especial (sin etiquetas técnicas del sistema) */}
-                          {cleanedNotes !== '' && (
-                            <div className={`mt-1.5 p-2 rounded-xl border text-xs shadow-xs flex items-start gap-1.5 ${
-                              isDone ? 'bg-emerald-100/50 border-emerald-200 text-emerald-900' : 'bg-red-50 border-red-200 text-red-900'
-                            }`}>
-                              <AlertTriangle className="w-3.5 h-3.5 text-red-600 flex-shrink-0 mt-0.5" />
-                              <div className="min-w-0">
-                                <span className="font-bold uppercase tracking-wider text-[9px] text-red-600 block leading-none">
-                                  Aclaración de Cocina:
-                                </span>
-                                <p className="font-extrabold text-xs leading-tight mt-0.5">
-                                  {cleanedNotes}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        )}
+                        {sortItemsForKitchen(mains).map((item, idx) => renderItemCard(item, idx, false))}
                       </div>
-                    )
-                  })
+                    )}
+
+                    {/* Bloque 2: Postres (Con candado gris si están retenidos esperando pase del mozo) */}
+                    {desserts.length > 0 && (
+                      <div className={`space-y-2 ${mains.length > 0 ? 'pt-2.5 border-t border-slate-200/80' : ''}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-purple-900 tracking-wider">
+                            <span>🍰 Postres ({desserts.length})</span>
+                          </div>
+                          {dessertsHeld && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-slate-200 text-slate-700 flex items-center gap-1">
+                              <Lock size={10} />
+                              <span>Esperando aviso del mozo</span>
+                            </span>
+                          )}
+                          {dessertsActive && !isOrderDessertsReady(roundOrder) && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-purple-100 text-purple-900 border border-purple-200 flex items-center gap-1">
+                              <Sparkles size={10} />
+                              <span>Marchados · En preparación</span>
+                            </span>
+                          )}
+                        </div>
+                        {desserts.map((item, idx) => renderItemCard(item, idx + mains.length, dessertsHeld))}
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="py-2.5 px-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-amber-900 text-xs flex items-center gap-2">
                     <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600 flex-shrink-0" />
                     <span className="font-semibold">Preparando comanda · Cargando detalle de platos...</span>
                   </div>
                 )}
-
-                {kitchenItems.length > 0 && barDrinks.length > 0 && (
-                  <div className="p-2.5 rounded-xl bg-cyan-50/70 border border-cyan-200 text-cyan-950 text-xs flex items-center justify-between shadow-2xs">
-                    <div className="flex items-center gap-1.5 font-bold">
-                      <span className="text-sm">🥤</span>
-                      <span>{barDrinks.reduce((acc, d) => acc + (d.quantity || 1), 0)} bebida(s) en barra / sala</span>
-                    </div>
-                    <span className="text-[11px] text-cyan-800 font-bold truncate max-w-[180px]">
-                      {barDrinks.map(d => `${d.quantity}x ${d.product?.name || 'Bebida'}`).join(', ')}
-                    </span>
-                  </div>
-                )}
               </div>
 
-              {/* Botón de Transición Táctil Independiente para esta Ronda */}
+              {/* Botón de Transición Táctil Único / Secuencial para esta Ronda */}
               <div className="pt-2">
                 {(roundOrder.status === 'pending' || roundOrder.status === 'confirmed') && (
                   <button
@@ -431,7 +471,7 @@ export function KitchenTicket({
                     ) : (
                       <>
                         <ChefHat className="w-5 h-5 stroke-[2.5]" />
-                        <span>INICIAR PREPARACIÓN {hasMultipleRounds ? `(RONDA ${roundIdx + 1})` : ''}</span>
+                        <span>1. INICIAR PREPARACIÓN {hasMultipleRounds ? `(RONDA ${roundIdx + 1})` : ''}</span>
                       </>
                     )}
                   </button>
@@ -441,100 +481,104 @@ export function KitchenTicket({
                   const hasFood = orderHasFood(roundOrder)
                   const hasDesserts = orderHasDesserts(roundOrder)
                   const foodReady = isOrderFoodReady(roundOrder)
+                  const dessertsFired = orderHasActiveDesserts(roundOrder)
 
-                  // Flujo en 2 Tiempos (Pase 1 Salado -> Pase 2 Dulce)
-                  if (hasFood && hasDesserts) {
-                    if (!foodReady) {
-                      return (
-                        <div className="space-y-2">
-                          <button
-                            onClick={() => {
-                              markItemsAsDone(kitchenItems.filter(it => getItemCourse(it) !== 'dessert'), roundIdx)
-                              if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_food')
-                              else onUpdateStatus(roundOrder.id, 'ready')
-                            }}
-                            disabled={isRoundUpdating}
-                            className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-amber-600/30 cursor-pointer"
-                          >
-                            {isRoundUpdating ? (
-                              <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                <span>AVISANDO SALA...</span>
-                              </>
-                            ) : (
-                              <>
-                                <ChefHat className="w-5 h-5 stroke-[2.5]" />
-                                <span>🍳 MARCAR COMIDA LISTA (PASE 1)</span>
-                              </>
-                            )}
-                          </button>
-                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 px-1">
-                            <span>Postres quedan en espera en cocina</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                markItemsAsDone(allRoundItems, roundIdx)
-                                onUpdateStatus(roundOrder.id, 'ready')
-                              }}
-                              className="text-emerald-700 hover:underline cursor-pointer"
-                            >
-                              Marcar todo listo directo &rarr;
-                            </button>
+                  // Si hay comida salada y aún no está lista
+                  if (hasFood && !foodReady) {
+                    return (
+                      <button
+                        onClick={() => {
+                          markItemsAsDone(mains, roundIdx)
+                          if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_food')
+                          else onUpdateStatus(roundOrder.id, 'ready')
+                        }}
+                        disabled={isRoundUpdating}
+                        className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-amber-600/30 cursor-pointer"
+                      >
+                        {isRoundUpdating ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>AVISANDO AL MOZO...</span>
+                          </>
+                        ) : (
+                          <>
+                            <ChefHat className="w-5 h-5 stroke-[2.5]" />
+                            <span>2. AVISAR AL MOZO (COMIDA LISTA)</span>
+                          </>
+                        )}
+                      </button>
+                    )
+                  }
+
+                  // Si la comida ya está lista pero los postres están retenidos en espera del mozo
+                  if (hasDesserts && dessertsHeld) {
+                    return (
+                      <div className="space-y-2">
+                        <div className="p-3 rounded-2xl bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold flex items-center justify-between shadow-2xs">
+                          <div className="flex items-center gap-2">
+                            <Lock className="w-4 h-4 text-slate-600" />
+                            <span>Comida entregada — Esperando orden de Marchar Postres</span>
                           </div>
                         </div>
-                      )
-                    }
-
-                    return (
-                      <div className="space-y-1.5">
-                        <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 text-xs font-bold flex items-center justify-between">
-                          <span>✅ Comida salada marchada</span>
-                          <span className="text-[10px] bg-purple-200 px-1.5 py-0.5 rounded text-purple-900 font-extrabold">Postres esperando pase</span>
-                        </div>
                         <button
-                          onClick={() => {
-                            markItemsAsDone(allRoundItems, roundIdx)
-                            if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_desserts')
-                            else onUpdateStatus(roundOrder.id, 'ready')
-                          }}
+                          type="button"
+                          onClick={() => onKitchenAction ? onKitchenAction(roundOrder.id, 'fire_desserts') : onUpdateStatus(roundOrder.id, 'preparing')}
                           disabled={isRoundUpdating}
-                          className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-purple-700/30 cursor-pointer"
+                          className="w-full h-11 py-2 px-3 rounded-xl font-bold text-xs bg-slate-200 hover:bg-amber-100 text-slate-800 hover:text-amber-950 border border-slate-300 hover:border-amber-400 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                         >
-                          {isRoundUpdating ? (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              <span>MARCANDO POSTRES...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-5 h-5" />
-                              <span>🍰 MARCAR POSTRES LISTOS (PASE 2)</span>
-                            </>
-                          )}
+                          <ChefHat className="w-4 h-4 text-amber-600" />
+                          <span>Marchar postres ahora desde cocina</span>
                         </button>
                       </div>
                     )
                   }
 
-                  // Caso estándar: Solo comida o solo postres
+                  // Si los postres ya fueron marchados o la comanda es de solo postres
+                  if (hasDesserts && (dessertsFired || !hasFood)) {
+                    return (
+                      <button
+                        onClick={() => {
+                          markItemsAsDone(desserts, roundIdx)
+                          if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_desserts')
+                          else onUpdateStatus(roundOrder.id, 'ready')
+                        }}
+                        disabled={isRoundUpdating}
+                        className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-purple-700/30 cursor-pointer"
+                      >
+                        {isRoundUpdating ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>AVISANDO AL MOZO...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-5 h-5" />
+                            <span>{hasFood ? '3. AVISAR AL MOZO (POSTRES LISTOS)' : '2. AVISAR AL MOZO (POSTRES LISTOS)'}</span>
+                          </>
+                        )}
+                      </button>
+                    )
+                  }
+
+                  // Caso estándar de solo comida
                   return (
                     <button
                       onClick={() => {
-                        markItemsAsDone(allRoundItems, roundIdx)
+                        markItemsAsDone(kitchenItems, roundIdx)
                         onUpdateStatus(roundOrder.id, 'ready')
                       }}
                       disabled={isRoundUpdating}
-                      className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md hover:shadow-emerald-600/20 active:scale-95 transition-all uppercase tracking-wide border-2 border-emerald-700/30 cursor-pointer"
+                      className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-emerald-700/30 cursor-pointer"
                     >
                       {isRoundUpdating ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>MARCANDO LISTO...</span>
+                          <span>AVISANDO AL MOZO...</span>
                         </>
                       ) : (
                         <>
                           <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                          <span>MARCAR LISTO {hasMultipleRounds ? `(RONDA ${roundIdx + 1})` : 'PARA SERVIR'}</span>
+                          <span>2. AVISAR AL MOZO (COMIDA LISTA)</span>
                         </>
                       )}
                     </button>
@@ -549,13 +593,13 @@ export function KitchenTicket({
                   if (hasDesserts && !dessertsReady) {
                     return (
                       <div className="space-y-1.5">
-                        <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 text-xs font-bold flex items-center justify-between">
-                          <span>Comida servida en mesa</span>
+                        <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 text-xs font-bold flex items-center justify-between">
+                          <span>Comida avisada a sala</span>
                           <span className="text-[10px] bg-purple-200 px-1.5 py-0.5 rounded text-purple-900 font-extrabold">Postres en espera</span>
                         </div>
                         <button
                           onClick={() => {
-                            markItemsAsDone(allRoundItems, roundIdx)
+                            markItemsAsDone(kitchenItems, roundIdx)
                             if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_desserts')
                             else onUpdateStatus(roundOrder.id, 'delivered')
                           }}
@@ -565,12 +609,12 @@ export function KitchenTicket({
                           {isRoundUpdating ? (
                             <>
                               <Loader2 className="w-5 h-5 animate-spin" />
-                              <span>DESPACHANDO POSTRES...</span>
+                              <span>AVISANDO AL MOZO...</span>
                             </>
                           ) : (
                             <>
                               <Sparkles className="w-5 h-5" />
-                              <span>🍰 MARCAR POSTRES LISTOS (PASE 2)</span>
+                              <span>3. AVISAR AL MOZO (POSTRES LISTOS)</span>
                             </>
                           )}
                         </button>
@@ -582,7 +626,7 @@ export function KitchenTicket({
                     <button
                       onClick={() => onUpdateStatus(roundOrder.id, 'delivered')}
                       disabled={isRoundUpdating}
-                      className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-blue-900 hover:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md hover:shadow-blue-900/20 active:scale-95 transition-all uppercase tracking-wide border-2 border-blue-950/30 cursor-pointer"
+                      className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-blue-900 hover:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-blue-950/30 cursor-pointer"
                     >
                       {isRoundUpdating ? (
                         <>
@@ -592,7 +636,7 @@ export function KitchenTicket({
                       ) : (
                         <>
                           <Sparkles className="w-5 h-5" />
-                          <span>MARCAR ENTREGADO {hasMultipleRounds ? `(RONDA ${roundIdx + 1})` : ''}</span>
+                          <span>MARCAR ENTREGADO EN SALA</span>
                         </>
                       )}
                     </button>
@@ -607,7 +651,7 @@ export function KitchenTicket({
                   if (hasDesserts && !dessertsReady) {
                     return (
                       <div className="space-y-2">
-                        <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 text-xs font-bold flex items-center justify-between">
+                        <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 text-xs font-bold flex items-center justify-between">
                           <span>Comida servida en mesa</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded font-extrabold ${dessertsFired ? 'bg-amber-200 text-amber-900' : 'bg-purple-200 text-purple-900'}`}>
                             {dessertsFired ? '🍰 Postres Marchados' : 'Postres en Espera'}
@@ -622,12 +666,12 @@ export function KitchenTicket({
                             {isRoundUpdating ? (
                               <>
                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                <span>MARCANDO LISTOS...</span>
+                                <span>AVISANDO AL MOZO...</span>
                               </>
                             ) : (
                               <>
                                 <Sparkles className="w-5 h-5" />
-                                <span>🍰 MARCAR POSTRES LISTOS (PASE 2)</span>
+                                <span>3. AVISAR AL MOZO (POSTRES LISTOS)</span>
                               </>
                             )}
                           </button>

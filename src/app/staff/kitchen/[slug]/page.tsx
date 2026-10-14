@@ -11,7 +11,12 @@ import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS } from '@/lib/supabase/mock-fallback'
-import { isDrinkOnlyOrder, orderHasDesserts, isOrderDessertsReady, isDessertItem, isDessertFired, isDessertReady } from '@/lib/course-utils'
+import {
+  orderHasFood,
+  orderHasDesserts,
+  isOrderDessertsReady,
+  orderHasActiveDesserts,
+} from '@/lib/course-utils'
 
 type StationFilterType = 'all' | 'kitchen' | 'bar'
 
@@ -32,6 +37,7 @@ export default function KitchenKDSPage() {
 
   const previousOrdersCountRef = useRef<number>(0)
   const seenOrderIdsRef = useRef<Set<string>>(new Set())
+  const seenFiredDessertOrderIdsRef = useRef<Set<string>>(new Set())
   const ordersFingerRef = useRef<string>('')
   const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
 
@@ -82,21 +88,22 @@ export default function KitchenKDSPage() {
 
   // 2. Sincronización con el servidor (Single Source of Truth - PostgreSQL)
   const fetchServerOrders = useCallback(async () => {
-    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
     try {
-      const res = await fetch(`/api/orders?slug=${slug}`)
+      const res = await fetch(`/api/orders?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
         if (Array.isArray(data.orders)) {
-          // La cocina solo recibe comandas activas ya validadas por el mozo y con platos reales (excluye comandas de solo bebida)
+          // La cocina solo recibe comandas que requieren elaboración gastronómica (comida o postres)
+          // y retiene comandas entregadas si tienen postres pendientes de pase 2
           const rawOrders: Order[] = data.orders || []
           const incomingOrders: Order[] = rawOrders
-            .filter((o: Order) => {
-              if (isDrinkOnlyOrder(o)) return false
-              if (['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)) return true
-              if (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o)) return true
-              return false
-            })
+            .filter((o: Order) =>
+              (
+                ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) ||
+                (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
+              ) &&
+              (orderHasFood(o) || orderHasDesserts(o))
+            )
             .map((o: Order) => {
               const items = (o.order_items && o.order_items.length > 0)
                 ? o.order_items
@@ -111,21 +118,21 @@ export default function KitchenKDSPage() {
               }
             })
 
-          // Detectar nueva orden entrante real o postres marchados para sonar campana
+          // Detectar nueva orden entrante o marcha de postres para sonar campana
           let hasNewUnseenOrder = false
+          let hasNewFiredDessert = false
           incomingOrders.forEach(ord => {
             if (!seenOrderIdsRef.current.has(ord.id)) {
               seenOrderIdsRef.current.add(ord.id)
               hasNewUnseenOrder = true
             }
-            const fired = (ord.order_items || []).some(it => isDessertItem(it) && isDessertFired(it) && !isDessertReady(it))
-            if (fired && !seenOrderIdsRef.current.has(`fired-${ord.id}`)) {
-              seenOrderIdsRef.current.add(`fired-${ord.id}`)
-              hasNewUnseenOrder = true
+            if (orderHasActiveDesserts(ord) && !seenFiredDessertOrderIdsRef.current.has(ord.id)) {
+              seenFiredDessertOrderIdsRef.current.add(ord.id)
+              hasNewFiredDessert = true
             }
           })
 
-          if (hasNewUnseenOrder && previousOrdersCountRef.current > 0) {
+          if ((hasNewUnseenOrder && previousOrdersCountRef.current > 0) || hasNewFiredDessert) {
             if (soundEnabled) playKitchenChime()
             setNewOrderAlert(true)
           }
@@ -177,8 +184,9 @@ export default function KitchenKDSPage() {
 
     // A. Canal Nativo Supabase Realtime (postgres_changes en orders y order_events)
     if (supabase) {
+      const channelId = `kds-orders-${slug}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
       realtimeChannel = supabase
-        .channel(`kds-orders-${slug}`)
+        .channel(channelId)
         .on(
           'postgres_changes',
           {
@@ -204,8 +212,8 @@ export default function KitchenKDSPage() {
         .subscribe()
     }
 
-    // B. SSE de respaldo para modo offline/local (solo si no hay canal de Supabase)
-    if (!supabase) {
+    // B. SSE de respaldo para modo offline/local (solo si no hay canal de Supabase y en desarrollo local)
+    if (!supabase && process.env.NODE_ENV === 'development') {
       try {
         let sseDebounceTimer: any = null
         const triggerDebouncedFetch = () => {
@@ -237,7 +245,12 @@ export default function KitchenKDSPage() {
     }
 
     // C. Soft Polling de Respaldo cada 4.5 segundos (R4 de Interface Contracts)
-    pollInterval = setInterval(fetchServerOrders, 4500)
+    pollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return
+      }
+      fetchServerOrders()
+    }, 4500)
 
     // D. Reconciliación inmediata en visibilitychange y window.focus
     const handleVisibilityChange = () => {
@@ -284,7 +297,7 @@ export default function KitchenKDSPage() {
 
       const data = await res.json().catch(() => ({}))
       if (res.ok && data.success) {
-        if (newStatus === 'delivered' || newStatus === 'cancelled') {
+        if (newStatus === 'cancelled' || (newStatus === 'delivered' && (!orderHasDesserts(targetOrd) || isOrderDessertsReady(targetOrd)))) {
           setOrders(prev => prev.filter(o => o.id !== orderId))
         } else {
           setOrders(prev =>
@@ -344,8 +357,13 @@ export default function KitchenKDSPage() {
     }
   }
 
-  // Filtrado de comandas por estado
-  const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'preparing')
+  // Filtrado de comandas por estado (incluye comandas con platos principales entregados pero postres pendientes de pase 2)
+  const activeOrders = orders.filter(o =>
+    o.status === 'pending' ||
+    o.status === 'confirmed' ||
+    o.status === 'preparing' ||
+    (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
+  )
   const readyOrders = orders.filter(o => o.status === 'ready')
 
   // Resumen acumulado de platos en línea (para saber cuánta carne tirar a la plancha de golpe)
