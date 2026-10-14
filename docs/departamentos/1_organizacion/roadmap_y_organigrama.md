@@ -64,14 +64,12 @@ flowchart TD
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ ⚙️ 4. INGENIERÍA & PRODUCTO — [PROGRAM DATA] (Desarrollo & Software)    │
 │  ├─ [x] Hitos Fundacionales Consolidados (v1.0 & v1.2 completados)         │
-│  ├─ [📋 Tarea 1] Generación Masiva de Códigos QR para Mesas (25-30+)       │
-│  │     (Selector interactivo de rango/lote e impresión en /staff/qr/[slug])│
-│  ├─ [📋 Tarea 2] Verificación y Corrección de Errores v1.0 y v1.2          │
-│  │     (Auditoría cruzada de regresiones, tipado, builds y estabilidad)    │
-│  ├─ [📋 Tarea 3] Finalizar Estructura de Reporte y Muestra de Estadísticas │
-│  │     (Consolidación de métricas de rotación, ticket medio y analítica)   │
-│  └─ [📋 Tarea 4] Simulación Completa del Servicio                          │
-│        (Prueba integral en vivo: Comensal -> Mozo -> Cocina -> Cierre mesa)│
+│  ├─ [📋 Tarea 1] Fixear Lógica Compleja de Mozo y Cocina                   │
+│  │     (Auditoría y simulación integral: estados, sincronización y cierre) │
+│  ├─ [📋 Tarea 2] Finalizar Detalles del Reporte y Estadísticas             │
+│  │     (Estructura definitiva de métricas, ticket medio y exportación)     │
+│  └─ [⏸️ STANDBY] Generación Masiva de Códigos QR para Mesas               │
+│        (Pausado hasta agotar las tareas prioritarias activas)              │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐

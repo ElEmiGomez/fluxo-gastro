@@ -6,6 +6,15 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-14 16:55] — Reestructuración de Tareas Técnicas Activas de Program Data
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
+* **Actualización del Backlog Prioritario:**
+  1. **Tarea de Generación de Códigos QR:** Pasa formalmente a estado `[STANDBY]` (oculta del listado activo hasta agotar el resto de tareas).
+  2. **Unificación de Tareas (Antiguas Tareas 2 y 4):** Se fusionan la verificación de errores y la simulación de servicio en una única tarea nuclear: **`Tarea 1: Fixear Lógica Compleja de Mozo y Cocina`** (abarcando transiciones atómicas, filtros KDS, sincronización en vivo y cierre de mesas).
+  3. **Tarea Final:** **`Tarea 2: Finalizar Detalles del Reporte y Estadísticas`** (ajustes visuales, métricas y exportación en el visor mensual).
+
+---
+
 ### [2026-10-13 16:45] — Manual de Neuroventas, Mesas Ciegas, Sellos y Presupuesto de Soportes
 * **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Dirección General y Producto.
 * **Documento Consolidado:** [`docs/departamentos/2_marketing/manual_neuroventas_y_cierre_comercial.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/manual_neuroventas_y_cierre_comercial.md).
