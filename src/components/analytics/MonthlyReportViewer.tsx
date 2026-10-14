@@ -1968,9 +1968,9 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
           className="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-slate-50/70 transition cursor-pointer select-none"
         >
           <div className="flex items-start sm:items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
-              <Zap className="w-4 h-4" />
-            </div>
+            <span className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-mono font-bold text-sm flex items-center justify-center flex-shrink-0 shadow-xs">
+              03
+            </span>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
