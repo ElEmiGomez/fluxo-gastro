@@ -7,16 +7,21 @@ export const TAG_DESSERT_READY = '[POSTRE_LISTO]'
 export const TAG_DESSERT_FIRED = '[MARCHAR_POSTRE]'
 
 /**
+ * Elimina cualquier etiqueta técnica interna entre corchetes de estaciones de cocina/barra
+ */
+export function stripInternalStationTags(rawNotes?: string | null): string {
+  if (!rawNotes) return ''
+  return rawNotes
+    .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|PASE_1|PASE_2|MARCHAR_POSTRE).*?\]/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+/**
  * Limpia notas de sistema para visualización de cara al personal y al cliente.
  */
 export function cleanItemNotes(notes?: string | null): string {
-  if (!notes) return ''
-  return notes
-    .replace(TAG_DRINK_SERVED, '')
-    .replace(TAG_FOOD_READY, '')
-    .replace(TAG_DESSERT_READY, '')
-    .replace(TAG_DESSERT_FIRED, '')
-    .trim()
+  return stripInternalStationTags(notes)
 }
 
 /**
