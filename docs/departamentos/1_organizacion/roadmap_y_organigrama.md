@@ -66,8 +66,8 @@ flowchart TD
 │  ├─ [x] Hitos Fundacionales Consolidados (v1.0 & v1.2 completados)         │
 │  ├─ [📋 Tarea 1] Fixear Lógica Compleja de Mozo y Cocina                   │
 │  │     (Auditoría y simulación integral: estados, sincronización y cierre) │
-│  ├─ [📋 Tarea 2] Finalizar Detalles del Reporte y Estadísticas             │
-│  │     (Estructura definitiva de métricas, ticket medio y exportación)     │
+│  ├─ [x] Tarea 2: Reporte Mensual y Estadísticas purgado y consolidado      │
+│  │     (Estructura base lista para iterar con feedback de clientes reales) │
 │  └─ [⏸️ STANDBY] Generación Masiva de Códigos QR para Mesas               │
 │        (Pausado hasta agotar las tareas prioritarias activas)              │
 └────────────────────────────────────┬────────────────────────────────────┘

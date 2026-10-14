@@ -6,6 +6,16 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-14 18:15] — Consolidación Técnica: Purga del Reporte Mensual y Estadísticas (Tarea 2 Check)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), Dirección General y Organización.
+* **Hito Alcanzado:**
+  - Estructura del **Reporte Mensual y Estadísticas** purgada, limpia y consolidada en base.
+  - Se adopta la directiva estratégica de congelar esta versión base y posponer ajustes finos de métricas para la fase de validación empírica con clientes reales en sala, evitando sobreingeniería teórica.
+  - **Tarea 2 marcada como COMPLETADA [x]**.
+  - **Única tarea activa restante en Program Data:** `Tarea 1 — Fixear Lógica Compleja de Mozo y Cocina`.
+
+---
+
 ### [2026-10-14 16:55] — Reestructuración de Tareas Técnicas Activas de Program Data
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4) y Organización General (Depto 1).
 * **Actualización del Backlog Prioritario:**
