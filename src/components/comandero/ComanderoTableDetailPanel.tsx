@@ -5,6 +5,7 @@ import { Bell, Check, Sparkles, Loader2, UserCheck, CheckCircle2, Trash2, Users,
 import { Table, Order, Product } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { PendingServiceCall, PreviousDrinkItem } from '@/types/comandero.types'
+import { isDessertItem, isDessertFired, isDessertReady } from '@/lib/course-utils'
 
 interface ComanderoTableDetailPanelProps {
   selectedTable: Table
@@ -24,6 +25,7 @@ interface ComanderoTableDetailPanelProps {
   onValidateOrder: (orderId: string, tblNum: string | number) => void
   onCancelValidationOrder: (orderId: string, tblNum: string | number) => void
   onFireSecondCourses: (tblNum: string | number) => void
+  onFireDesserts?: (tblNum: string | number) => void
   onOpenPreBill: () => void
   onOpenTransferModal: () => void
   onOpenFreeTableModal: (tblNum: string | number) => void
@@ -48,6 +50,7 @@ export function ComanderoTableDetailPanel({
   onValidateOrder,
   onCancelValidationOrder,
   onFireSecondCourses,
+  onFireDesserts,
   onOpenPreBill,
   onOpenTransferModal,
   onOpenFreeTableModal,
@@ -59,6 +62,11 @@ export function ComanderoTableDetailPanel({
   )
   const validationOrders = serverOrders.filter(
     o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && o.status === 'pending_validation'
+  )
+  const hasPendingDesserts = serverOrders.some(
+    o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+         o.status !== 'paid' && o.status !== 'cancelled' &&
+         (o.order_items || []).some(it => isDessertItem(it) && !isDessertReady(it))
   )
 
   return (
@@ -317,6 +325,28 @@ export function ComanderoTableDetailPanel({
           </div>
         </div>
         
+        {/* Banner destacado: Marchar Postres si hay postres pendientes en la mesa */}
+        {hasPendingDesserts && onFireDesserts && (
+          <div className="p-2.5 rounded-2xl bg-purple-50 border-2 border-purple-300 flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🍰</span>
+              <div>
+                <span className="text-xs font-black text-purple-950 uppercase tracking-wide block">Postres en Espera</span>
+                <span className="text-[11px] font-semibold text-purple-700">Mesa lista para pase dulce</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onFireDesserts(selectedTable.table_number)}
+              className="h-9 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              title="Avisar a cocina que prepare los postres de esta mesa"
+            >
+              <Sparkles size={13} />
+              <span>Marchar Postres</span>
+            </button>
+          </div>
+        )}
+
         {/* Fila 2: Grid de Acciones Operativas */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button

@@ -15,6 +15,8 @@ import {
   isOrderDessertsReady,
   isDrinkServed,
   isDessertReady,
+  isDessertFired,
+  isDessertItem,
 } from '@/lib/course-utils'
 
 interface KitchenTicketProps {
@@ -550,6 +552,63 @@ export function KitchenTicket({
                       )}
                     </button>
                   )
+                })()}
+
+                {roundOrder.status === 'delivered' && (() => {
+                  const hasDesserts = orderHasDesserts(roundOrder)
+                  const dessertsReady = isOrderDessertsReady(roundOrder)
+                  const dessertsFired = (roundOrder.order_items || []).some(it => isDessertItem(it) && isDessertFired(it))
+
+                  if (hasDesserts && !dessertsReady) {
+                    return (
+                      <div className="space-y-2">
+                        <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 text-xs font-bold flex items-center justify-between">
+                          <span>Comida servida en mesa</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-extrabold ${dessertsFired ? 'bg-amber-200 text-amber-900' : 'bg-purple-200 text-purple-900'}`}>
+                            {dessertsFired ? '🍰 Postres Marchados' : 'Postres en Espera'}
+                          </span>
+                        </div>
+                        {dessertsFired ? (
+                          <button
+                            onClick={() => onKitchenAction ? onKitchenAction(roundOrder.id, 'ready_desserts') : onUpdateStatus(roundOrder.id, 'ready')}
+                            disabled={isRoundUpdating}
+                            className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-purple-700/30 cursor-pointer"
+                          >
+                            {isRoundUpdating ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>MARCANDO LISTOS...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-5 h-5" />
+                                <span>🍰 MARCAR POSTRES LISTOS (PASE 2)</span>
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onKitchenAction ? onKitchenAction(roundOrder.id, 'fire_desserts') : onUpdateStatus(roundOrder.id, 'preparing')}
+                            disabled={isRoundUpdating}
+                            className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-amber-600/30 cursor-pointer"
+                          >
+                            {isRoundUpdating ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>MARCHANDO...</span>
+                              </>
+                            ) : (
+                              <>
+                                <ChefHat className="w-5 h-5 stroke-[2.5]" />
+                                <span>🔥 MARCHAR POSTRES AHORA (COCINA)</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )
+                  }
+                  return null
                 })()}
               </div>
             </div>

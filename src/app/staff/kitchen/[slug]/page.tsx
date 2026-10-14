@@ -11,6 +11,12 @@ import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS } from '@/lib/supabase/mock-fallback'
+import {
+  orderHasFood,
+  orderHasDesserts,
+  isOrderDessertsReady,
+  orderHasActiveDesserts,
+} from '@/lib/course-utils'
 
 type StationFilterType = 'all' | 'kitchen' | 'bar'
 
@@ -31,6 +37,7 @@ export default function KitchenKDSPage() {
 
   const previousOrdersCountRef = useRef<number>(0)
   const seenOrderIdsRef = useRef<Set<string>>(new Set())
+  const seenFiredDessertOrderIdsRef = useRef<Set<string>>(new Set())
   const ordersFingerRef = useRef<string>('')
   const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
 
@@ -86,11 +93,16 @@ export default function KitchenKDSPage() {
       if (res.ok) {
         const data = await res.json()
         if (Array.isArray(data.orders)) {
-          // La cocina solo recibe comandas activas ya validadas por el mozo y con platos reales
+          // La cocina solo recibe comandas que requieren elaboración gastronómica (comida o postres)
+          // y retiene comandas entregadas si tienen postres pendientes de pase 2
           const rawOrders: Order[] = data.orders || []
           const incomingOrders: Order[] = rawOrders
             .filter((o: Order) =>
-              ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
+              (
+                ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) ||
+                (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
+              ) &&
+              (orderHasFood(o) || orderHasDesserts(o))
             )
             .map((o: Order) => {
               const items = (o.order_items && o.order_items.length > 0)
@@ -106,16 +118,21 @@ export default function KitchenKDSPage() {
               }
             })
 
-          // Detectar nueva orden entrante real para sonar campana
+          // Detectar nueva orden entrante o marcha de postres para sonar campana
           let hasNewUnseenOrder = false
+          let hasNewFiredDessert = false
           incomingOrders.forEach(ord => {
             if (!seenOrderIdsRef.current.has(ord.id)) {
               seenOrderIdsRef.current.add(ord.id)
               hasNewUnseenOrder = true
             }
+            if (orderHasActiveDesserts(ord) && !seenFiredDessertOrderIdsRef.current.has(ord.id)) {
+              seenFiredDessertOrderIdsRef.current.add(ord.id)
+              hasNewFiredDessert = true
+            }
           })
 
-          if (hasNewUnseenOrder && previousOrdersCountRef.current > 0) {
+          if ((hasNewUnseenOrder && previousOrdersCountRef.current > 0) || hasNewFiredDessert) {
             if (soundEnabled) playKitchenChime()
             setNewOrderAlert(true)
           }
@@ -280,7 +297,7 @@ export default function KitchenKDSPage() {
 
       const data = await res.json().catch(() => ({}))
       if (res.ok && data.success) {
-        if (newStatus === 'delivered' || newStatus === 'cancelled') {
+        if (newStatus === 'cancelled' || (newStatus === 'delivered' && (!orderHasDesserts(targetOrd) || isOrderDessertsReady(targetOrd)))) {
           setOrders(prev => prev.filter(o => o.id !== orderId))
         } else {
           setOrders(prev =>
@@ -340,8 +357,13 @@ export default function KitchenKDSPage() {
     }
   }
 
-  // Filtrado de comandas por estado
-  const activeOrders = orders.filter(o => o.status === 'pending' || o.status === 'confirmed' || o.status === 'preparing')
+  // Filtrado de comandas por estado (incluye comandas con platos principales entregados pero postres pendientes de pase 2)
+  const activeOrders = orders.filter(o =>
+    o.status === 'pending' ||
+    o.status === 'confirmed' ||
+    o.status === 'preparing' ||
+    (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
+  )
   const readyOrders = orders.filter(o => o.status === 'ready')
 
   // Resumen acumulado de platos en línea (para saber cuánta carne tirar a la plancha de golpe)

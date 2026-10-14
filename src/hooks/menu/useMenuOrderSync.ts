@@ -51,6 +51,43 @@ export function useMenuOrderSync({
   const [tableTotalAmount, setTableTotalAmount] = useState<number>(0)
   const prevTableOrdersMapRef = useRef<Map<string, any>>(new Map())
 
+  // Estabilización de referencias para evitar desmontaje y re-suscripción innecesaria del canal Realtime
+  const handleTableMarkedPaidRef = useRef(handleTableMarkedPaid)
+  handleTableMarkedPaidRef.current = handleTableMarkedPaid
+
+  const loadDataRef = useRef(loadData)
+  loadDataRef.current = loadData
+
+  const setProductsRef = useRef(setProducts)
+  setProductsRef.current = setProducts
+
+  const setCartRef = useRef(setCart)
+  setCartRef.current = setCart
+
+  const sessionIdRef = useRef(sessionId)
+  sessionIdRef.current = sessionId
+
+  const setSessionIdRef = useRef(setSessionId)
+  setSessionIdRef.current = setSessionId
+
+  const isTablePaidRef = useRef(isTablePaid)
+  isTablePaidRef.current = isTablePaid
+
+  const setIsTablePaidRef = useRef(setIsTablePaid)
+  setIsTablePaidRef.current = setIsTablePaid
+
+  const setIsPaidBannerDismissedRef = useRef(setIsPaidBannerDismissed)
+  setIsPaidBannerDismissedRef.current = setIsPaidBannerDismissed
+
+  const setIsReviewBoosterDismissedRef = useRef(setIsReviewBoosterDismissed)
+  setIsReviewBoosterDismissedRef.current = setIsReviewBoosterDismissed
+
+  const setHasRequestedBillRef = useRef(setHasRequestedBill)
+  setHasRequestedBillRef.current = setHasRequestedBill
+
+  const setPendingServiceCallsRef = useRef(setPendingServiceCalls)
+  setPendingServiceCallsRef.current = setPendingServiceCalls
+
   useEffect(() => {
     let sseEventSource: EventSource | null = null
     let pollInterval: any = null
@@ -75,7 +112,7 @@ export function useMenuOrderSync({
         ])
 
         if (ordersRes?.product_availability) {
-          setProducts(prev => {
+          setProductsRef.current(prev => {
             let hasDiff = false
             const next = prev.map(p => {
               const canonical = resolveCanonicalProductId(p.id) || p.id
@@ -94,10 +131,10 @@ export function useMenuOrderSync({
         const sessions = tablesRes.sessions || {}
         const thisTableSession = sessions[tableNumber]
         if (thisTableSession?.session_id) {
-          setSessionId(thisTableSession.session_id)
+          setSessionIdRef.current(thisTableSession.session_id)
         }
 
-        const currentSessionId = thisTableSession?.session_id || sessionId
+        const currentSessionId = thisTableSession?.session_id || sessionIdRef.current
         const rawOrders: any[] = ordersRes.orders || []
         const serverOrdersList: any[] = rawOrders.map((ord: any) => {
           if (!ord.order_items || ord.order_items.length === 0) {
@@ -123,7 +160,7 @@ export function useMenuOrderSync({
           if (!currentSessionId || !o.session_token) return false
           const isCurrentSessionOrder = 
             o.session_token === currentSessionId || 
-            (sessionId && o.session_token === sessionId) || 
+            (sessionIdRef.current && o.session_token === sessionIdRef.current) || 
             (thisTableSession?.session_id && o.session_token === thisTableSession.session_id)
           return Boolean(isCurrentSessionOrder)
         })
@@ -136,7 +173,7 @@ export function useMenuOrderSync({
           o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
         )
 
-        if (isTablePaid) {
+        if (isTablePaidRef.current) {
           return
         }
 
@@ -144,11 +181,11 @@ export function useMenuOrderSync({
           prevTableOrdersMapRef.current.clear()
           setTableOrderStatus(null)
           if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-            handleTableMarkedPaid()
+            handleTableMarkedPaidRef.current()
             return
           }
-          setIsTablePaid(false)
-          setHasRequestedBill(false)
+          setIsTablePaidRef.current(false)
+          setHasRequestedBillRef.current(false)
           hasRequestedBillRef.current = false
           return
         }
@@ -165,7 +202,7 @@ export function useMenuOrderSync({
             if (servName) activeMicroServices.add(servName)
           }
         })
-        setPendingServiceCalls(activeMicroServices)
+        setPendingServiceCallsRef.current(activeMicroServices)
 
         const hasPaidOrder = serverOrdersList.some(o => {
           const matchesTable = (
@@ -177,7 +214,7 @@ export function useMenuOrderSync({
         })
 
         if ((hasRequestedBillRef.current || userRequestedBillTimeRef.current) && activeTableOrders.length === 0 && hasPaidOrder) {
-          handleTableMarkedPaid()
+          handleTableMarkedPaidRef.current()
           return
         }
 
@@ -194,7 +231,7 @@ export function useMenuOrderSync({
         )
 
         if (isBillPaidCall) {
-          handleTableMarkedPaid()
+          handleTableMarkedPaidRef.current()
           return
         }
 
@@ -256,7 +293,7 @@ export function useMenuOrderSync({
             newOrder.table_id === `table-${tableNumber}`
           )
           if (matchesTable && newOrder.status === 'paid') {
-            handleTableMarkedPaid()
+            handleTableMarkedPaidRef.current()
             return
           }
           checkOrderStatus()
@@ -264,7 +301,7 @@ export function useMenuOrderSync({
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events' }, (payload: any) => {
           const newEvt = payload?.new
           if (newEvt && (newEvt.event_type === 'order_paid' || newEvt.new_status === 'paid')) {
-            handleTableMarkedPaid()
+            handleTableMarkedPaidRef.current()
             return
           }
           checkOrderStatus()
@@ -273,7 +310,7 @@ export function useMenuOrderSync({
           const newCall = payload?.new
           const matchesTable = newCall && newCall.table_number?.toString() === tableNumber?.toString()
           if (matchesTable && newCall.status === 'attended' && newCall.call_type?.startsWith('bill_')) {
-            handleTableMarkedPaid()
+            handleTableMarkedPaidRef.current()
             return
           }
           checkOrderStatus()
@@ -283,7 +320,7 @@ export function useMenuOrderSync({
           const matchesTable = newSession && newSession.table_number?.toString() === tableNumber?.toString()
           if (matchesTable && (newSession.status === 'closed' || newSession.status === 'free')) {
             if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-              handleTableMarkedPaid()
+              handleTableMarkedPaidRef.current()
               return
             }
           }
@@ -305,15 +342,15 @@ export function useMenuOrderSync({
               (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
             ) {
               if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-                handleTableMarkedPaid()
+                handleTableMarkedPaidRef.current()
                 return
               }
-              setCart([])
+              setCartRef.current([])
               setTableOrderStatus(null)
-              setIsTablePaid(false)
-              setIsPaidBannerDismissed(false)
-              setIsReviewBoosterDismissed(false)
-              setHasRequestedBill(false)
+              setIsTablePaidRef.current(false)
+              setIsPaidBannerDismissedRef.current(false)
+              setIsReviewBoosterDismissedRef.current(false)
+              setHasRequestedBillRef.current(false)
               hasRequestedBillRef.current = false
               userRequestedBillTimeRef.current = null
               if (typeof window !== 'undefined') {
@@ -325,7 +362,7 @@ export function useMenuOrderSync({
                 sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
               }
               if (data.new_session_id) {
-                setSessionId(data.new_session_id)
+                setSessionIdRef.current(data.new_session_id)
               }
               return
             }
@@ -334,14 +371,14 @@ export function useMenuOrderSync({
               ((data.type === 'table_bill_paid') || (data.type === 'service_call_attended' && data.is_bill)) &&
               (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
             ) {
-              handleTableMarkedPaid()
+              handleTableMarkedPaidRef.current()
               return
             }
 
             if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
               if (data.productId && data.isAvailable !== undefined) {
                 const canonical = resolveCanonicalProductId(data.productId) || data.productId
-                setProducts(prev => prev.map(p => {
+                setProductsRef.current(prev => prev.map(p => {
                   const pCanon = resolveCanonicalProductId(p.id) || p.id
                   if (p.id === data.productId || p.id === canonical || pCanon === canonical) {
                     return { ...p, is_available: data.isAvailable }
@@ -350,7 +387,7 @@ export function useMenuOrderSync({
                 }))
                 return
               }
-              loadData()
+              loadDataRef.current()
               return
             }
 
@@ -385,15 +422,15 @@ export function useMenuOrderSync({
     const handleLocalTableFreed = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
         if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-          handleTableMarkedPaid()
+          handleTableMarkedPaidRef.current()
           return
         }
-        setCart([])
+        setCartRef.current([])
         setTableOrderStatus(null)
-        setIsTablePaid(false)
-        setIsPaidBannerDismissed(false)
-        setIsReviewBoosterDismissed(false)
-        setHasRequestedBill(false)
+        setIsTablePaidRef.current(false)
+        setIsPaidBannerDismissedRef.current(false)
+        setIsReviewBoosterDismissedRef.current(false)
+        setHasRequestedBillRef.current(false)
         hasRequestedBillRef.current = false
         userRequestedBillTimeRef.current = null
         if (typeof window !== 'undefined') {
@@ -409,7 +446,7 @@ export function useMenuOrderSync({
 
     const handleLocalTableBillPaid = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        handleTableMarkedPaid()
+        handleTableMarkedPaidRef.current()
       }
     }
 
@@ -435,7 +472,7 @@ export function useMenuOrderSync({
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleVisibilityChange)
     }
-  }, [slug, tableNumber, isFixedMenu, isTablePaid, handleTableMarkedPaid, setSessionId, setProducts, loadData, setCart, setIsTablePaid, setIsPaidBannerDismissed, setIsReviewBoosterDismissed, setHasRequestedBill, hasRequestedBillRef, userRequestedBillTimeRef, setPendingServiceCalls, sessionId])
+  }, [slug, tableNumber, isFixedMenu])
 
   return {
     tableOrderStatus,

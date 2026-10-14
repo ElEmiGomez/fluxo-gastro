@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Table, Order, Restaurant, CartItem } from '@/types/database.types'
 import { TableStatusType } from '@/components/comandero/TableSelector'
 import { PendingServiceCall } from '@/types/comandero.types'
+import { isDessertItem, isDessertReady } from '@/lib/course-utils'
 
 interface UseComanderoActionsParams {
   slug: string
@@ -262,6 +263,28 @@ export function useComanderoActions({
     setTimeout(() => setOrderSentToast(false), 2500)
   }
 
+  // Marchar postres retenidos a la cocina (Pase 2 dulce)
+  const handleFireDesserts = async (tableNum: string | number) => {
+    const tableOrders = serverOrders.filter(
+      o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
+    )
+    const dessertOrders = tableOrders.filter(o => {
+      const desserts = (o.order_items || []).filter(isDessertItem)
+      return desserts.length > 0 && desserts.some(d => !isDessertReady(d))
+    })
+
+    for (const ord of dessertOrders) {
+      await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, orderId: ord.id, action: 'fire_desserts' }),
+      })
+    }
+    await syncServerData()
+    setOrderSentToast(true)
+    setTimeout(() => setOrderSentToast(false), 2500)
+  }
+
   // Marcar mesa como cobrada y liberarla
   const executeCloseAndFreeTable = async (
     tableNum: number | string,
@@ -433,6 +456,7 @@ export function useComanderoActions({
     handleCancelValidationOrder,
     handleCancelSingleOrder,
     handleFireSecondCourses,
+    handleFireDesserts,
     executeCloseAndFreeTable,
     handleTransferTable,
     handleSendOrderToKitchen,

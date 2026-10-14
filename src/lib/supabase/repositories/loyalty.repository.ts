@@ -29,6 +29,26 @@ if (!globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__) {
   globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__ = new Set<string>()
 }
 
+const profileLocks = new Map<string, Promise<void>>()
+
+export async function withProfileLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const currentLock = profileLocks.get(key) || Promise.resolve()
+  let release: () => void
+  const newLock = new Promise<void>(resolve => {
+    release = resolve
+  })
+  profileLocks.set(key, currentLock.then(() => newLock))
+  try {
+    await currentLock
+    return await fn()
+  } finally {
+    release!()
+    if (profileLocks.get(key) === newLock) {
+      profileLocks.delete(key)
+    }
+  }
+}
+
 
 if (!globalStore.__GASTRO_LOYALTY_PROFILES__) {
   globalStore.__GASTRO_LOYALTY_PROFILES__ = {
@@ -242,7 +262,7 @@ export async function getUncreditedServiceOrdersForTable(
       const targetRestaurantId = getTargetRestaurantId('', slug)
       const { data } = await supabase
         .from('orders')
-        .select('id, table_number, total_amount, status, created_at')
+        .select('id, table_number, total_amount, status, created_at, loyalty_credited')
         .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', normTable)
         .order('created_at', { ascending: false })
@@ -254,7 +274,7 @@ export async function getUncreditedServiceOrdersForTable(
   }
 
   // Deduplicar órdenes por ID
-  const ordersMap = new Map<string, { id: string; total_amount: number; status: string; created_at?: string }>()
+  const ordersMap = new Map<string, { id: string; total_amount: number; status: string; created_at?: string; loyalty_credited?: boolean }>()
   memOrders.forEach(o => {
     if (Number(o.table_number) === normTable) {
       ordersMap.set(o.id, {
@@ -262,6 +282,7 @@ export async function getUncreditedServiceOrdersForTable(
         total_amount: Number(o.total_amount) || 0,
         status: o.status,
         created_at: o.created_at,
+        loyalty_credited: (o as any).loyalty_credited,
       })
     }
   })
@@ -272,6 +293,7 @@ export async function getUncreditedServiceOrdersForTable(
         total_amount: Number(o.total_amount) || 0,
         status: o.status,
         created_at: o.created_at,
+        loyalty_credited: Boolean(o.loyalty_credited),
       })
     }
   })
@@ -284,7 +306,8 @@ export async function getUncreditedServiceOrdersForTable(
     return time >= eightHoursAgo
   })
 
-  const uncredited = relevantOrders.filter(o => !awardedSet.has(o.id))
+  // Excluir órdenes ya acreditadas (tanto en PostgreSQL como en Set local de memoria)
+  const uncredited = relevantOrders.filter(o => !awardedSet.has(o.id) && !o.loyalty_credited)
   const uncreditedTotal = uncredited.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
   const uncreditedPoints = Math.max(0, Math.floor(uncreditedTotal))
 
@@ -309,125 +332,140 @@ export async function registerOrGetLoyaltyProfile(
 ): Promise<LoyaltyProfile> {
   const normEmail = normalizeEmail(params.email)
   const normName = (params.name || '').trim() || 'Comensal'
+  const memKey = getMemoryKey(slug, normEmail)
 
-  // Calcular puntos retroactivos del servicio si se proporciona mesa
-  let retroactivePoints = 0
-  let uncreditedOrdersToMark: Array<{ id: string }> = []
-  if (params.tableNumber) {
-    const res = await getUncreditedServiceOrdersForTable(slug, params.tableNumber)
-    retroactivePoints = res.uncreditedPoints
-    uncreditedOrdersToMark = res.uncreditedOrders
-  }
-
-  let profile = await getLoyaltyProfile(slug, normEmail)
-  if (profile) {
-    let hasChanges = false
-    if (params.name && params.name.trim() !== '' && profile.name !== normName) {
-      profile.name = normName
-      hasChanges = true
+  return withProfileLock(memKey, async () => {
+    // Calcular puntos retroactivos del servicio si se proporciona mesa
+    let retroactivePoints = 0
+    let uncreditedOrdersToMark: Array<{ id: string }> = []
+    if (params.tableNumber) {
+      const res = await getUncreditedServiceOrdersForTable(slug, params.tableNumber)
+      retroactivePoints = res.uncreditedPoints
+      uncreditedOrdersToMark = res.uncreditedOrders
     }
 
-    // Acreditar consumiciones previas no premiadas de esta mesa
-    if (retroactivePoints > 0) {
-      profile.total_points += retroactivePoints
-      profile.available_points += retroactivePoints
-      uncreditedOrdersToMark.forEach(o => globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id))
-      hasChanges = true
-    }
-
-    // Acreditar bonus de Google Maps pendiente si aplica
-    if (params.claimGoogleReviewBonus && !profile.google_review_bonus_awarded) {
-      profile.total_points += 50
-      profile.available_points += 50
-      profile.google_review_bonus_awarded = true
-      hasChanges = true
-    }
-
-    if (hasChanges) {
-      profile.updated_at = new Date().toISOString()
-      const memKey = getMemoryKey(slug, normEmail)
-      if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
-        globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = profile
+    let profile = await getLoyaltyProfile(slug, normEmail)
+    if (profile) {
+      let hasChanges = false
+      if (params.name && params.name.trim() !== '' && profile.name !== normName) {
+        profile.name = normName
+        hasChanges = true
       }
-      const supabase = createServerClient()
-      if (supabase && isSupabaseConfigured()) {
-        try {
-          await supabase
-            .from('loyalty_profiles')
-            .update({
-              name: profile.name,
-              total_points: profile.total_points,
-              google_review_bonus_awarded: profile.google_review_bonus_awarded,
-              updated_at: new Date().toISOString(),
-            })
-            .match({ restaurant_slug: slug, email: normEmail })
-        } catch (e) {
-          console.warn('[registerOrGetLoyaltyProfile] Fallback de actualización a memoria:', e)
+
+      // Acreditar consumiciones previas no premiadas de esta mesa
+      if (retroactivePoints > 0) {
+        profile.total_points += retroactivePoints
+        profile.available_points += retroactivePoints
+        uncreditedOrdersToMark.forEach(o => globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id))
+        hasChanges = true
+      }
+
+      // Acreditar bonus de Google Maps pendiente si aplica
+      if (params.claimGoogleReviewBonus && !profile.google_review_bonus_awarded) {
+        profile.total_points += 50
+        profile.available_points += 50
+        profile.google_review_bonus_awarded = true
+        hasChanges = true
+      }
+
+      if (hasChanges) {
+        profile.updated_at = new Date().toISOString()
+        if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
+          globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = profile
         }
+        const supabase = createServerClient()
+        if (supabase && isSupabaseConfigured()) {
+          try {
+            await supabase
+              .from('loyalty_profiles')
+              .update({
+                name: profile.name,
+                total_points: profile.total_points,
+                google_review_bonus_awarded: profile.google_review_bonus_awarded,
+                updated_at: new Date().toISOString(),
+              })
+              .match({ restaurant_slug: slug, email: normEmail })
+
+            if (uncreditedOrdersToMark.length > 0) {
+              await supabase
+                .from('orders')
+                .update({ loyalty_credited: true })
+                .in('id', uncreditedOrdersToMark.map(o => o.id))
+            }
+          } catch (e) {
+            console.warn('[registerOrGetLoyaltyProfile] Fallback de actualización a memoria:', e)
+          }
+        }
+      }
+
+      if (params.tableNumber) {
+        await linkLoyaltyProfileToTable(slug, params.tableNumber, normEmail)
+      }
+      return profile
+    }
+
+    // Generar ID compatible con UUID de PostgreSQL
+    const newId = crypto.randomUUID()
+    const reviewBonus = params.claimGoogleReviewBonus ? 50 : 0
+    const initialPoints = retroactivePoints + reviewBonus
+    uncreditedOrdersToMark.forEach(o => globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id))
+
+    const newProfile: LoyaltyProfile = {
+      id: newId,
+      restaurant_slug: slug,
+      name: normName,
+      email: normEmail,
+      phone: params.phone || null,
+      total_points: initialPoints,
+      held_points: 0,
+      available_points: initialPoints,
+      google_review_bonus_awarded: Boolean(params.claimGoogleReviewBonus),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
+      globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = newProfile
+    }
+
+    const supabase = createServerClient()
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('loyalty_profiles')
+          .insert({
+            id: newId,
+            restaurant_slug: slug,
+            name: normName,
+            email: normEmail,
+            phone: params.phone || null,
+            total_points: initialPoints,
+            google_review_bonus_awarded: Boolean(params.claimGoogleReviewBonus),
+          })
+          .select('*')
+          .maybeSingle()
+
+        if (!error && data) {
+          newProfile.id = data.id
+        }
+
+        if (uncreditedOrdersToMark.length > 0) {
+          await supabase
+            .from('orders')
+            .update({ loyalty_credited: true })
+            .in('id', uncreditedOrdersToMark.map(o => o.id))
+        }
+      } catch (e) {
+        console.warn('[registerOrGetLoyaltyProfile] Fallback de inserción a memoria:', e)
       }
     }
 
     if (params.tableNumber) {
       await linkLoyaltyProfileToTable(slug, params.tableNumber, normEmail)
     }
-    return profile
-  }
 
-  // Generar ID compatible con UUID de PostgreSQL
-  const newId = crypto.randomUUID()
-  const reviewBonus = params.claimGoogleReviewBonus ? 50 : 0
-  const initialPoints = retroactivePoints + reviewBonus
-  uncreditedOrdersToMark.forEach(o => globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id))
-
-  const newProfile: LoyaltyProfile = {
-    id: newId,
-    restaurant_slug: slug,
-    name: normName,
-    email: normEmail,
-    phone: params.phone || null,
-    total_points: initialPoints,
-    held_points: 0,
-    available_points: initialPoints,
-    google_review_bonus_awarded: Boolean(params.claimGoogleReviewBonus),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }
-
-  const memKey = getMemoryKey(slug, normEmail)
-  if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
-    globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = newProfile
-  }
-
-  const supabase = createServerClient()
-  if (supabase && isSupabaseConfigured()) {
-    try {
-      const { data, error } = await supabase
-        .from('loyalty_profiles')
-        .insert({
-          id: newId,
-          restaurant_slug: slug,
-          name: normName,
-          email: normEmail,
-          phone: params.phone || null,
-          total_points: initialPoints,
-          google_review_bonus_awarded: Boolean(params.claimGoogleReviewBonus),
-        })
-        .select('*')
-        .maybeSingle()
-
-      if (!error && data) {
-        newProfile.id = data.id
-      }
-    } catch (e) {
-      console.warn('[registerOrGetLoyaltyProfile] Fallback de inserción a memoria:', e)
-    }
-  }
-
-  if (params.tableNumber) {
-    await linkLoyaltyProfileToTable(slug, params.tableNumber, normEmail)
-  }
-
-  return newProfile
+    return newProfile
+  })
 }
 
 /**
@@ -488,64 +526,120 @@ export async function holdLoyaltyPoints(
     productId?: string
   }
 ): Promise<{ success: boolean; profile: LoyaltyProfile; hold: LoyaltyEscrowHold }> {
-  const profile = await getLoyaltyProfile(slug, params.email)
-  if (!profile) {
-    throw new Error('Perfil de fidelización no encontrado.')
-  }
+  const normEmail = normalizeEmail(params.email)
+  const memKey = getMemoryKey(slug, normEmail)
 
-  if (profile.available_points < params.points) {
-    throw new Error(
-      `Puntos insuficientes: Tienes ${profile.available_points} pts disponibles, pero este canje requiere ${params.points} pts.`
-    )
-  }
+  return withProfileLock(memKey, async () => {
+    // 1. Intentar RPC atómica en Supabase si está disponible (SELECT ... FOR UPDATE)
+    const supabase = createServerClient()
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.rpc('hold_loyalty_points_atomic', {
+          p_slug: slug,
+          p_email: normEmail,
+          p_points: params.points,
+          p_table_number: Number(params.tableNumber) || 1,
+          p_session_token: params.sessionToken,
+          p_product_id: params.productId || null,
+        })
 
-  // Asegurar que el comensal está vinculado a la mesa
-  if (params.tableNumber) {
-    await linkLoyaltyProfileToTable(slug, params.tableNumber, params.email)
-  }
+        if (!error && data) {
+          if (data.success === false) {
+            throw new Error(data.message || 'Puntos insuficientes')
+          }
 
-  const holdId = crypto.randomUUID()
-  const hold: LoyaltyEscrowHold = {
-    id: holdId,
-    profile_id: profile.id,
-    restaurant_slug: slug,
-    table_number: params.tableNumber,
-    session_token: params.sessionToken,
-    points: params.points,
-    product_id: params.productId,
-    status: 'held',
-    created_at: new Date().toISOString(),
-  }
+          const hold: LoyaltyEscrowHold = {
+            id: data.hold_id,
+            profile_id: data.profile_id,
+            restaurant_slug: slug,
+            table_number: params.tableNumber,
+            session_token: params.sessionToken,
+            points: params.points,
+            product_id: params.productId,
+            status: 'held',
+            created_at: new Date().toISOString(),
+          }
 
+          if (globalStore.__GASTRO_LOYALTY_ESCROW__) {
+            globalStore.__GASTRO_LOYALTY_ESCROW__[data.hold_id] = hold
+          }
 
-  if (globalStore.__GASTRO_LOYALTY_ESCROW__) {
-    globalStore.__GASTRO_LOYALTY_ESCROW__[holdId] = hold
-  }
+          if (params.tableNumber) {
+            await linkLoyaltyProfileToTable(slug, params.tableNumber, normEmail)
+          }
 
-  const supabase = createServerClient()
-  if (supabase && isSupabaseConfigured()) {
-    try {
-      await supabase.from('loyalty_escrow_holds').insert({
-        id: holdId,
-        profile_id: profile.id,
-        restaurant_slug: slug,
-        table_number: Number(params.tableNumber) || 1,
-        session_token: params.sessionToken,
-        points: params.points,
-        product_id: params.productId,
-        status: 'held',
-      })
-    } catch (e) {
-      console.warn('[holdLoyaltyPoints] Guardado en memoria local:', e)
+          const updatedProfile = await getLoyaltyProfile(slug, normEmail)
+          return {
+            success: true,
+            profile: updatedProfile!,
+            hold,
+          }
+        }
+      } catch (err: any) {
+        if (err.message && err.message.includes('Puntos insuficientes')) {
+          throw err
+        }
+        console.warn('[holdLoyaltyPoints] Fallback RPC atómica a memoria local:', err)
+      }
     }
-  }
 
-  const updatedProfile = await getLoyaltyProfile(slug, params.email)
-  return {
-    success: true,
-    profile: updatedProfile!,
-    hold,
-  }
+    // 2. Fallback local en memoria serializado por mutex withProfileLock
+    const profile = await getLoyaltyProfile(slug, normEmail)
+    if (!profile) {
+      throw new Error('Perfil de fidelización no encontrado.')
+    }
+
+    if (profile.available_points < params.points) {
+      throw new Error(
+        `Puntos insuficientes: Tienes ${profile.available_points} pts disponibles, pero este canje requiere ${params.points} pts.`
+      )
+    }
+
+    if (params.tableNumber) {
+      await linkLoyaltyProfileToTable(slug, params.tableNumber, normEmail)
+    }
+
+    const holdId = crypto.randomUUID()
+    const hold: LoyaltyEscrowHold = {
+      id: holdId,
+      profile_id: profile.id,
+      restaurant_slug: slug,
+      table_number: params.tableNumber,
+      session_token: params.sessionToken,
+      points: params.points,
+      product_id: params.productId,
+      status: 'held',
+      created_at: new Date().toISOString(),
+    }
+
+    if (globalStore.__GASTRO_LOYALTY_ESCROW__) {
+      globalStore.__GASTRO_LOYALTY_ESCROW__[holdId] = hold
+    }
+
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase.from('loyalty_escrow_holds').insert({
+          id: holdId,
+          profile_id: profile.id,
+          restaurant_slug: slug,
+          table_number: Number(params.tableNumber) || 1,
+          session_token: params.sessionToken,
+          points: params.points,
+          product_id: params.productId,
+          status: 'held',
+        })
+      } catch (e) {
+        console.warn('[holdLoyaltyPoints] Guardado en memoria local:', e)
+      }
+    }
+
+    const updatedProfile = await getLoyaltyProfile(slug, normEmail)
+    return {
+      success: true,
+      profile: updatedProfile!,
+      hold,
+    }
+  })
 }
 
 /**
@@ -670,6 +764,18 @@ export async function settleLoyaltySession(
   // Marcar las órdenes como acreditadas para evitar doble acumulación
   uncreditedOrders.forEach(o => globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id))
 
+  const supabase = createServerClient()
+  if (supabase && isSupabaseConfigured() && uncreditedOrders.length > 0) {
+    try {
+      await supabase
+        .from('orders')
+        .update({ loyalty_credited: true })
+        .in('id', uncreditedOrders.map(o => o.id))
+    } catch (e) {
+      console.warn('[settleLoyaltySession] Error marcando órdenes acreditadas en Supabase:', e)
+    }
+  }
+
   const numDiners = identifiedProfiles.length
   const basePointsPerDiner = Math.floor(totalBillPoints / numDiners)
   const remainderPoints = totalBillPoints % numDiners
@@ -677,8 +783,6 @@ export async function settleLoyaltySession(
   const breakdown: LoyaltyDinerSettlement[] = []
   let totalRedeemed = 0
   let totalEarned = 0
-
-  const supabase = createServerClient()
 
   for (let i = 0; i < identifiedProfiles.length; i++) {
     const profile = identifiedProfiles[i]
@@ -781,58 +885,112 @@ export async function claimGoogleReviewBonus(
   email: string,
   bonusAmount: number = 50
 ): Promise<{ success: boolean; bonus_points: number; new_total_points: number; profile: LoyaltyProfile; already_awarded?: boolean }> {
-  const profile = await getLoyaltyProfile(slug, email)
-  if (!profile) {
-    throw new Error('Perfil de comensal no encontrado.')
-  }
+  const normEmail = normalizeEmail(email)
+  const memKey = getMemoryKey(slug, normEmail)
 
-  if (profile.google_review_bonus_awarded) {
+  return withProfileLock(memKey, async () => {
+    const supabase = createServerClient()
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase.rpc('claim_google_review_bonus_atomic', {
+          p_slug: slug,
+          p_email: normEmail,
+          p_bonus_points: Number(bonusAmount) > 0 ? Number(bonusAmount) : 50,
+        })
+
+        if (!error && data) {
+          if (data.code === 'PROFILE_NOT_FOUND') {
+            throw new Error('Perfil de comensal no encontrado.')
+          }
+
+          const updatedProfile = (await getLoyaltyProfile(slug, normEmail)) || {
+            id: data.profile_id,
+            restaurant_slug: slug,
+            name: '',
+            email: normEmail,
+            total_points: data.new_total_points ?? data.total_points,
+            held_points: 0,
+            available_points: data.new_total_points ?? data.total_points,
+            google_review_bonus_awarded: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+
+          if (globalStore.__GASTRO_LOYALTY_PROFILES__?.[memKey]) {
+            globalStore.__GASTRO_LOYALTY_PROFILES__[memKey].total_points = data.new_total_points ?? data.total_points
+            globalStore.__GASTRO_LOYALTY_PROFILES__[memKey].google_review_bonus_awarded = true
+            globalStore.__GASTRO_LOYALTY_PROFILES__[memKey].available_points = Math.max(
+              0,
+              (data.new_total_points ?? data.total_points) - (globalStore.__GASTRO_LOYALTY_PROFILES__[memKey].held_points || 0)
+            )
+          }
+
+          return {
+            success: true,
+            bonus_points: data.bonus_points || 0,
+            new_total_points: data.new_total_points ?? data.total_points,
+            already_awarded: Boolean(data.already_awarded),
+            profile: updatedProfile,
+          }
+        }
+      } catch (err: any) {
+        if (err.message && err.message.includes('no encontrado')) throw err
+        console.warn('[claimGoogleReviewBonus] Fallback RPC atómica a memoria local:', err)
+      }
+    }
+
+    // Fallback local en memoria serializado por mutex
+    const profile = await getLoyaltyProfile(slug, normEmail)
+    if (!profile) {
+      throw new Error('Perfil de comensal no encontrado.')
+    }
+
+    if (profile.google_review_bonus_awarded) {
+      return {
+        success: true,
+        bonus_points: 0,
+        new_total_points: profile.total_points,
+        already_awarded: true,
+        profile,
+      }
+    }
+
+    const bonusPoints = Number(bonusAmount) > 0 ? Number(bonusAmount) : 50
+    const newTotal = profile.total_points + bonusPoints
+    profile.total_points = newTotal
+    profile.available_points = Math.max(0, newTotal - (profile.held_points || 0))
+    profile.google_review_bonus_awarded = true
+    profile.updated_at = new Date().toISOString()
+
+    // Actualizar en memoria global
+    if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
+      globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = profile
+    }
+
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase
+          .from('loyalty_profiles')
+          .update({
+            total_points: newTotal,
+            google_review_bonus_awarded: true,
+            updated_at: new Date().toISOString(),
+          })
+          .match({ restaurant_slug: slug, email: profile.email })
+      } catch (e) {
+        console.warn('[claimGoogleReviewBonus] Guardado en memoria:', e)
+      }
+    }
+
+    const updatedProfile = (await getLoyaltyProfile(slug, normEmail)) || profile
+
     return {
       success: true,
-      bonus_points: 0,
-      new_total_points: profile.total_points,
-      already_awarded: true,
-      profile,
+      bonus_points: bonusPoints,
+      new_total_points: newTotal,
+      profile: updatedProfile,
     }
-  }
-
-  const bonusPoints = Number(bonusAmount) > 0 ? Number(bonusAmount) : 50
-  const newTotal = profile.total_points + bonusPoints
-  profile.total_points = newTotal
-  profile.available_points = Math.max(0, newTotal - (profile.held_points || 0))
-  profile.google_review_bonus_awarded = true
-  profile.updated_at = new Date().toISOString()
-
-  // Actualizar en memoria global
-  const memKey = getMemoryKey(slug, email)
-  if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
-    globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = profile
-  }
-
-  const supabase = createServerClient()
-  if (supabase && isSupabaseConfigured()) {
-    try {
-      await supabase
-        .from('loyalty_profiles')
-        .update({
-          total_points: newTotal,
-          google_review_bonus_awarded: true,
-          updated_at: new Date().toISOString(),
-        })
-        .match({ restaurant_slug: slug, email: profile.email })
-    } catch (e) {
-      console.warn('[claimGoogleReviewBonus] Guardado en memoria:', e)
-    }
-  }
-
-  const updatedProfile = (await getLoyaltyProfile(slug, email)) || profile
-
-  return {
-    success: true,
-    bonus_points: bonusPoints,
-    new_total_points: newTotal,
-    profile: updatedProfile,
-  }
+  })
 }
 
 /**

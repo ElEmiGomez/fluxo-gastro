@@ -39,6 +39,8 @@ import {
   isFoodItem,
   isDessertItem,
   orderHasDesserts,
+  isDrinkOnlyOrder,
+  evaluateOrderStations,
 } from '@/lib/course-utils'
 import { PRODUCT_NAMES } from '@/lib/i18n'
 import { deduplicateProducts } from '@/lib/category-matcher'
@@ -475,7 +477,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const initialStatus = requestedStatus || (created_by === 'waiter' ? 'pending' : 'pending_validation')
+    const initialStatus = requestedStatus || (created_by === 'waiter' ? (isDrinkOnlyOrder(validItems as any) ? 'ready' : 'pending') : 'pending_validation')
 
     const saved = await createOrder(restaurantId, slug, {
       table_number: assignedTableNum,
@@ -613,7 +615,23 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
       const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_FIRED, isDessertItem)
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Postres marchados a cocina' })
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marchar postres' }, { status: 404 })
+      }
+      const restaurant = await getRestaurantBySlug(slug)
+      const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
+      const transRes = await transitionOrderStatus({
+        orderId: targetOrderId,
+        restaurantId,
+        slug,
+        nextStatus: 'preparing',
+        actorType: 'waiter',
+      })
+      return NextResponse.json({
+        success: true,
+        order: transRes.order || tagRes.order,
+        message: 'Postres marchados a cocina',
+      })
     }
 
     if (!targetOrderId || !status) {
@@ -645,11 +663,21 @@ export async function PATCH(req: NextRequest) {
 
     const effectiveTableNum = table_number ?? tableNumber
 
+    let targetStatus: OrderStatus = status
+    // Enrutamiento automático de órdenes 100% bebidas al validar: van directo a ready en Comandero
+    if (status === 'pending') {
+      const orders = await getRestaurantOrders(restaurantId, slug)
+      const currentOrd = orders.find(o => o.id === targetOrderId)
+      if (currentOrd?.order_items && currentOrd.order_items.length > 0 && isDrinkOnlyOrder(currentOrd.order_items)) {
+        targetStatus = 'ready'
+      }
+    }
+
     const result = await transitionOrderStatus({
-      orderId,
+      orderId: targetOrderId,
       restaurantId,
       slug,
-      nextStatus: status,
+      nextStatus: targetStatus,
       expectedVersion: parsedExpectedVersion,
       actorType: actor_type ?? actorType ?? 'waiter',
       actorId: actor_id ?? actorId,

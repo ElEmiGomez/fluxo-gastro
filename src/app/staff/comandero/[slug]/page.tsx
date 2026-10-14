@@ -89,6 +89,7 @@ export default function WaiterComanderoPage() {
     handleCancelValidationOrder,
     handleCancelSingleOrder,
     handleFireSecondCourses,
+    handleFireDesserts,
     executeCloseAndFreeTable,
     handleTransferTable,
     handleSendOrderToKitchen,
@@ -278,6 +279,7 @@ export default function WaiterComanderoPage() {
               onValidateOrder={handleValidateOrder}
               onCancelValidationOrder={handleCancelValidationOrder}
               onFireSecondCourses={handleFireSecondCourses}
+              onFireDesserts={handleFireDesserts}
               onOpenPreBill={() => setShowPreBill(true)}
               onOpenTransferModal={() => setShowTransferModal(true)}
               onOpenFreeTableModal={(tbl) => setShowFreeConfirmTable(tbl)}
