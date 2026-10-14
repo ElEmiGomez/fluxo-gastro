@@ -11,6 +11,7 @@ import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS } from '@/lib/supabase/mock-fallback'
+import { isDrinkOnlyOrder, orderHasDesserts, isOrderDessertsReady, isDessertItem, isDessertFired, isDessertReady } from '@/lib/course-utils'
 
 type StationFilterType = 'all' | 'kitchen' | 'bar'
 
@@ -81,17 +82,21 @@ export default function KitchenKDSPage() {
 
   // 2. Sincronización con el servidor (Single Source of Truth - PostgreSQL)
   const fetchServerOrders = useCallback(async () => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
     try {
       const res = await fetch(`/api/orders?slug=${slug}`)
       if (res.ok) {
         const data = await res.json()
         if (Array.isArray(data.orders)) {
-          // La cocina solo recibe comandas activas ya validadas por el mozo y con platos reales
+          // La cocina solo recibe comandas activas ya validadas por el mozo y con platos reales (excluye comandas de solo bebida)
           const rawOrders: Order[] = data.orders || []
           const incomingOrders: Order[] = rawOrders
-            .filter((o: Order) =>
-              ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
-            )
+            .filter((o: Order) => {
+              if (isDrinkOnlyOrder(o)) return false
+              if (['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)) return true
+              if (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o)) return true
+              return false
+            })
             .map((o: Order) => {
               const items = (o.order_items && o.order_items.length > 0)
                 ? o.order_items
@@ -106,11 +111,16 @@ export default function KitchenKDSPage() {
               }
             })
 
-          // Detectar nueva orden entrante real para sonar campana
+          // Detectar nueva orden entrante real o postres marchados para sonar campana
           let hasNewUnseenOrder = false
           incomingOrders.forEach(ord => {
             if (!seenOrderIdsRef.current.has(ord.id)) {
               seenOrderIdsRef.current.add(ord.id)
+              hasNewUnseenOrder = true
+            }
+            const fired = (ord.order_items || []).some(it => isDessertItem(it) && isDessertFired(it) && !isDessertReady(it))
+            if (fired && !seenOrderIdsRef.current.has(`fired-${ord.id}`)) {
+              seenOrderIdsRef.current.add(`fired-${ord.id}`)
               hasNewUnseenOrder = true
             }
           })

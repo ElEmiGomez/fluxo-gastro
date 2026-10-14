@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
-import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard, Loader2, Package, Ban, Wine } from 'lucide-react'
+import { Search, Plus, CheckCircle2, Utensils, BellRing, Sparkles, Bell, ArrowRight, Check, Users, RefreshCw, Receipt, Volume2, UserCheck, Trash2, X, Clock, Flame, CreditCard, Loader2, Package, Ban, Wine, CakeSlice } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector, TableStatusType } from '@/components/comandero/TableSelector'
@@ -20,7 +20,7 @@ import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@
 import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { isProductInCategory, resolveCanonicalProductId } from '@/lib/category-matcher'
-import { areOrderDrinksPending, getPendingDrinks, cleanItemNotes } from '@/lib/course-utils'
+import { areOrderDrinksPending, getPendingDrinks, cleanItemNotes, orderHasDesserts, isOrderDessertsReady, isDessertFired } from '@/lib/course-utils'
 
 
 interface PendingServiceCall {
@@ -154,6 +154,7 @@ export default function WaiterComanderoPage() {
 
   // Sincronización reactiva de datos desde el servidor (SSOT)
   const syncServerData = useCallback(async () => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
     try {
       const [ordersRes, callsRes, tablesRes] = await Promise.all([
         fetch(`/api/orders?slug=${slug}`).then(r => r.json()).catch(() => ({ orders: [] })),
@@ -885,6 +886,25 @@ export default function WaiterComanderoPage() {
     }
     setOrderSentToast(true)
     setTimeout(() => setOrderSentToast(false), 2500)
+    await syncServerData()
+  }
+
+  // Marchar postres retenidos a la cocina (Pase 2)
+  const handleFireDesserts = async (tableNum: string | number) => {
+    const tableOrders = serverOrders.filter(
+      o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
+    )
+    const dessertOrders = tableOrders.filter(o => orderHasDesserts(o) && !isOrderDessertsReady(o))
+    for (const ord of dessertOrders) {
+      await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, orderId: ord.id, action: 'fire_desserts' }),
+      })
+    }
+    setOrderSentToast(true)
+    setTimeout(() => setOrderSentToast(false), 2500)
+    await syncServerData()
   }
 
   // Anular plato marchado
@@ -1012,6 +1032,20 @@ export default function WaiterComanderoPage() {
     })
     return Object.values(drinksMap)
   }, [selectedTable, serverOrders, products, tableStatuses])
+
+  // Identificar si la mesa seleccionada tiene postres retenidos pendientes de marchar
+  const pendingDessertsInTable = React.useMemo(() => {
+    if (!selectedTable) return []
+    const currentTableStatus = tableStatuses[selectedTable.table_number] || 'free'
+    if (currentTableStatus === 'free') return []
+
+    const tableOrders = serverOrders.filter(
+      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+           o.status !== 'paid' && o.status !== 'cancelled'
+    )
+    return tableOrders.filter(o => orderHasDesserts(o) && !isOrderDessertsReady(o))
+  }, [selectedTable, serverOrders, tableStatuses])
+
   // Listas de Tareas y Avisos Pendientes para el Mozo (Reactivo SSOT)
   // Filtran SOLO por status — igual que service calls filtra solo por status === 'pending'.
   // Si items están vacíos es un estado transitorio; el ticket igual se muestra.
@@ -1842,6 +1876,19 @@ export default function WaiterComanderoPage() {
                 </div>
               </div>
               
+              {/* Botón Marchar Postres si la mesa tiene postres pendientes */}
+              {pendingDessertsInTable.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleFireDesserts(selectedTable.table_number)}
+                  className="w-full h-11 px-3 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-pink-600 hover:from-pink-500 hover:to-rose-500 text-white font-black text-xs transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 cursor-pointer animate-pulse"
+                  title="Avisar a cocina que marchen los postres de esta mesa"
+                >
+                  <CakeSlice className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">🍰 Marchar Postres a Cocina (Pase 2)</span>
+                </button>
+              )}
+
               {/* Fila 2: Grid de Acciones Operativas Ordenadas en 2 Columnas (Móvil) / 4 (Desktop) */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {/* 1. Marchar Segundos */}

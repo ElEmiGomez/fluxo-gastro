@@ -159,6 +159,7 @@ export function useDualRealtime({
 
     // 3. RESILIENT SOFT POLLING FALLBACK (4.5s)
     pollInterval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return
       triggerSync()
     }, pollingIntervalMs)
 

@@ -277,12 +277,12 @@ export function saveIdempotentOrder(key: string, order: Order, ttlMs: number = 3
 // MÁQUINA DE ESTADOS FORMAL DE COMANDAS
 // ==============================================================================
 export const VALID_ORDER_TRANSITIONS: Record<string, string[]> = {
-  pending_validation: ['pending', 'confirmed', 'preparing', 'cancelled'], // Mozo valida y envía a cocina
+  pending_validation: ['pending', 'confirmed', 'preparing', 'ready', 'cancelled'], // Mozo valida comanda (comida va a cocina, o si es 100% bebida va directo a ready)
   pending: ['confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
   confirmed: ['preparing', 'ready', 'delivered', 'cancelled'],
   preparing: ['ready', 'delivered', 'cancelled'],
-  ready: ['delivered', 'cancelled'],
-  delivered: ['paid', 'cancelled'],
+  ready: ['delivered', 'preparing', 'cancelled'], // Se admite volver a preparing si se marchan postres retenidos (pase 2)
+  delivered: ['paid', 'preparing', 'ready', 'cancelled'], // Si se marchan postres tras servir los principales, la comanda se reactiva
   paid: [],
   cancelled: [],
 }

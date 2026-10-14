@@ -70,11 +70,127 @@ export function orderHasDesserts(order: Order): boolean {
   return (order.order_items || []).some(isDessertItem)
 }
 
+export function isDrinkOnlyOrder(input?: Order | OrderItem[] | null): boolean {
+  if (!input) return false
+  const items = Array.isArray(input) ? input : (input as Order).order_items
+  if (!items || items.length === 0) return false
+  return items.every(isDrinkItem)
+}
+
+/**
+ * Retorna true si la orden tiene postres retenidos que aún no han sido marchados a cocina.
+ */
+export function orderHasHeldDesserts(order: Order): boolean {
+  const desserts = (order.order_items || []).filter(isDessertItem)
+  if (desserts.length === 0) return false
+  return desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
+}
+
+/**
+ * Retorna true si la orden tiene postres que ya fueron marchados y están en preparación en cocina.
+ */
+export function orderHasActiveDesserts(order: Order): boolean {
+  const desserts = (order.order_items || []).filter(isDessertItem)
+  if (desserts.length === 0) return false
+  return desserts.some(d => isDessertFired(d) && !isDessertReady(d))
+}
+
+export interface OrderStationEvaluation {
+  hasKitchenMains: boolean
+  hasHeldDesserts: boolean
+  hasReleasedDesserts: boolean
+  hasReadyDesserts: boolean
+  hasBarDrinks: boolean
+  isDrinkOnlyOrder: boolean
+  isDessertOnlyOrder: boolean
+  canKitchenCompleteOrder: boolean
+  kitchenItemsPending: number
+  drinksPending: number
+  kitchenItems: OrderItem[]
+  barItems: OrderItem[]
+}
+
+/**
+ * Evalúa las estaciones de preparación (Cocina vs. Barra/Sala) y tiempos gastronómicos de una comanda.
+ */
+export function evaluateOrderStations(input?: Order | OrderItem[] | null): OrderStationEvaluation {
+  if (!input) {
+    return {
+      hasKitchenMains: false,
+      hasHeldDesserts: false,
+      hasReleasedDesserts: false,
+      hasReadyDesserts: false,
+      hasBarDrinks: false,
+      isDrinkOnlyOrder: false,
+      isDessertOnlyOrder: false,
+      canKitchenCompleteOrder: true,
+      kitchenItemsPending: 0,
+      drinksPending: 0,
+      kitchenItems: [],
+      barItems: [],
+    }
+  }
+
+  const safeItems = Array.isArray(input) ? input : (input as Order).order_items || []
+  if (safeItems.length === 0) {
+    return {
+      hasKitchenMains: false,
+      hasHeldDesserts: false,
+      hasReleasedDesserts: false,
+      hasReadyDesserts: false,
+      hasBarDrinks: false,
+      isDrinkOnlyOrder: false,
+      isDessertOnlyOrder: false,
+      canKitchenCompleteOrder: true,
+      kitchenItemsPending: 0,
+      drinksPending: 0,
+      kitchenItems: [],
+      barItems: [],
+    }
+  }
+
+  const mains = safeItems.filter(isFoodItem)
+  const desserts = safeItems.filter(isDessertItem)
+  const drinks = safeItems.filter(isDrinkItem)
+  const kitchenItems = safeItems.filter(i => isFoodItem(i) || isDessertItem(i))
+
+  const hasKitchenMains = mains.length > 0
+  const hasHeldDesserts = desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
+  const hasReleasedDesserts = desserts.some(d => isDessertFired(d) && !isDessertReady(d))
+  const hasReadyDesserts = desserts.some(isDessertReady)
+  const hasBarDrinks = drinks.length > 0
+
+  const isDrinkOnly = safeItems.length > 0 && safeItems.every(isDrinkItem)
+  const isDessertOnly = safeItems.length > 0 && safeItems.every(isDessertItem)
+
+  // Cocina solo puede dar por finalizada la orden si no quedan postres retenidos sin despachar
+  const canKitchenCompleteOrder = !hasHeldDesserts
+
+  const kitchenItemsPending = mains.filter(m => !isFoodReady(m)).length + desserts.filter(d => !isDessertReady(d)).length
+  const drinksPending = drinks.filter(d => !isDrinkServed(d)).length
+
+  return {
+    hasKitchenMains,
+    hasHeldDesserts,
+    hasReleasedDesserts,
+    hasReadyDesserts,
+    hasBarDrinks,
+    isDrinkOnlyOrder: isDrinkOnly,
+    isDessertOnlyOrder: isDessertOnly,
+    canKitchenCompleteOrder,
+    kitchenItemsPending,
+    drinksPending,
+    kitchenItems,
+    barItems: drinks,
+  }
+}
+
 /**
  * Retorna true si la orden tiene bebidas activas y al menos una no ha sido servida por sala/mozo.
+ * Invariante anti-cierre prematuro: la entrega de comida salada en mesa NO borra las bebidas pendientes.
  */
 export function areOrderDrinksPending(order: Order): boolean {
-  if (order.status === 'delivered' || order.status === 'paid' || order.status === 'cancelled') {
+  if (order.status === 'paid' || order.status === 'cancelled') {
     return false
   }
   const drinks = (order.order_items || []).filter(isDrinkItem)

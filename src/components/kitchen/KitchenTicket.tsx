@@ -15,6 +15,8 @@ import {
   isOrderDessertsReady,
   isDrinkServed,
   isDessertReady,
+  isDessertItem,
+  isDessertFired,
 } from '@/lib/course-utils'
 
 interface KitchenTicketProps {
@@ -550,6 +552,43 @@ export function KitchenTicket({
                       )}
                     </button>
                   )
+                })()}
+
+                {roundOrder.status === 'delivered' && (() => {
+                  const hasDesserts = orderHasDesserts(roundOrder)
+                  const dessertsReady = isOrderDessertsReady(roundOrder)
+
+                  if (hasDesserts && !dessertsReady) {
+                    const dessertsFired = roundOrder.order_items?.some(it => isDessertItem(it) && isDessertFired(it))
+                    return (
+                      <div className="space-y-1.5 pt-1 border-t border-purple-100">
+                        <div className="p-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 text-xs font-bold flex items-center justify-between">
+                          <span>Comida principal entregada</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded font-extrabold ${dessertsFired ? 'bg-amber-400 text-slate-950 animate-pulse' : 'bg-purple-200 text-purple-900'}`}>
+                            {dessertsFired ? '🔥 Marchar ahora' : 'En espera'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <button
+                            onClick={() => onKitchenAction ? onKitchenAction(roundOrder.id, 'fire_desserts') : onUpdateStatus(roundOrder.id, 'preparing')}
+                            disabled={isRoundUpdating}
+                            className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                          >
+                            <span>🔥 MARCHAR POSTRES AHORA</span>
+                          </button>
+                          <button
+                            onClick={() => onKitchenAction ? onKitchenAction(roundOrder.id, 'ready_desserts') : onUpdateStatus(roundOrder.id, 'ready')}
+                            disabled={isRoundUpdating}
+                            className="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            <span>🍰 MARCAR LISTOS (PASE 2)</span>
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  }
+                  return null
                 })()}
               </div>
             </div>
