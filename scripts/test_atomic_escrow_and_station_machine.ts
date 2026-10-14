@@ -55,7 +55,7 @@ async function runTests() {
   // Inferencia Mixta
   const mixedOrder: any = {
     id: 'ord-mixed-1',
-    status: 'preparing',
+    status: 'pending_validation',
     order_items: [
       { id: 'i1', course: 'drink', product: { name: 'Refresco' } },
       { id: 'i2', course: 'second', product: { name: 'Burger' } },
@@ -63,8 +63,27 @@ async function runTests() {
     ],
   }
   assert.strictEqual(isDrinkOnlyOrder(mixedOrder), false, 'No debe clasificar orden mixta como drink-only')
-  assert.strictEqual(orderHasHeldDesserts(mixedOrder), true, 'Postres deben nacer retenidos en pase 1')
+  
+  // REGLA DEL EMBUDO: En pending_validation, NO deben mostrarse bebidas pendientes al mozo antes de aprobar
+  assert.strictEqual(areOrderDrinksPending(mixedOrder), false, 'Bebidas no deben mostrarse como pendientes en pending_validation')
+
+  // Tras aprobar comanda (pasa a pending o preparing)
+  mixedOrder.status = 'preparing'
+  assert.strictEqual(areOrderDrinksPending(mixedOrder), true, 'Tras aprobación, bebidas deben mostrarse como pendientes de servir en barra')
+  assert.strictEqual(orderHasHeldDesserts(mixedOrder), true, 'Postres deben nacer retenidos en pase 1 cuando hay comida principal')
   assert.strictEqual(orderHasActiveDesserts(mixedOrder), false, 'Postres no están activos antes de marchar')
+
+  // COMANDA SOLO DE POSTRES (Segunda ronda tras comer): Van directos a preparación, NO se retienen
+  const dessertOnlyOrder: any = {
+    id: 'ord-dessert-round2',
+    status: 'pending',
+    order_items: [
+      { id: 'd1', course: 'dessert', product: { name: 'Volcán de Chocolate' } },
+      { id: 'd2', course: 'drink', product: { name: 'Café solo' } },
+    ],
+  }
+  assert.strictEqual(orderHasHeldDesserts(dessertOnlyOrder), false, 'Comanda de solo postres NO debe retenerse en espera')
+  assert.strictEqual(orderHasActiveDesserts(dessertOnlyOrder), true, 'Comanda de solo postres debe estar activa para preparación inmediata')
 
   // Evaluación de estaciones
   const stations = evaluateOrderStations(mixedOrder)
@@ -75,7 +94,7 @@ async function runTests() {
   mixedOrder.status = 'delivered'
   assert.strictEqual(areOrderDrinksPending(mixedOrder), true, 'Bebidas no servidas siguen pendientes tras servir la comida')
 
-  console.log('  ✔ Máquina de estados gastronómica: Drink-only directo a ready y postres retenidos en 2 fases verificado.\n')
+  console.log('  ✔ Máquina de estados gastronómica: Regla del embudo (bebidas ocultas en validación), postres en 2 fases y postres solos directos a cocina verificado.\n')
 
   // =========================================================================
   // 2. ESCROW ATÓMICO Y DEFENSA ANTI-TOCTOU (DOUBLE-SPEND PREVENTION)
@@ -228,7 +247,19 @@ async function runTests() {
   const memOrd = globalStore.__GASTRO_ORDERS__[SLUG].find((o: any) => o.id === paidOrderId)
   assert.strictEqual(memOrd.loyalty_credited, true, 'La orden debe quedar marcada como loyalty_credited = true')
 
-  console.log('  ✔ Acreditación retroactiva post-pago (103 pts disponibles) y sanitización 100% verificada.\n')
+  // 5.3 Fallback de contingencia con lastPaidSessionTotal cuando no hay órdenes en memoria/BD
+  const fallbackEmail = `fallback-${Date.now()}@fluxo-test.com`
+  const fallbackProfile = await registerOrGetLoyaltyProfile(SLUG, {
+    name: 'Cliente Contingencia',
+    email: fallbackEmail,
+    tableNumber: 99, // Mesa sin órdenes en BD
+    lastPaidSessionTotal: 42.50, // 42.50 € pagados
+    claimGoogleReviewBonus: true, // + 50 pts
+  })
+  assert.strictEqual(fallbackProfile.total_points, 92, 'Debe otorgar 42 pts (lastPaidSessionTotal) + 50 pts (Google Maps) = 92 pts')
+  assert.strictEqual(fallbackProfile.available_points, 92, 'Puntos disponibles deben ser 92')
+
+  console.log('  ✔ Acreditación retroactiva post-pago (103 pts y fallback 92 pts) y sanitización 100% verificada.\n')
 
   console.log('=================================================================')
   console.log('TODAS LAS PRUEBAS DE AUDITORÍA ARGON 4 SUPERADAS CON ÉXITO: 100% PASS')

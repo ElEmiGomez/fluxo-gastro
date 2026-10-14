@@ -80,7 +80,7 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
   }, [storageKey, fetchProfile, fetchRewards])
 
   // 3. Registro o login sin contraseña (zero-fricción: Nombre + Email)
-  const loginOrRegister = async (name: string, email: string, phone?: string) => {
+  const loginOrRegister = async (name: string, email: string, phone?: string, lastPaidSessionTotal?: number) => {
     setError(null)
     setIsLoading(true)
     try {
@@ -88,6 +88,12 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
         typeof window !== 'undefined' &&
         (sessionStorage.getItem('fluxo_pending_google_review_bonus') === 'true' ||
           localStorage.getItem('fluxo_pending_google_review_bonus') === 'true')
+
+      let effectiveLastPaid = lastPaidSessionTotal
+      if (!effectiveLastPaid && typeof window !== 'undefined' && tableNumber) {
+        const stored = sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) || localStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
+        if (stored) effectiveLastPaid = Number(stored)
+      }
 
       const res = await fetch('/api/loyalty/profile', {
         method: 'POST',
@@ -99,6 +105,7 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
           phone,
           tableNumber,
           claimGoogleReviewBonus: hasPendingReviewBonus,
+          lastPaidSessionTotal: effectiveLastPaid,
         }),
       })
       const data = await res.json()

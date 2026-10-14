@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { slug = 'burger-gourmet', name, email, phone, tableNumber, claimGoogleReviewBonus } = body
+    const { slug = 'burger-gourmet', name, email, phone, tableNumber, claimGoogleReviewBonus, lastPaidSessionTotal } = body
 
     if (!email) {
       return NextResponse.json(
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       phone,
       tableNumber,
       claimGoogleReviewBonus: Boolean(claimGoogleReviewBonus),
+      lastPaidSessionTotal: lastPaidSessionTotal ? Number(lastPaidSessionTotal) : undefined,
     })
 
 

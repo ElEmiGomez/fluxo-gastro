@@ -204,7 +204,7 @@ export function useMenuOrderSync({
         })
         setPendingServiceCallsRef.current(activeMicroServices)
 
-        const hasPaidOrder = serverOrdersList.some(o => {
+        const paidOrdersForTable = serverOrdersList.filter(o => {
           const matchesTable = (
             o.table_number?.toString() === tableNumber?.toString() ||
             o.table?.table_number?.toString() === tableNumber?.toString() ||
@@ -212,6 +212,16 @@ export function useMenuOrderSync({
           )
           return matchesTable && o.status === 'paid'
         })
+        const hasPaidOrder = paidOrdersForTable.length > 0
+
+        if (hasPaidOrder && typeof window !== 'undefined') {
+          const paidTotal = paidOrdersForTable.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
+          if (paidTotal > 0) {
+            try {
+              sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(paidTotal))
+            } catch (_) {}
+          }
+        }
 
         if ((hasRequestedBillRef.current || userRequestedBillTimeRef.current) && activeTableOrders.length === 0 && hasPaidOrder) {
           handleTableMarkedPaidRef.current()
@@ -243,6 +253,11 @@ export function useMenuOrderSync({
           setTableOrders(sortedOrders)
           const total = sortedOrders.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
           setTableTotalAmount(total)
+          if (total > 0 && typeof window !== 'undefined') {
+            try {
+              sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(total))
+            } catch (_) {}
+          }
 
           const activeOrders = sortedOrders.filter(o =>
             ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
@@ -293,6 +308,11 @@ export function useMenuOrderSync({
             newOrder.table_id === `table-${tableNumber}`
           )
           if (matchesTable && newOrder.status === 'paid') {
+            if (newOrder.total_amount && typeof window !== 'undefined') {
+              try {
+                sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(newOrder.total_amount))
+              } catch (_) {}
+            }
             handleTableMarkedPaidRef.current()
             return
           }
