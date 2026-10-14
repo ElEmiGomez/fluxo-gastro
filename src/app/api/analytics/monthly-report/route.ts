@@ -59,6 +59,10 @@ interface MonthlyReportData {
     description: string
     estimated_impact_eur: string
     priority: 'high' | 'medium' | 'critical'
+    urgencyLabel?: string
+    problem?: string
+    solution?: string
+    subnote?: string
   }>
 }
 
@@ -169,8 +173,14 @@ export async function GET(req: NextRequest) {
         id: 'sug-1',
         category: 'upselling' as const,
         title: 'Destacar Bebidas y Postres Caseros en la Cabecera de la Carta QR',
+        urgencyLabel: '🔴 Urgencia Crítica · Acción Inmediata',
+        problem:
+          'El 72% de los comensales en terraza agota su primera bebida antes de recibir el plato principal. Al tener que esperar al camarero para pedir de nuevo, se pierden consumiciones clave.',
+        solution:
+          'Posicionar bebidas frías y postres caseros de alto margen (82%-84%) en el acceso rápido de la Carta QR para impulsar el re-pedido directo desde mesa.',
         description:
           'Posicionar bebidas frías y postres caseros de alto margen (82%-84%) en el acceso rápido de la Carta QR impulsa segundas rondas y ventas adicionales en terraza sin esperar al camarero (+48 pedidos semanales).',
+        subnote: '+48 consumiciones/sem',
         estimated_impact_eur: '+1.240 €/mes',
         priority: 'critical' as const,
       },
@@ -178,17 +188,29 @@ export async function GET(req: NextRequest) {
         id: 'sug-2',
         category: 'kitchen_speed' as const,
         title: 'Pre-elaboración de Guarniciones antes del Pico de las 21:00',
+        urgencyLabel: '🟠 Urgencia Alta · Ajuste Operativo',
+        problem:
+          'El monitor KDS registra que el tiempo de pase sube de 11 a 19 minutos entre las 21:15 y 22:30 por acumulación simultánea de comandas.',
+        solution:
+          'Completar la preparación previa de patatas trufadas y ensaladas base a las 20:30 para desahogar la partida caliente y estabilizar el pase en menos de 12 min.',
         description:
-          'El tiempo de pase en cocina sube de 11 a 19 minutos entre 21:15 y 22:30. Preparar raciones de patatas trufadas y ensaladas base a las 20:30 liberará un 35% de cuello de botella.',
+          'El tiempo de pase en cocina aumenta entre las 21:15 y 22:30. Completar la preparación previa de salsas, raciones y guarniciones a las 20:30 reducirá el tiempo de espera en cocina hasta un 35%.',
+        subnote: '-35% demoras de cocina',
         estimated_impact_eur: '+820 €/mes',
         priority: 'high' as const,
       },
       {
         id: 'sug-3',
         category: 'menu_engineering' as const,
-        title: 'Reestructurar Posición del Tartar de Atún en Menú Digital',
+        title: 'Reestructurar Posición del Tartar de Atún en la Carta QR',
+        urgencyLabel: '🟡 Urgencia Media · Optimización de Carta',
+        problem:
+          'El plato ofrece un margen bruto del 81% (16,80 € de beneficio neto por ración), pero solo recibe el 4% de las visitas por estar ubicado al fondo de la carta.',
+        solution:
+          'Mover el plato a la sección \'Sugerencias Destacadas\' de la Carta QR para multiplicar su visibilidad e impulsar pedidos de alto margen.',
         description:
-          "El plato tiene un margen bruto del 81% pero solo recibe un 4% de los clics iniciales por ubicarse al final de la carta. Destacarlo en 'Recomendaciones del Chef' generará +18 pedidos/mes.",
+          'Mover el Tartar de Atún a la sección destacada de la Carta QR aprovecha su 81% de margen neto generando +18 pedidos adicionales al mes.',
+        subnote: '+18 pedidos extra/mes',
         estimated_impact_eur: '+450 €/mes',
         priority: 'medium' as const,
       },
