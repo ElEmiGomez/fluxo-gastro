@@ -479,9 +479,9 @@ export async function GET(req: NextRequest) {
       {
         id: 'sug-1',
         category: 'upselling' as const,
-        title: 'Activar 2ª Ronda Automática de Bebidas a los 18 Minutos',
+        title: 'Destacar Bebidas y Postres Caseros en la Cabecera de la Carta QR',
         description:
-          'El 72% de los comensales en terraza termina su primera consumición antes del plato principal. El aviso sutil en el teléfono del comensal genera más de 45 consumiciones adicionales por semana.',
+          'Posicionar bebidas frías y postres caseros de alto margen (82%-84%) en el acceso rápido de la Carta QR impulsa segundas rondas y ventas adicionales en terraza sin esperar al camarero (+48 pedidos semanales).',
         estimated_impact_eur: '+1.240 €/mes',
         priority: 'critical' as const,
       },

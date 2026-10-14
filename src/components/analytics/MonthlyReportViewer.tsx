@@ -73,8 +73,8 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
   const aiSuggestions = rawAiSuggestions.length > 0 ? rawAiSuggestions : [
     {
       id: 'sug-1',
-      title: 'Activar 2ª Ronda Automática de Bebidas a los 18 Minutos',
-      description: 'El 72% de los comensales en terraza termina su primera consumición antes del plato principal. Un aviso sutil en el móvil del cliente genera +48 consumiciones semanales.',
+      title: 'Destacar Bebidas y Postres Caseros en la Cabecera de la Carta QR',
+      description: 'Posicionar bebidas frías y postres caseros de alto margen (82%-84%) en el acceso rápido de la Carta QR impulsa segundas rondas y ventas adicionales en terraza sin esperar al camarero (+48 pedidos semanales).',
       priority: 'critical',
       estimated_impact_eur: '+1.240 €/mes'
     },
@@ -355,7 +355,7 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
       revenue: 1020.0,
       costMp: 0.54,
       marginPct: 82,
-      action: 'Activar botón 2ª ronda',
+      action: 'Re-pedido ágil por QR',
       actionClass: 'bg-cyan-50 text-cyan-700 border-cyan-200',
       reasoning: '82% de margen bruto. El botón directo en el QR generó 86 rondas extra sin necesidad de llamar al camarero ni saturar la barra.'
     },
@@ -1594,7 +1594,7 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
                       </div>
                       <div className="truncate">
                         <h5 className="text-sm font-bold text-slate-900 truncate">Cocina y Pantallas KDS</h5>
-                        <p className="text-xs text-slate-500">Pantallas táctiles &middot; 4 puestos</p>
+                        <p className="text-xs text-slate-500">Monitor KDS Web &middot; Sincronización en tiempo real</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/60 text-xs">
