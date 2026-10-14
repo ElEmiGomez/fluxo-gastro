@@ -5,7 +5,7 @@ import { Bell, Check, Sparkles, Loader2, UserCheck, CheckCircle2, Trash2, Users,
 import { Table, Order, Product } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { PendingServiceCall, PreviousDrinkItem } from '@/types/comandero.types'
-import { isDessertItem, isDessertFired, isDessertReady } from '@/lib/course-utils'
+import { isDessertItem, isDessertFired, isDessertReady, stripInternalStationTags } from '@/lib/course-utils'
 
 interface ComanderoTableDetailPanelProps {
   selectedTable: Table
@@ -112,84 +112,7 @@ export function ComanderoTableDetailPanel({
         </div>
       )}
 
-      {/* B. Platos Listos en Cocina para Servir */}
-      {readyOrders.length > 0 && (
-        <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-3.5 space-y-2.5 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-emerald-700 animate-pulse" />
-              <h4 className="font-black text-xs sm:text-sm text-emerald-950 uppercase tracking-wider">
-                Platos Listos para Servir (Mesa #{selectedTable.table_number})
-              </h4>
-            </div>
-            <button
-              type="button"
-              onClick={() => onMarkDelivered(selectedTable.table_number)}
-              className="px-3 py-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-black transition-all shadow-xs cursor-pointer"
-            >
-              Servir Todos ({readyOrders.length})
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {readyOrders.map((ord, idx) => (
-              <div
-                key={ord.id}
-                className="bg-white p-3 rounded-xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs"
-              >
-                <div className="space-y-0.5 min-w-0">
-                  <span className="text-[10px] font-black uppercase text-emerald-700 block">
-                    Ticket #{idx + 1}
-                  </span>
-                  <div className="text-xs font-bold text-slate-900">
-                    {ord.order_items?.map(it => `${it.quantity}x ${it.product?.name || 'Plato'}`).join(' + ')}
-                  </div>
-                  {ord.order_items?.some(it => it.notes) && (
-                    <p className="text-[11px] text-red-700 font-semibold">
-                      Nota: {ord.order_items.map(it => it.notes).filter(Boolean).join(' | ')}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    disabled={deliveringOrderIds.has(ord.id)}
-                    onClick={() => onDeliverSingleOrder(ord.id)}
-                    className="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:opacity-70 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95 flex-shrink-0 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    {deliveringOrderIds.has(ord.id) ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Entregando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        <span>Entregado</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const reason = prompt('Motivo de anulación (ej: Error comanda / Plato frío):', 'Error de comanda')
-                      if (reason) onCancelSingleOrder(ord.id, reason)
-                    }}
-                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-50 text-slate-400 hover:text-red-700 border border-slate-200 transition-colors cursor-pointer"
-                    title="Anular plato marchado"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* B.2. Comandas Pendientes de Validación en esta Mesa */}
+      {/* B. Comandas Pendientes de Validación en esta Mesa */}
       {validationOrders.length > 0 && (
         <div className="bg-blue-950/80 border-2 border-blue-400 rounded-2xl p-3.5 space-y-2.5 shadow-md">
           <div className="flex items-center justify-between">
@@ -224,7 +147,7 @@ export function ComanderoTableDetailPanel({
                   </div>
                   {valOrder.order_items?.some(it => it.notes) && (
                     <p className="text-[11px] text-amber-300 font-semibold">
-                      Nota: {valOrder.order_items.map(it => it.notes).filter(Boolean).join(' | ')}
+                      Nota: {valOrder.order_items.map(it => it.notes ? stripInternalStationTags(it.notes) : '').filter(Boolean).join(' | ')}
                     </p>
                   )}
                 </div>
@@ -348,17 +271,7 @@ export function ComanderoTableDetailPanel({
         )}
 
         {/* Fila 2: Grid de Acciones Operativas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <button
-            type="button"
-            onClick={() => onFireSecondCourses(selectedTable.table_number)}
-            className="h-11 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-            title="Avisar a cocina que marchen los segundos platos"
-          >
-            <Flame className="w-4 h-4 text-slate-950 flex-shrink-0" />
-            <span className="truncate">Marchar Segundos</span>
-          </button>
-
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={onOpenPreBill}

@@ -232,17 +232,20 @@ export function ComanderoTaskQueue({
                           </div>
 
                           <div className="mt-2.5 space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                            {(ord.order_items || []).map((it, itemIdx) => (
-                              <div key={itemIdx} className="text-xs text-slate-200 leading-tight">
-                                <span className="font-black text-emerald-400">{it.quantity}x </span>
-                                <span className="font-bold text-white">{it.product?.name || `Plato #${itemIdx + 1}`}</span>
-                                {it.notes && (
-                                  <span className="block text-[10px] text-amber-300 font-extrabold pl-3 mt-0.5">
-                                    &bull; {it.notes}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
+                            {(ord.order_items || []).map((it, itemIdx) => {
+                              const cleanedNotes = cleanItemNotes(it.notes)
+                              return (
+                                <div key={itemIdx} className="text-xs text-slate-200 leading-tight">
+                                  <span className="font-black text-emerald-400">{it.quantity}x </span>
+                                  <span className="font-bold text-white">{it.product?.name || `Plato #${itemIdx + 1}`}</span>
+                                  {cleanedNotes && (
+                                    <span className="block text-[10px] text-amber-300 font-extrabold pl-3 mt-0.5">
+                                      &bull; {cleanedNotes}
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
 
@@ -316,17 +319,20 @@ export function ComanderoTaskQueue({
                           </div>
 
                           <div className="mt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                            {(valOrder.order_items || []).map((it, idx) => (
-                              <div key={idx} className="text-xs text-slate-300 leading-tight">
-                                <span className="font-black text-blue-400">{it.quantity}x </span>
-                                <span className="font-semibold text-white">{it.product?.name || `Plato #${idx + 1}`}</span>
-                                {it.notes && (
-                                  <span className="block text-[10px] text-amber-300 font-bold pl-3">
-                                    &bull; {it.notes}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
+                            {(valOrder.order_items || []).map((it, idx) => {
+                              const cleanedNotes = cleanItemNotes(it.notes)
+                              return (
+                                <div key={idx} className="text-xs text-slate-300 leading-tight">
+                                  <span className="font-black text-blue-400">{it.quantity}x </span>
+                                  <span className="font-semibold text-white">{it.product?.name || `Plato #${idx + 1}`}</span>
+                                  {cleanedNotes && (
+                                    <span className="block text-[10px] text-amber-300 font-bold pl-3">
+                                      &bull; {cleanedNotes}
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
 
@@ -453,79 +459,6 @@ export function ComanderoTaskQueue({
           </div>
         </div>
       )}
-
-      {/* Alertas Flotantes Permanentes de Comandas Listas para Servir */}
-      {readyOrdersList.filter(ord => !dismissedReadyBannerOrderIds.has(ord.id)).map(ord => {
-        const tblNum = ord.table_number || ord.table?.table_number || '?'
-        const itemsCount = (ord.order_items || []).reduce((acc, it) => acc + (it.quantity || 1), 0)
-        const itemsSummary = (ord.order_items || []).map(it => `${it.quantity}x ${it.product?.name || 'Plato'}`).join(', ')
-
-        return (
-          <div
-            key={`float-ready-${ord.id}`}
-            className="fixed top-16 inset-x-3 z-50 max-w-lg mx-auto p-3.5 sm:p-4 rounded-2xl bg-emerald-600 text-white font-black shadow-2xl flex items-center justify-between gap-3 border-2 border-emerald-400 animate-in slide-in-from-top duration-300"
-          >
-            <div
-              onClick={() => {
-                const target = tables.find(t => t.table_number.toString() === tblNum.toString())
-                if (target) onSelectTable(target)
-              }}
-              className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
-              title="Toca para ir a la mesa"
-            >
-              <div className="w-10 h-10 rounded-xl bg-white text-emerald-900 flex items-center justify-center flex-shrink-0 font-black shadow-xs animate-bounce">
-                <Sparkles className="w-6 h-6 text-emerald-600" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] uppercase font-black tracking-wider bg-emerald-700/90 text-white px-2 py-0.5 rounded-md">
-                    Mesa #{tblNum}
-                  </span>
-                  <span className="text-[10px] text-emerald-100 font-extrabold">
-                    {itemsCount} {itemsCount === 1 ? 'plato listo' : 'platos listos'}
-                  </span>
-                </div>
-                <div className="text-xs sm:text-sm font-black uppercase text-white truncate mt-0.5">
-                  ¡Comanda Lista en Cocina!
-                </div>
-                <div className="text-[10px] text-emerald-100 truncate font-semibold">
-                  {itemsSummary}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <button
-                type="button"
-                disabled={deliveringOrderIds.has(ord.id)}
-                onClick={() => onDeliverSingleOrder(ord.id, tblNum)}
-                className="px-3 py-2 rounded-xl bg-white hover:bg-emerald-50 disabled:opacity-70 text-emerald-950 font-black text-xs shadow-md active:scale-95 transition-all flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
-                title="Marcar como servido"
-              >
-                {deliveringOrderIds.has(ord.id) ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-700" />
-                    <span>Entregando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 text-emerald-700 stroke-[3]" />
-                    <span>Servir</span>
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => onDismissReadyBanner(ord.id)}
-                className="p-2 rounded-xl bg-emerald-700/80 hover:bg-emerald-800 text-white transition-colors cursor-pointer"
-                title="Ocultar aviso flotante"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-        )
-      })}
     </>
   )
 }

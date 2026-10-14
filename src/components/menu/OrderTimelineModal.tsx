@@ -1,9 +1,17 @@
 'use client'
 
 import React from 'react'
-import { X, CheckCircle2, Clock, Flame, Sparkles, UtensilsCrossed, Bell, Receipt, Layers, AlertTriangle } from 'lucide-react'
+import { X, CheckCircle2, Clock, Flame, Sparkles, UtensilsCrossed, Bell, Receipt, Layers } from 'lucide-react'
 import { Order, OrderStatus } from '@/types/database.types'
 import { formatCurrency, getWaitingMinutes } from '@/lib/utils'
+import {
+  stripInternalStationTags,
+  getItemCourse,
+  isDrinkServed,
+  isDessertReady,
+  isDessertFired,
+  isFoodReady,
+} from '@/lib/course-utils'
 
 interface OrderTimelineModalProps {
   isOpen: boolean
@@ -227,11 +235,14 @@ export function OrderTimelineModal({
                             const prod = item.product || (item as any).products
                             const name = prod?.name || `Plato #${itemIdx + 1}`
                             const itemPrice = Number((item as any).unit_price ?? (item as any).price ?? prod?.price ?? 0)
+                            const cleanNote = stripInternalStationTags(item.notes)
+                            const course = getItemCourse(item)
+                            const isDeliveredOrPaid = ord.status === 'delivered' || ord.status === 'paid'
 
                             return (
                               <div
                                 key={item.id || `${item.product_id}-${itemIdx}`}
-                                className="flex items-start justify-between text-xs py-1 border-b border-slate-200/50 last:border-b-0 gap-2"
+                                className="flex items-start justify-between text-xs py-1.5 border-b border-slate-200/50 last:border-b-0 gap-2"
                               >
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -246,11 +257,55 @@ export function OrderTimelineModal({
                                         🎁 Cortesía
                                       </span>
                                     )}
+
+                                    {/* Badges de estado limpios por tiempo / estación (solo en curso) */}
+                                    {!isDeliveredOrPaid && (
+                                      <>
+                                        {course === 'drink' && (
+                                          isDrinkServed(item) ? (
+                                            <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] font-bold">
+                                              ✓ Servida en mesa
+                                            </span>
+                                          ) : (
+                                            <span className="px-1.5 py-0.2 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
+                                              🥤 En barra
+                                            </span>
+                                          )
+                                        )}
+                                        {course === 'dessert' && (
+                                          isDessertReady(item) ? (
+                                            <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] font-bold">
+                                              ✓ Postre listo
+                                            </span>
+                                          ) : isDessertFired(item) ? (
+                                            <span className="px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-900 border border-purple-300 text-[9px] font-bold">
+                                              🔥 Marchando en cocina
+                                            </span>
+                                          ) : (
+                                            <span className="px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 border border-slate-200 text-[9px] font-semibold">
+                                              ⏳ En espera para después
+                                            </span>
+                                          )
+                                        )}
+                                        {(course === 'first' || course === 'second') && (
+                                          (isFoodReady(item) || ord.status === 'ready') ? (
+                                            <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] font-bold">
+                                              ✓ Listo para llevar a mesa
+                                            </span>
+                                          ) : ord.status === 'preparing' ? (
+                                            <span className="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-semibold">
+                                              👨‍🍳 En preparación
+                                            </span>
+                                          ) : null
+                                        )}
+                                      </>
+                                    )}
                                   </div>
-                                  {item.notes && item.notes.trim() !== '' && (
-                                    <div className="flex items-center gap-1 mt-0.5 text-[10px] text-amber-900 font-semibold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80">
-                                      <AlertTriangle size={10} className="text-amber-600 flex-shrink-0" />
-                                      <span className="truncate">{item.notes}</span>
+
+                                  {/* Aclaración del cliente sanitizada (sin códigos técnicos) */}
+                                  {cleanNote !== '' && (
+                                    <div className="text-[10px] text-slate-500 font-medium italic mt-0.5 pl-1">
+                                      Nota: {cleanNote}
                                     </div>
                                   )}
                                 </div>

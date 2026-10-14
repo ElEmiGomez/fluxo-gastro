@@ -241,7 +241,7 @@ export async function clearTableLoyaltyMembers(
 export async function getUncreditedServiceOrdersForTable(
   slug: string,
   tableNumber: number | string
-): Promise<{ uncreditedOrders: Array<{ id: string; total_amount: number }>; uncreditedPoints: number }> {
+): Promise<{ uncreditedOrders: Array<{ id: string; total_amount: number; status: string }>; uncreditedPoints: number }> {
   const normTable = Number(tableNumber)
   if (!normTable) return { uncreditedOrders: [], uncreditedPoints: 0 }
 
@@ -250,9 +250,8 @@ export async function getUncreditedServiceOrdersForTable(
   }
   const awardedSet = globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__
 
-  // 1. Órdenes en memoria
-  const { getServerOrders } = await import('@/lib/server-state')
-  const memOrders = getServerOrders(slug) || []
+  // 1. Órdenes en memoria (acceder a todo el historial en memoria para incluir órdenes recién cobradas 'paid')
+  const memOrders = (globalStore as any).__GASTRO_ORDERS__?.[slug] || []
 
   // 2. Órdenes en base de datos si Supabase está activo
   let dbOrders: any[] = []
@@ -260,11 +259,14 @@ export async function getUncreditedServiceOrdersForTable(
   if (supabase && isSupabaseConfigured()) {
     try {
       const targetRestaurantId = getTargetRestaurantId('', slug)
+      const windowStart = new Date(Date.now() - 45 * 60 * 1000).toISOString()
       const { data } = await supabase
         .from('orders')
         .select('id, table_number, total_amount, status, created_at, loyalty_credited')
         .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', normTable)
+        .in('status', ['approved', 'in_preparation', 'ready', 'delivered', 'paid', 'pending', 'confirmed', 'preparing'])
+        .gte('created_at', windowStart)
         .order('created_at', { ascending: false })
         .limit(40)
       if (Array.isArray(data)) {
@@ -275,19 +277,21 @@ export async function getUncreditedServiceOrdersForTable(
 
   // Deduplicar órdenes por ID
   const ordersMap = new Map<string, { id: string; total_amount: number; status: string; created_at?: string; loyalty_credited?: boolean }>()
-  memOrders.forEach(o => {
-    if (Number(o.table_number) === normTable) {
+  memOrders.forEach((o: any) => {
+    const orderTable = Number(o.table_number || o.table?.table_number)
+    if (orderTable === normTable) {
       ordersMap.set(o.id, {
         id: o.id,
         total_amount: Number(o.total_amount) || 0,
         status: o.status,
         created_at: o.created_at,
-        loyalty_credited: (o as any).loyalty_credited,
+        loyalty_credited: Boolean(o.loyalty_credited),
       })
     }
   })
   dbOrders.forEach(o => {
-    if (Number(o.table_number) === normTable && !ordersMap.has(o.id)) {
+    const orderTable = Number(o.table_number)
+    if (orderTable === normTable && !ordersMap.has(o.id)) {
       ordersMap.set(o.id, {
         id: o.id,
         total_amount: Number(o.total_amount) || 0,
@@ -298,12 +302,12 @@ export async function getUncreditedServiceOrdersForTable(
     }
   })
 
-  // Ventana de servicio (órdenes de las últimas 8 horas no canceladas)
-  const eightHoursAgo = Date.now() - 8 * 3600 * 1000
+  // Ventana de servicio (órdenes de los últimos 45 minutos no canceladas)
+  const windowStartMs = Date.now() - 45 * 60 * 1000
   const relevantOrders = Array.from(ordersMap.values()).filter(o => {
     if (o.status === 'cancelled') return false
     const time = o.created_at ? new Date(o.created_at).getTime() : Date.now()
-    return time >= eightHoursAgo
+    return time >= windowStartMs
   })
 
   // Excluir órdenes ya acreditadas (tanto en PostgreSQL como en Set local de memoria)
@@ -356,7 +360,13 @@ export async function registerOrGetLoyaltyProfile(
       if (retroactivePoints > 0) {
         profile.total_points += retroactivePoints
         profile.available_points += retroactivePoints
-        uncreditedOrdersToMark.forEach(o => globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id))
+        uncreditedOrdersToMark.forEach(o => {
+          globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id)
+          const memOrd = (globalStore as any).__GASTRO_ORDERS__?.[slug]?.find((x: any) => x.id === o.id)
+          if (memOrd) {
+            memOrd.loyalty_credited = true
+          }
+        })
         hasChanges = true
       }
 
@@ -408,7 +418,13 @@ export async function registerOrGetLoyaltyProfile(
     const newId = crypto.randomUUID()
     const reviewBonus = params.claimGoogleReviewBonus ? 50 : 0
     const initialPoints = retroactivePoints + reviewBonus
-    uncreditedOrdersToMark.forEach(o => globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id))
+    uncreditedOrdersToMark.forEach(o => {
+      globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id)
+      const memOrd = (globalStore as any).__GASTRO_ORDERS__?.[slug]?.find((x: any) => x.id === o.id)
+      if (memOrd) {
+        memOrd.loyalty_credited = true
+      }
+    })
 
     const newProfile: LoyaltyProfile = {
       id: newId,

@@ -150,20 +150,20 @@ export function MenuLiveTracker({
 
           {tableOrderStatus === 'delivered' && (
             <div className="space-y-3 animate-in fade-in duration-300">
-              <div className="p-3.5 bg-slate-900 text-white rounded-2xl border border-slate-700/80 shadow-md space-y-3">
+              <div className="p-3.5 bg-amber-50/70 text-slate-900 rounded-2xl border border-amber-200/90 shadow-xs space-y-2.5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center flex-shrink-0 font-black shadow-2xs">
                       <UtensilsCrossed className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
                           {t('tableNumberLabel')} #{tableNumber}
                         </span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       </div>
-                      <h4 className="font-extrabold text-xs text-white leading-tight truncate">
+                      <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight truncate">
                         {t('orderDeliveredTitle')} · ¡Buen provecho!
                       </h4>
                     </div>
@@ -172,14 +172,14 @@ export function MenuLiveTracker({
                   <button
                     type="button"
                     onClick={onOpenTimelineModal}
-                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold border border-slate-700 transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
+                    className="px-2 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold border border-slate-200 shadow-2xs transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
                   >
                     <span>{t('viewPhases')}</span>
                     <ChevronRight size={11} />
                   </button>
                 </div>
 
-                <p className="text-[11px] text-slate-300 leading-snug">
+                <p className="text-[11px] text-slate-600 font-medium leading-snug">
                   ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
                 </p>
 
@@ -187,7 +187,7 @@ export function MenuLiveTracker({
                   <button
                     type="button"
                     onClick={onGoToDesserts}
-                    className="p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                    className="p-2.5 rounded-xl bg-white hover:bg-amber-100/60 text-amber-950 border border-amber-300 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
                   >
                     <span className="text-sm">☕🍰</span>
                     <span>Café / Postres</span>
