@@ -76,6 +76,10 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
       title: 'Destacar Bebidas y Postres Caseros en la Cabecera de la Carta QR',
       description: 'Posicionar bebidas frías y postres caseros de alto margen (82%-84%) en el acceso rápido de la Carta QR impulsa segundas rondas y ventas adicionales en terraza sin esperar al camarero (+48 pedidos semanales).',
       priority: 'critical',
+      urgencyLabel: '🔴 Urgencia Crítica · Acción Inmediata',
+      problem: 'El 72% de los comensales en terraza agota su primera bebida antes de recibir el plato principal. Al tener que esperar al camarero para pedir de nuevo, se pierden consumiciones clave.',
+      solution: 'Posicionar bebidas frías y postres caseros de alto margen (82%-84%) en el acceso rápido de la Carta QR para impulsar el re-pedido directo desde mesa.',
+      subnote: '+48 consumiciones/sem',
       estimated_impact_eur: '+1.240 €/mes'
     },
     {
@@ -83,13 +87,21 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
       title: 'Pre-elaboración de Guarniciones antes del Pico de las 21:00',
       description: 'El tiempo de pase en cocina sube de 11 a 19 minutos entre 21:15 y 22:30. Preparar raciones de patatas trufadas y ensaladas base a las 20:30 liberará un 35% de cuello de botella.',
       priority: 'high',
+      urgencyLabel: '🟠 Urgencia Alta · Ajuste Operativo',
+      problem: 'El monitor KDS registra que el tiempo de pase sube de 11 a 19 minutos entre las 21:15 y 22:30 por acumulación simultánea de comandas.',
+      solution: 'Completar la preparación previa de patatas trufadas y ensaladas base a las 20:30 para desahogar la partida caliente y estabilizar el pase en menos de 12 min.',
+      subnote: '-35% demoras de cocina',
       estimated_impact_eur: '+820 €/mes'
     },
     {
       id: 'sug-3',
-      title: 'Reestructurar Posición del Tartar de Atún en Menú Digital',
+      title: 'Reestructurar Posición del Tartar de Atún en la Carta QR',
       description: "El plato tiene un margen bruto del 81% pero solo recibe un 4% de los clics iniciales por ubicarse al final de la carta. Destacarlo en 'Recomendaciones del Chef' generará +18 pedidos/mes.",
       priority: 'medium',
+      urgencyLabel: '🟡 Urgencia Media · Optimización de Carta',
+      problem: 'El plato ofrece un margen bruto del 81% (16,80 € de beneficio neto por ración), pero solo recibe el 4% de las visitas por estar ubicado al fondo de la carta.',
+      solution: "Mover el plato a la sección 'Sugerencias Destacadas' de la Carta QR para multiplicar su visibilidad e impulsar pedidos de alto margen.",
+      subnote: '+18 pedidos extra/mes',
       estimated_impact_eur: '+450 €/mes'
     }
   ]
@@ -151,7 +163,7 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
           areaAlmuerzos: 'M0,120 Q60,95 125,70 T250,55 T375,40 L500,30 L500,170 L0,170 Z',
           pathQR: 'M0,160 Q60,150 125,135 T250,120 T375,105 L500,90',
           tableRows: [
-            { name: 'Menús del Día & Ejecutivos', rev: '8.210,00 €', orders: '154', avg: '26,65 €', rot: '2.0x', grw: '+8.9%', color: 'bg-blue-600' },
+            { name: 'Comidas en Salón (Platos y Raciones)', rev: '8.210,00 €', orders: '154', avg: '26,65 €', rot: '2.0x', grw: '+8.9%', color: 'bg-blue-600' },
             { name: 'Platos a la Carta Mediodía', rev: '4.830,00 €', orders: '68', avg: '35,51 €', rot: '1.5x', grw: '+12.1%', color: 'bg-indigo-500' },
             { name: 'Bebidas Extra QR', rev: '1.380,00 €', orders: '46', avg: '15,00 €', rot: '2.4x', grw: '+19.6%', color: 'bg-cyan-500' },
           ]
@@ -184,9 +196,9 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
           areaAlmuerzos: 'M0,140 Q60,120 125,90 T250,70 T375,55 L500,45 L500,170 L0,170 Z',
           pathQR: 'M0,165 Q60,155 125,140 T250,115 T375,95 L500,80',
           tableRows: [
-            { name: 'Comidas / Almuerzo (13:00 - 16:30)', rev: '14.420,00 €', orders: '238', avg: '30,29 €', rot: '1.8x', grw: '+11.4%', color: 'bg-blue-600' },
-            { name: 'Cenas & Cócteles (20:30 - 23:30)', rev: '12.010,00 €', orders: '195', avg: '36,95 €', rot: '1.4x', grw: '+18.2%', color: 'bg-indigo-500' },
-            { name: 'Turno de Tarde & Re-pedidos Terraza QR', rev: '4.920,00 €', orders: '109', avg: '22,56 €', rot: '2.6x', grw: '+26.5%', color: 'bg-cyan-500' },
+            { name: 'Comidas / Almuerzo (13:00 - 16:30)', rev: '14.420,00 €', orders: '476', avg: '30,29 €', rot: '1.8x', grw: '+11.4%', color: 'bg-blue-600' },
+            { name: 'Cenas & Cócteles (20:30 - 23:30)', rev: '12.010,00 €', orders: '325', avg: '36,95 €', rot: '1.4x', grw: '+18.2%', color: 'bg-indigo-500' },
+            { name: 'Turno de Tarde & Re-pedidos Terraza QR', rev: '4.920,00 €', orders: '218', avg: '22,56 €', rot: '2.6x', grw: '+26.5%', color: 'bg-cyan-500' },
           ]
         }
     }
@@ -207,16 +219,16 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
       { name: 'Fin de Semana 4 (26-28 Sep)', x: 470, yCenas: 12, yAlm: 27, yQR: 55, alm: '2.380 €', cenas: '2.070 €', qr: '630 €', total: '5.080 €', note: 'Cenas potentes (+21.0%)' }
     ],
     lunch: [
-      { name: 'Semana 1 (Mediodía)', x: 30, yCenas: 148, yAlm: 105, yQR: 153, alm: '3.380 €', cenas: '1.100 €', qr: '310 €', total: '4.790 €', note: 'Menús del día rápidos' },
-      { name: 'Semana 2 (Mediodía)', x: 170, yCenas: 138, yAlm: 61, yQR: 126, alm: '3.620 €', cenas: '1.210 €', qr: '340 €', total: '5.170 €', note: 'Rotación 2.0x por mesa' },
-      { name: 'Semana 3 (Mediodía)', x: 320, yCenas: 133, yAlm: 46, yQR: 111, alm: '3.710 €', cenas: '1.250 €', qr: '360 €', total: '5.320 €', note: 'Ticket medio 26,65 €' },
-      { name: 'Semana 4 (Mediodía)', x: 470, yCenas: 126, yAlm: 32, yQR: 94, alm: '3.710 €', cenas: '1.270 €', qr: '370 €', total: '5.350 €', note: 'Servicio ágil sin demoras' }
+      { name: 'Semana 1 (Mediodía)', x: 30, yCenas: 148, yAlm: 105, yQR: 153, alm: '2.450 €', cenas: '620 €', qr: '270 €', total: '3.340 €', note: 'Comidas en salón líderes' },
+      { name: 'Semana 2 (Mediodía)', x: 170, yCenas: 138, yAlm: 61, yQR: 126, alm: '2.610 €', cenas: '650 €', qr: '300 €', total: '3.560 €', note: 'Rotación 2.0x por mesa' },
+      { name: 'Semana 3 (Mediodía)', x: 320, yCenas: 133, yAlm: 46, yQR: 111, alm: '2.740 €', cenas: '660 €', qr: '320 €', total: '3.720 €', note: 'Ticket medio 26,65 €' },
+      { name: 'Semana 4 (Mediodía)', x: 470, yCenas: 126, yAlm: 32, yQR: 94, alm: '2.800 €', cenas: '660 €', qr: '340 €', total: '3.800 €', note: 'Servicio ágil sin demoras' }
     ],
     dinner: [
-      { name: 'Semana 1 (Noche)', x: 30, yCenas: 90, yAlm: 163, yQR: 136, alm: '980 €', cenas: '2.680 €', qr: '420 €', total: '4.080 €', note: 'Gran ticket carnes' },
-      { name: 'Semana 2 (Noche)', x: 170, yCenas: 46, yAlm: 153, yQR: 95, alm: '1.020 €', cenas: '2.990 €', qr: '480 €', total: '4.490 €', note: 'Cenas +18.2%' },
-      { name: 'Semana 3 (Noche)', x: 320, yCenas: 31, yAlm: 148, yQR: 73, alm: '1.040 €', cenas: '3.140 €', qr: '510 €', total: '4.690 €', note: 'Pico cócteles 22:15' },
-      { name: 'Semana 4 (Noche)', x: 470, yCenas: 17, yAlm: 141, yQR: 50, alm: '1.050 €', cenas: '3.200 €', qr: '510 €', total: '4.760 €', note: 'Ticket medio 36,95 €' }
+      { name: 'Semana 1 (Noche)', x: 30, yCenas: 90, yAlm: 163, yQR: 136, alm: '520 €', cenas: '1.880 €', qr: '340 €', total: '2.740 €', note: 'Gran ticket carnes' },
+      { name: 'Semana 2 (Noche)', x: 170, yCenas: 46, yAlm: 153, yQR: 95, alm: '540 €', cenas: '2.040 €', qr: '380 €', total: '2.960 €', note: 'Cenas +18.2%' },
+      { name: 'Semana 3 (Noche)', x: 320, yCenas: 31, yAlm: 148, yQR: 73, alm: '560 €', cenas: '2.160 €', qr: '410 €', total: '3.130 €', note: 'Pico cócteles 22:15' },
+      { name: 'Semana 4 (Noche)', x: 470, yCenas: 17, yAlm: 141, yQR: 50, alm: '560 €', cenas: '2.200 €', qr: '420 €', total: '3.180 €', note: 'Ticket medio 36,95 €' }
     ]
   }), [])
 
@@ -554,6 +566,16 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
             break-inside: avoid !important;
             margin-bottom: 0.35rem !important;
           }
+          #section-recommendations {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+            margin-top: 0.4rem !important;
+            padding: 0.45rem 0.65rem !important;
+            border: 1px solid #cbd5e1 !important;
+          }
+          #section-recommendations .p-4 {
+            padding: 0.35rem 0.5rem !important;
+          }
           #certFooter {
             page-break-after: avoid !important;
             break-after: avoid !important;
@@ -725,10 +747,64 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
         </div>
       </section>
 
-
+      {/* SUB-BARRA DE KPIS FINANCIEROS Y OPERATIVOS DEL MES (Parte 1: Data de Ganancias Monetarias) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="bg-white rounded-xl p-3 sm:p-3.5 ring-1 ring-slate-200 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Facturación Total Mes</span>
+          <div className="text-lg sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5">
+            {formatCurrency(kpis.total_revenue_eur || 31350)}
+          </div>
+          <span className="text-[11px] font-bold text-emerald-600 mt-1 flex items-center gap-1">
+            ↑ +14.8% <span className="font-normal text-slate-400 font-sans">vs mes anterior</span>
+          </span>
+        </div>
+        <div className="bg-white rounded-xl p-3 sm:p-3.5 ring-1 ring-slate-200 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Ticket Medio Comensal</span>
+          <div className="text-lg sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5">
+            {formatCurrency(kpis.avg_ticket_eur || 30.76)}
+          </div>
+          <span className="text-[11px] font-bold text-emerald-600 mt-1 flex items-center gap-1">
+            ↑ +9.2% <span className="font-normal text-slate-400 font-sans">por re-pedidos QR</span>
+          </span>
+        </div>
+        <div className="bg-white rounded-xl p-3 sm:p-3.5 ring-1 ring-slate-200 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Comandas Auditadas</span>
+          <div className="text-lg sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5">
+            {kpis.total_orders || 1019} pedidos
+          </div>
+          <span className="text-[11px] text-slate-500 mt-1">476 comidas &middot; 325 cenas</span>
+        </div>
+        <div className="bg-white rounded-xl p-3 sm:p-3.5 ring-1 ring-slate-200 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Clientes Atendidos</span>
+          <div className="text-lg sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5">
+            {kpis.total_guests || 1856} personas
+          </div>
+          <span className="text-[11px] text-blue-600 font-semibold mt-1">1,8x rotación / servicio</span>
+        </div>
+      </div>
 
       {/* ========================================================================================= */}
-      {/* 4. ACORDEÓN PASO 1: RENDIMIENTO POR TURNOS (Chart Composition) */}
+      {/* 2. DESGLOSE DEL MES: ANALÍTICAS OPERATIVAS, RITMO Y GRÁFICOS INTERACTIVOS                 */}
+      {/* ========================================================================================= */}
+      <div className="pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 mb-3 border-b border-slate-200/80">
+          <div>
+            <h2 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+              Desglose del Mes &middot; Analíticas Operativas y Gráficos
+            </h2>
+            <p className="text-xs text-slate-500">
+              Auditoría paso a paso de horarios, márgenes por categoría, tiempos de cocina e ingeniería de carta.
+            </p>
+          </div>
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-2.5 py-1 rounded-md self-start sm:self-auto border border-slate-200">
+            4 Módulos Auditados
+          </span>
+        </div>
+      </div>
+
+      {/* ========================================================================================= */}
+      {/* ACORDEÓN PASO 1: RENDIMIENTO POR TURNOS (Chart Composition) */}
       {/* ========================================================================================= */}
       <div id="item-step1" className="bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs transition-all duration-200">
         <button
@@ -1639,10 +1715,10 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
-                  Ingeniería de Menú (Matriz BCG) y Recomendaciones de IA
+                  Ingeniería de Menú y Rentabilidad de Carta (Matriz BCG)
                 </h3>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                  Paso 4 &middot; Optimización de Carta
+                  Paso 4 &middot; Platos y Rentabilidad
                 </span>
               </div>
               <p className="text-xs text-purple-700 font-semibold mt-0.5 flex items-center gap-1">
@@ -1656,9 +1732,9 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
             <div className="text-left sm:text-right">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Conclusión Clave</span>
               <div className="flex items-center gap-1.5 justify-end">
-                <span className="text-xs font-bold text-purple-700 font-sans tracking-tight whitespace-nowrap">6 ganadores</span>
+                <span className="text-xs font-bold text-purple-700 font-sans tracking-tight whitespace-nowrap">8 Platos Auditados</span>
                 <span className="text-slate-300 font-normal">&middot;</span>
-                <span className="text-sm font-extrabold text-purple-700 font-mono whitespace-nowrap">+2.510 € IA</span>
+                <span className="text-sm font-extrabold text-purple-700 font-mono whitespace-nowrap">82% Margen Máx</span>
               </div>
             </div>
             <span className={`no-print w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center transition-transform duration-200 ${effectiveOpen('step4') ? 'rotate-180 bg-purple-50 text-purple-600' : ''}`}>
@@ -1825,77 +1901,125 @@ export function MonthlyReportViewer({ data, forceOpen = false }: MonthlyReportVi
               </div>
             </div>
 
-            {/* BANNERS DE SUGERENCIAS IA */}
-            <div className="space-y-3 pt-3 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-600"></div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                    Sugerencias Accionables de la IA
-                  </h4>
-                </div>
-                <span className="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-md">
-                  Impacto Potencial: +2.510 €/mes
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                {aiSuggestions.map((sug: any) => {
-                  const isCritical = sug.priority === 'critical'
-                  const isHigh = sug.priority === 'high'
-
-                  return (
-                    <div
-                      key={sug.id}
-                      className="bg-slate-50/70 hover:bg-white rounded-xl p-4 ring-1 ring-slate-200 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                    >
-                      <div className="flex items-start gap-3.5 min-w-0">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          isCritical
-                            ? 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200'
-                            : isHigh
-                            ? 'bg-blue-50 text-blue-600 ring-1 ring-blue-200'
-                            : 'bg-amber-50 text-amber-600 ring-1 ring-amber-200'
-                        }`}>
-                          {isCritical ? <Zap className="w-5 h-5" /> : isHigh ? <Clock className="w-5 h-5" /> : <Award className="w-5 h-5" />}
-                        </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-bold text-slate-900">{sug.title}</span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
-                              isCritical
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : isHigh
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-amber-100 text-amber-700'
-                            }`}>
-                              {isCritical ? 'Alta Prioridad' : isHigh ? 'Operaciones' : 'Carta'}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-500 leading-relaxed">
-                            {sug.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="sm:text-right flex-shrink-0 pl-12 sm:pl-0">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                          Impacto Mensual Est.
-                        </span>
-                        <span className="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">
-                          {sug.estimated_impact_eur}
-                        </span>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
             </div>
           </div>
         </div>
       </div>
+
+      {/* ========================================================================================= */}
+      {/* 3. PLAN DE ACCIÓN: TOP 3 RECOMENDACIONES IA PRIORIZADAS POR URGENCIA                      */}
+      {/* ========================================================================================= */}
+      <section id="section-recommendations" className="bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs p-4 sm:p-5 space-y-4">
+        {/* Encabezado de la Sección de Recomendaciones */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-extrabold text-slate-900">
+                  Top 3 Recomendaciones Accionables de la IA
+                </h3>
+                <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                  Plan de Acción &middot; Priorizado por Urgencia
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Soluciones prácticas a problemas clave detectados automáticamente a partir de los datos registrados en tu local y en la app durante el mes.
+              </p>
+            </div>
+          </div>
+          <div className="self-start sm:self-auto bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold font-mono">
+            Impacto Total Est.: <strong className="text-emerald-700 font-extrabold">+2.510 €/mes</strong>
+          </div>
+        </div>
+
+        {/* Tarjetas de Recomendaciones con Urgencia Visible */}
+        <div className="space-y-3">
+          {aiSuggestions.map((sug: any) => {
+            const isCritical = sug.priority === 'critical'
+            const isHigh = sug.priority === 'high'
+
+            return (
+              <div
+                key={sug.id}
+                className={`${
+                  isCritical
+                    ? 'bg-rose-50/40 ring-rose-200/80 hover:bg-white'
+                    : isHigh
+                    ? 'bg-amber-50/40 ring-amber-200/80 hover:bg-white'
+                    : 'bg-blue-50/40 ring-blue-200/80 hover:bg-white'
+                } rounded-xl p-4 ring-1 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
+              >
+                <div className="flex items-start gap-3.5 min-w-0">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 font-black text-lg ${
+                    isCritical
+                      ? 'bg-rose-100 text-rose-700 ring-1 ring-rose-300'
+                      : isHigh
+                      ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300'
+                      : 'bg-blue-100 text-blue-700 ring-1 ring-blue-300'
+                  }`}>
+                    {isCritical ? <Zap className="w-5 h-5" /> : isHigh ? <Clock className="w-5 h-5" /> : <Award className="w-5 h-5" />}
+                  </div>
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider shadow-xs ${
+                        isCritical
+                          ? 'bg-rose-600 text-white'
+                          : isHigh
+                          ? 'bg-amber-500 text-slate-950'
+                          : 'bg-blue-600 text-white'
+                      }`}>
+                        {sug.urgencyLabel || (isCritical ? '🔴 Urgencia Crítica · Acción Inmediata' : isHigh ? '🟠 Urgencia Alta · Ajuste Operativo' : '🟡 Urgencia Media · Optimización de Carta')}
+                      </span>
+                      <span className="text-sm font-bold text-slate-900">{sug.title}</span>
+                    </div>
+
+                    <div className="text-xs text-slate-600 leading-relaxed space-y-1">
+                      {sug.problem && (
+                        <p>
+                          <strong className={isCritical ? 'text-rose-950 font-semibold' : isHigh ? 'text-amber-950 font-semibold' : 'text-blue-950 font-semibold'}>
+                            Problema detectado por la app:
+                          </strong>{' '}
+                          {sug.problem}
+                        </p>
+                      )}
+                      {sug.solution && (
+                        <p>
+                          <strong className={isCritical ? 'text-emerald-800 font-semibold' : isHigh ? 'text-blue-800 font-semibold' : 'text-indigo-800 font-semibold'}>
+                            Solución Fluxo 1.0:
+                          </strong>{' '}
+                          {sug.solution}
+                        </p>
+                      )}
+                      {!sug.problem && !sug.solution && (
+                        <p>{sug.description}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={`sm:text-right flex-shrink-0 pl-12 sm:pl-0 border-t sm:border-t-0 pt-2 sm:pt-0 ${
+                  isCritical ? 'border-rose-100' : isHigh ? 'border-amber-100' : 'border-blue-100'
+                }`}>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Impacto Mensual Est.
+                  </span>
+                  <span className="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">
+                    {sug.estimated_impact_eur}
+                  </span>
+                  {sug.subnote && (
+                    <span className="text-[10px] text-slate-500 block font-medium">
+                      {sug.subnote}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
 
       {/* Footer / Legal & Privacy */}
       <footer id="certFooter" className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">

@@ -338,6 +338,18 @@
         padding: 0.35rem 0.5rem !important;
       }
 
+      /* Sección 3 de Recomendaciones compacta en print */
+      #section-recommendations {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        margin-top: 0.4rem !important;
+        padding: 0.45rem 0.65rem !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+      #section-recommendations .p-4 {
+        padding: 0.35rem 0.5rem !important;
+      }
+
       /* Gráficos vectoriales SVG proporcionados */
       svg {
         max-width: 100% !important;
@@ -482,8 +494,56 @@
       </div>
     </section>
 
+    <!-- SUB-BARRA DE KPIS FINANCIEROS Y OPERATIVOS DEL MES (Parte 1: Data de Ganancias Monetarias) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      <div class="bg-white rounded-xl p-3 sm:p-3.5 ring-1 ring-slate-200 shadow-xs flex flex-col justify-between">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Facturación Total Mes</span>
+        <div class="text-lg sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5">31.350,00 €</div>
+        <span class="text-[11px] font-bold text-emerald-600 mt-1 flex items-center gap-1">
+          ↑ +14.8% <span class="font-normal text-slate-400 font-sans">vs mes anterior</span>
+        </span>
+      </div>
+      <div class="bg-white rounded-xl p-3 sm:p-3.5 ring-1 ring-slate-200 shadow-xs flex flex-col justify-between">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Ticket Medio Comensal</span>
+        <div class="text-lg sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5">30,76 €</div>
+        <span class="text-[11px] font-bold text-emerald-600 mt-1 flex items-center gap-1">
+          ↑ +9.2% <span class="font-normal text-slate-400 font-sans">por re-pedidos QR</span>
+        </span>
+      </div>
+      <div class="bg-white rounded-xl p-3 sm:p-3.5 ring-1 ring-slate-200 shadow-xs flex flex-col justify-between">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Comandas Auditadas</span>
+        <div class="text-lg sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5">1.019 pedidos</div>
+        <span class="text-[11px] text-slate-500 mt-1">476 comidas &middot; 325 cenas</span>
+      </div>
+      <div class="bg-white rounded-xl p-3 sm:p-3.5 ring-1 ring-slate-200 shadow-xs flex flex-col justify-between">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Clientes Atendidos</span>
+        <div class="text-lg sm:text-xl font-extrabold text-slate-900 font-mono mt-0.5">1.856 personas</div>
+        <span class="text-[11px] text-blue-600 font-semibold mt-1">1,8x rotación / servicio</span>
+      </div>
+    </div>
+
     <!-- ========================================================================================= -->
-    <!-- 2. ACORDEÓN PASO 1: RENDIMIENTO POR TURNOS (Chart Composition) -->
+    <!-- 2. DESGLOSE DEL MES: ANALÍTICAS OPERATIVAS, RITMO Y GRÁFICOS INTERACTIVOS                 -->
+    <!-- ========================================================================================= -->
+    <div class="pt-2">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 mb-3 border-b border-slate-200/80">
+        <div>
+          <h2 class="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+            Desglose del Mes &middot; Analíticas Operativas y Gráficos
+          </h2>
+          <p class="text-xs text-slate-500">
+            Auditoría paso a paso de horarios, márgenes por categoría, tiempos de cocina e ingeniería de carta.
+          </p>
+        </div>
+        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-2.5 py-1 rounded-md self-start sm:self-auto border border-slate-200">
+          4 Módulos Auditados
+        </span>
+      </div>
+    </div>
+
+    <!-- ========================================================================================= -->
+    <!-- ACORDEÓN PASO 1: RENDIMIENTO POR TURNOS (Chart Composition) -->
     <!-- ========================================================================================= -->
     <div id="item-step1" class="accordion-item bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs transition-all duration-200">
       <button type="button" onclick="toggleAccordion('step1')" class="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-slate-50/70 transition cursor-pointer select-none">
@@ -1228,10 +1288,10 @@
           <div>
             <div class="flex items-center gap-2 flex-wrap">
               <h3 class="text-sm sm:text-base font-extrabold text-slate-900">
-                Ingeniería de Menú (Matriz BCG) y Recomendaciones de IA
+                Ingeniería de Menú y Rentabilidad de Carta (Matriz BCG)
               </h3>
               <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                Paso 4 &middot; Optimización de Carta
+                Paso 4 &middot; Platos y Rentabilidad
               </span>
             </div>
             <p class="text-xs text-purple-700 font-semibold mt-0.5 flex items-center gap-1">
@@ -1245,9 +1305,9 @@
           <div class="text-left sm:text-right">
             <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Conclusión Clave</span>
             <div class="flex items-center gap-1.5 justify-end">
-              <span class="text-xs font-bold text-purple-700 font-sans tracking-tight whitespace-nowrap">6 ganadores</span>
+              <span class="text-xs font-bold text-purple-700 font-sans tracking-tight whitespace-nowrap">8 Platos Auditados</span>
               <span class="text-slate-300 font-normal">&middot;</span>
-              <span class="text-sm font-extrabold text-purple-700 font-mono whitespace-nowrap">+2.510 € IA</span>
+              <span class="text-sm font-extrabold text-purple-700 font-mono whitespace-nowrap">82% Margen Máx</span>
             </div>
           </div>
           <span id="chevron-step4" class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center transition-transform duration-200">
@@ -1559,88 +1619,142 @@
           </div>
         </div>
 
-        <!-- Sugerencias IA Banners -->
-        <div class="space-y-3 pt-3 border-t border-slate-100">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="w-2 h-2 rounded-full bg-blue-600"></div>
-              <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">Sugerencias Accionables de la IA</h4>
-            </div>
-            <span class="text-xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded-md">
-              Impacto Potencial: +2.510 €/mes
-            </span>
-          </div>
-
-          <div class="space-y-2.5">
-            <div class="bg-slate-50/70 hover:bg-white rounded-xl p-4 ring-1 ring-slate-200 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div class="flex items-start gap-3.5 min-w-0">
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200 font-black">
-                  ⚡
-                </div>
-                <div class="space-y-0.5 min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-sm font-bold text-slate-900">Destacar Bebidas y Postres Caseros en la Cabecera de la Carta QR</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-emerald-100 text-emerald-700">Alta Prioridad</span>
-                  </div>
-                  <p class="text-xs text-slate-500 leading-relaxed">
-                    Posicionar bebidas frías y postres caseros de alto margen (82%-84%) en el acceso rápido de la Carta QR impulsa segundas rondas y ventas adicionales en terraza sin esperar al camarero (+48 pedidos semanales).
-                  </p>
-                </div>
-              </div>
-              <div class="sm:text-right flex-shrink-0 pl-12 sm:pl-0">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Impacto Mensual Est.</span>
-                <span class="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">+1.240 €/mes</span>
-              </div>
-            </div>
-
-            <div class="bg-slate-50/70 hover:bg-white rounded-xl p-4 ring-1 ring-slate-200 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div class="flex items-start gap-3.5 min-w-0">
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-blue-50 text-blue-600 ring-1 ring-blue-200 font-black">
-                  ⏱️
-                </div>
-                <div class="space-y-0.5 min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-sm font-bold text-slate-900">Pre-elaboración de Guarniciones antes del Pico de las 21:00</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-blue-100 text-blue-700">Operaciones</span>
-                  </div>
-                  <p class="text-xs text-slate-500 leading-relaxed">
-                    El tiempo de pase en cocina sube de 11 a 19 minutos entre 21:15 y 22:30. Preparar raciones de patatas trufadas y ensaladas base a las 20:30 liberará un 35% de cuello de botella.
-                  </p>
-                </div>
-              </div>
-              <div class="sm:text-right flex-shrink-0 pl-12 sm:pl-0">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Impacto Mensual Est.</span>
-                <span class="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">+820 €/mes</span>
-              </div>
-            </div>
-
-            <div class="bg-slate-50/70 hover:bg-white rounded-xl p-4 ring-1 ring-slate-200 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div class="flex items-start gap-3.5 min-w-0">
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 bg-amber-50 text-amber-600 ring-1 ring-amber-200 font-black">
-                  🏆
-                </div>
-                <div class="space-y-0.5 min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-sm font-bold text-slate-900">Reestructurar Posición del Tartar de Atún en Menú Digital</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-amber-100 text-amber-700">Carta</span>
-                  </div>
-                  <p class="text-xs text-slate-500 leading-relaxed">
-                    El plato tiene un margen bruto del 81% pero solo recibe un 4% de los clics iniciales por ubicarse al final de la carta. Destacarlo en 'Recomendaciones del Chef' generará +18 pedidos/mes.
-                  </p>
-                </div>
-              </div>
-              <div class="sm:text-right flex-shrink-0 pl-12 sm:pl-0">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Impacto Mensual Est.</span>
-                <span class="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">+450 €/mes</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
           </div>
         </div>
       </div>
     </div>
+
+    <!-- ========================================================================================= -->
+    <!-- 3. PLAN DE ACCIÓN: TOP 3 RECOMENDACIONES IA PRIORIZADAS POR URGENCIA                      -->
+    <!-- ========================================================================================= -->
+    <section id="section-recommendations" class="bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden shadow-xs p-4 sm:p-5 space-y-4">
+      
+      <!-- Encabezado de la Sección de Recomendaciones -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div class="flex items-start sm:items-center gap-3">
+          <div class="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
+            ⚡
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-extrabold text-slate-900">
+                Top 3 Recomendaciones Accionables de la IA
+              </h3>
+              <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                Plan de Acción &middot; Priorizado por Urgencia
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Soluciones prácticas a problemas clave detectados automáticamente a partir de los datos registrados en tu local y en la app durante el mes.
+            </p>
+          </div>
+        </div>
+        <div class="self-start sm:self-auto bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 px-3 py-1.5 rounded-lg text-xs font-bold font-mono">
+          Impacto Total Est.: <strong class="text-emerald-700 font-extrabold">+2.510 €/mes</strong>
+        </div>
+      </div>
+
+      <!-- Tarjetas de Recomendaciones con Urgencia Visible -->
+      <div class="space-y-3">
+        
+        <!-- Recomendación 1: Urgencia Crítica -->
+        <div class="bg-rose-50/40 hover:bg-white rounded-xl p-4 ring-1 ring-rose-200/80 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-start gap-3.5 min-w-0">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 bg-rose-100 text-rose-700 ring-1 ring-rose-300 font-black text-lg">
+              ⚡
+            </div>
+            <div class="space-y-1.5 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs">
+                  🔴 Urgencia Crítica &middot; Acción Inmediata
+                </span>
+                <span class="text-sm font-bold text-slate-900">
+                  Destacar Bebidas y Postres Caseros en la Cabecera de la Carta QR
+                </span>
+              </div>
+              <div class="text-xs text-slate-600 leading-relaxed space-y-1">
+                <p>
+                  <strong class="text-rose-950 font-semibold">Problema detectado por la app:</strong> El 72% de los comensales en terraza agota su primera bebida antes de recibir el plato principal. Al tener que esperar al camarero para pedir de nuevo, se pierden consumiciones clave.
+                </p>
+                <p>
+                  <strong class="text-emerald-800 font-semibold">Solución Fluxo 1.0:</strong> Posicionar bebidas frías y postres caseros de alto margen (82%-84%) en el acceso rápido de la Carta QR para impulsar el re-pedido directo desde mesa.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="sm:text-right flex-shrink-0 pl-12 sm:pl-0 border-t sm:border-t-0 border-rose-100 pt-2 sm:pt-0">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Impacto Mensual Est.</span>
+            <span class="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">+1.240 €/mes</span>
+            <span class="text-[10px] text-slate-500 block font-medium">+48 consumiciones/sem</span>
+          </div>
+        </div>
+
+        <!-- Recomendación 2: Urgencia Alta -->
+        <div class="bg-amber-50/40 hover:bg-white rounded-xl p-4 ring-1 ring-amber-200/80 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-start gap-3.5 min-w-0">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 bg-amber-100 text-amber-800 ring-1 ring-amber-300 font-black text-lg">
+              ⏱️
+            </div>
+            <div class="space-y-1.5 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 shadow-xs">
+                  🟠 Urgencia Alta &middot; Ajuste Operativo
+                </span>
+                <span class="text-sm font-bold text-slate-900">
+                  Pre-elaboración de Guarniciones antes del Pico de las 21:00
+                </span>
+              </div>
+              <div class="text-xs text-slate-600 leading-relaxed space-y-1">
+                <p>
+                  <strong class="text-amber-950 font-semibold">Problema detectado por la app:</strong> El monitor KDS registra que el tiempo de pase sube de 11 a 19 minutos entre las 21:15 y 22:30 por acumulación simultánea de comandas.
+                </p>
+                <p>
+                  <strong class="text-blue-800 font-semibold">Solución Fluxo 1.0:</strong> Completar la preparación previa de patatas trufadas y ensaladas base a las 20:30 para desahogar la partida caliente y estabilizar el pase en menos de 12 min.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="sm:text-right flex-shrink-0 pl-12 sm:pl-0 border-t sm:border-t-0 border-amber-100 pt-2 sm:pt-0">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Impacto Mensual Est.</span>
+            <span class="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">+820 €/mes</span>
+            <span class="text-[10px] text-slate-500 block font-medium">-35% demoras de cocina</span>
+          </div>
+        </div>
+
+        <!-- Recomendación 3: Urgencia Media -->
+        <div class="bg-blue-50/40 hover:bg-white rounded-xl p-4 ring-1 ring-blue-200/80 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-start gap-3.5 min-w-0">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 bg-blue-100 text-blue-700 ring-1 ring-blue-300 font-black text-lg">
+              🏆
+            </div>
+            <div class="space-y-1.5 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white shadow-xs">
+                  🟡 Urgencia Media &middot; Optimización de Carta
+                </span>
+                <span class="text-sm font-bold text-slate-900">
+                  Reestructurar Posición del Tartar de Atún en la Carta QR
+                </span>
+              </div>
+              <div class="text-xs text-slate-600 leading-relaxed space-y-1">
+                <p>
+                  <strong class="text-blue-950 font-semibold">Problema detectado por la app:</strong> El plato ofrece un margen bruto del 81% (16,80 € de beneficio neto por ración), pero solo recibe el 4% de las visitas por estar ubicado al fondo de la carta.
+                </p>
+                <p>
+                  <strong class="text-indigo-800 font-semibold">Solución Fluxo 1.0:</strong> Mover el plato a la sección 'Sugerencias Destacadas' de la Carta QR para multiplicar su visibilidad e impulsar pedidos de alto margen.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="sm:text-right flex-shrink-0 pl-12 sm:pl-0 border-t sm:border-t-0 border-blue-100 pt-2 sm:pt-0">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Impacto Mensual Est.</span>
+            <span class="text-lg sm:text-xl font-extrabold text-emerald-600 font-mono">+450 €/mes</span>
+            <span class="text-[10px] text-slate-500 block font-medium">+18 pedidos extra/mes</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
 
     <!-- Footer / Legal & Privacy -->
     <footer id="certFooter" class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 font-medium">
