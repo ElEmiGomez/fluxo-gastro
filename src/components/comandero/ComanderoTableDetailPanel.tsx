@@ -5,7 +5,7 @@ import { Bell, Check, Sparkles, Loader2, UserCheck, CheckCircle2, Trash2, Users,
 import { Table, Order, Product } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { PendingServiceCall, PreviousDrinkItem } from '@/types/comandero.types'
-import { isDessertItem, isDessertFired, isDessertReady, stripInternalStationTags } from '@/lib/course-utils'
+import { isDessertItem, isDessertFired, isDessertReady, orderHasHeldDesserts, stripInternalStationTags } from '@/lib/course-utils'
 
 interface ComanderoTableDetailPanelProps {
   selectedTable: Table
@@ -65,8 +65,8 @@ export function ComanderoTableDetailPanel({
   )
   const hasPendingDesserts = serverOrders.some(
     o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
-         o.status !== 'paid' && o.status !== 'cancelled' &&
-         (o.order_items || []).some(it => isDessertItem(it) && !isDessertReady(it))
+         o.status !== 'pending_validation' && o.status !== 'paid' && o.status !== 'cancelled' &&
+         orderHasHeldDesserts(o)
   )
 
   return (
@@ -114,15 +114,15 @@ export function ComanderoTableDetailPanel({
 
       {/* B. Comandas Pendientes de Validación en esta Mesa */}
       {validationOrders.length > 0 && (
-        <div className="bg-blue-950/80 border-2 border-blue-400 rounded-2xl p-3.5 space-y-2.5 shadow-md">
+        <div className="bg-amber-950/90 border-2 border-amber-400 rounded-2xl p-3.5 space-y-2.5 shadow-md">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-blue-400 animate-pulse" />
-              <h4 className="font-black text-xs sm:text-sm text-blue-200 uppercase tracking-wider">
-                Comandas Pendientes de Validación (Mesa #{selectedTable.table_number})
+              <UserCheck className="w-5 h-5 text-amber-400 animate-pulse" />
+              <h4 className="font-black text-xs sm:text-sm text-amber-200 uppercase tracking-wider">
+                Validar Mesa #{selectedTable.table_number} ({validationOrders.length})
               </h4>
             </div>
-            <span className="text-[11px] font-bold text-blue-300">
+            <span className="text-[11px] font-bold text-amber-300">
               {validationOrders.length} comanda(s)
             </span>
           </div>
@@ -131,11 +131,11 @@ export function ComanderoTableDetailPanel({
             {validationOrders.map((valOrder, idx) => (
               <div
                 key={valOrder.id}
-                className="bg-slate-900 p-3 rounded-xl border border-blue-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs"
+                className="bg-slate-900 p-3 rounded-xl border border-amber-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs"
               >
                 <div className="space-y-0.5 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase text-blue-400 block">
+                    <span className="text-[10px] font-black uppercase text-amber-400 block">
                       Comanda #{idx + 1}
                     </span>
                     <span className="text-xs font-black text-white tabular-nums">
@@ -157,17 +157,17 @@ export function ComanderoTableDetailPanel({
                     type="button"
                     disabled={validatingOrderIds.has(valOrder.id)}
                     onClick={() => onValidateOrder(valOrder.id, selectedTable.table_number)}
-                    className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-70 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
+                    className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:bg-amber-700 disabled:opacity-70 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer disabled:cursor-not-allowed"
                   >
                     {validatingOrderIds.has(valOrder.id) ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin text-white" />
-                        <span>Confirmando...</span>
+                        <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                        <span>Aprobando...</span>
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                        <span>Confirmar a Cocina</span>
+                        <span>Aprobar Comanda</span>
                       </>
                     )}
                   </button>

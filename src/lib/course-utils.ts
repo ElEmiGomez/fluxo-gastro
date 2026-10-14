@@ -84,19 +84,25 @@ export function isDrinkOnlyOrder(input?: Order | OrderItem[] | null): boolean {
 
 /**
  * Retorna true si la orden tiene postres retenidos que aún no han sido marchados a cocina.
+ * Regla inteligente: Si la comanda es SOLO de postres (segunda ronda), NO se retienen; van directos a preparación.
  */
 export function orderHasHeldDesserts(order: Order): boolean {
+  if (!orderHasFood(order)) return false
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
   return desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
 }
 
 /**
- * Retorna true si la orden tiene postres que ya fueron marchados y están en preparación en cocina.
+ * Retorna true si la orden tiene postres que ya fueron marchados y están en preparación en cocina,
+ * o si es una comanda de solo postres que ya está en marcha.
  */
 export function orderHasActiveDesserts(order: Order): boolean {
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
+  if (!orderHasFood(order)) {
+    return desserts.some(d => !isDessertReady(d))
+  }
   return desserts.some(d => isDessertFired(d) && !isDessertReady(d))
 }
 
@@ -160,8 +166,8 @@ export function evaluateOrderStations(input?: Order | OrderItem[] | null): Order
   const kitchenItems = safeItems.filter(i => isFoodItem(i) || isDessertItem(i))
 
   const hasKitchenMains = mains.length > 0
-  const hasHeldDesserts = desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
-  const hasReleasedDesserts = desserts.some(d => isDessertFired(d) && !isDessertReady(d))
+  const hasHeldDesserts = hasKitchenMains && desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
+  const hasReleasedDesserts = desserts.some(d => (!hasKitchenMains || isDessertFired(d)) && !isDessertReady(d))
   const hasReadyDesserts = desserts.some(isDessertReady)
   const hasBarDrinks = drinks.length > 0
 
@@ -192,10 +198,11 @@ export function evaluateOrderStations(input?: Order | OrderItem[] | null): Order
 
 /**
  * Retorna true si la orden tiene bebidas activas y al menos una no ha sido servida por sala/mozo.
+ * Invariante "Regla del Embudo": En estado 'pending_validation' NUNCA se muestran bebidas pendientes.
  * Invariante anti-cierre prematuro: la entrega de comida salada en mesa NO borra las bebidas pendientes.
  */
 export function areOrderDrinksPending(order: Order): boolean {
-  if (order.status === 'paid' || order.status === 'cancelled') {
+  if (order.status === 'paid' || order.status === 'cancelled' || order.status === 'pending_validation') {
     return false
   }
   const drinks = (order.order_items || []).filter(isDrinkItem)

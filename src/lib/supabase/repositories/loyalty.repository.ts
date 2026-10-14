@@ -253,14 +253,14 @@ export async function getUncreditedServiceOrdersForTable(
   // 1. Órdenes en memoria (acceder a todo el historial en memoria para incluir órdenes recién cobradas 'paid')
   const memOrders = (globalStore as any).__GASTRO_ORDERS__?.[slug] || []
 
-  // 2. Órdenes en base de datos si Supabase está activo
+  // 2. Órdenes en base de datos si Supabase está activo (ventana de 2 horas / 120 minutos)
   let dbOrders: any[] = []
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
       const targetRestaurantId = getTargetRestaurantId('', slug)
-      const windowStart = new Date(Date.now() - 45 * 60 * 1000).toISOString()
-      const { data } = await supabase
+      const windowStart = new Date(Date.now() - 120 * 60 * 1000).toISOString()
+      let { data, error } = await supabase
         .from('orders')
         .select('id, table_number, total_amount, status, created_at, loyalty_credited')
         .eq('restaurant_id', targetRestaurantId)
@@ -269,6 +269,21 @@ export async function getUncreditedServiceOrdersForTable(
         .gte('created_at', windowStart)
         .order('created_at', { ascending: false })
         .limit(40)
+
+      // Fallback si la columna loyalty_credited no existe en el esquema remoto
+      if (error && error.message && error.message.includes('loyalty_credited')) {
+        const fallbackRes = await supabase
+          .from('orders')
+          .select('id, table_number, total_amount, status, created_at')
+          .eq('restaurant_id', targetRestaurantId)
+          .eq('table_number', normTable)
+          .in('status', ['approved', 'in_preparation', 'ready', 'delivered', 'paid', 'pending', 'confirmed', 'preparing'])
+          .gte('created_at', windowStart)
+          .order('created_at', { ascending: false })
+          .limit(40)
+        data = fallbackRes.data
+      }
+
       if (Array.isArray(data)) {
         dbOrders = data
       }
@@ -302,8 +317,8 @@ export async function getUncreditedServiceOrdersForTable(
     }
   })
 
-  // Ventana de servicio (órdenes de los últimos 45 minutos no canceladas)
-  const windowStartMs = Date.now() - 45 * 60 * 1000
+  // Ventana de servicio (órdenes de las últimas 2 horas / 120 minutos no canceladas)
+  const windowStartMs = Date.now() - 120 * 60 * 1000
   const relevantOrders = Array.from(ordersMap.values()).filter(o => {
     if (o.status === 'cancelled') return false
     const time = o.created_at ? new Date(o.created_at).getTime() : Date.now()
@@ -332,6 +347,7 @@ export async function registerOrGetLoyaltyProfile(
     phone?: string | null
     tableNumber?: number | string
     claimGoogleReviewBonus?: boolean
+    lastPaidSessionTotal?: number
   }
 ): Promise<LoyaltyProfile> {
   const normEmail = normalizeEmail(params.email)
@@ -346,6 +362,12 @@ export async function registerOrGetLoyaltyProfile(
       const res = await getUncreditedServiceOrdersForTable(slug, params.tableNumber)
       retroactivePoints = res.uncreditedPoints
       uncreditedOrdersToMark = res.uncreditedOrders
+    }
+
+    // Fallback de contingencia: si la mesa se limpió o las órdenes en BD no se localizaron,
+    // pero el cliente envía lastPaidSessionTotal del banner verde de pago confirmado
+    if (retroactivePoints === 0 && params.lastPaidSessionTotal && params.lastPaidSessionTotal > 0) {
+      retroactivePoints = Math.max(0, Math.floor(Number(params.lastPaidSessionTotal) || 0))
     }
 
     let profile = await getLoyaltyProfile(slug, normEmail)
