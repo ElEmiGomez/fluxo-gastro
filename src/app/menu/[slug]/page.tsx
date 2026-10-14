@@ -9,8 +9,11 @@ import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
 import { MenuHeader } from '@/components/menu/MenuHeader'
 import { MenuLiveTracker } from '@/components/menu/MenuLiveTracker'
 import { MenuCategoryBar } from '@/components/menu/MenuCategoryBar'
-import { DailyMenuCard } from '@/components/menu/DailyMenuCard'
 import { DailyMenuModal, DailyMenuSelectionItem } from '@/components/menu/DailyMenuModal'
+import { DailyMenuCard } from '@/components/menu/DailyMenuCard'
+import { PromoConfiguratorModal, PromoConfiguredPayload } from '@/components/menu/PromoConfiguratorModal'
+import { QuickDessertSelectorModal } from '@/components/comandero/QuickDessertSelectorModal'
+import { orderHasPendingChoiceDesserts } from '@/lib/course-utils'
 import { isDailyMenuActive } from '@/lib/daily-menu-utils'
 import { MenuListCatalog } from '@/components/menu/MenuListCatalog'
 import { MenuGridCatalog } from '@/components/menu/MenuGridCatalog'
@@ -55,6 +58,8 @@ function DinerMenuContent() {
   const [showLegalModal, setShowLegalModal] = useState(false)
   const [dailyMenu, setDailyMenu] = useState<DailyMenu | null>(null)
   const [isDailyMenuModalOpen, setIsDailyMenuModalOpen] = useState(false)
+  const [customizingPromoProduct, setCustomizingPromoProduct] = useState<Product | null>(null)
+  const [isQuickDessertModalOpen, setIsQuickDessertModalOpen] = useState(false)
 
   // 1.1 Carga del Menú del Día Dinámico
   useEffect(() => {
@@ -254,10 +259,28 @@ function DinerMenuContent() {
     return match ? match.quantity : 0
   }
 
+  // Helper para identificar productos tipo combo o promo
+  const isPromoProduct = (prod: Product) => {
+    const cat = categories.find(c => c.id === prod.category_id)
+    const catName = (cat?.name || '').toUpperCase()
+    const prodName = (prod.name || '').toUpperCase()
+    return catName.includes('PROMO') || catName.includes('COMBO') || prodName.includes('COMBO') || prodName.includes('PROMO')
+  }
+
+  // Comprobar si hay alguna orden activa con comodín de postre por elegir
+  const activeOrderWithPendingDessert = tableOrders.find(o => orderHasPendingChoiceDesserts(o))
+  const hasPendingDessertChoice = Boolean(activeOrderWithPendingDessert)
+
   // Modificar cantidad inline (+ / -) con haptic feedback
   const handleUpdateProductQuantity = (product: Product, delta: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     if (isInSituAdmin) return
+
+    // Si es un combo/promo y se quiere agregar, abrir modal de configuración paso a paso
+    if (delta > 0 && isPromoProduct(product)) {
+      setCustomizingPromoProduct(product)
+      return
+    }
 
     triggerHaptic(delta > 0 ? HAPTIC_PATTERNS.QUANTITY : HAPTIC_PATTERNS.TAP)
 
@@ -309,26 +332,26 @@ function DinerMenuContent() {
     setTimeout(() => setAddedToast(null), 2500)
   }
 
-  // Agregar Menú del Día configurado de 4 pasos
+  // Agregar Menú del Día configurado de 4 pasos con Desglose Operativo (Item Explosion)
   const handleAddDailyMenuToCart = (menuPayload: {
     title: string
     price: number
     selections: DailyMenuSelectionItem[]
   }) => {
     triggerHaptic(HAPTIC_PATTERNS.ADD_CART)
-    const notesParts = menuPayload.selections.map(s => {
-      const coursePrefix = s.course === 'first' ? '1º' : s.course === 'second' ? '2º' : s.course === 'dessert' ? 'Postre' : 'Bebida'
-      return `${coursePrefix}: ${s.product.name}${s.notes ? ` (${s.notes})` : ''}`
-    })
-    const compiledNotes = notesParts.join(' · ')
+    const existingMenuCount = cart.filter(it => it.is_pack_header && it.pack_tag?.startsWith('Menú del Día')).length
+    const packNumber = existingMenuCount + 1
+    const packId = `pack-daily-menu-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
+    const packTag = `Menú del Día #${packNumber}`
 
-    const menuCartItem: CartItem = {
+    const headerItem: CartItem = {
+      cartItemId: `${packId}-header`,
       product: {
         id: `daily-menu-${dailyMenu?.id || 'standard'}`,
         restaurant_id: restaurant?.id || '',
         category_id: 'cat-menu-del-dia',
-        name: menuPayload.title,
-        description: 'Menú del Día (1º, 2º, Postre/Café, Bebida)',
+        name: `${menuPayload.title} #${packNumber}`,
+        description: 'Menú del Día Completo (1º, 2º, Postre/Café, Bebida)',
         price: menuPayload.price,
         image_url: null,
         model_3d_url: null,
@@ -336,11 +359,75 @@ function DinerMenuContent() {
       },
       quantity: 1,
       selectedPills: [],
-      notes: compiledNotes,
+      notes: `[PACK_HEADER] [${packTag}]`,
+      is_pack_header: true,
+      pack_id: packId,
+      pack_tag: packTag,
     }
 
-    setCart(prev => [...prev, menuCartItem])
-    setAddedToast(menuPayload.title)
+    const subItems: CartItem[] = menuPayload.selections.map((sel, idx) => ({
+      cartItemId: `${packId}-sub-${idx}`,
+      product: {
+        ...sel.product,
+        price: 0,
+      },
+      quantity: 1,
+      selectedPills: [],
+      notes: `[${packTag}] ${sel.notes || ''}`.trim(),
+      course: sel.course,
+      is_complimentary: true,
+      is_pack_component: true,
+      pack_id: packId,
+      pack_tag: packTag,
+    }))
+
+    setCart(prev => [...prev, headerItem, ...subItems])
+    setAddedToast(`${menuPayload.title} #${packNumber}`)
+    setTimeout(() => setAddedToast(null), 2500)
+  }
+
+  // Agregar Promo/Combo configurado con Desglose Operativo (Item Explosion)
+  const handleAddPromoToCart = (payload: PromoConfiguredPayload) => {
+    triggerHaptic(HAPTIC_PATTERNS.ADD_CART)
+    const existingPromoCount = cart.filter(it => it.is_pack_header && it.product.id === payload.promoProduct.id).length
+    const promoNumber = existingPromoCount + 1
+    const packId = `pack-promo-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
+    const packTag = `${payload.title} #${promoNumber}`
+
+    const headerItem: CartItem = {
+      cartItemId: `${packId}-header`,
+      product: {
+        ...payload.promoProduct,
+        name: `${payload.title} #${promoNumber}`,
+        price: payload.price,
+      },
+      quantity: 1,
+      selectedPills: [],
+      notes: `[PACK_HEADER] [${packTag}]`,
+      is_pack_header: true,
+      pack_id: packId,
+      pack_tag: packTag,
+    }
+
+    const subItems: CartItem[] = payload.selections.map((sel, idx) => ({
+      cartItemId: `${packId}-sub-${idx}`,
+      product: {
+        ...sel.product,
+        price: 0,
+      },
+      quantity: 1,
+      selectedPills: [],
+      notes: `[${packTag}] ${sel.notes || ''}`.trim(),
+      course: sel.course,
+      is_complimentary: true,
+      is_pack_component: true,
+      pack_id: packId,
+      pack_tag: packTag,
+    }))
+
+    setCart(prev => [...prev, headerItem, ...subItems])
+    setCustomizingPromoProduct(null)
+    setAddedToast(`${payload.title} #${promoNumber}`)
     setTimeout(() => setAddedToast(null), 2500)
   }
 
@@ -499,6 +586,8 @@ function DinerMenuContent() {
           loyaltyProfile={loyalty.profile}
           onClaimLoyaltyBonus={loyalty.claimGoogleReviewBonus}
           onOpenLoyaltyModal={() => loyalty.setIsModalOpen(true)}
+          hasPendingDessertChoice={hasPendingDessertChoice}
+          onOpenDessertSelector={() => setIsQuickDessertModalOpen(true)}
         />
 
         {/* Carta Gastronómica Principal */}
@@ -552,7 +641,7 @@ function DinerMenuContent() {
               onToggleAvailability={handleToggleAvailability}
               onOpenEditModal={handleOpenEditProductModal}
               onOpenAddProductModal={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
-              onCustomizeProduct={(prod) => setCustomizingProduct(prod)}
+              onCustomizeProduct={(prod) => isPromoProduct(prod) ? setCustomizingPromoProduct(prod) : setCustomizingProduct(prod)}
               searchQuery={searchQuery}
             />
           ) : (
@@ -565,7 +654,7 @@ function DinerMenuContent() {
               onUpdateQuantity={handleUpdateProductQuantity}
               onToggleAvailability={handleToggleAvailability}
               onOpenEditModal={handleOpenEditProductModal}
-              onCustomizeProduct={(prod) => setCustomizingProduct(prod)}
+              onCustomizeProduct={(prod) => isPromoProduct(prod) ? setCustomizingPromoProduct(prod) : setCustomizingProduct(prod)}
             />
           )}
 
@@ -673,7 +762,15 @@ function DinerMenuContent() {
               })
             }
           }}
-          onRemoveCartItem={(index) => setCart(prev => prev.filter((_, idx) => idx !== index))}
+          onRemoveCartItem={(index) => {
+            setCart(prev => {
+              const target = prev[index]
+              if (target?.pack_id) {
+                return prev.filter(item => item.pack_id !== target.pack_id)
+              }
+              return prev.filter((_, idx) => idx !== index)
+            })
+          }}
           onClearCart={() => setCart([])}
           onAddProductInline={(prod) => handleUpdateProductQuantity(prod, 1)}
         />
@@ -685,6 +782,55 @@ function DinerMenuContent() {
             onClose={() => setIsDailyMenuModalOpen(false)}
             dailyMenu={dailyMenu}
             onAddMenuToCart={handleAddDailyMenuToCart}
+          />
+        )}
+
+        {/* Modal de Configuración Guiada de Promos/Combos (Explosión de Platos) */}
+        {customizingPromoProduct && (
+          <PromoConfiguratorModal
+            isOpen={Boolean(customizingPromoProduct)}
+            onClose={() => setCustomizingPromoProduct(null)}
+            product={customizingPromoProduct}
+            catalogProducts={products}
+            onAddPromoToCart={handleAddPromoToCart}
+          />
+        )}
+
+        {/* Modal Rápido de Elección de Postre Comodín */}
+        {activeOrderWithPendingDessert && (
+          <QuickDessertSelectorModal
+            isOpen={isQuickDessertModalOpen}
+            onClose={() => setIsQuickDessertModalOpen(false)}
+            tableNumber={tableNumber}
+            availableDesserts={products.filter(p => {
+              const cat = (p.category_id || '').toLowerCase()
+              const n = (p.name || '').toLowerCase()
+              return cat.includes('postre') || cat.includes('cafe') || n.includes('postre') || n.includes('tarta') || n.includes('helado') || n.includes('café') || n.includes('cafe')
+            })}
+            onConfirmDessert={async (dessert, note) => {
+              try {
+                const res = await fetch('/api/orders', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    slug,
+                    order_id: activeOrderWithPendingDessert.id,
+                    action: 'resolve_pending_dessert',
+                    dessertProduct: dessert,
+                    note,
+                    actor_type: 'diner',
+                  }),
+                })
+                if (res.ok) {
+                  setIsQuickDessertModalOpen(false)
+                  setAddedToast(`¡${dessert.name} marchando a cocina!`)
+                  setTimeout(() => setAddedToast(null), 3000)
+                  loadData()
+                }
+              } catch (err) {
+                console.error('Error al resolver postre en orden:', err)
+              }
+            }}
           />
         )}
 

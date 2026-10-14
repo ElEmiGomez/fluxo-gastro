@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { RefreshCw } from 'lucide-react'
-import { Product, Table, CartItem, Restaurant, Order, CourseType } from '@/types/database.types'
+import { Product, Table, CartItem, Restaurant, Order, CourseType, DailyMenu } from '@/types/database.types'
 import { ProductModifierModal } from '@/components/comandero/ProductModifierModal'
 import { OrderSummaryBar } from '@/components/comandero/OrderSummaryBar'
 import { CartDrawer } from '@/components/menu/CartDrawer'
@@ -10,6 +10,9 @@ import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { PreBillModal } from '@/components/comandero/PreBillModal'
 import { CloseTableModal } from '@/components/comandero/CloseTableModal'
 import { QuickStockModal } from '@/components/comandero/QuickStockModal'
+import { DailyMenuModal, DailyMenuSelectionItem } from '@/components/menu/DailyMenuModal'
+import { PromoConfiguratorModal, PromoConfiguredPayload } from '@/components/menu/PromoConfiguratorModal'
+import { QuickDessertSelectorModal } from '@/components/comandero/QuickDessertSelectorModal'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
 import { PendingServiceCall } from '@/types/comandero.types'
 
@@ -41,6 +44,17 @@ interface ComanderoModalsProps {
   serverOrders: Order[]
   pendingCalls?: PendingServiceCall[]
   recentTogglesRef: React.MutableRefObject<Map<string, { status: boolean; until: number }>>
+  dailyMenu?: DailyMenu | null
+  isDailyMenuModalOpen?: boolean
+  setIsDailyMenuModalOpen?: (open: boolean) => void
+  onAddDailyMenuToCart?: (payload: { title: string; price: number; selections: DailyMenuSelectionItem[] }) => void
+  customizingPromoProduct?: Product | null
+  setCustomizingPromoProduct?: (p: Product | null) => void
+  onAddPromoToCart?: (payload: PromoConfiguredPayload) => void
+  isQuickDessertModalOpen?: boolean
+  setIsQuickDessertModalOpen?: (open: boolean) => void
+  activeOrderWithPendingDessert?: Order | null
+  onResolvePendingDessert?: (dessert: Product, note?: string) => Promise<void> | void
   onAddItemToComanda: (
     product: Product,
     quantity: number,
@@ -91,6 +105,17 @@ export function ComanderoModals({
   serverOrders,
   pendingCalls = [],
   recentTogglesRef,
+  dailyMenu,
+  isDailyMenuModalOpen = false,
+  setIsDailyMenuModalOpen,
+  onAddDailyMenuToCart,
+  customizingPromoProduct,
+  setCustomizingPromoProduct,
+  onAddPromoToCart,
+  isQuickDessertModalOpen = false,
+  setIsQuickDessertModalOpen,
+  activeOrderWithPendingDessert,
+  onResolvePendingDessert,
   onAddItemToComanda,
   onSendOrderToKitchen,
   onUpdateCartQuantity,
@@ -263,6 +288,42 @@ export function ComanderoModals({
           }
         }}
       />
+
+      {/* 8. Modal de Configuración Guiada de Menú del Día */}
+      {dailyMenu && isDailyMenuModalOpen && setIsDailyMenuModalOpen && onAddDailyMenuToCart && (
+        <DailyMenuModal
+          isOpen={isDailyMenuModalOpen}
+          onClose={() => setIsDailyMenuModalOpen(false)}
+          dailyMenu={dailyMenu}
+          onAddMenuToCart={onAddDailyMenuToCart}
+        />
+      )}
+
+      {/* 9. Modal de Configuración Guiada de Promos/Combos (Explosión de Platos) */}
+      {customizingPromoProduct && setCustomizingPromoProduct && onAddPromoToCart && (
+        <PromoConfiguratorModal
+          isOpen={Boolean(customizingPromoProduct)}
+          onClose={() => setCustomizingPromoProduct(null)}
+          product={customizingPromoProduct}
+          catalogProducts={products}
+          onAddPromoToCart={onAddPromoToCart}
+        />
+      )}
+
+      {/* 10. Modal Rápido de Elección de Postre Comodín */}
+      {selectedTable && isQuickDessertModalOpen && setIsQuickDessertModalOpen && onResolvePendingDessert && (
+        <QuickDessertSelectorModal
+          isOpen={isQuickDessertModalOpen}
+          onClose={() => setIsQuickDessertModalOpen(false)}
+          tableNumber={selectedTable.table_number}
+          availableDesserts={products.filter(p => {
+            const cat = (p.category_id || '').toLowerCase()
+            const n = (p.name || '').toLowerCase()
+            return cat.includes('postre') || cat.includes('cafe') || n.includes('postre') || n.includes('tarta') || n.includes('helado') || n.includes('café') || n.includes('cafe')
+          })}
+          onConfirmDessert={onResolvePendingDessert}
+        />
+      )}
     </>
   )
 }

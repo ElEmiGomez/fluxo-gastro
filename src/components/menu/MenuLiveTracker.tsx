@@ -25,6 +25,8 @@ interface MenuLiveTrackerProps {
   loyaltyProfile?: LoyaltyProfile | null
   onClaimLoyaltyBonus?: () => void
   onOpenLoyaltyModal?: () => void
+  hasPendingDessertChoice?: boolean
+  onOpenDessertSelector?: () => void
 }
 
 export function MenuLiveTracker({
@@ -45,6 +47,8 @@ export function MenuLiveTracker({
   loyaltyProfile,
   onClaimLoyaltyBonus,
   onOpenLoyaltyModal,
+  hasPendingDessertChoice = false,
+  onOpenDessertSelector,
 }: MenuLiveTrackerProps) {
   const t = (key: string) => getTranslation(currentLang, key)
 
@@ -179,9 +183,34 @@ export function MenuLiveTracker({
                   </button>
                 </div>
 
-                <p className="text-[11px] text-slate-600 font-medium leading-snug">
-                  ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
-                </p>
+                {/* Banner destacado: Elegir postre comodín incluido */}
+                {hasPendingDessertChoice && onOpenDessertSelector ? (
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border-2 border-purple-300 flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-xl flex-shrink-0">🍰</span>
+                      <div className="min-w-0">
+                        <span className="text-xs font-black text-purple-950 block leading-tight">
+                          Tienes 1 postre o café incluido
+                        </span>
+                        <span className="text-[11px] text-purple-700 font-medium truncate block">
+                          Elige tu opción ahora para marcharla a cocina
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onOpenDessertSelector}
+                      className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer flex-shrink-0"
+                    >
+                      <Sparkles size={13} />
+                      <span>Elegir Postre</span>
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-600 font-medium leading-snug">
+                    ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
+                  </p>
+                )}
 
                 <div className="grid grid-cols-2 gap-2 pt-0.5">
                   <button

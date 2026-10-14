@@ -1,14 +1,16 @@
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
-import { areOrderDrinksPending } from '@/lib/course-utils'
+import { areOrderDrinksPending, orderHasPendingChoiceDesserts } from '@/lib/course-utils'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector } from '@/components/comandero/TableSelector'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
-import { Product, CartItem, CourseType } from '@/types/database.types'
+import { Product, CartItem, CourseType, DailyMenu } from '@/types/database.types'
+import { DailyMenuSelectionItem } from '@/components/menu/DailyMenuModal'
+import { PromoConfiguredPayload } from '@/components/menu/PromoConfiguratorModal'
 import { useComanderoData } from '@/hooks/comandero/useComanderoData'
 import { useComanderoActions } from '@/hooks/comandero/useComanderoActions'
 import { ComanderoTaskQueue } from '@/components/comandero/ComanderoTaskQueue'
@@ -59,7 +61,31 @@ export default function WaiterComanderoPage() {
   const [transferTargetTable, setTransferTargetTable] = useState('')
   const [showQuickStockModal, setShowQuickStockModal] = useState(false)
   const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null)
+  const [customizingPromoProduct, setCustomizingPromoProduct] = useState<Product | null>(null)
+  const [isDailyMenuModalOpen, setIsDailyMenuModalOpen] = useState(false)
+  const [isQuickDessertModalOpen, setIsQuickDessertModalOpen] = useState(false)
   const [isCartDetailsOpen, setIsCartDetailsOpen] = useState(false)
+  const [dailyMenu, setDailyMenu] = useState<DailyMenu | null>(null)
+
+  // Carga del Menú del Día Dinámico
+  useEffect(() => {
+    let isMounted = true
+    const fetchDailyMenu = async () => {
+      try {
+        const res = await fetch(`/api/daily-menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          if (isMounted && data.dailyMenu) {
+            setDailyMenu(data.dailyMenu)
+          }
+        }
+      } catch (err) {
+        console.warn('[ComanderoPage] Error fetching daily menu:', err)
+      }
+    }
+    fetchDailyMenu()
+    return () => { isMounted = false }
+  }, [slug])
 
   // 4. Filtros de catálogo
   const [selectedCategory, setSelectedCategory] = useState<string>(() => categories[0]?.id || 'cat-1')
@@ -74,6 +100,136 @@ export default function WaiterComanderoPage() {
       ...prev,
       [currentTableNum]: updater(prev[currentTableNum] || []),
     }))
+  }
+
+  // Identificar si la mesa seleccionada tiene una orden con comodín de postre pendiente
+  const activeOrderWithPendingDessert = useMemo(() => {
+    if (!selectedTable) return null
+    return serverOrders.find(
+      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+           orderHasPendingChoiceDesserts(o)
+    ) || null
+  }, [selectedTable, serverOrders])
+
+  // Desglose de Menú del Día para el Comandero
+  const handleAddDailyMenuToCart = (menuPayload: {
+    title: string
+    price: number
+    selections: DailyMenuSelectionItem[]
+  }) => {
+    const tableCart = tableCarts[currentTableNum] || []
+    const existingMenuCount = tableCart.filter(it => it.is_pack_header && it.pack_tag?.startsWith('Menú del Día')).length
+    const packNumber = existingMenuCount + 1
+    const packId = `pack-daily-menu-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
+    const packTag = `Menú del Día #${packNumber}`
+
+    const headerItem: CartItem = {
+      cartItemId: `${packId}-header`,
+      product: {
+        id: `daily-menu-${dailyMenu?.id || 'standard'}`,
+        restaurant_id: restaurant?.id || '',
+        category_id: 'cat-menu-del-dia',
+        name: `${menuPayload.title} #${packNumber}`,
+        description: 'Menú del Día Completo (1º, 2º, Postre/Café, Bebida)',
+        price: menuPayload.price,
+        image_url: null,
+        model_3d_url: null,
+        is_available: true,
+      },
+      quantity: 1,
+      selectedPills: [],
+      notes: `[PACK_HEADER] [${packTag}]`,
+      is_pack_header: true,
+      pack_id: packId,
+      pack_tag: packTag,
+    }
+
+    const subItems: CartItem[] = menuPayload.selections.map((sel, idx) => ({
+      cartItemId: `${packId}-sub-${idx}`,
+      product: {
+        ...sel.product,
+        price: 0,
+      },
+      quantity: 1,
+      selectedPills: [],
+      notes: `[${packTag}] ${sel.notes || ''}`.trim(),
+      course: sel.course,
+      is_complimentary: true,
+      is_pack_component: true,
+      pack_id: packId,
+      pack_tag: packTag,
+    }))
+
+    updateCartForCurrentTable(prev => [...prev, headerItem, ...subItems])
+    setIsDailyMenuModalOpen(false)
+  }
+
+  // Desglose de Promo/Combo para el Comandero
+  const handleAddPromoToCart = (payload: PromoConfiguredPayload) => {
+    const tableCart = tableCarts[currentTableNum] || []
+    const existingPromoCount = tableCart.filter(it => it.is_pack_header && it.product.id === payload.promoProduct.id).length
+    const promoNumber = existingPromoCount + 1
+    const packId = `pack-promo-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
+    const packTag = `${payload.title} #${promoNumber}`
+
+    const headerItem: CartItem = {
+      cartItemId: `${packId}-header`,
+      product: {
+        ...payload.promoProduct,
+        name: `${payload.title} #${promoNumber}`,
+        price: payload.price,
+      },
+      quantity: 1,
+      selectedPills: [],
+      notes: `[PACK_HEADER] [${packTag}]`,
+      is_pack_header: true,
+      pack_id: packId,
+      pack_tag: packTag,
+    }
+
+    const subItems: CartItem[] = payload.selections.map((sel, idx) => ({
+      cartItemId: `${packId}-sub-${idx}`,
+      product: {
+        ...sel.product,
+        price: 0,
+      },
+      quantity: 1,
+      selectedPills: [],
+      notes: `[${packTag}] ${sel.notes || ''}`.trim(),
+      course: sel.course,
+      is_complimentary: true,
+      is_pack_component: true,
+      pack_id: packId,
+      pack_tag: packTag,
+    }))
+
+    updateCartForCurrentTable(prev => [...prev, headerItem, ...subItems])
+    setCustomizingPromoProduct(null)
+  }
+
+  // Resolver postre comodín en la orden de la mesa
+  const handleResolvePendingDessert = async (dessert: Product, note?: string) => {
+    if (!activeOrderWithPendingDessert) return
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          order_id: activeOrderWithPendingDessert.id,
+          action: 'resolve_pending_dessert',
+          dessertProduct: dessert,
+          note,
+          actor_type: 'waiter',
+        }),
+      })
+      if (res.ok) {
+        setIsQuickDessertModalOpen(false)
+        await syncServerData()
+      }
+    } catch (err) {
+      console.error('Error resolving pending dessert:', err)
+    }
   }
 
   // 5. Acciones y mutaciones de comandas
@@ -280,9 +436,11 @@ export default function WaiterComanderoPage() {
               onCancelValidationOrder={handleCancelValidationOrder}
               onFireSecondCourses={handleFireSecondCourses}
               onFireDesserts={handleFireDesserts}
+              onOpenDessertSelector={() => setIsQuickDessertModalOpen(true)}
               onOpenPreBill={() => setShowPreBill(true)}
               onOpenTransferModal={() => setShowTransferModal(true)}
               onOpenFreeTableModal={(tbl) => setShowFreeConfirmTable(tbl)}
+              onExecuteFreeTableDirect={(tblNum) => executeCloseAndFreeTable(tblNum, 'cash', 0, 0)}
               onRepeatDrinksRound={() => {
                 previousDrinksInTable.forEach(d => {
                   handleAddItemToComanda(d.product, d.quantity, [], 'Repetición de ronda')
@@ -303,7 +461,19 @@ export default function WaiterComanderoPage() {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             recentTogglesRef={recentTogglesRef}
-            onCustomizeProduct={setCustomizingProduct}
+            onCustomizeProduct={(prod) => {
+              const cat = categories.find(c => c.id === prod.category_id)
+              const catName = (cat?.name || '').toUpperCase()
+              const prodName = (prod.name || '').toUpperCase()
+              const isPromo = catName.includes('PROMO') || catName.includes('COMBO') || prodName.includes('COMBO') || prodName.includes('PROMO')
+              if (isPromo) {
+                setCustomizingPromoProduct(prod)
+              } else {
+                setCustomizingProduct(prod)
+              }
+            }}
+            dailyMenu={dailyMenu}
+            onOpenDailyMenu={() => setIsDailyMenuModalOpen(true)}
           />
 
           {/* Modales y Paneles Desplegables */}
@@ -335,6 +505,17 @@ export default function WaiterComanderoPage() {
             serverOrders={serverOrders}
             pendingCalls={pendingCalls}
             recentTogglesRef={recentTogglesRef}
+            dailyMenu={dailyMenu}
+            isDailyMenuModalOpen={isDailyMenuModalOpen}
+            setIsDailyMenuModalOpen={setIsDailyMenuModalOpen}
+            onAddDailyMenuToCart={handleAddDailyMenuToCart}
+            customizingPromoProduct={customizingPromoProduct}
+            setCustomizingPromoProduct={setCustomizingPromoProduct}
+            onAddPromoToCart={handleAddPromoToCart}
+            isQuickDessertModalOpen={isQuickDessertModalOpen}
+            setIsQuickDessertModalOpen={setIsQuickDessertModalOpen}
+            activeOrderWithPendingDessert={activeOrderWithPendingDessert}
+            onResolvePendingDessert={handleResolvePendingDessert}
             onAddItemToComanda={handleAddItemToComanda}
             onSendOrderToKitchen={() => handleSendOrderToKitchen(selectedTable, cart, tableDiscounts[currentTableNum] || 0)}
             onUpdateCartQuantity={(idx, q) => {
@@ -346,7 +527,13 @@ export default function WaiterComanderoPage() {
               })
             }}
             onRemoveCartItem={(idx) => {
-              updateCartForCurrentTable(prev => prev.filter((_, i) => i !== idx))
+              updateCartForCurrentTable(prev => {
+                const target = prev[idx]
+                if (target?.pack_id) {
+                  return prev.filter(item => item.pack_id !== target.pack_id)
+                }
+                return prev.filter((_, i) => i !== idx)
+              })
             }}
             onClearCurrentCart={() => {
               setTableCarts(prev => ({ ...prev, [currentTableNum]: [] }))

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { X, CreditCard, Banknote, Receipt, CheckCircle2, Sparkles, ShieldCheck } from 'lucide-react'
+import { X, CreditCard, Banknote, Receipt, CheckCircle2, Sparkles, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { Order } from '@/types/database.types'
 import { PendingServiceCall } from '@/types/comandero.types'
 
@@ -31,6 +31,7 @@ export function CloseTableModal({
 }: CloseTableModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<'card' | 'cash'>('card')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showUnpaidWarning, setShowUnpaidWarning] = useState(false)
 
   // 1. Inferencia Inteligente del Método de Pago (Smart Default)
   const { detectedMethod, hasDinerRequest, dinerRequestText } = useMemo(() => {
@@ -71,6 +72,7 @@ export function CloseTableModal({
     if (isOpen) {
       setSelectedMethod(detectedMethod)
       setIsSubmitting(false)
+      setShowUnpaidWarning(false)
     }
   }, [isOpen, detectedMethod])
 
@@ -260,6 +262,17 @@ export function CloseTableModal({
               </span>
             </button>
 
+            {finalAmount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowUnpaidWarning(true)}
+                disabled={isSubmitting}
+                className="w-full py-1.5 text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline transition-colors cursor-pointer text-center block"
+              >
+                Liberar mesa sin cobrar (Invitación / Descarte)
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onClose}
@@ -271,6 +284,61 @@ export function CloseTableModal({
           </div>
         </div>
       </div>
+
+      {/* MODAL DE ADVERTENCIA ROJA: LIBERACIÓN SIN COBRO */}
+      {showUnpaidWarning && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in select-none">
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border-2 border-rose-500 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2.5 text-rose-600">
+              <div className="p-2.5 rounded-2xl bg-rose-100 text-rose-600 flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 stroke-[2.5]" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 block leading-tight">
+                  Atención · Pérdida de Ingreso
+                </span>
+                <h3 className="text-base font-black text-slate-900 leading-tight">
+                  Mesa #{tableNumber} tiene saldo
+                </h3>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-rose-50 rounded-2xl border border-rose-200 text-xs text-rose-950 space-y-1.5 font-medium leading-relaxed">
+              <p className="font-extrabold text-sm text-rose-700">
+                ⚠️ Esta mesa tiene {finalAmount.toFixed(2)} € sin cobrar.
+              </p>
+              <p>
+                ¿Estás seguro de que deseas liberarla <strong>SIN cobrar</strong> y vaciar la sesión?
+              </p>
+              <p className="text-[11px] text-rose-600 font-bold">
+                Este importe NO se sumará a la caja diaria del restaurante.
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowUnpaidWarning(false)}
+                className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-md transition-all cursor-pointer"
+              >
+                Volver a Cobrar los {finalAmount.toFixed(2)} €
+              </button>
+
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setIsSubmitting(true)
+                  onConfirm(tableNumber, 'cash', 0, Math.max(1, tableOrders.length))
+                }}
+                className="w-full py-2.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-extrabold text-xs transition-colors cursor-pointer"
+              >
+                {isSubmitting ? 'Liberando sin cobrar...' : 'Confirmar Liberación sin Cobro'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

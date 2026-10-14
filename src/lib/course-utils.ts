@@ -5,6 +5,8 @@ export const TAG_DRINK_SERVED = '[BARRA_SERVIDA]'
 export const TAG_FOOD_READY = '[COCINA_LISTA]'
 export const TAG_DESSERT_READY = '[POSTRE_LISTO]'
 export const TAG_DESSERT_FIRED = '[MARCHAR_POSTRE]'
+export const TAG_DESSERT_PENDING = '[POSTRE_PENDIENTE_ELECCION]'
+export const TAG_PACK_HEADER = '[PACK_HEADER]'
 
 /**
  * Elimina cualquier etiqueta técnica interna entre corchetes de estaciones de cocina/barra
@@ -12,7 +14,7 @@ export const TAG_DESSERT_FIRED = '[MARCHAR_POSTRE]'
 export function stripInternalStationTags(rawNotes?: string | null): string {
   if (!rawNotes) return ''
   return rawNotes
-    .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|PASE_1|PASE_2|MARCHAR_POSTRE).*?\]/gi, '')
+    .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|PASE_1|PASE_2|MARCHAR_POSTRE|POSTRE_PENDIENTE_ELECCION|PACK_HEADER|PACK_SUBITEM).*?\]/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim()
 }
@@ -22,6 +24,27 @@ export function stripInternalStationTags(rawNotes?: string | null): string {
  */
 export function cleanItemNotes(notes?: string | null): string {
   return stripInternalStationTags(notes)
+}
+
+/**
+ * Determina si un ítem es la cabecera contable/financiera de un pack o menú
+ */
+export function isPackHeaderItem(item: OrderItem): boolean {
+  if (item.is_pack_header) return true
+  const notes = item.notes || ''
+  if (notes.includes(TAG_PACK_HEADER)) return true
+  const rawId = String(item.product_id || item.product?.id || '')
+  if (rawId.startsWith('daily-menu-') && !item.is_pack_component) {
+    return true
+  }
+  return false
+}
+
+/**
+ * Determina si un postre es un comodín pendiente de elección por parte del comensal
+ */
+export function isDessertPendingChoice(item: OrderItem): boolean {
+  return Boolean(item.notes && item.notes.includes(TAG_DESSERT_PENDING))
 }
 
 /**
@@ -106,11 +129,16 @@ export function orderHasActiveDesserts(order: Order): boolean {
   return desserts.some(d => isDessertFired(d) && !isDessertReady(d))
 }
 
+export function orderHasPendingChoiceDesserts(order: Order): boolean {
+  return (order.order_items || []).some(d => isDessertItem(d) && isDessertPendingChoice(d) && !isDessertReady(d))
+}
+
 export interface OrderStationEvaluation {
   hasKitchenMains: boolean
   hasHeldDesserts: boolean
   hasReleasedDesserts: boolean
   hasReadyDesserts: boolean
+  hasPendingChoiceDesserts: boolean
   hasBarDrinks: boolean
   isDrinkOnlyOrder: boolean
   isDessertOnlyOrder: boolean
@@ -131,6 +159,7 @@ export function evaluateOrderStations(input?: Order | OrderItem[] | null): Order
       hasHeldDesserts: false,
       hasReleasedDesserts: false,
       hasReadyDesserts: false,
+      hasPendingChoiceDesserts: false,
       hasBarDrinks: false,
       isDrinkOnlyOrder: false,
       isDessertOnlyOrder: false,
@@ -149,6 +178,7 @@ export function evaluateOrderStations(input?: Order | OrderItem[] | null): Order
       hasHeldDesserts: false,
       hasReleasedDesserts: false,
       hasReadyDesserts: false,
+      hasPendingChoiceDesserts: false,
       hasBarDrinks: false,
       isDrinkOnlyOrder: false,
       isDessertOnlyOrder: false,
@@ -160,15 +190,16 @@ export function evaluateOrderStations(input?: Order | OrderItem[] | null): Order
     }
   }
 
-  const mains = safeItems.filter(isFoodItem)
-  const desserts = safeItems.filter(isDessertItem)
+  const mains = safeItems.filter(i => isFoodItem(i) && !isPackHeaderItem(i))
+  const desserts = safeItems.filter(i => isDessertItem(i) && !isPackHeaderItem(i))
   const drinks = safeItems.filter(isDrinkItem)
-  const kitchenItems = safeItems.filter(i => isFoodItem(i) || isDessertItem(i))
+  const kitchenItems = safeItems.filter(i => (isFoodItem(i) || isDessertItem(i)) && !isPackHeaderItem(i))
 
   const hasKitchenMains = mains.length > 0
   const hasHeldDesserts = hasKitchenMains && desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
   const hasReleasedDesserts = desserts.some(d => (!hasKitchenMains || isDessertFired(d)) && !isDessertReady(d))
   const hasReadyDesserts = desserts.some(isDessertReady)
+  const hasPendingChoiceDesserts = desserts.some(isDessertPendingChoice)
   const hasBarDrinks = drinks.length > 0
 
   const isDrinkOnly = safeItems.length > 0 && safeItems.every(isDrinkItem)
@@ -185,6 +216,7 @@ export function evaluateOrderStations(input?: Order | OrderItem[] | null): Order
     hasHeldDesserts,
     hasReleasedDesserts,
     hasReadyDesserts,
+    hasPendingChoiceDesserts,
     hasBarDrinks,
     isDrinkOnlyOrder: isDrinkOnly,
     isDessertOnlyOrder: isDessertOnly,

@@ -5,7 +5,7 @@ import { Bell, Check, Sparkles, Loader2, UserCheck, CheckCircle2, Trash2, Users,
 import { Table, Order, Product } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { PendingServiceCall, PreviousDrinkItem } from '@/types/comandero.types'
-import { isDessertItem, isDessertFired, isDessertReady, orderHasHeldDesserts, stripInternalStationTags } from '@/lib/course-utils'
+import { isDessertItem, isDessertFired, isDessertReady, orderHasHeldDesserts, orderHasPendingChoiceDesserts, stripInternalStationTags } from '@/lib/course-utils'
 
 interface ComanderoTableDetailPanelProps {
   selectedTable: Table
@@ -26,9 +26,11 @@ interface ComanderoTableDetailPanelProps {
   onCancelValidationOrder: (orderId: string, tblNum: string | number) => void
   onFireSecondCourses: (tblNum: string | number) => void
   onFireDesserts?: (tblNum: string | number) => void
+  onOpenDessertSelector?: () => void
   onOpenPreBill: () => void
   onOpenTransferModal: () => void
   onOpenFreeTableModal: (tblNum: string | number) => void
+  onExecuteFreeTableDirect?: (tblNum: string | number) => void
   onRepeatDrinksRound: () => void
 }
 
@@ -49,11 +51,12 @@ export function ComanderoTableDetailPanel({
   onCancelSingleOrder,
   onValidateOrder,
   onCancelValidationOrder,
-  onFireSecondCourses,
   onFireDesserts,
+  onOpenDessertSelector,
   onOpenPreBill,
   onOpenTransferModal,
   onOpenFreeTableModal,
+  onExecuteFreeTableDirect,
   onRepeatDrinksRound,
 }: ComanderoTableDetailPanelProps) {
   const tableCalls = pendingCalls.filter(c => c.table_number.toString() === selectedTable.table_number.toString())
@@ -68,6 +71,34 @@ export function ComanderoTableDetailPanel({
          o.status !== 'pending_validation' && o.status !== 'paid' && o.status !== 'cancelled' &&
          orderHasHeldDesserts(o)
   )
+
+  const hasPendingDessertChoiceInTable = serverOrders.some(
+    o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+         orderHasPendingChoiceDesserts(o)
+  )
+
+  const tablePendingAmount = React.useMemo(() => {
+    const tableOrders = serverOrders.filter(
+      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+           !['cancelled', 'paid'].includes(o.status)
+    )
+    let sum = 0
+    tableOrders.forEach(ord => {
+      if (ord.order_items && ord.order_items.length > 0) {
+        ord.order_items.forEach(it => {
+          if (!it.is_complimentary) {
+            sum += (it.quantity || 1) * (it.product?.price || 0)
+          }
+        })
+      } else if (ord.total_amount) {
+        sum += Number(ord.total_amount) || 0
+      }
+    })
+    const discount = tableDiscount > 0 ? sum * (tableDiscount / 100) : 0
+    return Math.max(0, sum - discount)
+  }, [serverOrders, selectedTable, tableDiscount])
+
+  const [showZeroBalanceConfirm, setShowZeroBalanceConfirm] = React.useState(false)
 
   return (
     <div className="max-w-7xl mx-auto w-full px-3 pt-3 space-y-2.5">
@@ -249,23 +280,33 @@ export function ComanderoTableDetailPanel({
         </div>
         
         {/* Banner destacado: Marchar Postres si hay postres pendientes en la mesa */}
-        {hasPendingDesserts && onFireDesserts && (
+        {hasPendingDesserts && (
           <div className="p-2.5 rounded-2xl bg-purple-50 border-2 border-purple-300 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-2">
               <span className="text-base">🍰</span>
               <div>
-                <span className="text-xs font-black text-purple-950 uppercase tracking-wide block">Postres en Espera</span>
-                <span className="text-[11px] font-semibold text-purple-700">Mesa lista para pase dulce</span>
+                <span className="text-xs font-black text-purple-950 uppercase tracking-wide block">
+                  {hasPendingDessertChoiceInTable ? 'Postre Incluido por Definir' : 'Postres en Espera'}
+                </span>
+                <span className="text-[11px] font-semibold text-purple-700">
+                  {hasPendingDessertChoiceInTable ? 'El comensal o mozo debe elegir el postre' : 'Mesa lista para pase dulce'}
+                </span>
               </div>
             </div>
             <button
               type="button"
-              onClick={() => onFireDesserts(selectedTable.table_number)}
+              onClick={() => {
+                if (hasPendingDessertChoiceInTable && onOpenDessertSelector) {
+                  onOpenDessertSelector()
+                } else if (onFireDesserts) {
+                  onFireDesserts(selectedTable.table_number)
+                }
+              }}
               className="h-9 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
-              title="Avisar a cocina que prepare los postres de esta mesa"
+              title={hasPendingDessertChoiceInTable ? 'Elegir qué postre desea el comensal' : 'Avisar a cocina que prepare los postres de esta mesa'}
             >
               <Sparkles size={13} />
-              <span>Marchar Postres</span>
+              <span>{hasPendingDessertChoiceInTable ? 'Elegir Postre y Marchar' : 'Marchar Postres'}</span>
             </button>
           </div>
         )}
@@ -294,14 +335,70 @@ export function ComanderoTableDetailPanel({
 
           <button
             type="button"
-            onClick={() => onOpenFreeTableModal(selectedTable.table_number)}
+            onClick={() => {
+              if (tablePendingAmount > 0) {
+                onOpenFreeTableModal(selectedTable.table_number)
+              } else {
+                setShowZeroBalanceConfirm(true)
+              }
+            }}
             className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-            title="Cobrar y liberar mesa"
+            title={tablePendingAmount > 0 ? `Cobrar ${tablePendingAmount.toFixed(2)} € y liberar mesa` : 'Liberar mesa sin consumo'}
           >
             <CreditCard className="w-4 h-4 text-emerald-700 flex-shrink-0" />
-            <span className="truncate">Liberar Mesa</span>
+            <span className="truncate">{tablePendingAmount > 0 ? 'Cobrar y Liberar' : 'Liberar Mesa'}</span>
           </button>
         </div>
+
+        {/* Modal de Confirmación en 2 Toques para Liberar Mesa Sin Cobro Pendiente (0 €) */}
+        {showZeroBalanceConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in select-none">
+            <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-2 text-slate-900">
+                <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-700 flex-shrink-0">
+                  <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block leading-tight">
+                    Mesa al día · 0,00 € pendiente
+                  </span>
+                  <h3 className="text-base font-black text-slate-900 leading-tight">
+                    ¿Confirmas liberar la Mesa #{selectedTable.table_number}?
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                La mesa pasará inmediatamente a estar <strong>Libre</strong> para recibir a los siguientes comensales.
+              </p>
+
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowZeroBalanceConfirm(false)
+                    if (onExecuteFreeTableDirect) {
+                      onExecuteFreeTableDirect(selectedTable.table_number)
+                    } else {
+                      onOpenFreeTableModal(selectedTable.table_number)
+                    }
+                  }}
+                  className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition-all cursor-pointer"
+                >
+                  Sí, Confirmar y Liberar Mesa #{selectedTable.table_number}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowZeroBalanceConfirm(false)}
+                  className="w-full py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Repetir ronda de bebidas */}
         {previousDrinks.length > 0 && (

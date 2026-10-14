@@ -19,6 +19,8 @@ import {
   isDessertReady,
   isDessertFired,
   isDessertItem,
+  isPackHeaderItem,
+  isDessertPendingChoice,
 } from '@/lib/course-utils'
 
 interface KitchenTicketProps {
@@ -200,9 +202,9 @@ export function KitchenTicket({
             ? new Date(roundOrder.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : '--:--'
 
-          // Regla de Oro Cocina: 0% BEBIDAS (las bebidas se atienden en barra y mozo)
+          // Regla de Oro Cocina: 0% BEBIDAS (barra/mozo) y 0% CABECERAS DE PACK (se cocinan los platos reales desglosados)
           const allRoundItems = roundOrder.order_items || []
-          const kitchenItems = allRoundItems.filter(item => getItemCourse(item) !== 'drink')
+          const kitchenItems = allRoundItems.filter(item => getItemCourse(item) !== 'drink' && !isPackHeaderItem(item))
           const mains = kitchenItems.filter(item => getItemCourse(item) === 'first' || getItemCourse(item) === 'second')
           const desserts = kitchenItems.filter(item => getItemCourse(item) === 'dessert')
 
@@ -309,10 +311,19 @@ export function KitchenTicket({
                         <span>🍰 {isDessertReady(item) ? 'POSTRE (LISTO)' : isHeldItem ? 'POSTRE (ESPERANDO PASE)' : 'POSTRE (MARCHADO)'}</span>
                       </span>
                     )}
+                    {isDessertPendingChoice(item) && (
+                      <span className="px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-950 font-black text-[9px] border border-amber-300 flex items-center gap-1">
+                        <span>⏳ ELECCIÓN PENDIENTE DE COMENSAL</span>
+                      </span>
+                    )}
                     {Boolean(item.loyalty_points_redeemed || (item.notes && item.notes.includes('[🎁 Canje Fidelización'))) ? (
                       <span className="px-1.5 py-0.2 rounded-md bg-amber-600 text-white font-black text-[9px] shadow-xs flex items-center gap-1">
                         <span>⭐ CANJE FIDELIZACIÓN</span>
                         {item.loyalty_points_redeemed ? <span>(-{item.loyalty_points_redeemed} pts)</span> : null}
+                      </span>
+                    ) : (item.is_pack_component || (item.notes && (item.notes.includes('[Incluido en Menú') || item.notes.includes('[Incluido en Promo') || item.notes.includes('[Menú del Día') || item.notes.includes('[Promo Pareja')))) ? (
+                      <span className="px-1.5 py-0.2 rounded-md bg-indigo-100 text-indigo-950 font-black text-[9px] border border-indigo-300">
+                        🍽️ PACK INCLUIDO
                       </span>
                     ) : item.is_complimentary ? (
                       <span className="px-1.5 py-0.2 rounded-md bg-purple-600 text-white font-black text-[9px] shadow-xs">

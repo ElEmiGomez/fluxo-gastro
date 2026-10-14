@@ -3,7 +3,7 @@
 import React from 'react'
 import Image from 'next/image'
 import { Search, Utensils, Ban, Plus } from 'lucide-react'
-import { Product, Category } from '@/types/database.types'
+import { Product, Category, DailyMenu } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { isProductInCategory, resolveCanonicalProductId } from '@/lib/category-matcher'
 import { createBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client'
@@ -19,6 +19,8 @@ interface ComanderoCatalogGridProps {
   onSearchChange: (query: string) => void
   recentTogglesRef: React.MutableRefObject<Map<string, { status: boolean; until: number }>>
   onCustomizeProduct: (product: Product) => void
+  dailyMenu?: DailyMenu | null
+  onOpenDailyMenu?: () => void
 }
 
 export function ComanderoCatalogGrid({
@@ -32,6 +34,8 @@ export function ComanderoCatalogGrid({
   onSearchChange,
   recentTogglesRef,
   onCustomizeProduct,
+  dailyMenu,
+  onOpenDailyMenu,
 }: ComanderoCatalogGridProps) {
   const filteredProducts = products.filter(prod => {
     const matchesCat = isProductInCategory(prod, selectedCategory, categories)
@@ -117,6 +121,20 @@ export function ComanderoCatalogGrid({
 
         {/* Carrusel de Píldoras */}
         <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {dailyMenu && onOpenDailyMenu && (
+            <button
+              type="button"
+              onClick={onOpenDailyMenu}
+              className="flex-shrink-0 px-3.5 py-1.5 rounded-2xl text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md hover:from-amber-600 hover:to-orange-600 flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <span>🍽️</span>
+              <span>MENÚ DEL DÍA</span>
+              <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold">
+                {formatCurrency(dailyMenu.fixed_price)}
+              </span>
+            </button>
+          )}
+
           {categories.map((cat) => {
             const isSelected = selectedCategory === cat.id
             return (

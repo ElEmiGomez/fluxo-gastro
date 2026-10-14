@@ -142,9 +142,13 @@ export interface OrderItem {
   is_complimentary?: boolean // Invitación de la casa / 0,00 €
   weight_grams?: number // Gramos reales en productos al peso
   loyalty_points_redeemed?: number // Puntos de fidelización canjeados en este ítem
+  is_pack_header?: boolean // Línea cabecera del pack/menú que lleva el precio fijado
+  is_pack_component?: boolean // Sub-ítem desglosado incluido a 0,00 €
+  pack_id?: string // Identificador único del pack
 }
 
 export interface CartItem {
+  cartItemId?: string // Identificador único de línea en comanda para evitar colisiones
   product: Product
   quantity: number
   selectedPills: string[]
@@ -153,6 +157,10 @@ export interface CartItem {
   is_complimentary?: boolean
   weight_grams?: number
   loyalty_points_redeemed?: number
+  is_pack_header?: boolean
+  is_pack_component?: boolean
+  pack_id?: string
+  pack_tag?: string
 }
 
 // ==============================================================================

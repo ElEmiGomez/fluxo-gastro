@@ -678,3 +678,110 @@ export async function updateOrderCourseTags(
   return { success: true, order: updatedOrder }
 }
 
+/**
+ * Resuelve el comodín de postre/café pendiente [POSTRE_PENDIENTE_ELECCION]
+ * asignando el plato elegido por el comensal y marchándolo a cocina.
+ */
+export async function resolvePendingDessertInOrder(
+  slug: string,
+  orderId: string,
+  dessertProduct: { id: string; name: string; description?: string; image_url?: string | null },
+  note?: string
+): Promise<{ success: boolean; order?: Order; error?: string }> {
+  const supabase = createServerClient()
+  const hasSupabase = supabase && isSupabaseConfigured()
+
+  const memOrders = getServerOrders(slug)
+  let order = memOrders.find(o => o.id === orderId)
+
+  if (!order && hasSupabase) {
+    try {
+      const orders = await getRestaurantOrders('', slug)
+      order = orders.find(o => o.id === orderId)
+    } catch (e) {
+      console.warn('[resolvePendingDessertInOrder] Error fetching order from Supabase:', e)
+    }
+  }
+
+  if (!order) {
+    return { success: false, error: 'ORDER_NOT_FOUND' }
+  }
+
+  let resolved = false
+  const updatedItems: OrderItem[] = (order.order_items || []).map(it => {
+    const isPending = Boolean(
+      (it.notes && it.notes.includes('[POSTRE_PENDIENTE_ELECCION]')) ||
+      it.product_id === 'p-dessert-pending' ||
+      it.product_id === 'p-dessert-pending-later' ||
+      it.product?.name?.includes('por definir')
+    )
+    if (isPending && !resolved) {
+      resolved = true
+      const strippedNotes = (it.notes || '')
+        .replace(/\[POSTRE_PENDIENTE_ELECCION\]/g, '')
+        .trim()
+      const newNotes = [
+        strippedNotes,
+        note ? `(${note})` : '',
+        '[MARCHAR_POSTRE]',
+      ].filter(Boolean).join(' ')
+
+      return {
+        ...it,
+        product_id: dessertProduct.id,
+        notes: newNotes,
+        product: {
+          ...(it.product || {}),
+          id: dessertProduct.id,
+          name: dessertProduct.name,
+          description: dessertProduct.description || (it.product?.description ?? ''),
+          image_url: dessertProduct.image_url || it.product?.image_url || null,
+          price: 0,
+          category_id: 'cat-postres',
+          restaurant_id: it.product?.restaurant_id || '',
+          model_3d_url: null,
+          is_available: true,
+        },
+      }
+    }
+    return it
+  })
+
+  // Persistir en Supabase
+  if (hasSupabase) {
+    try {
+      for (const it of updatedItems) {
+        if (it.id) {
+          await supabase
+            .from('order_items')
+            .update({ notes: it.notes, product_id: it.product_id })
+            .eq('id', it.id)
+        }
+      }
+    } catch (dbErr) {
+      console.warn('[resolvePendingDessertInOrder] DB update error:', dbErr)
+    }
+  }
+
+  const updatedOrder: Order = {
+    ...order,
+    status: order.status === 'ready' || order.status === 'delivered' ? 'preparing' : order.status,
+    order_items: updatedItems,
+  }
+
+  saveCachedOrderItems(orderId, updatedItems)
+  addServerOrder(slug, updatedOrder, true)
+
+  broadcastEvent({
+    type: 'order_updated',
+    slug,
+    orderId,
+    status: updatedOrder.status,
+    tableNumber: updatedOrder.table_number,
+    order: updatedOrder,
+  })
+
+  return { success: true, order: updatedOrder }
+}
+
+

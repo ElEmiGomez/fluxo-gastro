@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
+  Clock,
 } from 'lucide-react'
 import { DailyMenu, DailyMenuSection, Product, CourseType } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
@@ -72,11 +73,22 @@ export function DailyMenuModal({
   const [selectedItems, setSelectedItems] = useState<Record<number, Product>>({})
   const [itemNotes, setItemNotes] = useState<Record<number, string>>({})
 
+  // Resetear selecciones limpias al abrir el modal para permitir configurar múltiples menús independientes (#1, #2, etc.)
+  React.useEffect(() => {
+    if (isOpen) {
+      setActiveStepIndex(0)
+      setSelectedItems({})
+      setItemNotes({})
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const currentSection = sections[activeStepIndex]
   const isLastStep = activeStepIndex === sections.length - 1
   const allStepsComplete = sections.length > 0 && sections.every((_, idx) => Boolean(selectedItems[idx]))
+  const isDessertStep = (SECTION_COURSE_MAP[activeStepIndex] === 'dessert') || (currentSection?.name || '').toLowerCase().includes('postre')
+  const PENDING_DESSERT_ID = 'p-dessert-pending-later'
 
   const handleSelectItem = (itemProduct: Product) => {
     setSelectedItems(prev => ({
@@ -98,10 +110,16 @@ export function DailyMenuModal({
       const prod = selectedItems[idx]
       const course = SECTION_COURSE_MAP[idx] || 'first'
       const note = itemNotes[idx]?.trim()
+      const isPendingDessert = prod.id === PENDING_DESSERT_ID
+      const combinedNotes = [
+        isPendingDessert ? '[POSTRE_PENDIENTE_ELECCION]' : '',
+        note || '',
+      ].filter(Boolean).join(' ')
+
       return {
         product: prod,
         course,
-        notes: note || undefined,
+        notes: combinedNotes || undefined,
       }
     })
 
@@ -208,6 +226,59 @@ export function DailyMenuModal({
 
               {/* Lista de Platos para esta Sección */}
               <div className="space-y-2.5">
+                {/* Comodín de Postre Pendiente: Elegir postre/café después de comer */}
+                {isDessertStep && (
+                  <div
+                    onClick={() => {
+                      const placeholderProd: Product = {
+                        id: PENDING_DESSERT_ID,
+                        restaurant_id: dailyMenu.restaurant_id,
+                        category_id: 'cat-postres',
+                        name: '⏳ Decidir postre/café después de comer',
+                        description: 'Podrás elegir el postre o café más adelante cuando terminen los platos principales (Incluido).',
+                        price: 0,
+                        image_url: null,
+                        model_3d_url: null,
+                        is_available: true,
+                      }
+                      handleSelectItem(placeholderProd)
+                    }}
+                    className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3 ${
+                      selectedItems[activeStepIndex]?.id === PENDING_DESSERT_ID
+                        ? 'bg-amber-50/80 border-amber-500 shadow-sm ring-2 ring-amber-300'
+                        : 'bg-white hover:bg-slate-50 border-amber-200 hover:border-amber-300'
+                    }`}
+                  >
+                    <div className="w-16 h-16 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 flex-shrink-0">
+                      <Clock className="w-7 h-7" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded-md border border-amber-200">
+                          Comodín
+                        </span>
+                        <h5 className="text-xs font-black text-slate-900 leading-snug">
+                          ⏳ Decidir postre/café después de comer
+                        </h5>
+                      </div>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5 font-medium">
+                        Podrás elegir tu postre o café más adelante cuando terminen los platos principales (Incluido).
+                      </p>
+                    </div>
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                        selectedItems[activeStepIndex]?.id === PENDING_DESSERT_ID
+                          ? 'bg-amber-600 border-amber-600 text-white shadow-xs'
+                          : 'border-slate-300 bg-white'
+                      }`}
+                    >
+                      {selectedItems[activeStepIndex]?.id === PENDING_DESSERT_ID && (
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {(currentSection.items || [])
                   .filter(it => it.is_available && it.product)
                   .map(it => {

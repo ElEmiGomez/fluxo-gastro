@@ -29,7 +29,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { inferCourseType } from '@/lib/category-matcher'
-import { updateOrderCourseTags } from '@/lib/supabase/repositories/orders.repository'
+import { updateOrderCourseTags, resolvePendingDessertInOrder } from '@/lib/supabase/repositories/orders.repository'
 import {
   TAG_DRINK_SERVED,
   TAG_FOOD_READY,
@@ -433,15 +433,26 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      // Cortesía ("Invita la casa" o Canje de Puntos de Fidelización)
+      // Cortesía ("Invita la casa", Canje de Puntos de Fidelización o Componente de Pack/Menú)
       const isStaffSender = verifyStaffRequest(req, slug, ['comandero', 'admin', 'kitchen'])
       const isLoyaltyRedeemed = Boolean(
         (Number(item.loyalty_points_redeemed) > 0) ||
         (item.notes && item.notes.includes('[🎁 Canje Fidelización'))
       )
+      const isPackComponent = Boolean(
+        item.is_pack_component ||
+        (item.notes && (
+          item.notes.includes('[Incluido en Menú') ||
+          item.notes.includes('[Incluido en Promo') ||
+          item.notes.includes('[Menú del Día #') ||
+          item.notes.includes('[Promo Pareja') ||
+          item.notes.includes('[PACK_SUBITEM]')
+        ))
+      )
       const isComplimentary = Boolean(
         (isStaffSender && (item.is_complimentary || (item.notes && item.notes.includes('[🎁 INVITACIÓN DE LA CASA]')))) ||
-        isLoyaltyRedeemed
+        isLoyaltyRedeemed ||
+        isPackComponent
       )
 
       const itemPriceToCharge = isComplimentary ? 0 : (Number(catalogProduct.price) || 0)
@@ -466,6 +477,9 @@ export async function POST(req: NextRequest) {
         course: (item.course && ['first', 'second', 'dessert', 'drink'].includes(item.course))
           ? item.course
           : inferCourseType(catalogProduct),
+        is_pack_header: Boolean(item.is_pack_header || (item.notes && item.notes.includes('[PACK_HEADER]'))),
+        is_pack_component: isPackComponent,
+        pack_id: item.pack_id,
       })
     }
 
@@ -631,6 +645,30 @@ export async function PATCH(req: NextRequest) {
         success: true,
         order: transRes.order || tagRes.order,
         message: 'Postres marchados a cocina',
+      })
+    }
+
+    if (body.action === 'resolve_pending_dessert') {
+      if (!targetOrderId || !body.dessertProduct) {
+        return NextResponse.json({ error: 'Faltan parámetros orderId o dessertProduct' }, { status: 400 })
+      }
+      const resolveRes = await resolvePendingDessertInOrder(slug, targetOrderId, body.dessertProduct, body.note)
+      if (!resolveRes.success) {
+        return NextResponse.json({ error: resolveRes.error || 'Error al resolver postre' }, { status: 404 })
+      }
+      const restaurant = await getRestaurantBySlug(slug)
+      const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
+      const transRes = await transitionOrderStatus({
+        orderId: targetOrderId,
+        restaurantId,
+        slug,
+        nextStatus: 'preparing',
+        actorType: body.actor_type || 'waiter',
+      })
+      return NextResponse.json({
+        success: true,
+        order: transRes.order || resolveRes.order,
+        message: 'Postre elegido y marchado a cocina',
       })
     }
 

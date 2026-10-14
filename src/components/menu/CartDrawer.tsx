@@ -212,7 +212,8 @@ export function CartDrawer({
       const prod = item.product || {}
       const prodId = String(prod.id || (item as any).product_id || (item as any).id || (item as any).productId || '').trim() || 'p-unknown'
       const prodName = String(prod.name || (item as any).name || 'Plato').trim()
-      const prodPrice = Number(prod.price ?? (item as any).price ?? 0)
+      const isFree = Boolean(item.is_complimentary || item.is_pack_component)
+      const prodPrice = isFree ? 0 : Number(prod.price ?? (item as any).price ?? 0)
       return {
         ...item,
         product: {
@@ -345,6 +346,9 @@ export function CartDrawer({
             course: item.course,
             is_complimentary: item.is_complimentary,
             loyalty_points_redeemed: item.loyalty_points_redeemed,
+            is_pack_header: item.is_pack_header,
+            is_pack_component: item.is_pack_component,
+            pack_id: item.pack_id,
           }
         }),
         loyalty_email: (() => {
@@ -589,11 +593,25 @@ export function CartDrawer({
 
                         {/* Nombre y Precio */}
                         <div className="flex-1 min-w-0">
+                          {item.is_pack_header && (
+                            <span className="text-[9px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 inline-block mb-1">
+                              🍽️ Menú / Promo Pack
+                            </span>
+                          )}
+                          {item.is_pack_component && (
+                            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded-md border border-emerald-200 inline-block mb-1">
+                              ✨ Incluido en Pack
+                            </span>
+                          )}
                           <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">
                             {translateProductName(activeLang, item.product?.id, item.product?.name)}
                           </h3>
                           <span className="text-xs font-black text-blue-900 mt-0.5 block tabular-nums">
-                            {formatCurrency(item.product?.price || 0)}
+                            {item.is_pack_component || item.is_complimentary ? (
+                              <span className="text-emerald-700 font-bold">0,00 € (Incluido)</span>
+                            ) : (
+                              formatCurrency(item.product?.price || 0)
+                            )}
                           </span>
 
                           {/* Personalizaciones o notas */}
@@ -623,7 +641,7 @@ export function CartDrawer({
                           onClick={() => onRemoveItem(index)}
                           aria-label={`Eliminar ${item.product?.name || 'plato'} de la comanda`}
                           className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 cursor-pointer"
-                          title="Eliminar plato"
+                          title={item.pack_id ? 'Eliminar pack completo' : 'Eliminar plato'}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -632,33 +650,39 @@ export function CartDrawer({
                       {/* Control de Cantidad (+ / -) */}
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                         <span className="text-[11px] text-slate-500 font-bold">Cantidad:</span>
-                        <div className="flex items-center gap-1.5 bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (item.quantity <= 1) {
-                                onRemoveItem(index)
-                              } else {
-                                onUpdateQuantity(index, item.quantity - 1)
-                              }
-                            }}
-                            aria-label={item.quantity <= 1 ? `Eliminar ${item.product?.name || 'plato'}` : `Disminuir cantidad de ${item.product?.name || 'plato'}`}
-                            className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
-                          >
-                            {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-red-500" /> : <Minus className="w-3.5 h-3.5" />}
-                          </button>
-                          <span className="font-black text-xs text-slate-900 px-1.5 tabular-nums">
-                            {item.quantity}
+                        {item.is_pack_component ? (
+                          <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
+                            1 ud (Pack)
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => onUpdateQuantity(index, item.quantity + 1)}
-                            aria-label={`Aumentar cantidad de ${item.product?.name || 'plato'}`}
-                            className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (item.quantity <= 1) {
+                                  onRemoveItem(index)
+                                } else {
+                                  onUpdateQuantity(index, item.quantity - 1)
+                                }
+                              }}
+                              aria-label={item.quantity <= 1 ? `Eliminar ${item.product?.name || 'plato'}` : `Disminuir cantidad de ${item.product?.name || 'plato'}`}
+                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
+                            >
+                              {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-red-500" /> : <Minus className="w-3.5 h-3.5" />}
+                            </button>
+                            <span className="font-black text-xs text-slate-900 px-1.5 tabular-nums">
+                              {item.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onUpdateQuantity(index, item.quantity + 1)}
+                              aria-label={`Aumentar cantidad de ${item.product?.name || 'plato'}`}
+                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
