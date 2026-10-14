@@ -597,7 +597,7 @@ export async function GET(req: NextRequest) {
             <span class="local-icon">🍹</span>
             <div class="local-info">
               <span class="local-name">Terraza Malecón Bar</span>
-              <span class="local-tag">Cócteles &amp; Tardeo · Mesa #12</span>
+              <span class="local-tag">Cócteles &amp; Tarde y picoteo · Mesa #12</span>
             </div>
             ${slug === 'terraza-malecon' ? '<span class="check-dot">✓</span>' : ''}
           </a>

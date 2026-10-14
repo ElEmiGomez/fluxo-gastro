@@ -54,7 +54,7 @@ export const MOCK_RESTAURANTS: Record<string, Restaurant> = {
     address: 'Paseo do Malecón, 28 (Frente á Ría)',
     city: 'Noia',
     postal_code: '15200',
-    cuisine_type: ['Cafetería & Tardeo', 'Cócteles de Autor', 'Picoteo frente a la Ría'],
+    cuisine_type: ['Cafetería & Tarde y picoteo', 'Cócteles de Autor', 'Picoteo frente a la Ría'],
     price_range: '€€',
   },
 
