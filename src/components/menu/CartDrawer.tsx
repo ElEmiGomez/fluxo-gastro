@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice, Clock, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ShoppingBag, X, Plus, Minus, Trash2, CheckCircle2, Loader2, Utensils, Send, UserCheck, Bell, Sparkles, Receipt, CakeSlice, Clock, AlertCircle, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { CartItem, Product, OrderStatus } from '@/types/database.types'
 import { useTenant } from '@/components/tenant/TenantProvider'
 import { formatCurrency } from '@/lib/utils'
@@ -67,6 +67,13 @@ export function CartDrawer({
   const [isDrinkSuggestionsOpen, setIsDrinkSuggestionsOpen] = useState(false)
   const [isDessertSuggestionsOpen, setIsDessertSuggestionsOpen] = useState(false)
   const [lastSubmissionTime, setLastSubmissionTime] = useState<number>(0)
+  const [expandedPacks, setExpandedPacks] = useState<Record<string, boolean>>({})
+
+  const togglePackExpanded = (packId: string) => {
+    triggerHaptic(HAPTIC_PATTERNS.TAP)
+    setExpandedPacks(prev => ({ ...prev, [packId]: !prev[packId] }))
+  }
+
   const idempotencyKeyRef = useRef<string>('')
 
   if (!idempotencyKeyRef.current) {
@@ -550,143 +557,285 @@ export function CartDrawer({
                 )}
 
                 {/* 1. BARRA DE GESTIÓN DE COMANDA */}
-                <div className="flex items-center justify-between pb-1 border-b border-slate-200">
-                  <span className="text-xs font-black text-slate-700 uppercase tracking-wide">
-                    {t('yourOrder')} ({validCart.length})
-                  </span>
-                  <button
-                    onClick={() => setShowClearConfirm(true)}
-                    className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1 hover:underline p-1 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>{t('clearCart')}</span>
-                  </button>
-                </div>
+                {(() => {
+                  const topLevelCartItems = validCart
+                    .map((item, originalIndex) => ({ item, originalIndex }))
+                    .filter(({ item }) => !item.is_pack_component)
 
-                {/* 2. LISTA DE PLATOS SELECCIONADOS (PRIMERO) */}
-                <div className="space-y-2.5">
-                  {validCart.map((item, index) => (
-                    <div
-                      key={index}
-                      className="bg-white border border-slate-200/90 rounded-2xl p-3 space-y-2.5 shadow-xs"
-                    >
-                      <div className="flex items-start gap-3">
-                        {/* Foto del Plato */}
-                        <div
-                          style={{ position: 'relative', width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', overflow: 'hidden', borderRadius: '12px' }}
-                          className="bg-slate-100 border border-slate-200 flex-shrink-0"
-                        >
-                          {item.product?.image_url ? (
-                            <Image
-                              src={item.product.image_url}
-                              alt={item.product?.name || 'Plato'}
-                              fill
-                              className="object-cover"
-                              sizes="52px"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-slate-400">
-                              <Utensils className="w-5 h-5 stroke-[1.5]" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Nombre y Precio */}
-                        <div className="flex-1 min-w-0">
-                          {item.is_pack_header && (
-                            <span className="text-[9px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 inline-block mb-1">
-                              🍽️ Menú / Promo Pack
-                            </span>
-                          )}
-                          {item.is_pack_component && (
-                            <span className="text-[9px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded-md border border-emerald-200 inline-block mb-1">
-                              ✨ Incluido en Pack
-                            </span>
-                          )}
-                          <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">
-                            {translateProductName(activeLang, item.product?.id, item.product?.name)}
-                          </h3>
-                          <span className="text-xs font-black text-blue-900 mt-0.5 block tabular-nums">
-                            {item.is_pack_component || item.is_complimentary ? (
-                              <span className="text-emerald-700 font-bold">0,00 € (Incluido)</span>
-                            ) : (
-                              formatCurrency(item.product?.price || 0)
-                            )}
-                          </span>
-
-                          {/* Personalizaciones o notas */}
-                          {item.selectedPills && item.selectedPills.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {item.selectedPills.map((pill, pIdx) => (
-                                <span
-                                  key={pIdx}
-                                  className="text-[10px] bg-slate-100 text-slate-700 font-bold px-1.5 py-0.5 rounded-md border border-slate-200/80"
-                                >
-                                  {pill}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {item.notes && (
-                            <p className="text-[10px] text-amber-800 bg-amber-50/80 border border-amber-200/60 rounded px-1.5 py-0.5 mt-1 font-medium italic">
-                              &ldquo;{item.notes}&rdquo;
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Botón Eliminar individual */}
+                  return (
+                    <>
+                      <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                        <span className="text-xs font-black text-slate-700 uppercase tracking-wide">
+                          {t('yourOrder')} ({topLevelCartItems.length})
+                        </span>
                         <button
-                          type="button"
-                          onClick={() => onRemoveItem(index)}
-                          aria-label={`Eliminar ${item.product?.name || 'plato'} de la comanda`}
-                          className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 cursor-pointer"
-                          title={item.pack_id ? 'Eliminar pack completo' : 'Eliminar plato'}
+                          onClick={() => setShowClearConfirm(true)}
+                          className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center gap-1 hover:underline p-1 cursor-pointer"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>{t('clearCart')}</span>
                         </button>
                       </div>
 
-                      {/* Control de Cantidad (+ / -) */}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                        <span className="text-[11px] text-slate-500 font-bold">Cantidad:</span>
-                        {item.is_pack_component ? (
-                          <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
-                            1 ud (Pack)
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-1.5 bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (item.quantity <= 1) {
-                                  onRemoveItem(index)
-                                } else {
-                                  onUpdateQuantity(index, item.quantity - 1)
-                                }
-                              }}
-                              aria-label={item.quantity <= 1 ? `Eliminar ${item.product?.name || 'plato'}` : `Disminuir cantidad de ${item.product?.name || 'plato'}`}
-                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
+                      {/* 2. LISTA DE PLATOS SELECCIONADOS (PRIMERO) */}
+                      <div className="space-y-2.5">
+                        {topLevelCartItems.map(({ item, originalIndex }) => {
+                          const isPack = Boolean(item.is_pack_header && item.pack_id)
+                          const packSubItems = isPack
+                            ? validCart.filter(sub => sub.pack_id === item.pack_id && sub.is_pack_component)
+                            : []
+                          const isExpanded = Boolean(item.pack_id && expandedPacks[item.pack_id])
+
+                          if (isPack) {
+                            return (
+                              <div
+                                key={`pack-${item.pack_id || originalIndex}`}
+                                className="bg-white border border-blue-200/90 rounded-2xl p-3 space-y-2.5 shadow-xs"
+                              >
+                                <div className="flex items-start gap-3">
+                                  {/* Icono del Pack */}
+                                  <div
+                                    style={{ position: 'relative', width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', overflow: 'hidden', borderRadius: '12px' }}
+                                    className="bg-blue-50 border border-blue-200 flex-shrink-0 flex items-center justify-center text-blue-700"
+                                  >
+                                    <Utensils className="w-6 h-6 stroke-[1.8]" />
+                                  </div>
+
+                                  {/* Nombre y Precio del Pack */}
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 inline-block mb-1">
+                                      🍽️ Menú / Promo Pack
+                                    </span>
+                                    <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">
+                                      {translateProductName(activeLang, item.product?.id, item.product?.name)}
+                                    </h3>
+                                    <span className="text-xs font-black text-blue-900 mt-0.5 block tabular-nums">
+                                      {formatCurrency(item.product?.price || 0)}
+                                    </span>
+                                  </div>
+
+                                  {/* Botón Eliminar Pack */}
+                                  <button
+                                    type="button"
+                                    onClick={() => onRemoveItem(originalIndex)}
+                                    aria-label={`Eliminar ${item.product?.name || 'menú'} de la comanda`}
+                                    className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 cursor-pointer"
+                                    title="Eliminar pack completo"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+
+                                {/* Desplegable: Ver qué incluye */}
+                                {packSubItems.length > 0 && (
+                                  <div className="pt-2 border-t border-slate-100 space-y-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => item.pack_id && togglePackExpanded(item.pack_id)}
+                                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-[11px] font-bold text-slate-700 transition-colors cursor-pointer select-none"
+                                    >
+                                      <span className="flex items-center gap-1.5 text-slate-800">
+                                        <span className="text-blue-600 font-extrabold">📋</span>
+                                        <span>
+                                          {isExpanded
+                                            ? 'Ocultar platos incluidos'
+                                            : `Ver qué incluye (${packSubItems.length} platos)`}
+                                        </span>
+                                      </span>
+                                      <ChevronDown
+                                        className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${
+                                          isExpanded ? 'rotate-180 text-blue-600' : ''
+                                        }`}
+                                      />
+                                    </button>
+
+                                    {isExpanded && (
+                                      <div className="space-y-1.5 pt-1 animate-in slide-in-from-top-1 duration-150">
+                                        {packSubItems.map((comp, compIdx) => {
+                                          const courseLabel =
+                                            comp.course === 'first'
+                                              ? '1º'
+                                              : comp.course === 'second'
+                                              ? '2º'
+                                              : comp.course === 'dessert'
+                                              ? 'Postre'
+                                              : comp.course === 'drink'
+                                              ? 'Bebida'
+                                              : null
+
+                                          return (
+                                            <div
+                                              key={compIdx}
+                                              className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50/90 border border-slate-200/70 text-xs"
+                                            >
+                                              <div className="flex items-center gap-2 min-w-0">
+                                                {courseLabel && (
+                                                  <span className="text-[9px] font-black uppercase text-blue-700 bg-blue-100/80 px-1.5 py-0.2 rounded border border-blue-200 flex-shrink-0">
+                                                    {courseLabel}
+                                                  </span>
+                                                )}
+                                                <span className="font-bold text-slate-800 truncate">
+                                                  {translateProductName(activeLang, comp.product?.id, comp.product?.name)}
+                                                </span>
+                                              </div>
+                                              <span className="text-[10px] font-bold text-emerald-700 flex-shrink-0">
+                                                Incluido
+                                              </span>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Control de Cantidad (+ / -) */}
+                                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                                  <span className="text-[11px] text-slate-500 font-bold">Cantidad:</span>
+                                  <div className="flex items-center gap-1.5 bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (item.quantity <= 1) {
+                                          onRemoveItem(originalIndex)
+                                        } else {
+                                          onUpdateQuantity(originalIndex, item.quantity - 1)
+                                        }
+                                      }}
+                                      aria-label={`Eliminar ${item.product?.name || 'menú'}`}
+                                      className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
+                                    >
+                                      {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-red-500" /> : <Minus className="w-3.5 h-3.5" />}
+                                    </button>
+                                    <span className="font-black text-xs text-slate-900 px-1.5 tabular-nums">
+                                      {item.quantity}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => onUpdateQuantity(originalIndex, item.quantity + 1)}
+                                      aria-label={`Aumentar cantidad de ${item.product?.name || 'menú'}`}
+                                      className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          }
+
+                          // Plato individual estándar
+                          return (
+                            <div
+                              key={originalIndex}
+                              className="bg-white border border-slate-200/90 rounded-2xl p-3 space-y-2.5 shadow-xs"
                             >
-                              {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-red-500" /> : <Minus className="w-3.5 h-3.5" />}
-                            </button>
-                            <span className="font-black text-xs text-slate-900 px-1.5 tabular-nums">
-                              {item.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => onUpdateQuantity(index, item.quantity + 1)}
-                              aria-label={`Aumentar cantidad de ${item.product?.name || 'plato'}`}
-                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
+                              <div className="flex items-start gap-3">
+                                {/* Foto del Plato */}
+                                <div
+                                  style={{ position: 'relative', width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', overflow: 'hidden', borderRadius: '12px' }}
+                                  className="bg-slate-100 border border-slate-200 flex-shrink-0"
+                                >
+                                  {item.product?.image_url ? (
+                                    <Image
+                                      src={item.product.image_url}
+                                      alt={item.product?.name || 'Plato'}
+                                      fill
+                                      className="object-cover"
+                                      sizes="52px"
+                                      unoptimized={item.product.image_url.startsWith('http')}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                      <Utensils className="w-5 h-5 stroke-[1.5]" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Nombre y Precio */}
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight">
+                                    {translateProductName(activeLang, item.product?.id, item.product?.name)}
+                                  </h3>
+                                  <span className="text-xs font-black text-blue-900 mt-0.5 block tabular-nums">
+                                    {item.is_complimentary ? (
+                                      <span className="text-emerald-700 font-bold">0,00 € (Incluido)</span>
+                                    ) : (
+                                      formatCurrency(item.product?.price || 0)
+                                    )}
+                                  </span>
+
+                                  {/* Personalizaciones o notas */}
+                                  {item.selectedPills && item.selectedPills.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {item.selectedPills.map((pill, pIdx) => (
+                                        <span
+                                          key={pIdx}
+                                          className="text-[10px] bg-slate-100 text-slate-700 font-bold px-1.5 py-0.5 rounded-md border border-slate-200/80"
+                                        >
+                                          {pill}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {item.notes && (
+                                    <p className="text-[10px] text-amber-800 bg-amber-50/80 border border-amber-200/60 rounded px-1.5 py-0.5 mt-1 font-medium italic">
+                                      &ldquo;{item.notes}&rdquo;
+                                    </p>
+                                  )}
+                                </div>
+
+                                {/* Botón Eliminar individual */}
+                                <button
+                                  type="button"
+                                  onClick={() => onRemoveItem(originalIndex)}
+                                  aria-label={`Eliminar ${item.product?.name || 'plato'} de la comanda`}
+                                  className="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 cursor-pointer"
+                                  title="Eliminar plato"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              {/* Control de Cantidad (+ / -) */}
+                              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                                <span className="text-[11px] text-slate-500 font-bold">Cantidad:</span>
+                                <div className="flex items-center gap-1.5 bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (item.quantity <= 1) {
+                                        onRemoveItem(originalIndex)
+                                      } else {
+                                        onUpdateQuantity(originalIndex, item.quantity - 1)
+                                      }
+                                    }}
+                                    aria-label={item.quantity <= 1 ? `Eliminar ${item.product?.name || 'plato'}` : `Disminuir cantidad de ${item.product?.name || 'plato'}`}
+                                    className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
+                                  >
+                                    {item.quantity <= 1 ? <Trash2 className="w-3.5 h-3.5 text-red-500" /> : <Minus className="w-3.5 h-3.5" />}
+                                  </button>
+                                  <span className="font-black text-xs text-slate-900 px-1.5 tabular-nums">
+                                    {item.quantity}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => onUpdateQuantity(originalIndex, item.quantity + 1)}
+                                    aria-label={`Aumentar cantidad de ${item.product?.name || 'plato'}`}
+                                    className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-white transition-colors cursor-pointer"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    </>
+                  )
+                })()}
 
                 {/* 3. SUGERENCIAS COMPACTAS CON ACORDEÓN DESPLEGABLE */}
                 {!hasDrinks && suggestedDrinksList.length > 0 && (

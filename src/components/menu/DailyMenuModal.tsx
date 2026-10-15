@@ -243,37 +243,37 @@ export function DailyMenuModal({
                       }
                       handleSelectItem(placeholderProd)
                     }}
-                    className={`p-3 rounded-2xl border-2 transition-all cursor-pointer flex items-center gap-3 ${
+                    className={`py-2 px-3 rounded-xl border transition-all cursor-pointer flex items-center gap-2.5 ${
                       selectedItems[activeStepIndex]?.id === PENDING_DESSERT_ID
-                        ? 'bg-amber-50/80 border-amber-500 shadow-sm ring-2 ring-amber-300'
-                        : 'bg-white hover:bg-slate-50 border-amber-200 hover:border-amber-300'
+                        ? 'bg-amber-50/90 border-amber-500 shadow-xs ring-1 ring-amber-300'
+                        : 'bg-amber-50/30 hover:bg-amber-50/80 border-amber-200 hover:border-amber-300'
                     }`}
                   >
-                    <div className="w-16 h-16 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 flex-shrink-0">
-                      <Clock className="w-7 h-7" />
+                    <div className="w-9 h-9 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 flex-shrink-0 shadow-2xs">
+                      <Clock className="w-4 h-4" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded-md border border-amber-200">
+                        <span className="text-[8px] font-black uppercase tracking-wider text-amber-800 bg-amber-200/70 px-1 py-0.2 rounded border border-amber-300/80">
                           Comodín
                         </span>
-                        <h5 className="text-xs font-black text-slate-900 leading-snug">
+                        <h5 className="text-xs font-bold text-slate-900 leading-tight">
                           ⏳ Decidir postre/café después de comer
                         </h5>
                       </div>
-                      <p className="text-[11px] text-slate-500 line-clamp-2 mt-0.5 font-medium">
+                      <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5 font-medium">
                         Podrás elegir tu postre o café más adelante cuando terminen los platos principales (Incluido).
                       </p>
                     </div>
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 border-2 transition-all ${
+                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border transition-all ${
                         selectedItems[activeStepIndex]?.id === PENDING_DESSERT_ID
                           ? 'bg-amber-600 border-amber-600 text-white shadow-xs'
                           : 'border-slate-300 bg-white'
                       }`}
                     >
                       {selectedItems[activeStepIndex]?.id === PENDING_DESSERT_ID && (
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <Check className="w-3 h-3 stroke-[3]" />
                       )}
                     </div>
                   </div>
@@ -304,6 +304,7 @@ export function DailyMenuModal({
                               fill
                               sizes="64px"
                               className="object-cover"
+                              unoptimized={prod.image_url.startsWith('http')}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-slate-400">

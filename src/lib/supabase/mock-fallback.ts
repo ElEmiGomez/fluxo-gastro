@@ -877,7 +877,7 @@ export const MOCK_DAILY_MENUS: Record<string, DailyMenu> = {
               description: 'Botella de agua mineral 50cl o refresco a elección.',
               price: 2.20,
               cost_price: 0.50,
-              image_url: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=800&q=80',
+              image_url: '/images/agua-mineral.jpg',
               model_3d_url: null,
               is_available: true,
               allergens: [],

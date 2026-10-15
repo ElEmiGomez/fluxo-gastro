@@ -139,20 +139,68 @@ export function ComanderoTaskQueue({
                           </div>
 
                           <div className="mt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                            {(valOrder.order_items || []).map((it, idx) => {
-                              const cleanedNotes = cleanItemNotes(it.notes)
+                            {(() => {
+                              const all = valOrder.order_items || []
+                              const hasPacks = all.some(it => it.is_pack_header || (it.notes && it.notes.includes('[PACK_HEADER]')) || String(it.product_id || '').startsWith('daily-menu-'))
+
+                              if (!hasPacks) {
+                                return all.map((it, idx) => {
+                                  const cleanedNotes = cleanItemNotes(it.notes)
+                                  return (
+                                    <div key={idx} className="text-xs text-slate-300 leading-tight">
+                                      <span className="font-black text-amber-400">{it.quantity}x </span>
+                                      <span className="font-semibold text-white">{it.product?.name || `Plato #${idx + 1}`}</span>
+                                      {cleanedNotes && (
+                                        <span className="block text-[10px] text-amber-300 font-bold pl-3">
+                                          &bull; {cleanedNotes}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )
+                                })
+                              }
+
+                              const headers = all.filter(it => it.is_pack_header || (it.notes && it.notes.includes('[PACK_HEADER]')) || String(it.product_id || '').startsWith('daily-menu-'))
+                              const singles = all.filter(it => !it.is_pack_header && !it.is_pack_component && !(it.notes && (it.notes.includes('[PACK_HEADER]') || it.notes.includes('[COURSE:'))))
+
                               return (
-                                <div key={idx} className="text-xs text-slate-300 leading-tight">
-                                  <span className="font-black text-amber-400">{it.quantity}x </span>
-                                  <span className="font-semibold text-white">{it.product?.name || `Plato #${idx + 1}`}</span>
-                                  {cleanedNotes && (
-                                    <span className="block text-[10px] text-amber-300 font-bold pl-3">
-                                      &bull; {cleanedNotes}
-                                    </span>
-                                  )}
+                                <div className="space-y-1.5">
+                                  {headers.map((h, hIdx) => {
+                                    const subs = all.filter(s => s !== h && (s.pack_id === h.pack_id || (h.notes && s.notes && s.notes.includes(h.product?.name || '')) || (h.pack_id && s.notes?.includes(h.pack_id))))
+                                    return (
+                                      <div key={`h-${hIdx}`} className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-400/30">
+                                        <div className="text-xs text-amber-300 font-extrabold flex items-center justify-between">
+                                          <span>🍽️ {h.quantity}x {h.product?.name || 'Menú'}</span>
+                                        </div>
+                                        {subs.length > 0 && (
+                                          <div className="pl-2 mt-1 space-y-0.5 border-l-2 border-amber-400/40 text-[11px] text-slate-300">
+                                            {subs.map((sub, sIdx) => (
+                                              <div key={sIdx} className="truncate">
+                                                &bull; {sub.product?.name || 'Plato'}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                  {singles.map((it, idx) => {
+                                    const cleanedNotes = cleanItemNotes(it.notes)
+                                    return (
+                                      <div key={`s-${idx}`} className="text-xs text-slate-300 leading-tight">
+                                        <span className="font-black text-amber-400">{it.quantity}x </span>
+                                        <span className="font-semibold text-white">{it.product?.name || `Plato #${idx + 1}`}</span>
+                                        {cleanedNotes && (
+                                          <span className="block text-[10px] text-amber-300 font-bold pl-3">
+                                            &bull; {cleanedNotes}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
                                 </div>
                               )
-                            })}
+                            })()}
                           </div>
                         </div>
 
