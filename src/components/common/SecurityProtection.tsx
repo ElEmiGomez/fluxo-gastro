@@ -4,6 +4,9 @@ import { useEffect } from 'react'
 
 export function SecurityProtection() {
   useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.title = 'Fluxo - Gastronomic System'
+    }
 
     // 1. Advertencia disuasoria en consola contra ataques Self-XSS e ingeniería inversa (Similar a Facebook/Discord)
     const printSecurityWarning = () => {

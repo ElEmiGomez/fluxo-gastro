@@ -42,6 +42,10 @@ export default function LandingPage() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
   const [selectedPlanForModal, setSelectedPlanForModal] = useState('Plan Full (Recomendado)')
 
+  React.useEffect(() => {
+    document.title = 'Fluxo - Gastronomic System'
+  }, [])
+
   const handleOpenPilotModal = (plan = 'Plan Full (Recomendado)') => {
     setSelectedPlanForModal(plan)
     setIsPilotModalOpen(true)
