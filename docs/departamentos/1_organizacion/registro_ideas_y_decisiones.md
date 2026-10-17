@@ -69,4 +69,9 @@
   - Selector ágil de idioma en la cabecera de la carta con traducción reactiva de categorías, descripciones de platos, alérgenos y avisos de sala.
 * [ ] **Telemetría de Tiempos de Pase:** Detección de cuellos de botella entre comanda confirmada y entrega en mesa para optimizar cocina en Plan Suite.
 * [ ] **Integración de Impresión Automática en Cocina vía Webhooks:** Disparo directo a tiqueteras térmicas sin depender de pantalla física.
+* [ ] **Botón Rápido "📶 Wi-Fi" en Cabecera de Carta QR (1 Toque):** Botón en la cabecera de la carta del comensal que copia la clave del Wi-Fi del restaurante al portapapeles. Ahorra decenas de interrupciones diarias al camarero y tiene coste cero de servidor.
+* [ ] **Métrica de Conversión en Reporte Mensual ("Platos Más Vistos vs. Platos Pedidos"):** Cruzar aperturas/vistas de ficha de plato en la carta QR frente a comandas reales. Si un plato se mira mucho pero no se pide, el Reporte Mensual alerta al dueño de que el precio o la descripción están frenando la venta.
+* [ ] **Casilla Obligatoria de Consentimiento RGPD/LSSI en Captación:** Incluir checkbox obligatorio de aceptación de Política de Privacidad y comunicaciones antes de guardar teléfono o email tanto en el registro del Club de Clientes (v1.2) como en el formulario de contacto de la landing page.
+* [ ] **Pruebas de Carga Concurrente con `k6` (`k6.io`) en Entorno de Pruebas:** Complementar `scripts/run_5000_scenarios_matrix.mjs` con scripts de carga en `k6` para simular picos de 100-500 usuarios simultáneos (viernes/sábado 21:30 en múltiples terrazas) y certificar respuesta en milisegundos de Supabase antes de escalar locales.
+* [ ] **Auditoría de Reseñas de Competencia Local (`Founder` / Google Maps):** Revisar reseñas de 1-3 estrellas de restaurantes en Noia buscando quejas repetidas de lentitud de atención o cuenta para usarlas como argumento personalizado de venta presencial.
 

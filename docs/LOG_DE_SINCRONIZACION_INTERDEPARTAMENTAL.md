@@ -6,6 +6,36 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-17 17:45] — Base de Datos Maestra CRM de Noia (35 Locales Activos + 5 Exclusiones) y Ruta Táctica
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Dirección General y Organización.
+* **Documento Consolidado:** [`docs/departamentos/2_marketing/prospeccion_locales_noia.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/prospeccion_locales_noia.md).
+* **Hitos y Decisiones del Análisis DeepResearch:**
+  1. *Censo Completo de 40 Locales en Noia:* Estructurados los **35 locales activos** por puntuación (Tier 1, Tier 2 y Tier 3) y perfil (`[ICP-CARLOS]`, `[ICP-MARTIN]`, `[ICP-LUCIA]`), más la **lista negra de 5 exclusiones** (*A Casa da Maiana* cerrado, *Telepizza* franquicia, *Kebabs*, *O Lar* pub nocturno y bares <8 mesas).
+  2. *Correcciones Críticas de Campo:*
+     - Prohibido mencionar *"RestoBar Noia en Rúa do Curro"* como si fuera un bar real vecino (en Noia todos los hosteleros se conocen y detectarían que es ficticio); se presenta como *Simulación Financiera Estándar*.
+     - Detectada sinergia de grupo empresarial **2x1 (*Hostelería Rosende*)**: propietarios tanto de **Casa Mar da Vila** (Porta da Vila, 6) como de **Don Juan Gastrofusión** (Alameda / Xenaro Carrero, 25).
+     - Ascendidos **Casa Mar da Vila** (3 zonas ciegas + visor pasivo Ágora POS) y **Babilonia Brunch** (sin reservas + carta visual + 8 sellos) al grupo de ataque prioritario.
+  3. *Ruta de Calle Top 6 (Menos de 4 min a pie):* 1. Casa Mar da Vila $\rightarrow$ 2. Babilonia Brunch $\rightarrow$ 3. Tapería Adega do Pazo (Score 9.6, 3 terrazas en distintas plantas) $\rightarrow$ 4. La Parra Tapería (columnas de soportales) $\rightarrow$ 5. Cervexería Equs $\rightarrow$ 6. Pizzería Mamma Mía (20 mesas + web rota).
+
+---
+
+### [2026-10-16 20:25] — Fichas de Prospección Real en Noia (Casa Mar da Vila & Babilonia Brunch) y Benchmark de Fidelización/Personal
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Dirección General y Organización.
+* **Documento Actualizado:** [`docs/departamentos/2_marketing/prospeccion_locales_noia.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/prospeccion_locales_noia.md).
+* **Acciones y Hallazgos Consolidados:**
+  1. *Ficha Lead 1 — Casa Mar da Vila (`@casamardavilanoia` | Porta da Vila, 6, Noia):*
+     - Distribución con **"mesas ciegas"** (terraza exterior, terraza acristalada y jardín).
+     - Actualmente utiliza visor pasivo de *Ágora POS* (`smartmenu.agorapos.com`) y enlace `mailto:` para reservas. Nota Google: 4,1 ⭐ (quejas por demoras cuando se llenan las zonas).
+     - **Abordaje Fluxo:** Piloto de 4-5 QRs en jardín/terraza acristalada para avisos directos al camarero y petición de cuenta con tarjeta + embudo para subir nota en Google Maps (Plan Sala 69€ / Full 99€).
+  2. *Ficha Lead 2 — Babilonia Brunch (`@babilonia.brunch` | Rúa Cantón, 8, Noia):*
+     - Cafetería de especialidad y *brunch* de espacio reducido que **no admite reservas** (cierra los miércoles). Nota Google: 4,4 ⭐.
+     - **Abordaje Fluxo:** Carta visual de alto impacto para subir ticket medio por antojo + botón de pedir cuenta rápida para liberar mesas cuando hay cola + tarjeta de **8 sellos digitales** para clientes recurrentes de Noia (Plan Carta 39€ / Sala 69€).
+  3. *Benchmark Complementario (`@comeback_loyalty` y `@unusualcrew.eu`):*
+     - Frente a soluciones sueltas de fidelización de 21 días (*Comeback*), Fluxo unifica operativa de sala + sellos + reseñas Google en 14 días (2 fines de semana).
+     - Se incorpora el argumento de escasez de personal (*Unusual Crew*): hacer que 2 camareros rindan como 3 sin quemarse.
+
+---
+
 ### [2026-10-14 18:15] — Consolidación Técnica: Purga del Reporte Mensual y Estadísticas (Tarea 2 Check)
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), Dirección General y Organización.
 * **Hito Alcanzado:**
@@ -771,5 +801,15 @@
 - **Tareas Operativas Pendientes en Backlog (Ajustes de Sala y Cocina para Mañana):**
   1. **Refinamiento de Estación de Bebidas (Barra/Sala):** Ajustar la visualización y despacho de bebidas en Comandero para que el personal de barra/sala las atienda con agilidad sin sobrecargar la pantalla de cocina y manteniendo el seguimiento en mesa.
   2. **Refinamiento de Pase en Cocina en 2 Tiempos (Postres Retenidos):** Ajustar la retención y marcha de postres para que queden claramente separados de los principales y el cocinero o mozo pueda activar su preparación cuando la mesa termine la comida.
+
+---
+## [2026-10-17 17:35] REGISTRO EN BACKLOG DE MEJORAS EXTRAÍDAS DE AUDITORÍA DE 10 VÍDEOS
+- **Departamento:** Organización General (COO), Producto, Marketing & Ingeniería
+- **Mejoras Guardadas para Próximas Actualizaciones (`registro_ideas_y_decisiones.md`):**
+  1. **Botón "📶 Wi-Fi" en Cabecera de Carta QR:** Copiar la clave del restaurante al portapapeles con 1 toque (0 € coste servidor, menos interrupciones al mozo).
+  2. **Cruce en Reporte Mensual ("Platos más vistos vs. Platos pedidos"):** Detectar platos con muchas aperturas en la carta pero baja conversión para avisar al dueño sobre posibles frenos en precio o descripción.
+  3. **Consentimiento Obligatorio RGPD/LSSI:** Casilla obligatoria de privacidad antes de guardar teléfono o email en el Club de Clientes (v1.2) y en el formulario de la landing page.
+  4. **Pruebas de Carga con `k6` (`k6.io`):** Complementar `scripts/run_5000_scenarios_matrix.mjs` en entorno de pruebas para validar picos simultáneos de varias terrazas (viernes/sábado 21:30).
+  5. **Prospección Basada en Quejas de Google Maps (`Founder`):** Uso de reseñas negativas de servicio como gancho comercial directo en visitas locales.
 
 
