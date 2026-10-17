@@ -1,17 +1,31 @@
 'use client'
 
 import React from 'react'
-import { BellRing, CheckCircle2, Sparkles, Clock, Loader2, UserCheck, Trash2, Bell, Check, X, Wine } from 'lucide-react'
+import { BellRing, CheckCircle2, Sparkles, Clock, Loader2, UserCheck, Trash2, Bell, Check, X, Wine, ChefHat } from 'lucide-react'
 import { Order, Table } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { PendingServiceCall } from '@/types/comandero.types'
-import { cleanItemNotes, getPendingDrinks, getItemCourse } from '@/lib/course-utils'
+import {
+  cleanItemNotes,
+  getPendingDrinks,
+  getHeldDesserts,
+  getItemCourse,
+  isFoodItem,
+  isDessertItem,
+  isDessertFired,
+  isOrderFoodReady,
+  isOrderDessertsReady,
+  orderHasDesserts,
+  orderHasHeldDesserts,
+  orderHasPendingChoiceDesserts,
+} from '@/lib/course-utils'
 
 interface ComanderoTaskQueueProps {
   readyOrdersList: Order[]
   validationOrdersList: Order[]
   pendingCalls: PendingServiceCall[]
   pendingDrinksList?: Order[]
+  pendingDessertsList?: Order[]
   deliveringOrderIds: Set<string>
   validatingOrderIds: Set<string>
   servingDrinkOrderIds?: Set<string>
@@ -28,6 +42,9 @@ interface ComanderoTaskQueueProps {
   onOpenFreeTableModal?: (tblNum: string | number) => void
   onServeDrinks?: (orderId: string) => void
   onServeAllDrinks?: () => void
+  onFireOrderDesserts?: (orderId: string) => void
+  onDeliverOrderDessertsDirect?: (orderId: string) => void
+  onOpenDessertSelectorForTable?: (tableNum: string | number) => void
 }
 
 export function ComanderoTaskQueue({
@@ -35,6 +52,7 @@ export function ComanderoTaskQueue({
   validationOrdersList,
   pendingCalls,
   pendingDrinksList = [],
+  pendingDessertsList = [],
   deliveringOrderIds,
   validatingOrderIds,
   servingDrinkOrderIds,
@@ -51,12 +69,16 @@ export function ComanderoTaskQueue({
   onOpenFreeTableModal,
   onServeDrinks,
   onServeAllDrinks,
+  onFireOrderDesserts,
+  onDeliverOrderDessertsDirect,
+  onOpenDessertSelectorForTable,
 }: ComanderoTaskQueueProps) {
   const totalPendingTasks =
     readyOrdersList.length +
     validationOrdersList.length +
     pendingCalls.length +
-    (pendingDrinksList?.length || 0)
+    (pendingDrinksList?.length || 0) +
+    (pendingDessertsList?.length || 0)
 
   return (
     <>
@@ -350,7 +372,18 @@ export function ComanderoTaskQueue({
                   {readyOrdersList.map(ord => {
                     const tblNum = ord.table_number || ord.table?.table_number || '?'
                     const waitingMins = ord.created_at ? Math.max(1, Math.floor((Date.now() - new Date(ord.created_at).getTime()) / 60000)) : 1
-                    const readyKitchenItems = (ord.order_items || []).filter(it => getItemCourse(it) !== 'drink')
+                    const isSecondPassDesserts =
+                      isOrderFoodReady(ord) &&
+                      isOrderDessertsReady(ord) &&
+                      orderHasDesserts(ord) &&
+                      (ord.order_items || []).some(isDessertFired)
+
+                    const readyKitchenItems = isSecondPassDesserts
+                      ? (ord.order_items || []).filter(isDessertItem)
+                      : orderHasHeldDesserts(ord)
+                        ? (ord.order_items || []).filter(isFoodItem)
+                        : (ord.order_items || []).filter(it => getItemCourse(it) !== 'drink')
+
                     const displayItems = readyKitchenItems.length > 0 ? readyKitchenItems : (ord.order_items || [])
 
                     return (
@@ -366,7 +399,7 @@ export function ComanderoTaskQueue({
                             </span>
                             <span className="text-[11px] font-extrabold text-emerald-300 flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5" />
-                              <span>Listo (hace {waitingMins} min)</span>
+                              <span>{isSecondPassDesserts ? '🍰 Postres listos' : `Listo (hace ${waitingMins} min)`}</span>
                             </span>
                           </div>
 
@@ -418,6 +451,89 @@ export function ComanderoTaskQueue({
                             title="Ver mesa en comandero"
                           >
                             Ver Mesa
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* SECCIÓN 4: POSTRES PENDIENTES DE MESA (COMIDA Y BEBIDA YA ENTREGADAS) */}
+            {pendingDessertsList.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-pulse" />
+                  <h4 className="text-xs sm:text-sm font-black text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🍰 Postres Pendientes — Comida ya Entregada ({pendingDessertsList.length})</span>
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {pendingDessertsList.map(ord => {
+                    const tblNum = ord.table_number || ord.table?.table_number || '?'
+                    const heldDesserts = getHeldDesserts(ord)
+                    const hasWildcardDessert = orderHasPendingChoiceDesserts(ord)
+
+                    return (
+                      <div
+                        key={`desserts-${ord.id}`}
+                        className="bg-slate-900/90 border-2 border-purple-400/90 rounded-2xl p-3.5 shadow-lg flex flex-col justify-between space-y-3 relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-purple-500 via-fuchsia-400 to-purple-500" />
+                        <div>
+                          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                            <span className="px-3 py-1 rounded-xl bg-purple-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-xs">
+                              <span>Mesa #{tblNum}</span>
+                            </span>
+                            <span className="text-[11px] font-extrabold text-purple-300 flex items-center gap-1">
+                              <span>🍽️ Comida entregada</span>
+                            </span>
+                          </div>
+
+                          <div className="mt-2.5 space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                            {heldDesserts.map((it, itemIdx) => {
+                              const cleanedNotes = cleanItemNotes(it.notes)
+                              return (
+                                <div key={itemIdx} className="text-xs text-slate-200 leading-tight">
+                                  <span className="font-black text-purple-400">{it.quantity}x </span>
+                                  <span className="font-bold text-white">{it.product?.name || `Postre #${itemIdx + 1}`}</span>
+                                  {cleanedNotes && (
+                                    <span className="block text-[10px] text-purple-200/80 font-bold pl-3 mt-0.5">
+                                      &bull; {cleanedNotes}
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (hasWildcardDessert && onOpenDessertSelectorForTable) {
+                                onOpenDessertSelectorForTable(tblNum)
+                              } else if (onFireOrderDesserts) {
+                                onFireOrderDesserts(ord.id)
+                              }
+                            }}
+                            className="flex-1 py-2.5 px-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer"
+                            title={hasWildcardDessert ? 'Elegir postre del menú y mandarlo a cocina' : 'Mandar estos postres a cocina para su preparación'}
+                          >
+                            <ChefHat className="w-4 h-4 stroke-[2.5]" />
+                            <span>{hasWildcardDessert ? 'Elegir y Mandar' : 'Mandar a Cocina'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeliverOrderDessertsDirect && onDeliverOrderDessertsDirect(ord.id)}
+                            className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all uppercase tracking-wide cursor-pointer"
+                            title="Tachar y marcar como entregado directamente por el mozo sin pasar por cocina"
+                          >
+                            <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                            <span>Entregar Directo</span>
                           </button>
                         </div>
                       </div>

@@ -418,43 +418,47 @@ export function KitchenTicket({
                 </div>
               </div>
 
-              {/* BLOQUES ESTRUCTURADOS EN COCINA: ENTRADAS Y PRINCIPALES ARRIBA, POSTRES ABAJO */}
+              {/* BLOQUES ESTRUCTURADOS EN COCINA: ENTRADAS Y PRINCIPALES EN PASE 1, POSTRES CUANDO EL MOZO LOS MARCHA */}
               <div className="space-y-3">
                 {kitchenItems.length > 0 ? (
                   <>
                     {/* Bloque 1: Entradas y Principales */}
                     {mains.length > 0 && (
-                      <div className="space-y-2">
-                        {desserts.length > 0 && (
+                      isOrderFoodReady(roundOrder) && dessertsActive ? (
+                        <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 size={13} className="text-emerald-600" />
+                            <span>Comida principal ya entregada ({mains.length} platos)</span>
+                          </span>
+                          <span className="text-[10px] font-black uppercase bg-emerald-100 px-2 py-0.5 rounded-md text-emerald-800">
+                            Pase 1 Completado
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
                           <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-amber-900 tracking-wider">
                             <span>🍔 Entradas y Principales ({mains.length})</span>
                           </div>
-                        )}
-                        {sortItemsForKitchen(mains).map((item, idx) => renderItemCard(item, idx, false))}
-                      </div>
+                          {sortItemsForKitchen(mains).map((item, idx) => renderItemCard(item, idx, false))}
+                        </div>
+                      )
                     )}
 
-                    {/* Bloque 2: Postres (Con candado gris si están retenidos esperando pase del mozo) */}
-                    {desserts.length > 0 && (
+                    {/* Bloque 2: Postres (Solo se muestran en cocina cuando el mozo los marcha o si es una comanda de solo postres) */}
+                    {desserts.length > 0 && !dessertsHeld && (
                       <div className={`space-y-2 ${mains.length > 0 ? 'pt-2.5 border-t border-slate-200/80' : ''}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-purple-900 tracking-wider">
                             <span>🍰 Postres ({desserts.length})</span>
                           </div>
-                          {dessertsHeld && (
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-slate-200 text-slate-700 flex items-center gap-1">
-                              <Lock size={10} />
-                              <span>Esperando aviso del mozo</span>
-                            </span>
-                          )}
                           {dessertsActive && !isOrderDessertsReady(roundOrder) && (
                             <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-purple-100 text-purple-900 border border-purple-200 flex items-center gap-1">
                               <Sparkles size={10} />
-                              <span>Marchados · En preparación</span>
+                              <span>Marchados por el mozo · En preparación</span>
                             </span>
                           )}
                         </div>
-                        {desserts.map((item, idx) => renderItemCard(item, idx + mains.length, dessertsHeld))}
+                        {desserts.map((item, idx) => renderItemCard(item, idx + mains.length, false))}
                       </div>
                     )}
                   </>
@@ -521,30 +525,7 @@ export function KitchenTicket({
                     )
                   }
 
-                  // Si la comida ya está lista pero los postres están retenidos en espera del mozo
-                  if (hasDesserts && dessertsHeld) {
-                    return (
-                      <div className="space-y-2">
-                        <div className="p-3 rounded-2xl bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold flex items-center justify-between shadow-2xs">
-                          <div className="flex items-center gap-2">
-                            <Lock className="w-4 h-4 text-slate-600" />
-                            <span>Comida entregada — Esperando orden de Marchar Postres</span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => onKitchenAction ? onKitchenAction(roundOrder.id, 'fire_desserts') : onUpdateStatus(roundOrder.id, 'preparing')}
-                          disabled={isRoundUpdating}
-                          className="w-full h-11 py-2 px-3 rounded-xl font-bold text-xs bg-slate-200 hover:bg-amber-100 text-slate-800 hover:text-amber-950 border border-slate-300 hover:border-amber-400 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                        >
-                          <ChefHat className="w-4 h-4 text-amber-600" />
-                          <span>Marchar postres ahora desde cocina</span>
-                        </button>
-                      </div>
-                    )
-                  }
-
-                  // Si los postres ya fueron marchados o la comanda es de solo postres
+                  // Si los postres ya fueron marchados por el mozo o la comanda es de solo postres
                   if (hasDesserts && (dessertsFired || !hasFood)) {
                     return (
                       <button
@@ -564,7 +545,7 @@ export function KitchenTicket({
                         ) : (
                           <>
                             <Sparkles className="w-5 h-5" />
-                            <span>{hasFood ? '3. AVISAR AL MOZO (POSTRES LISTOS)' : '2. AVISAR AL MOZO (POSTRES LISTOS)'}</span>
+                            <span>2. AVISAR AL MOZO (POSTRES LISTOS)</span>
                           </>
                         )}
                       </button>
@@ -596,63 +577,25 @@ export function KitchenTicket({
                   )
                 })()}
 
-                {roundOrder.status === 'ready' && (() => {
-                  const hasDesserts = orderHasDesserts(roundOrder)
-                  const dessertsReady = isOrderDessertsReady(roundOrder)
-
-                  // Si la comida salada se despachó pero quedan postres por emplatar
-                  if (hasDesserts && !dessertsReady) {
-                    return (
-                      <div className="space-y-1.5">
-                        <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 text-xs font-bold flex items-center justify-between">
-                          <span>Comida avisada a sala</span>
-                          <span className="text-[10px] bg-purple-200 px-1.5 py-0.5 rounded text-purple-900 font-extrabold">Postres en espera</span>
-                        </div>
-                        <button
-                          onClick={() => {
-                            markItemsAsDone(kitchenItems, roundIdx)
-                            if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_desserts')
-                            else onUpdateStatus(roundOrder.id, 'delivered')
-                          }}
-                          disabled={isRoundUpdating}
-                          className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-purple-700/30 cursor-pointer"
-                        >
-                          {isRoundUpdating ? (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              <span>AVISANDO AL MOZO...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-5 h-5" />
-                              <span>3. AVISAR AL MOZO (POSTRES LISTOS)</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )
-                  }
-
-                  return (
-                    <button
-                      onClick={() => onUpdateStatus(roundOrder.id, 'delivered')}
-                      disabled={isRoundUpdating}
-                      className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-blue-900 hover:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-blue-950/30 cursor-pointer"
-                    >
-                      {isRoundUpdating ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>DESPACHANDO...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-5 h-5" />
-                          <span>MARCAR ENTREGADO EN SALA</span>
-                        </>
-                      )}
-                    </button>
-                  )
-                })()}
+                {roundOrder.status === 'ready' && (
+                  <button
+                    onClick={() => onUpdateStatus(roundOrder.id, 'delivered')}
+                    disabled={isRoundUpdating}
+                    className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-blue-900 hover:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-blue-950/30 cursor-pointer"
+                  >
+                    {isRoundUpdating ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>DESPACHANDO...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        <span>MARCAR ENTREGADO EN SALA</span>
+                      </>
+                    )}
+                  </button>
+                )}
 
                 {roundOrder.status === 'delivered' && (() => {
                   const hasDesserts = orderHasDesserts(roundOrder)

@@ -4,6 +4,7 @@ import { inferCourseType } from './category-matcher'
 export const TAG_DRINK_SERVED = '[BARRA_SERVIDA]'
 export const TAG_FOOD_READY = '[COCINA_LISTA]'
 export const TAG_DESSERT_READY = '[POSTRE_LISTO]'
+export const TAG_DESSERT_SERVED = '[POSTRE_SERVIDO]'
 export const TAG_DESSERT_FIRED = '[MARCHAR_POSTRE]'
 export const TAG_DESSERT_PENDING = '[POSTRE_PENDIENTE_ELECCION]'
 export const TAG_PACK_HEADER = '[PACK_HEADER]'
@@ -14,7 +15,7 @@ export const TAG_PACK_HEADER = '[PACK_HEADER]'
 export function stripInternalStationTags(rawNotes?: string | null): string {
   if (!rawNotes) return ''
   return rawNotes
-    .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|PASE_1|PASE_2|MARCHAR_POSTRE|POSTRE_PENDIENTE_ELECCION|PACK_HEADER|PACK_SUBITEM|COURSE:\s*[a-z]+).*?\]/gi, '')
+    .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_SERVIDO|POSTRE:\s*SERVIDO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|PASE_1|PASE_2|MARCHAR_POSTRE|POSTRE_PENDIENTE_ELECCION|PACK_HEADER|PACK_SUBITEM|COURSE:\s*[a-z]+).*?\]/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim()
 }
@@ -86,8 +87,12 @@ export function isFoodReady(item: OrderItem): boolean {
   return Boolean(item.notes && item.notes.includes(TAG_FOOD_READY))
 }
 
+export function isDessertServed(item: OrderItem): boolean {
+  return Boolean(item.notes && item.notes.includes(TAG_DESSERT_SERVED))
+}
+
 export function isDessertReady(item: OrderItem): boolean {
-  return Boolean(item.notes && item.notes.includes(TAG_DESSERT_READY))
+  return Boolean(item.notes && (item.notes.includes(TAG_DESSERT_READY) || item.notes.includes(TAG_DESSERT_SERVED)))
 }
 
 export function isDessertFired(item: OrderItem): boolean {
@@ -114,7 +119,7 @@ export function isDrinkOnlyOrder(input?: Order | OrderItem[] | null): boolean {
 }
 
 /**
- * Retorna true si la orden tiene postres retenidos que aún no han sido marchados a cocina.
+ * Retorna true si la orden tiene postres retenidos que aún no han sido marchados a cocina ni entregados.
  * Regla inteligente: Si la comanda es SOLO de postres (segunda ronda), NO se retienen; van directos a preparación.
  */
 export function orderHasHeldDesserts(order: Order): boolean {
@@ -122,6 +127,23 @@ export function orderHasHeldDesserts(order: Order): boolean {
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
   return desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
+}
+
+/**
+ * Retorna la lista de postres retenidos pendientes de decisión del mozo (marchar a cocina o entregar directo).
+ */
+export function getHeldDesserts(order: Order): OrderItem[] {
+  return (order.order_items || []).filter(d => isDessertItem(d) && !isDessertFired(d) && !isDessertReady(d))
+}
+
+/**
+ * Retorna true cuando la comida principal y las bebidas de la comanda ya fueron entregadas en mesa
+ * y existen postres retenidos listos para que el mozo los marche a cocina o los entregue directamente.
+ */
+export function areOrderDessertsPendingWaiter(order: Order): boolean {
+  if (order.status !== 'delivered') return false
+  if (areOrderDrinksPending(order)) return false
+  return orderHasHeldDesserts(order)
 }
 
 /**

@@ -99,11 +99,8 @@ export default function KitchenKDSPage() {
           const rawOrders: Order[] = data.orders || []
           const incomingOrders: Order[] = rawOrders
             .filter((o: Order) =>
-              (
-                ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) ||
-                (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
-              ) &&
-              (orderHasFood(o) || orderHasDesserts(o))
+              ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) &&
+              (orderHasFood(o) || orderHasActiveDesserts(o) || (!orderHasFood(o) && orderHasDesserts(o) && !isOrderDessertsReady(o)))
             )
             .map((o: Order) => {
               const items = (o.order_items && o.order_items.length > 0)

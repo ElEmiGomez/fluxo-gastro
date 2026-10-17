@@ -26,6 +26,7 @@ interface ComanderoTableDetailPanelProps {
   onCancelValidationOrder: (orderId: string, tblNum: string | number) => void
   onFireSecondCourses: (tblNum: string | number) => void
   onFireDesserts?: (tblNum: string | number) => void
+  onDeliverDessertsDirect?: (tblNum: string | number) => void
   onOpenDessertSelector?: () => void
   onOpenPreBill: () => void
   onOpenTransferModal: () => void
@@ -52,6 +53,7 @@ export function ComanderoTableDetailPanel({
   onValidateOrder,
   onCancelValidationOrder,
   onFireDesserts,
+  onDeliverDessertsDirect,
   onOpenDessertSelector,
   onOpenPreBill,
   onOpenTransferModal,
@@ -279,9 +281,9 @@ export function ComanderoTableDetailPanel({
           </div>
         </div>
         
-        {/* Banner destacado: Marchar Postres si hay postres pendientes en la mesa */}
+        {/* Banner destacado: Gestionar Postres si hay postres pendientes en la mesa */}
         {hasPendingDesserts && (
-          <div className="p-2.5 rounded-2xl bg-purple-50 border-2 border-purple-300 flex items-center justify-between shadow-xs">
+          <div className="p-2.5 rounded-2xl bg-purple-50 border-2 border-purple-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
             <div className="flex items-center gap-2">
               <span className="text-base">🍰</span>
               <div>
@@ -289,25 +291,38 @@ export function ComanderoTableDetailPanel({
                   {hasPendingDessertChoiceInTable ? 'Postre Incluido por Definir' : 'Postres en Espera'}
                 </span>
                 <span className="text-[11px] font-semibold text-purple-700">
-                  {hasPendingDessertChoiceInTable ? 'El comensal o mozo debe elegir el postre' : 'Mesa lista para pase dulce'}
+                  {hasPendingDessertChoiceInTable ? 'El comensal o mozo debe elegir el postre' : 'Mandar a cocina o entregar directo'}
                 </span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (hasPendingDessertChoiceInTable && onOpenDessertSelector) {
-                  onOpenDessertSelector()
-                } else if (onFireDesserts) {
-                  onFireDesserts(selectedTable.table_number)
-                }
-              }}
-              className="h-9 px-3.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs transition-all shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
-              title={hasPendingDessertChoiceInTable ? 'Elegir qué postre desea el comensal' : 'Avisar a cocina que prepare los postres de esta mesa'}
-            >
-              <Sparkles size={13} />
-              <span>{hasPendingDessertChoiceInTable ? 'Elegir Postre y Marchar' : 'Marchar Postres'}</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (hasPendingDessertChoiceInTable && onOpenDessertSelector) {
+                    onOpenDessertSelector()
+                  } else if (onFireDesserts) {
+                    onFireDesserts(selectedTable.table_number)
+                  }
+                }}
+                className="flex-1 sm:flex-initial h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                title={hasPendingDessertChoiceInTable ? 'Elegir qué postre desea el comensal' : 'Avisar a cocina que prepare los postres de esta mesa'}
+              >
+                <Sparkles size={13} />
+                <span>{hasPendingDessertChoiceInTable ? 'Elegir y Mandar' : 'Mandar a Cocina'}</span>
+              </button>
+              {onDeliverDessertsDirect && (
+                <button
+                  type="button"
+                  onClick={() => onDeliverDessertsDirect(selectedTable.table_number)}
+                  className="flex-1 sm:flex-initial h-9 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                  title="Tachar y marcar postres como entregados directamente por el mozo"
+                >
+                  <CheckCircle2 size={13} />
+                  <span>Entregar Directo</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
 

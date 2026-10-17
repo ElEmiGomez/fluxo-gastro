@@ -34,6 +34,7 @@ import {
   TAG_DRINK_SERVED,
   TAG_FOOD_READY,
   TAG_DESSERT_READY,
+  TAG_DESSERT_SERVED,
   TAG_DESSERT_FIRED,
   isDrinkItem,
   isFoodItem,
@@ -652,6 +653,37 @@ export async function PATCH(req: NextRequest) {
         success: true,
         order: transRes.order || tagRes.order,
         message: 'Postres marchados a cocina',
+      })
+    }
+
+    if (body.action === 'deliver_desserts_direct') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`, isDessertItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al entregar postres directamente' }, { status: 404 })
+      }
+      if (tagRes.order && tagRes.order.status !== 'delivered' && tagRes.order.status !== 'paid') {
+        const restaurant = await getRestaurantBySlug(slug)
+        const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
+        const transRes = await transitionOrderStatus({
+          orderId: targetOrderId,
+          restaurantId,
+          slug,
+          nextStatus: 'delivered',
+          actorType: 'waiter',
+        })
+        return NextResponse.json({
+          success: true,
+          order: transRes.order || tagRes.order,
+          message: 'Postres entregados directamente por el mozo',
+        })
+      }
+      return NextResponse.json({
+        success: true,
+        order: tagRes.order,
+        message: 'Postres entregados directamente por el mozo',
       })
     }
 

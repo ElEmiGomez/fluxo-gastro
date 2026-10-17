@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
-import { areOrderDrinksPending, orderHasPendingChoiceDesserts } from '@/lib/course-utils'
+import { areOrderDrinksPending, areOrderDessertsPendingWaiter, orderHasPendingChoiceDesserts } from '@/lib/course-utils'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector } from '@/components/comandero/TableSelector'
@@ -245,7 +245,10 @@ export default function WaiterComanderoPage() {
     handleCancelValidationOrder,
     handleCancelSingleOrder,
     handleFireSecondCourses,
+    handleFireOrderDesserts,
+    handleDeliverOrderDessertsDirect,
     handleFireDesserts,
+    handleDeliverTableDessertsDirect,
     executeCloseAndFreeTable,
     handleTransferTable,
     handleSendOrderToKitchen,
@@ -324,6 +327,7 @@ export default function WaiterComanderoPage() {
   const readyOrdersList = useMemo(() => serverOrders.filter(o => o.status === 'ready'), [serverOrders])
   const validationOrdersList = useMemo(() => serverOrders.filter(o => o.status === 'pending_validation'), [serverOrders])
   const pendingDrinksList = useMemo(() => serverOrders.filter(areOrderDrinksPending), [serverOrders])
+  const pendingDessertsList = useMemo(() => serverOrders.filter(areOrderDessertsPendingWaiter), [serverOrders])
 
   const handleServeDrinks = useCallback(async (orderId: string) => {
     setServingDrinkOrderIds(prev => new Set(prev).add(orderId))
@@ -368,6 +372,7 @@ export default function WaiterComanderoPage() {
             validationOrdersList={validationOrdersList}
             pendingCalls={pendingCalls}
             pendingDrinksList={pendingDrinksList}
+            pendingDessertsList={pendingDessertsList}
             deliveringOrderIds={deliveringOrderIds}
             validatingOrderIds={validatingOrderIds}
             servingDrinkOrderIds={servingDrinkOrderIds}
@@ -389,6 +394,13 @@ export default function WaiterComanderoPage() {
             onOpenFreeTableModal={(tbl) => setShowFreeConfirmTable(tbl)}
             onServeDrinks={handleServeDrinks}
             onServeAllDrinks={handleServeAllDrinks}
+            onFireOrderDesserts={handleFireOrderDesserts}
+            onDeliverOrderDessertsDirect={handleDeliverOrderDessertsDirect}
+            onOpenDessertSelectorForTable={(tblNum) => {
+              const target = tables.find(t => t.table_number.toString() === tblNum.toString())
+              if (target) setSelectedTable(target)
+              setIsQuickDessertModalOpen(true)
+            }}
           />
 
           {/* Toast de confirmación de envío */}
@@ -436,6 +448,7 @@ export default function WaiterComanderoPage() {
               onCancelValidationOrder={handleCancelValidationOrder}
               onFireSecondCourses={handleFireSecondCourses}
               onFireDesserts={handleFireDesserts}
+              onDeliverDessertsDirect={handleDeliverTableDessertsDirect}
               onOpenDessertSelector={() => setIsQuickDessertModalOpen(true)}
               onOpenPreBill={() => setShowPreBill(true)}
               onOpenTransferModal={() => setShowTransferModal(true)}

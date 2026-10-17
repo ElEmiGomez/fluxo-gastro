@@ -6,6 +6,16 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-17 19:15] — Matriz de las 10 Objeciones Reales de Calle en Galicia (Caso Serra de Outes) y Regla 100% Presencial
+* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Dirección General y Organización.
+* **Documento Actualizado:** [`docs/departamentos/2_marketing/manual_prospeccion_y_objeciones.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/manual_prospeccion_y_objeciones.md#L46-L100).
+* **Acuerdos Operativos:**
+  1. *Regla 100% Puerta Fría Presencial en Noia:* Queda descartado el envío de mensajes fríos por Instagram antes de ir en persona para evitar el "visto" sin respuesta y la pérdida del factor sorpresa.
+  2. *Límite de Capacidad Compatible con la Universidad:* Parar de prospectar nuevos locales en cuanto **1 o 2 restaurantes** acepten el piloto de 14 días, garantizando atención impecable durante los 2 fines de semana de prueba.
+  3. *Derribo de las 10 Objeciones Reales de Galicia:* Incorporadas al manual las respuestas palabra por palabra ante: (1) *"Ya me dio el QR gratis el Concello / Estrella Galicia"* (Caso Serra de Outes A), (2) *"Aquí son clientes de siempre y ya sabemos lo que piden"* (Caso Serra de Outes B), (3) *"Preferimos trato cercano sin que el cliente pida en móvil"*, (4) *"Clientes mayores"*, (5) *"Camareros veteranos con libreta"*, (6) *"No quiero tocar mi TPV ni Hacienda"*, (7) *"Pedidos falsos de broma desde la calle"*, (8) *"Mala cobertura en paredes de piedra"*, (9) *"Demasiados gastos fijos/autónomo"*, y (10) *"Déjame una tarjeta y hablo con mi socio"* (Cierre de doble alternativa).
+
+---
+
 ### [2026-10-17 17:45] — Base de Datos Maestra CRM de Noia (35 Locales Activos + 5 Exclusiones) y Ruta Táctica
 * **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Dirección General y Organización.
 * **Documento Consolidado:** [`docs/departamentos/2_marketing/prospeccion_locales_noia.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/prospeccion_locales_noia.md).
@@ -811,5 +821,40 @@
   3. **Consentimiento Obligatorio RGPD/LSSI:** Casilla obligatoria de privacidad antes de guardar teléfono o email en el Club de Clientes (v1.2) y en el formulario de la landing page.
   4. **Pruebas de Carga con `k6` (`k6.io`):** Complementar `scripts/run_5000_scenarios_matrix.mjs` en entorno de pruebas para validar picos simultáneos de varias terrazas (viernes/sábado 21:30).
   5. **Prospección Basada en Quejas de Google Maps (`Founder`):** Uso de reseñas negativas de servicio como gancho comercial directo en visitas locales.
+
+---
+## [2026-10-17 20:06] ACTA EJECUTIVA DE REUNIÓN DE EQUIPO FLUXO (EMILIANO GÓMEZ, GUILLERMO F. GÓMEZ & IGNACIO CERUTTI NORRIS)
+- **Departamentos Sincronizados:** Dirección General (COO), Estrategia Comercial & Marketing, Ingeniería & Producto (Program Data) y Operaciones.
+- **1. Estrategia Comercial y Barrera de Entrada ("Caballo de Troya" — DEC-28):**
+  - **Diagnóstico del Mercado Real:** En bares pequeños los mozos prefieren papel y lápiz o atienden de memoria. El cliente ideal para el sistema completo es un local mediano/grande (**30 a 40 mesas** donde las mesas no están todas al alcance visual de los mozos). Sin embargo, entrar en frío a un restaurante grande ofreciendo cambiar toda su operativa tiene una barrera de confianza muy alta.
+  - **Puerta de Entrada (Carta Digital QR):** Iniciar ofreciendo **exclusivamente la Carta Digital** como servicio rápido, simple y sin riesgo ("como atarse los cordones").
+  - **Modelos de Cobro de Entrada Evaluados:**
+    - *Suscripción accesible (ej. 10 € - 39 €/mes):* Incluir un límite claro de **hasta 4 cambios/promociones al mes (1 por semana)** para evitar abusos de tiempo diarios.
+    - *Pago por modificación puntual (ej. 5 € por cambio):* Alternativa para locales en España que casi no cambian precios por la baja inflación y temen pagar una cuota fija sin usarla.
+  - **Escalado Modular tras Ganar Confianza:**
+    1. **Nivel 1:** Carta Digital QR + Impresión plastificada lista para las mesas (acuerdo con imprenta local).
+    2. **Nivel 2:** Añadir el botón **"Llamar al Mozo"** con alerta sonora (`clin`) y registro de tiempos de respuesta (ej. llamado a las 22:00, atendido a las 22:37 -> demuestra al dueño si falta personal en esa zona).
+    3. **Nivel 3:** Comandero de Mozo + Monitor de Cocina (KDS) para eliminar errores de caligrafía y pase.
+    4. **Nivel 4 (Perfil Dueño/Administrador):** Reporte Mensual con platos más vendidos, más cliqueados y **vistos pero no pedidos**, más control futuro de stock/mermas.
+- **2. Táctica del Único QR Físico Dinámico Plastificado (DEC-29):**
+  - Para no gastar dinero imprimiendo QRs distintos que se pierden si el local rechaza la oferta, se llevará **un único QR impreso y plastificado** (formato resistente y limpio).
+  - Ese QR apunta a un enlace único dinámico que Emiliano cambia en segundos antes de entrar a cada local según su nicho (Hamburguesería, Tapería, Cervecería, Cafetería), respaldado en el mapeo previo de Noia (Tier 1, Tier 2, Tier 3).
+- **3. Arquitectura y Flujo de Pedidos en Sala y Cocina (DEC-30):**
+  - **Separación Estricta por Perfil:**
+    - *Comensal:* Ve la carta y el estado de su pedido.
+    - *Mozo:* Gestiona las bebidas y marca el ritmo de la mesa (cuándo levantar platos y cuándo marchar el postre).
+    - *Cocina:* Solo ve los platos de comida que debe preparar, nunca las bebidas.
+    - *Administrador/Dueño:* Recibe las métricas de rentabilidad y conversión de carta.
+  - **Solución de Raíz para Pedidos Múltiples (Bloqueo Secuencial de Postres):**
+    - Para evitar que un cliente pida bebida, entrada, principal y postre todo junto al principio y genere confusión en cocina, se acuerda **restringir/bloquear el pedido de postres en la carta del comensal hasta que el plato principal haya sido entregado** (`delivered`).
+    - Una vez entregado el plato principal, se habilita pedir postres, cafés o segundas rondas. Si una mesa entra solo por un postre o café, el mozo siempre tiene todas las opciones desbloqueadas en su comandero.
+- **4. Validación de Campo y Entrevistas con Gastronómicos (DEC-31):**
+  - Consultar primero con contactos reales del sector (los chicos de la cafetería conocidos a través de Tabo, y contactos del club de básquet) y acudir a locales con vestimenta formal-sobria (pantalón largo y remera lisa) bajo el enfoque: *"Estoy desarrollando una herramienta para restaurantes y, como ustedes están en el rubro, ¿les puedo hacer 2 preguntas sobre qué es lo que más les complica hoy?"*.
+- **5. Reglas de Negocio para Proyectos a Medida e Infraestructura (Caso Pollería de Nacho aplicado al Equipo):**
+  - **Cobro por Etapas / Seña:** Nunca cobrar el 100% al final. Dividir el proyecto en entregas parciales cada **15-20 días** mostrando un MVP o avance funcional contra pagos porcentuales por etapa.
+  - **Cuadro Comparativo de Valor:** Presentar al cliente una comparativa frente a software enlatado o gratuito de internet, resaltando el soporte personalizado, idioma local y adaptación a sus reglas semanales/transferencias.
+  - **Desglose de Dominio, Hosting y Privacidad:** Dejar siempre por escrito desde el inicio que el registro de dominio anual y el servidor/hosting son gastos operativos a cargo del cliente, priorizando bases de datos privadas y seguras frente a hojas compartidas gratuitas.
+- **6. Acción Comunitaria Local y Networking en Noia (Caso Cáritas / Juan Carlos):**
+  - Enfoque 100% constructivo y de reciprocidad: contactar a Juan Carlos (director de Cáritas Noia) ofreciendo disponibilidad de voluntariado en horarios compatibles con el estudio. Durante esa charla presencial e informal, proponer de forma orgánica facilitar la información de horarios (cartel o mensaje de respuesta automática simple en WhatsApp, sin bots complejos) para ayudar a futuros solicitantes y fortalecer la red de contactos de confianza en Noia.
 
 

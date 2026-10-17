@@ -11,6 +11,7 @@ import {
   getServerOrders,
   addServerOrder,
   updateServerOrderStatus,
+  isValidOrderTransition,
   saveCachedOrderItems,
   getCachedOrderItems,
 } from '@/lib/server-state'
@@ -493,6 +494,14 @@ export async function transitionOrderStatus(
             previous_status: data.previous_status,
             new_status: data.new_status,
           }
+        } else if (
+          data.code !== 'VERSION_CONFLICT' &&
+          data.code !== 'ORDER_NOT_FOUND' &&
+          data.current_status &&
+          isValidOrderTransition(data.current_status, nextStatus)
+        ) {
+          // La transición es válida en la máquina de estados (ej. Pase 2 postres: delivered -> preparing),
+          // continuar hacia el fallback de servidor y persistencia directa en Supabase.
         } else {
           return {
             success: false,
@@ -780,6 +789,8 @@ export async function resolvePendingDessertInOrder(
     return it
   })
 
+  const nextStatus: OrderStatus = order.status === 'ready' || order.status === 'delivered' ? 'preparing' : order.status
+
   // Persistir en Supabase
   if (hasSupabase) {
     try {
@@ -791,6 +802,12 @@ export async function resolvePendingDessertInOrder(
             .eq('id', it.id)
         }
       }
+      if (nextStatus !== order.status) {
+        await supabase
+          .from('orders')
+          .update({ status: nextStatus })
+          .eq('id', orderId)
+      }
     } catch (dbErr) {
       console.warn('[resolvePendingDessertInOrder] DB update error:', dbErr)
     }
@@ -798,7 +815,7 @@ export async function resolvePendingDessertInOrder(
 
   const updatedOrder: Order = {
     ...order,
-    status: order.status === 'ready' || order.status === 'delivered' ? 'preparing' : order.status,
+    status: nextStatus,
     order_items: updatedItems,
   }
 

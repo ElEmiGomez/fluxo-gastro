@@ -263,7 +263,37 @@ export function useComanderoActions({
     setTimeout(() => setOrderSentToast(false), 2500)
   }
 
-  // Marchar postres retenidos a la cocina (Pase 2 dulce)
+  // Marchar postres retenidos de una orden específica a la cocina (Pase 2 dulce)
+  const handleFireOrderDesserts = async (orderId: string) => {
+    try {
+      await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, orderId, action: 'fire_desserts' }),
+      })
+      await syncServerData()
+      setOrderSentToast(true)
+      setTimeout(() => setOrderSentToast(false), 2500)
+    } catch (e) {
+      console.error('Error firing order desserts:', e)
+    }
+  }
+
+  // Entregar postres retenidos de una orden directamente por el mozo (Tachar sin pasar por cocina)
+  const handleDeliverOrderDessertsDirect = async (orderId: string) => {
+    try {
+      await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, orderId, action: 'deliver_desserts_direct' }),
+      })
+      await syncServerData()
+    } catch (e) {
+      console.error('Error delivering order desserts directly:', e)
+    }
+  }
+
+  // Marchar postres retenidos de toda la mesa a la cocina (Pase 2 dulce)
   const handleFireDesserts = async (tableNum: string | number) => {
     const tableOrders = serverOrders.filter(
       o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
@@ -283,6 +313,26 @@ export function useComanderoActions({
     await syncServerData()
     setOrderSentToast(true)
     setTimeout(() => setOrderSentToast(false), 2500)
+  }
+
+  // Entregar postres retenidos de toda la mesa directamente por el mozo (Tachar sin cocina)
+  const handleDeliverTableDessertsDirect = async (tableNum: string | number) => {
+    const tableOrders = serverOrders.filter(
+      o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
+    )
+    const dessertOrders = tableOrders.filter(o => {
+      const desserts = (o.order_items || []).filter(isDessertItem)
+      return desserts.length > 0 && desserts.some(d => !isDessertReady(d))
+    })
+
+    for (const ord of dessertOrders) {
+      await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, orderId: ord.id, action: 'deliver_desserts_direct' }),
+      })
+    }
+    await syncServerData()
   }
 
   // Marcar mesa como cobrada y liberarla
@@ -461,7 +511,10 @@ export function useComanderoActions({
     handleCancelValidationOrder,
     handleCancelSingleOrder,
     handleFireSecondCourses,
+    handleFireOrderDesserts,
+    handleDeliverOrderDessertsDirect,
     handleFireDesserts,
+    handleDeliverTableDessertsDirect,
     executeCloseAndFreeTable,
     handleTransferTable,
     handleSendOrderToKitchen,

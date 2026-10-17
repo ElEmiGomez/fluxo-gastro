@@ -43,28 +43,60 @@ Saca tu móvil con el QR de demostración impreso en una tarjeta:
 
 ---
 
-## 3. Derribo Quirúrgico de Objeciones
+## 3. Derribo Quirúrgico de las 10 Objeciones Reales de Calle en Galicia
 
-### Objeción 1: *"Mis clientes son mayores / tradicionales y pasan de los QR"*
-* **Por qué lo dice:** Tienen miedo a alienar a su clientela habitual de barrio.
-* **Respuesta táctica:**
-  > *"Es normal, y a los clientes mayores hay que mimarlos como siempre. El camarero sigue teniendo su libreta o comandero para tomarles la comanda de viva voz.  
-  > Pero en las mesas donde hay gente joven o trabajadores con 30 minutos para comer, ellos mismos piden la cuenta por el QR. Eso te libera al camarero para darle una atención de 10 a los clientes tradicionales que quieren charlar."*
+### Objeción 1 (Caso Serra de Outes A): *"No necesito carta digital, ya me la dio gratis el Ayuntamiento / la Xunta / Estrella Galicia"*
+* **Por qué te pasó esto:** Si el hostelero escucha las palabras *"carta digital"* o *"código QR"*, te mete automáticamente en el saco de los PDFs mudos que regalaron los ayuntamientos y distribuidoras en pandemia.
+* **Cómo prevenirla:** Nunca abras diciendo *"vengo a ofrecerte una carta digital"*. Abre hablando de **ahorrar viajes al camarero** y **cobrar más rápido en las mesas donde no llega la vista**.
+* **Respuesta exacta si te la dicen:**
+  > *"Claro, para leer un PDF ya vale el del Concello. Pero el QR del Concello es mudo: si la mesa del fondo del jardín o de la terraza quiere otra caña o pagar con tarjeta, el QR del Concello no le hace vibrar el bolsillo a tu camarero ni manda la comanda a cocina. Nosotros no somos un papel en el móvil; somos un avisador y comandero para que tu personal camine la mitad."*
 
-### Objeción 2: *"Los camareros van a pensar que esto es para recortar personal"*
-* **Por qué lo dice:** Teme el rechazo interno de su plantilla sindical o de confianza.
-* **Respuesta táctica:**
-  > *"Pregúntale a cualquier camarero si le gusta hacer 14 kilómetros por turno cargando jarras de agua o haciendo viajes dobles para traer el datáfono. Esto no sustituye al camarero: le quita los pasos basura y le deja centrarse en vender más copas, postres y dar buen servicio. Los camareros son los primeros que defienden Fluxo cuando lo prueban un sábado."*
+### Objeción 2 (Caso Serra de Outes B): *"Aquí vienen siempre los mismos vecinos del pueblo, ni miran la carta, ya sabemos lo que toman"*
+* **Por qué lo dice y diagnóstico sincero:**
+  * **Si es un bar pequeño de barra/cafés (<8 mesas):** Tiene toda la razón. Ese local NO es cliente de Fluxo. Despídete con educación en 30 segundos y no pierdas tiempo ahí.
+  * **Si es un local con terraza o comedor de 15-25 mesas en Noia (ej. *Adega do Pazo*, *Equs*, *Forno do Rato*):** El dueño está pensando en el martes a las 11:00 de la mañana con los jubilados, no en el viernes o sábado lleno.
+* **Respuesta exacta (solo para locales de nuestro filtro de 35):**
+  > *"Entre semana con los vecinos del café a primera hora, totalmente de acuerdo. Pero un viernes por la noche o un sábado al mediodía cuando tienes las 20 mesas llenas, gente de fuera y grupos pidiendo raciones a la vez, ahí no son cuatro vecinos en la barra: ahí tienes 8 mesas queriendo pedir otra ronda o pagar con datáfono al mismo tiempo. Para ese pico del fin de semana es para lo que te ponemos las 4 peanas de prueba."*
 
-### Objeción 3: *"Ya tengo un software TPV con comandero de pantalla"*
-* **Por qué lo dice:** Pereza a cambiar de sistema informático o pagar doble.
+### Objeción 3: *"No quiero que el cliente pida por el móvil, aquí nos gusta el trato cercano de toda la vida"*
+* **Por qué lo dice:** Muy típico en mesones y marisquerías tradicionales (`[ICP-MARTIN]`: *El Txoko*, *Mesón O Forno*, *Taberna de Lelo*). Temen parecer una franquicia fría de comida rápida.
 * **Respuesta táctica:**
-  > *"No toques tu TPV. Fluxo no reemplaza tu sistema de facturación ni tu datáfono bancario. Se coloca encima como un acelerador de terraza. La cuenta se sigue cobrando en tu TPV de siempre, pero el cliente ya no espera 15 minutos con la mano levantada para pedirla."*
+  > *"Y hacéis muy bien, en un mesón como el vuestro el trato del camarero es sagrado. Por eso Fluxo es modular: desactivamos que el cliente pida desde la mesa. El cliente solo ve los platos con foto (y en su idioma si es extranjero), o pulsa para pedir la cuenta, y es tu camarero quien toma la nota hablando con ellos como siempre, pero desde su móvil la manda en 1 segundo a la pantalla de cocina y bloquea en un toque si se acaba el cachopo o una ración."*
 
-### Objeción 4: *"Ahora mismo no tengo presupuesto para software"*
-* **Por qué lo dice:** Barrera de gasto ante incertidumbre económica.
+### Objeción 4: *"Mis clientes son mayores / tradicionales y pasan de los QR"*
+* **Por qué lo dice:** Miedo a incomodar a la clientela veterana.
 * **Respuesta táctica:**
-  > *"Por eso la prueba es 100% gratuita. Y cuando empiece la suscripción, arranca desde solo 69€ al mes en Plan Sala o 99€ en Plan Full (apenas 2€ a 3€ al día). Con que gracias a atender más rápido rotes una sola mesa extra a la semana, ya has pagado todo el mes y te sobra beneficio limpio."*
+  > *"A los clientes mayores se les atiende de viva voz como toda la vida. Pero en las mesas donde se sientan parejas jóvenes, familias o gente con prisa al mediodía, ellos mismos te piden la cuenta con tarjeta desde el móvil. Con que la mitad de la terraza lo use, ya le quitaste la mitad de paseos en vacío al camarero para que pueda atender con más calma a la gente mayor."*
+
+### Objeción 5: *"Mis camareros llevan años con libreta y boli, no se van a aclarar o van a pensar que es para controlarlos / recortar personal"*
+* **Por qué lo dice:** Miedo a que su equipo se queje en pleno fin de semana.
+* **Respuesta táctica:**
+  > *"Si les pones un programa complicado con 50 botones, lo odian. Esto en su móvil tiene literalmente dos botones grandes: verde para confirmar la mesa y azul cuando llevan el datáfono. Pregúntale a cualquier camarero si prefiere caminar 14 kilómetros un sábado dando viajes en vacío al fondo de la terraza o ir a tiro fijo con el datáfono en la mano. El primer fin de semana que ven que les duelen menos las piernas, son ellos los que no quieren volver al papel."*
+
+### Objeción 6: *"Ya tengo mi TPV en la barra (Ágora / Glop / Hiboutik) y no quiero cambiar de programa ni líos con Hacienda"*
+* **Por qué lo dice:** Pereza informática y miedo a tocar la facturación (clave en locales como *Casa Mar da Vila* que usan Ágora).
+* **Respuesta táctica:**
+  > *"Prohibido tocar tu TPV. Tu caja, tus tickets y tu datáfono del banco siguen exactamente igual. Fluxo no toca tu contabilidad: funciona por encima únicamente para conectar las mesas ciegas de la terraza con el bolsillo del camarero y la cocina."*
+
+### Objeción 7: *"Si pongo códigos QR en la terraza, los chavales que pasan por la calle me van a mandar pedidos falsos de broma"*
+* **Por qué lo dice:** Miedo real (ha pasado con otros sistemas de QR abiertos).
+* **Respuesta táctica:**
+  > *"En otros sistemas pasa, en Fluxo es imposible. Tenemos un filtro de seguridad obligatorio: aunque alguien escanee en la mesa y pida, a la cocina NO entra absolutamente nada hasta que tu camarero mira la mesa y pulsa 'Confirmar' en su móvil. Cero bromas y cero comandas fantasma."*
+
+### Objeción 8: *"En este local de piedra dentro no hay buena cobertura o a veces falla el Wi-Fi"*
+* **Por qué lo dice:** Muy habitual en los bajos de piedra del casco histórico de Noia (*Cantón*, *Curro*, *Costa do Ferrador*).
+* **Respuesta táctica:**
+  > *"precisamente donde más sufren tus camareros es en la terraza de fuera, y en la calle los móviles tienen 4G/5G a tope sin depender del Wi-Fi del local. Y para las mesas del comedor interior de piedra, basta con que el móvil del camarero esté conectado a vuestro Wi-Fi cerca de la barra para mandar la nota a cocina."*
+
+### Objeción 9: *"Ya pago demasiados impuestos, autónomo, luz y alquiler como para meter otra cuota mensual"*
+* **Por qué lo dice:** Saturación real de gastos fijos en hostelería.
+* **Respuesta táctica:**
+  > *"Te entiendo perfectamente, hoy al hostelero lo fríen a cuotas fijas que no le traen ni un euro de vuelta. Por eso te propongo 14 días (dos fines de semana reales) a 0€, sin firmar permanencia ni dar tarjeta. Y si te quedas el sistema, son 69€ al mes (2,30€ al día, lo que cuesta un café con leche). Con que un solo sábado dobles una mesa más en terraza porque cobraste 12 minutos antes, ya pagaste el mes entero y el resto es beneficio limpio."*
+
+### Objeción 10 (La Falsa Salida): *"Suena interesante, pero ahora estoy liado / déjame una tarjeta y ya lo hablo con mi socio"*
+* **Por qué lo dice:** Es la forma educada de quitarte de encima. **Si dejas una tarjeta y te vas esperando a que te llamen, no te van a llamar jamás.**
+* **Respuesta táctica (Cierre de Doble Alternativa):**
+  > *"Por supuesto, no te quito ni un minuto más ahora que estáis preparando todo. Como soy de aquí al lado, dime una cosa rápida: ¿tu socio y tú coincidís aquí un momento el martes sobre las 11:30 o es mejor que me pase el jueves a las 17:30 y se lo enseño en el móvil en 2 minutos?"*
 
 ---
 
