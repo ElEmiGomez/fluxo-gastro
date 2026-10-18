@@ -6,13 +6,35 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
-### [2026-10-17 19:15] — Matriz de las 10 Objeciones Reales de Calle en Galicia (Caso Serra de Outes) y Regla 100% Presencial
-* **Departamentos Sincronizados:** Marketing & Ventas ([`e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac`](conversation://e8fcf7e2-1bce-4f7e-95ae-ebfb2c0ca5ac)) con Dirección General y Organización.
-* **Documento Actualizado:** [`docs/departamentos/2_marketing/manual_prospeccion_y_objeciones.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/manual_prospeccion_y_objeciones.md#L46-L100).
-* **Acuerdos Operativos:**
-  1. *Regla 100% Puerta Fría Presencial en Noia:* Queda descartado el envío de mensajes fríos por Instagram antes de ir en persona para evitar el "visto" sin respuesta y la pérdida del factor sorpresa.
-  2. *Límite de Capacidad Compatible con la Universidad:* Parar de prospectar nuevos locales en cuanto **1 o 2 restaurantes** acepten el piloto de 14 días, garantizando atención impecable durante los 2 fines de semana de prueba.
-  3. *Derribo de las 10 Objeciones Reales de Galicia:* Incorporadas al manual las respuestas palabra por palabra ante: (1) *"Ya me dio el QR gratis el Concello / Estrella Galicia"* (Caso Serra de Outes A), (2) *"Aquí son clientes de siempre y ya sabemos lo que piden"* (Caso Serra de Outes B), (3) *"Preferimos trato cercano sin que el cliente pida en móvil"*, (4) *"Clientes mayores"*, (5) *"Camareros veteranos con libreta"*, (6) *"No quiero tocar mi TPV ni Hacienda"*, (7) *"Pedidos falsos de broma desde la calle"*, (8) *"Mala cobertura en paredes de piedra"*, (9) *"Demasiados gastos fijos/autónomo"*, y (10) *"Déjame una tarjeta y hablo con mi socio"* (Cierre de doble alternativa).
+### [2026-10-18 21:05] — Nueva Tarea Técnica y Comercial: QR Dinámico para Demostraciones de Venta (Tarea 2)
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Diseño de Marca (Depto 3) e Ingeniería & Producto / Program Data (Depto 4).
+* **Definición de la Tarea:**
+  - **Requisito:** Diseñar un soporte físico/digital de código QR de alta presencia estética ("QR de Demostración Fluxo") que apunte a una URL fija/permanente (ej. `fluxo-system.com/demo` o con parámetro de redirección configurable).
+  - **Funcionalidad Dinámica:** Permitir al fundador/comercial conmutar el destino o cargar al vuelo la carta de muestra correspondiente al restaurante que va a visitar (ej. hamburguesería, tapería gallega, pizzería o menú personalizado con el logo del local) sin tener que reimprimir el código QR físico.
+  - **Estado en Backlog:** Registrada como **`Tarea 2`** en Program Data y Marketing.
+
+---
+
+### [2026-10-18 09:00] — Vigilancia Diaria de Mercado e Inteligencia B2B (4 Cuadrantes)
+* **Departamentos Sincronizados:** Organización General (COO), Marketing & Ventas, Diseño de Marca & UI, Ingeniería & Producto (Program Data) y Learning & Intelligence.
+* **Acción Realizada:**
+  1. **Marketing & Ventas (Depto 2):**
+     - Generado informe diario `docs/departamentos/2_marketing/investigaciones_diarias/2026-10-18_inteligencia_mercado.md` cubriendo los 4 cuadrantes (Competidores, Normativa, Sala/Personal e IA).
+     - Actualizado `manual_prospeccion_y_objeciones.md` con 3 nuevas Battle Cards frente a Qamarero, escasez de camareros y calendario Veri*Factu.
+     - Focalizadas oportunidades comerciales en Noia (Fase 2), Barbanza (Fase 3) y Santiago (Fase 4).
+  2. **Diseño de Marca & UI (Depto 3):**
+     - Ratificada la jerarquía visual de alto contraste y botones táctiles industriales (>70px) para cocina KDS y visibilidad solar en cartas QR de terraza.
+  3. **Organización General & COO (Depto 1):**
+     - Auditoría y confirmación de la matriz canónica de precios DEC-06: Carta (39€), Sala (69€), Full (99€), Suite (139€) y Setup (149€ bonificable 100%).
+  4. **Ingeniería & Producto / Program Data (Depto 4):**
+     - Ejecución automatizada del motor de inteligencia de mercado (`scripts/daily_market_intelligence.mjs`).
+     - Verificación de 0 errores en compilación Next.js 14 (`npm run build` PASS).
+  5. **Learning & Intelligence (Depto 5):**
+     - Consolidación de la lección didáctica matutina con la analogía del "Pase de Cocina y el Mozo Gatekeeper".
+     - Compilado y actualizado el documento didáctico PDF en la raíz del workspace (`Lecciones_Fluxo_18_10_2026.pdf`).
+* **Impacto Operativo:** Alineación estratégica integral y disponibilidad de argumentario comercial actualizado para prospección a pie de calle en Galicia.
+* **Verificación del Sistema:** Pipeline automatizado ejecutado con éxito (0 errores).
+
 
 ---
 

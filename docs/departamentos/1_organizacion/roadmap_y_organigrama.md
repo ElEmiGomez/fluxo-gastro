@@ -66,8 +66,9 @@ flowchart TD
 │  ├─ [x] Hitos Fundacionales Consolidados (v1.0 & v1.2 completados)         │
 │  ├─ [📋 Tarea 1] Fixear Lógica Compleja de Mozo y Cocina                   │
 │  │     (Auditoría y simulación integral: estados, sincronización y cierre) │
-│  ├─ [x] Tarea 2: Reporte Mensual y Estadísticas purgado y consolidado      │
-│  │     (Estructura base lista para iterar con feedback de clientes reales) │
+│  ├─ [x] Tarea 2 (Previa): Reporte Mensual y Estadísticas consolidado       │
+│  ├─ [📋 Tarea 2] QR Dinámico y Personalizable para Muestras Comerciales    │
+│  │     (Soporte de demo redireccionable/configurable para cartas por nicho)│
 │  └─ [⏸️ STANDBY] Generación Masiva de Códigos QR para Mesas               │
 │        (Pausado hasta agotar las tareas prioritarias activas)              │
 └────────────────────────────────────┬────────────────────────────────────┘
