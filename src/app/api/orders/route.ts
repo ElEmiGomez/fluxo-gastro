@@ -690,6 +690,7 @@ export async function PATCH(req: NextRequest) {
         slug,
         nextStatus: 'preparing',
         actorType: 'kitchen',
+        forceAllowReactivation: true,
       })
       const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
       return NextResponse.json({ success: true, order: finalOrder, message: 'Preparación de platos principales iniciada' })
@@ -726,6 +727,7 @@ export async function PATCH(req: NextRequest) {
         slug,
         nextStatus: 'preparing',
         actorType: 'kitchen',
+        forceAllowReactivation: true,
       })
       const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
       return NextResponse.json({ success: true, order: finalOrder, message: 'Preparación de postres iniciada' })
@@ -757,6 +759,7 @@ export async function PATCH(req: NextRequest) {
             slug,
             nextStatus: 'preparing',
             actorType: 'waiter',
+            forceAllowReactivation: true,
           })
           finalOrder = transRes.order || (currentOrder ? { ...currentOrder, status: 'preparing' } : currentOrder)
         } else {
@@ -852,6 +855,7 @@ export async function PATCH(req: NextRequest) {
         slug,
         nextStatus: 'preparing',
         actorType: 'waiter',
+        forceAllowReactivation: true,
       })
       return NextResponse.json({
         success: true,
@@ -907,6 +911,7 @@ export async function PATCH(req: NextRequest) {
         slug,
         nextStatus: 'preparing',
         actorType: body.actor_type || 'waiter',
+        forceAllowReactivation: true,
       })
       return NextResponse.json({
         success: true,

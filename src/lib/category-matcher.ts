@@ -364,6 +364,9 @@ export function deduplicateProducts(products: Product[]): Product[] {
 // Mapeo bidireccional entre identificadores legados ('p-...') y UUIDs canónicos oficiales de Supabase
 export const CANONICAL_PRODUCT_MAP: Record<string, string> = {
   'p-promo-1': 'b0000000-0000-0000-0000-000000000001',
+  'p-1': 'b0000000-0000-0000-0000-000000000002',
+  'p-2': 'b0000000-0000-0000-0000-000000000002',
+  'p-3': 'b0000000-0000-0000-0000-000000000002',
   'p-bur-1': 'b0000000-0000-0000-0000-000000000002',
   'p-beb-3': 'b0000000-0000-0000-0000-000000000003',
   'p-pos-1': 'b0000000-0000-0000-0000-000000000006',

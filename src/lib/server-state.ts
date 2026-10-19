@@ -277,18 +277,25 @@ export function saveIdempotentOrder(key: string, order: Order, ttlMs: number = 3
 // MÁQUINA DE ESTADOS FORMAL DE COMANDAS
 // ==============================================================================
 export const VALID_ORDER_TRANSITIONS: Record<string, string[]> = {
-  pending_validation: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'], // Mozo valida; órdenes de solo bebidas van directo a ready o delivered
+  pending_validation: ['pending', 'confirmed', 'preparing', 'delivered', 'cancelled'], // Mozo valida; café/bebidas pueden ir directo a delivered
   pending: ['confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
   confirmed: ['preparing', 'ready', 'delivered', 'cancelled'],
   preparing: ['ready', 'delivered', 'cancelled'],
-  ready: ['preparing', 'delivered', 'cancelled'], // Marchar postres reactiva la comanda a preparing
-  delivered: ['preparing', 'ready', 'paid', 'cancelled'], // Pase 2 postres tras entregar platos principales
+  ready: ['delivered', 'cancelled'],
+  delivered: ['paid', 'cancelled'],
   paid: [],
   cancelled: [],
 }
 
-export function isValidOrderTransition(currentStatus: string, nextStatus: string): boolean {
+export function isValidOrderTransition(
+  currentStatus: string,
+  nextStatus: string,
+  allowReactivation: boolean = false
+): boolean {
   if (currentStatus === nextStatus) return true
+  if (allowReactivation && (currentStatus === 'delivered' || currentStatus === 'ready') && nextStatus === 'preparing') {
+    return true
+  }
   const allowed = VALID_ORDER_TRANSITIONS[currentStatus] || []
   return allowed.includes(nextStatus)
 }
@@ -358,7 +365,8 @@ export function updateServerOrderStatus(
   orderId: string,
   status: OrderStatus,
   tableNumber?: number | string,
-  expectedVersion?: number
+  expectedVersion?: number,
+  allowReactivation: boolean = false
 ): {
   orders: Order[]
   error?: string
@@ -415,7 +423,7 @@ export function updateServerOrderStatus(
   }
 
   // 4. Validar transición de estado legal
-  if (!isValidOrderTransition(existingOrder.status, status)) {
+  if (!isValidOrderTransition(existingOrder.status, status, allowReactivation)) {
     return {
       orders: getServerOrders(slug),
       error: `Transición inválida de ${existingOrder.status} a ${status}`,

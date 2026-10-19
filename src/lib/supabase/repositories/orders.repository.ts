@@ -33,6 +33,7 @@ export interface TransitionOrderParams {
   actorType?: string
   actorId?: string
   tableNumber?: number | string
+  forceAllowReactivation?: boolean
 }
 
 export interface TransitionOrderResult {
@@ -474,10 +475,67 @@ export async function transitionOrderStatus(
     actorType = 'waiter',
     actorId,
     tableNumber,
+    forceAllowReactivation = false,
   } = params
 
   const supabase = createServerClient()
   const hasSupabase = supabase && isSupabaseConfigured()
+
+  // 1. Obtener la comanda previa (memoria o Supabase) para validar idempotencia y transiciones
+  const memOrders = getServerOrders(slug)
+  let currentOrder = memOrders.find(o => o.id === orderId)
+  if (!currentOrder && hasSupabase) {
+    try {
+      const { data: supaOrder } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            quantity,
+            notes,
+            products (*)
+          )
+        `)
+        .eq('id', orderId)
+        .maybeSingle()
+      if (supaOrder) {
+        currentOrder = {
+          ...supaOrder,
+          version: supaOrder.version || 1,
+          order_items: supaOrder.order_items || [],
+        } as Order
+        addServerOrder(slug, currentOrder, true)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // Idempotencia inmediata si ya está en el estado solicitado
+  if (currentOrder && currentOrder.status === nextStatus) {
+    return {
+      success: true,
+      code: 'ALREADY_IN_STATE',
+      message: `Orden ${orderId} ya se encuentra en estado ${nextStatus}`,
+      order: currentOrder,
+      version: currentOrder.version || 1,
+      current_status: currentOrder.status,
+    }
+  }
+
+  // Validación estricta de máquina de estados formal
+  if (currentOrder && !isValidOrderTransition(currentOrder.status, nextStatus, forceAllowReactivation)) {
+    return {
+      success: false,
+      code: 'TRANSITION_INVALID',
+      message: `Transición inválida de ${currentOrder.status} a ${nextStatus}`,
+      error: `Transición inválida de ${currentOrder.status} a ${nextStatus}`,
+      current_version: currentOrder.version,
+      current_status: currentOrder.status,
+    }
+  }
 
   if (hasSupabase) {
     try {
@@ -494,6 +552,19 @@ export async function transitionOrderStatus(
 
       if (!error && data) {
         if (data.success) {
+          // Doble verificación: si la transición no era válida según la máquina de estados, rechazar
+          const priorStatus = (data.previous_status || currentOrder?.status) as string | undefined
+          if (priorStatus && !isValidOrderTransition(priorStatus, nextStatus, forceAllowReactivation)) {
+            return {
+              success: false,
+              code: 'TRANSITION_INVALID',
+              message: `Transición inválida de ${priorStatus} a ${nextStatus}`,
+              error: `Transición inválida de ${priorStatus} a ${nextStatus}`,
+              current_version: data.current_version ?? currentOrder?.version,
+              current_status: priorStatus as OrderStatus,
+            }
+          }
+
           const rpcItems = (data.order?.order_items || []).map((it: any) => ({
             ...it,
             product: it.product || it.products,
@@ -529,7 +600,7 @@ export async function transitionOrderStatus(
 
           // Sincronizar en memoria local con items hidratados antes del broadcast
           if (parsedOrder) {
-            updateServerOrderStatus(slug, orderId, nextStatus, tableNumber)
+            updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, undefined, forceAllowReactivation)
           }
 
           broadcastEvent({
@@ -554,7 +625,7 @@ export async function transitionOrderStatus(
           data.code !== 'VERSION_CONFLICT' &&
           data.code !== 'ORDER_NOT_FOUND' &&
           data.current_status &&
-          isValidOrderTransition(data.current_status, nextStatus)
+          isValidOrderTransition(data.current_status, nextStatus, forceAllowReactivation)
         ) {
           // La transición es válida en la máquina de estados (ej. Pase 2 postres: delivered -> preparing),
           // continuar hacia el fallback de servidor y persistencia directa en Supabase.
@@ -581,7 +652,7 @@ export async function transitionOrderStatus(
   }
 
   // 2. Fallback de máquina de estados en servidor (memoria + persistencia directa en Supabase)
-  let memResult = updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, expectedVersion)
+  let memResult = updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, expectedVersion, forceAllowReactivation)
 
   // Si no se encontró en memoria pero Supabase está configurado, intentar buscar en Supabase
   if (memResult.error === 'ORDER_NOT_FOUND' && hasSupabase) {
@@ -624,7 +695,7 @@ export async function transitionOrderStatus(
           order_items: effectiveItems,
         }
         addServerOrder(slug, orderToHydrate)
-        memResult = updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, expectedVersion)
+        memResult = updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, expectedVersion, forceAllowReactivation)
       }
     } catch (fetchErr) {
       console.warn('[transitionOrderStatus] Error recovering order from Supabase:', fetchErr)

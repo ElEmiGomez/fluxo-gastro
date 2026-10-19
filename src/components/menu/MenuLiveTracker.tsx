@@ -16,12 +16,16 @@ import {
   isMainCooking,
   isMainReady,
   isMainServed,
+  isMainFired,
   isDessertItem,
   isDessertCooking,
+  isDessertFired,
   isDessertReady,
   isDessertServed,
   isDessertPendingChoice,
   areOrderMainsFired,
+  TAG_MAIN_FIRED,
+  TAG_DESSERT_FIRED,
 } from '@/lib/course-utils'
 
 interface MenuLiveTrackerProps {
@@ -96,12 +100,25 @@ export function MenuLiveTracker({
 
   const areMainsServed = hasMains && mains.every(isMainServed)
   const areMainsReady = hasMains && mains.every(isMainReady)
-  const areMainsFired = (tableOrders || []).some(areOrderMainsFired)
-  const areMainsCooking = mains.some(isMainCooking) || (hasMains && !hasStarters && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))) || (hasMains && areStartersServed && areMainsFired && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing')))
+  const areMainsFired =
+    (tableOrders || []).some(areOrderMainsFired) ||
+    mains.some(isMainFired) ||
+    (tableOrders || []).some(
+      o => (o as any).notes?.includes(TAG_MAIN_FIRED) || (o as any).kitchen_notes?.includes(TAG_MAIN_FIRED)
+    )
+  const areMainsCooking =
+    mains.some(isMainCooking) ||
+    (hasMains && areMainsFired && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))) ||
+    (hasMains && !hasStarters && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))) ||
+    (hasMains && areStartersServed && areMainsFired && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing')))
 
   const areDessertsServed = hasDesserts && desserts.every(isDessertServed)
   const areDessertsReady = hasDesserts && desserts.every(isDessertReady)
-  const areDessertsCooking = desserts.some(isDessertCooking)
+  const areDessertsCooking =
+    desserts.some(d => isDessertCooking(d) || isDessertFired(d)) ||
+    (tableOrders || []).some(
+      o => (o as any).notes?.includes(TAG_DESSERT_FIRED) || (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)
+    )
   const hasChoicePending = hasPendingDessertChoice || desserts.some(isDessertPendingChoice)
 
   // Título y subtítulo contextual según qué plato está en marcha en este instante
