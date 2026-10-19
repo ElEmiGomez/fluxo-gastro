@@ -23,11 +23,11 @@ export async function GET(req: NextRequest) {
     }
 
     let profile = await getLoyaltyProfile(slug, email)
-    if (tableNumber) {
+    if (tableNumber && profile) {
       profile = await registerOrGetLoyaltyProfile(slug, {
-        name: profile?.name || 'Comensal',
+        name: profile.name || 'Comensal',
         email,
-        phone: profile?.phone,
+        phone: profile.phone,
         tableNumber,
       })
     }
@@ -91,10 +91,20 @@ export async function DELETE(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
     const email = searchParams.get('email')
+    const all = searchParams.get('all') === 'true'
+
+    if (all) {
+      const { clearAllLoyaltyProfiles } = await import('@/lib/supabase/repositories/loyalty.repository')
+      await clearAllLoyaltyProfiles(slug)
+      return NextResponse.json({
+        success: true,
+        message: `Todas las cuentas de fidelización y sellos han sido reseteadas para ${slug}`,
+      })
+    }
 
     if (!email) {
       return NextResponse.json(
-        { success: false, error: 'Email requerido para resetear fidelización' },
+        { success: false, error: 'Email requerido para resetear fidelización o ?all=true para reset general' },
         { status: 400 }
       )
     }

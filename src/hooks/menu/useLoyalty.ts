@@ -33,6 +33,11 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
         try {
           localStorage.setItem(storageKey, JSON.stringify({ email: data.profile.email, name: data.profile.name }))
         } catch (_) {}
+      } else {
+        setProfile(null)
+        try {
+          localStorage.removeItem(storageKey)
+        } catch (_) {}
       }
     } catch (err: any) {
       console.warn('[useLoyalty] Error sincronizando perfil:', err)

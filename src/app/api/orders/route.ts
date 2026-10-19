@@ -1048,8 +1048,16 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const slug = searchParams.get('slug') || 'burger-gourmet'
+    const slug = searchParams.get('slug')
+    const all = searchParams.get('all') === 'true'
     const { clearServerOrders } = await import('@/lib/server-state')
+    
+    if (all || !slug) {
+      const slugs = ['burger-gourmet', 'taperia-casco-antigo', 'terraza-malecon', 'bella-napoli']
+      slugs.forEach(s => clearServerOrders(s))
+      return NextResponse.json({ success: true, message: 'Comandas y sesiones eliminadas para todos los restaurantes' })
+    }
+
     clearServerOrders(slug)
     return NextResponse.json({ success: true, message: `Comandas eliminadas para ${slug}` })
   } catch (err: any) {

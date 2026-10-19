@@ -1480,3 +1480,40 @@ export async function resetOrDeleteLoyaltyProfile(
   return getLoyaltyProfile(slug, normEmail)
 }
 
+/**
+ * Purga todas las cuentas de fidelización y sellos en memoria y en base de datos.
+ */
+export async function clearAllLoyaltyProfiles(slug?: string): Promise<void> {
+  if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
+    if (slug) {
+      Object.keys(globalStore.__GASTRO_LOYALTY_PROFILES__).forEach(k => {
+        if (k.startsWith(`${slug}:`)) delete globalStore.__GASTRO_LOYALTY_PROFILES__![k]
+      })
+    } else {
+      globalStore.__GASTRO_LOYALTY_PROFILES__ = {}
+    }
+  }
+  if (globalStore.__GASTRO_LOYALTY_REWARDS__) {
+    if (slug) delete globalStore.__GASTRO_LOYALTY_REWARDS__[slug]
+    else globalStore.__GASTRO_LOYALTY_REWARDS__ = {}
+  }
+  if (globalStore.__GASTRO_LOYALTY_ESCROW__) {
+    globalStore.__GASTRO_LOYALTY_ESCROW__ = {}
+  }
+  if (globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__) {
+    if (slug) delete globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__[slug]
+    else globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__ = {}
+  }
+  if (globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__) {
+    globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__ = new Set()
+  }
+
+  const supabase = createServerClient()
+  if (supabase && isSupabaseConfigured()) {
+    try {
+      await supabase.from('loyalty_escrow_holds').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      await supabase.from('loyalty_rewards').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      await supabase.from('loyalty_profiles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    } catch (_) {}
+  }
+}
