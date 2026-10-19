@@ -196,13 +196,23 @@ export function isMainItem(item: OrderItem): boolean {
 }
 
 export function isDrinkServed(item: OrderItem): boolean {
-  return Boolean(item.notes && item.notes.includes(TAG_DRINK_SERVED))
+  return Boolean(
+    item.notes &&
+      (item.notes.includes(TAG_DRINK_SERVED) ||
+        item.notes.includes('[BARRA: SERVIDA]') ||
+        item.notes.includes('[BARRA:SERVIDA]'))
+  )
 }
 
 export function isFoodReady(item: OrderItem): boolean {
   if (isStarterItem(item)) return isStarterReady(item)
   if (isMainItem(item)) return isMainReady(item)
-  return Boolean(item.notes && item.notes.includes(TAG_FOOD_READY))
+  return Boolean(
+    item.notes &&
+      (item.notes.includes(TAG_FOOD_READY) ||
+        item.notes.includes('[COCINA: LISTA]') ||
+        item.notes.includes('[COCINA:LISTA]'))
+  )
 }
 
 export function isFoodServed(item: OrderItem): boolean {
@@ -216,7 +226,9 @@ export function isStarterReady(item: OrderItem): boolean {
     item.notes &&
       (item.notes.includes(TAG_STARTER_READY) ||
         item.notes.includes(TAG_STARTER_SERVED) ||
-        item.notes.includes(TAG_FOOD_READY))
+        item.notes.includes(TAG_FOOD_READY) ||
+        item.notes.includes('[COCINA: LISTA]') ||
+        item.notes.includes('[COCINA:LISTA]'))
   )
 }
 
@@ -233,7 +245,9 @@ export function isMainReady(item: OrderItem): boolean {
     item.notes &&
       (item.notes.includes(TAG_MAIN_READY) ||
         item.notes.includes(TAG_MAIN_SERVED) ||
-        item.notes.includes(TAG_FOOD_READY))
+        item.notes.includes(TAG_FOOD_READY) ||
+        item.notes.includes('[COCINA: LISTA]') ||
+        item.notes.includes('[COCINA:LISTA]'))
   )
 }
 
@@ -242,11 +256,24 @@ export function isMainServed(item: OrderItem): boolean {
 }
 
 export function isDessertServed(item: OrderItem): boolean {
-  return Boolean(item.notes && item.notes.includes(TAG_DESSERT_SERVED))
+  return Boolean(
+    item.notes &&
+      (item.notes.includes(TAG_DESSERT_SERVED) ||
+        item.notes.includes('[POSTRE: SERVIDO]') ||
+        item.notes.includes('[POSTRE:SERVIDO]'))
+  )
 }
 
 export function isDessertReady(item: OrderItem): boolean {
-  return Boolean(item.notes && (item.notes.includes(TAG_DESSERT_READY) || item.notes.includes(TAG_DESSERT_SERVED)))
+  return Boolean(
+    item.notes &&
+      (item.notes.includes(TAG_DESSERT_READY) ||
+        item.notes.includes('[POSTRE: LISTO]') ||
+        item.notes.includes('[POSTRE:LISTO]') ||
+        item.notes.includes(TAG_DESSERT_SERVED) ||
+        item.notes.includes('[POSTRE: SERVIDO]') ||
+        item.notes.includes('[POSTRE:SERVIDO]'))
+  )
 }
 
 export function isDessertFired(item: OrderItem): boolean {

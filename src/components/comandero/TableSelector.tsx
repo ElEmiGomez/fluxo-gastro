@@ -69,34 +69,42 @@ interface TableCourseBadges {
 }
 
 function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
-  const allItems = tableOrders.flatMap(o => o.order_items || [])
+  const activeOrders = tableOrders.filter(o => o.status !== 'cancelled' && o.status !== 'paid')
+  const approvedOrders = activeOrders.filter(o => o.status !== 'pending_validation')
+
+  const allItems = activeOrders.flatMap(o => o.order_items || [])
+  const approvedItems = approvedOrders.flatMap(o => o.order_items || [])
 
   // 1. Bebidas (Barra)
   const drinks = allItems.filter(isDrinkItem)
   const hasDrinks = drinks.length > 0
-  const drinksPending = drinks.some(d => !isDrinkServed(d))
+  const approvedDrinks = approvedItems.filter(isDrinkItem)
+  const drinksPending = approvedDrinks.some(d => !isDrinkServed(d))
 
   // 2. Entradas (Papitas / 1º Pase)
   const starters = allItems.filter(isStarterItem)
   const hasStarters = starters.length > 0
-  const startersReady = starters.some(s => isStarterReady(s) && !isStarterServed(s))
+  const approvedStarters = approvedItems.filter(isStarterItem)
+  const startersReady = approvedStarters.some(s => isStarterReady(s) && !isStarterServed(s))
   const startersServed = hasStarters && starters.every(isStarterServed)
-  const startersCooking = hasStarters && !startersReady && !startersServed
+  const startersCooking = approvedStarters.length > 0 && !startersReady && !startersServed
 
   // 3. Platos Principales (Comida / 2º Pase)
   const mains = allItems.filter(isMainItem)
   const hasMains = mains.length > 0
-  const mainsReady = mains.some(m => isMainReady(m) && !isMainServed(m))
+  const approvedMains = approvedItems.filter(isMainItem)
+  const mainsReady = approvedMains.some(m => isMainReady(m) && !isMainServed(m))
   const mainsServed = hasMains && mains.every(isMainServed)
-  const mainsCooking = hasMains && !mainsReady && !mainsServed && mains.some(m => isMainCooking(m) || isMainFired(m))
+  const mainsCooking = approvedMains.length > 0 && !mainsReady && !mainsServed && approvedMains.some(m => isMainCooking(m) || isMainFired(m))
   const mainsWaiting = hasMains && !mainsReady && !mainsServed && !mainsCooking
 
   // 4. Postres
   const desserts = allItems.filter(isDessertItem)
   const hasDesserts = desserts.length > 0
-  const dessertsReady = desserts.some(d => isDessertReady(d) && !isDessertServed(d))
+  const approvedDesserts = approvedItems.filter(isDessertItem)
+  const dessertsReady = approvedDesserts.some(d => isDessertReady(d) && !isDessertServed(d))
   const dessertsServed = hasDesserts && desserts.every(isDessertServed)
-  const dessertsCooking = hasDesserts && !dessertsReady && !dessertsServed && desserts.some(d => isDessertCooking(d))
+  const dessertsCooking = approvedDesserts.length > 0 && !dessertsReady && !dessertsServed && approvedDesserts.some(d => isDessertCooking(d))
   const dessertsWaiting = hasDesserts && !dessertsReady && !dessertsServed && !dessertsCooking
 
   return {

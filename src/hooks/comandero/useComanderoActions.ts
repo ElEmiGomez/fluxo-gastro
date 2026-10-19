@@ -4,7 +4,18 @@ import { useState } from 'react'
 import { Table, Order, Restaurant, CartItem } from '@/types/database.types'
 import { TableStatusType } from '@/components/comandero/TableSelector'
 import { PendingServiceCall } from '@/types/comandero.types'
-import { isDessertItem, isDessertReady } from '@/lib/course-utils'
+import {
+  isDessertItem,
+  isDessertReady,
+  isStarterItem,
+  isMainItem,
+  TAG_STARTER_SERVED,
+  TAG_MAIN_FIRED,
+  TAG_MAIN_SERVED,
+  TAG_DESSERT_FIRED,
+  TAG_DESSERT_READY,
+  TAG_DESSERT_SERVED,
+} from '@/lib/course-utils'
 
 interface UseComanderoActionsParams {
   slug: string
@@ -251,45 +262,112 @@ export function useComanderoActions({
     const tableOrders = serverOrders.filter(
       o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
     )
-    const fireableOrders = tableOrders.filter(o => o.status === 'pending' || o.status === 'ready')
+    const fireableOrders = tableOrders.filter(o => o.status === 'pending' || o.status === 'ready' || o.status === 'preparing')
+    const fireableOrderIds = new Set(fireableOrders.map(o => o.id))
+
+    // Actualización optimista inmediata en estado local
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (!fireableOrderIds.has(o.id)) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isMainItem(it)) {
+            const currentNotes = it.notes || ''
+            if (!currentNotes.includes(TAG_MAIN_FIRED)) {
+              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_MAIN_FIRED}` : TAG_MAIN_FIRED }
+            }
+          }
+          return it
+        })
+        return { ...o, status: 'preparing', order_items: updatedItems }
+      })
+    )
+
     for (const ord of fireableOrders) {
       await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, orderId: ord.id, status: 'preparing' }),
+        body: JSON.stringify({ slug, orderId: ord.id, action: 'fire_mains' }),
       })
     }
+    await syncServerData()
     setOrderSentToast(true)
     setTimeout(() => setOrderSentToast(false), 2500)
   }
 
   // Marchar postres retenidos de una orden específica a la cocina (Pase 2 dulce)
   const handleFireOrderDesserts = async (orderId: string) => {
+    // Actualización optimista inmediata en estado local
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (o.id !== orderId) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isDessertItem(it)) {
+            const currentNotes = it.notes || ''
+            if (!currentNotes.includes(TAG_DESSERT_FIRED)) {
+              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_DESSERT_FIRED}` : TAG_DESSERT_FIRED }
+            }
+          }
+          return it
+        })
+        return { ...o, status: 'preparing', order_items: updatedItems }
+      })
+    )
     try {
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug, orderId, action: 'fire_desserts' }),
       })
+      if (res.ok) {
+        const data = await res.json().catch(() => null)
+        if (data?.order) {
+          setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
+        }
+      }
       await syncServerData()
       setOrderSentToast(true)
       setTimeout(() => setOrderSentToast(false), 2500)
     } catch (e) {
       console.error('Error firing order desserts:', e)
+      await syncServerData()
     }
   }
 
   // Entregar postres retenidos de una orden directamente por el mozo (Tachar sin pasar por cocina)
   const handleDeliverOrderDessertsDirect = async (orderId: string) => {
+    // Actualización optimista inmediata en estado local
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (o.id !== orderId) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isDessertItem(it)) {
+            const currentNotes = it.notes || ''
+            const tags = `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
+            if (!currentNotes.includes(TAG_DESSERT_SERVED)) {
+              return { ...it, notes: currentNotes ? `${currentNotes} ${tags}` : tags }
+            }
+          }
+          return it
+        })
+        return { ...o, order_items: updatedItems }
+      })
+    )
     try {
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug, orderId, action: 'deliver_desserts_direct' }),
       })
+      if (res.ok) {
+        const data = await res.json().catch(() => null)
+        if (data?.order) {
+          setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
+        }
+      }
       await syncServerData()
     } catch (e) {
       console.error('Error delivering order desserts directly:', e)
+      await syncServerData()
     }
   }
 
@@ -500,6 +578,21 @@ export function useComanderoActions({
 
   const handleDeliverStarters = async (orderId: string) => {
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (o.id !== orderId) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isStarterItem(it)) {
+            const currentNotes = it.notes || ''
+            if (!currentNotes.includes(TAG_STARTER_SERVED)) {
+              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_STARTER_SERVED}` : TAG_STARTER_SERVED }
+            }
+          }
+          return it
+        })
+        return { ...o, order_items: updatedItems }
+      })
+    )
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -511,14 +604,15 @@ export function useComanderoActions({
         }),
       })
       if (res.ok) {
-        const data = await res.json()
-        if (data.order) {
+        const data = await res.json().catch(() => null)
+        if (data?.order) {
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
         await syncServerData()
       }
     } catch (e) {
       console.error('Error al entregar entradas:', e)
+      await syncServerData()
     } finally {
       setDeliveringOrderIds(prev => {
         const next = new Set(prev)
@@ -530,6 +624,21 @@ export function useComanderoActions({
 
   const handleDeliverMains = async (orderId: string) => {
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (o.id !== orderId) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isMainItem(it)) {
+            const currentNotes = it.notes || ''
+            if (!currentNotes.includes(TAG_MAIN_SERVED)) {
+              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_MAIN_SERVED}` : TAG_MAIN_SERVED }
+            }
+          }
+          return it
+        })
+        return { ...o, order_items: updatedItems }
+      })
+    )
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -541,14 +650,15 @@ export function useComanderoActions({
         }),
       })
       if (res.ok) {
-        const data = await res.json()
-        if (data.order) {
+        const data = await res.json().catch(() => null)
+        if (data?.order) {
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
         await syncServerData()
       }
     } catch (e) {
       console.error('Error al entregar principales:', e)
+      await syncServerData()
     } finally {
       setDeliveringOrderIds(prev => {
         const next = new Set(prev)
@@ -559,6 +669,21 @@ export function useComanderoActions({
   }
 
   const handleFireMains = async (orderId: string) => {
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (o.id !== orderId) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isMainItem(it)) {
+            const currentNotes = it.notes || ''
+            if (!currentNotes.includes(TAG_MAIN_FIRED)) {
+              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_MAIN_FIRED}` : TAG_MAIN_FIRED }
+            }
+          }
+          return it
+        })
+        return { ...o, order_items: updatedItems }
+      })
+    )
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -570,8 +695,8 @@ export function useComanderoActions({
         }),
       })
       if (res.ok) {
-        const data = await res.json()
-        if (data.order) {
+        const data = await res.json().catch(() => null)
+        if (data?.order) {
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
         await syncServerData()
@@ -580,11 +705,27 @@ export function useComanderoActions({
       }
     } catch (e) {
       console.error('Error al marchar principales:', e)
+      await syncServerData()
     }
   }
 
   const handleDeliverDesserts = async (orderId: string) => {
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (o.id !== orderId) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isDessertItem(it)) {
+            const currentNotes = it.notes || ''
+            if (!currentNotes.includes(TAG_DESSERT_SERVED)) {
+              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_DESSERT_SERVED}` : TAG_DESSERT_SERVED }
+            }
+          }
+          return it
+        })
+        return { ...o, order_items: updatedItems }
+      })
+    )
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -596,14 +737,15 @@ export function useComanderoActions({
         }),
       })
       if (res.ok) {
-        const data = await res.json()
-        if (data.order) {
+        const data = await res.json().catch(() => null)
+        if (data?.order) {
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
         await syncServerData()
       }
     } catch (e) {
       console.error('Error al entregar postres:', e)
+      await syncServerData()
     } finally {
       setDeliveringOrderIds(prev => {
         const next = new Set(prev)

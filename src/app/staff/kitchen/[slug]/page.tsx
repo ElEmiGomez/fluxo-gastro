@@ -362,10 +362,14 @@ export default function KitchenKDSPage() {
         }),
       })
 
+      const data = await res.json().catch(() => null)
       if (res.ok) {
+        if (data?.order) {
+          setOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
+        }
         await fetchServerOrders()
       } else {
-        console.error('[KDS] Error en acción de cocina:', action)
+        console.error('[KDS] Error en acción de cocina:', action, data?.error)
         await fetchServerOrders()
       }
     } catch (err) {

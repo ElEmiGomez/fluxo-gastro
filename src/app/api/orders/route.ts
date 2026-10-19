@@ -649,13 +649,14 @@ export async function PATCH(req: NextRequest) {
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar entradas listas' }, { status: 404 })
       }
-      await transitionOrderStatus({
+      const transRes = await transitionOrderStatus({
         orderId: targetOrderId,
         slug,
         nextStatus: 'ready',
         actorType: 'kitchen',
       })
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Entradas listas para retirar en cocina' })
+      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'ready' } : tagRes.order)
+      return NextResponse.json({ success: true, order: finalOrder, message: 'Entradas listas para retirar en cocina' })
     }
 
     if (body.action === 'fire_mains') {
@@ -666,7 +667,14 @@ export async function PATCH(req: NextRequest) {
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marchar principales' }, { status: 404 })
       }
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Platos principales marchados a cocina' })
+      const transRes = await transitionOrderStatus({
+        orderId: targetOrderId,
+        slug,
+        nextStatus: 'preparing',
+        actorType: 'waiter',
+      })
+      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
+      return NextResponse.json({ success: true, order: finalOrder, message: 'Platos principales marchados a cocina' })
     }
 
     if (body.action === 'start_mains') {
@@ -677,13 +685,14 @@ export async function PATCH(req: NextRequest) {
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al iniciar principales' }, { status: 404 })
       }
-      await transitionOrderStatus({
+      const transRes = await transitionOrderStatus({
         orderId: targetOrderId,
         slug,
         nextStatus: 'preparing',
         actorType: 'kitchen',
       })
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Preparación de platos principales iniciada' })
+      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
+      return NextResponse.json({ success: true, order: finalOrder, message: 'Preparación de platos principales iniciada' })
     }
 
     if (body.action === 'ready_mains') {
@@ -694,13 +703,14 @@ export async function PATCH(req: NextRequest) {
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar principales listos' }, { status: 404 })
       }
-      await transitionOrderStatus({
+      const transRes = await transitionOrderStatus({
         orderId: targetOrderId,
         slug,
         nextStatus: 'ready',
         actorType: 'kitchen',
       })
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Platos principales listos para retirar en cocina' })
+      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'ready' } : tagRes.order)
+      return NextResponse.json({ success: true, order: finalOrder, message: 'Platos principales listos para retirar en cocina' })
     }
 
     if (body.action === 'start_desserts') {
@@ -711,13 +721,14 @@ export async function PATCH(req: NextRequest) {
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al iniciar postres' }, { status: 404 })
       }
-      await transitionOrderStatus({
+      const transRes = await transitionOrderStatus({
         orderId: targetOrderId,
         slug,
         nextStatus: 'preparing',
         actorType: 'kitchen',
       })
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Preparación de postres iniciada' })
+      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
+      return NextResponse.json({ success: true, order: finalOrder, message: 'Preparación de postres iniciada' })
     }
 
     if (body.action === 'deliver_starters') {
@@ -733,6 +744,7 @@ export async function PATCH(req: NextRequest) {
       // la orden debe volver a 'preparing' para que NO figure como 'ready' en el pase ni en la barra de avisos superiores.
       // Si ya no quedan principales ni postres (o no tenía), entonces pasa a 'delivered'.
       const currentOrder = tagRes.order
+      let finalOrder = currentOrder
       if (currentOrder) {
         const hasMains = orderHasMains(currentOrder)
         const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(isMainServed)
@@ -740,23 +752,25 @@ export async function PATCH(req: NextRequest) {
         const dessertsDone = (currentOrder.order_items || []).filter(isDessertItem).every(isDessertServed)
 
         if ((hasMains && !mainsDone) || (hasDesserts && !dessertsDone)) {
-          await transitionOrderStatus({
+          const transRes = await transitionOrderStatus({
             orderId: targetOrderId,
             slug,
             nextStatus: 'preparing',
             actorType: 'waiter',
           })
+          finalOrder = transRes.order || (currentOrder ? { ...currentOrder, status: 'preparing' } : currentOrder)
         } else {
-          await transitionOrderStatus({
+          const transRes = await transitionOrderStatus({
             orderId: targetOrderId,
             slug,
             nextStatus: 'delivered',
             actorType: 'waiter',
           })
+          finalOrder = transRes.order || (currentOrder ? { ...currentOrder, status: 'delivered' } : currentOrder)
         }
       }
 
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Entradas entregadas en mesa' })
+      return NextResponse.json({ success: true, order: finalOrder, message: 'Entradas entregadas en mesa' })
     }
 
     if (body.action === 'deliver_mains') {
@@ -767,21 +781,23 @@ export async function PATCH(req: NextRequest) {
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar principales entregados' }, { status: 404 })
       }
-      // Si la comanda ya tiene las entradas servidas (o no tenía entradas) y no tiene postres en marcha, pasar a delivered
       const currentOrder = tagRes.order
+      let finalOrder = currentOrder
       if (currentOrder) {
-        const startersDone = (currentOrder.order_items || []).filter(isStarterItem).every(i => Boolean(i.notes?.includes(TAG_STARTER_SERVED)))
-        const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(i => Boolean(i.notes?.includes(TAG_MAIN_SERVED)))
-        if (startersDone && mainsDone) {
-          await transitionOrderStatus({
+        const startersDone = (currentOrder.order_items || []).filter(isStarterItem).every(isStarterServed)
+        const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(isMainServed)
+        const dessertsDone = !orderHasPendingDesserts(currentOrder)
+        if (startersDone && mainsDone && dessertsDone) {
+          const transRes = await transitionOrderStatus({
             orderId: targetOrderId,
             slug,
             nextStatus: 'delivered',
             actorType: 'waiter',
           })
+          finalOrder = transRes.order || (currentOrder ? { ...currentOrder, status: 'delivered' } : currentOrder)
         }
       }
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Principales entregados en mesa' })
+      return NextResponse.json({ success: true, order: finalOrder, message: 'Principales entregados en mesa' })
     }
 
     if (body.action === 'ready_food') {
@@ -792,13 +808,14 @@ export async function PATCH(req: NextRequest) {
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar comida lista' }, { status: 404 })
       }
-      await transitionOrderStatus({
+      const transRes = await transitionOrderStatus({
         orderId: targetOrderId,
         slug,
         nextStatus: 'ready',
         actorType: 'kitchen',
       })
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Comida salada marcada como lista' })
+      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'ready' } : tagRes.order)
+      return NextResponse.json({ success: true, order: finalOrder, message: 'Comida salada marcada como lista' })
     }
 
     if (body.action === 'ready_desserts') {

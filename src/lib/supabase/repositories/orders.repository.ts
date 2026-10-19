@@ -498,12 +498,18 @@ export async function transitionOrderStatus(
           // Backfill desde memoria o caché si el RPC devolvió items vacíos (race condition Supabase)
           const memOrder = getServerOrders(slug).find(o => o.id === orderId)
           const cachedItems = getCachedOrderItems(orderId)
-          const resolvedItems =
+          const referenceItems = (memOrder?.order_items && memOrder.order_items.length > 0)
+            ? memOrder.order_items
+            : (cachedItems && cachedItems.length > 0 ? cachedItems : [])
+
+          let resolvedItems =
             rpcItems.length > 0
               ? rpcItems
-              : (memOrder?.order_items && memOrder.order_items.length > 0)
-                ? memOrder.order_items
-                : (cachedItems && cachedItems.length > 0 ? cachedItems : [])
+              : (referenceItems.length > 0 ? referenceItems : [])
+
+          if (referenceItems.length > 0 && resolvedItems.length > 0) {
+            resolvedItems = mergeOrderItemsCourseTags(resolvedItems, referenceItems)
+          }
 
           if (resolvedItems.length > 0) {
             saveCachedOrderItems(orderId, resolvedItems)
@@ -597,9 +603,13 @@ export async function transitionOrderStatus(
             : getItemCourse(it),
         }))
         const cached = getCachedOrderItems(orderId)
-        const effectiveItems = supaItems.length > 0
+        let effectiveItems = supaItems.length > 0
           ? supaItems
           : (cached && cached.length > 0 ? cached : [])
+
+        if (cached && cached.length > 0 && effectiveItems.length > 0) {
+          effectiveItems = mergeOrderItemsCourseTags(effectiveItems, cached)
+        }
 
         const orderToHydrate: Order = {
           ...supaOrder,
