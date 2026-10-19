@@ -44,6 +44,7 @@ export default function KitchenKDSPage() {
   const seenFiredDessertOrderIdsRef = useRef<Set<string>>(new Set())
   const ordersFingerRef = useRef<string>('')
   const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
+  const recentMutationsRef = useRef<Map<string, { status?: OrderStatus; order?: Order; until: number }>>(new Map())
 
   // Toggle de Pantalla Completa con 1 Toque
   const toggleFullscreen = () => {
@@ -101,10 +102,19 @@ export default function KitchenKDSPage() {
           // y retiene comandas entregadas si tienen postres pendientes de pase 2
           const rawOrders: Order[] = data.orders || []
           const incomingOrders: Order[] = rawOrders
-            .filter((o: Order) =>
-              ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) &&
-              (orderHasFood(o) || orderHasActiveDesserts(o) || (!orderHasFood(o) && orderHasDesserts(o) && !isOrderDessertsReady(o)))
-            )
+            .filter((o: Order) => {
+              const mut = recentMutationsRef.current.get(o.id)
+              const isMutActive = Boolean(mut && Date.now() < mut.until)
+              if (isMutActive && (mut?.status === 'delivered' || mut?.status === 'cancelled')) {
+                if (!orderHasDesserts(o) || isOrderDessertsReady(o)) {
+                  return false
+                }
+              }
+              return (
+                ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) &&
+                (orderHasFood(o) || orderHasActiveDesserts(o) || (!orderHasFood(o) && orderHasDesserts(o) && !isOrderDessertsReady(o)))
+              )
+            })
             .map((o: Order) => {
               const items = (o.order_items && o.order_items.length > 0)
                 ? o.order_items
@@ -160,13 +170,31 @@ export default function KitchenKDSPage() {
             const prevMap = new Map(prev.map(o => [o.id, o]))
             const reconciled = sorted.map(ord => {
               const existing = prevMap.get(ord.id)
+              const mut = recentMutationsRef.current.get(ord.id)
+              const isMutActive = Boolean(mut && Date.now() < mut.until)
+
               let effectiveItems = (ord.order_items && ord.order_items.length > 0)
                 ? ord.order_items
                 : (existing?.order_items || [])
               if (existing?.order_items && existing.order_items.length > 0 && effectiveItems.length > 0) {
                 effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
               }
-              return { ...ord, order_items: effectiveItems }
+              if (isMutActive && mut?.order?.order_items) {
+                effectiveItems = mergeOrderItemsCourseTags(effectiveItems, mut.order.order_items)
+              }
+
+              let effectiveStatus = ord.status
+              if (isMutActive && mut?.status) {
+                effectiveStatus = mut.status
+              } else {
+                if (existing?.status === 'ready' && (ord.status === 'pending' || ord.status === 'preparing')) {
+                  effectiveStatus = 'ready'
+                } else if (existing?.status === 'preparing' && ord.status === 'pending') {
+                  effectiveStatus = 'preparing'
+                }
+              }
+
+              return { ...ord, status: effectiveStatus, order_items: effectiveItems }
             })
 
             const prevFinger = computeKdsFinger(prev)
@@ -300,6 +328,7 @@ export default function KitchenKDSPage() {
     const tableNum = targetOrd?.table?.table_number ?? targetOrd?.table_number ?? 1
 
     setUpdatingOrderIds(prev => new Set(prev).add(orderId))
+    recentMutationsRef.current.set(orderId, { status: newStatus, until: Date.now() + 4500 })
 
     try {
       const res = await fetch('/api/orders', {
@@ -326,13 +355,16 @@ export default function KitchenKDSPage() {
         }
       } else if (res.status === 409) {
         console.warn(`[KDS] Concurrencia detectada en orden ${orderId}, re-sincronizando...`)
+        recentMutationsRef.current.delete(orderId)
         await fetchServerOrders()
       } else {
         console.error('[KDS] Error en transición de orden:', data.error)
+        recentMutationsRef.current.delete(orderId)
         await fetchServerOrders()
       }
     } catch (err) {
       console.error('Error updating order status from kitchen:', err)
+      recentMutationsRef.current.delete(orderId)
       await fetchServerOrders()
     } finally {
       setUpdatingOrderIds(prev => {
@@ -350,6 +382,7 @@ export default function KitchenKDSPage() {
   ) => {
     if (updatingOrderIds.has(orderId)) return
     setUpdatingOrderIds(prev => new Set(prev).add(orderId))
+    recentMutationsRef.current.set(orderId, { until: Date.now() + 4500 })
 
     try {
       const res = await fetch('/api/orders', {
@@ -365,15 +398,17 @@ export default function KitchenKDSPage() {
       const data = await res.json().catch(() => null)
       if (res.ok) {
         if (data?.order) {
+          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
           setOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
-        await fetchServerOrders()
       } else {
         console.error('[KDS] Error en acción de cocina:', action, data?.error)
+        recentMutationsRef.current.delete(orderId)
         await fetchServerOrders()
       }
     } catch (err) {
       console.error('Error executing kitchen action:', err)
+      recentMutationsRef.current.delete(orderId)
       await fetchServerOrders()
     } finally {
       setUpdatingOrderIds(prev => {

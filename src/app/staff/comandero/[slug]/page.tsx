@@ -8,7 +8,7 @@ import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector } from '@/components/comandero/TableSelector'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
-import { Product, CartItem, CourseType, DailyMenu } from '@/types/database.types'
+import { Product, CartItem, CourseType, DailyMenu, Order } from '@/types/database.types'
 import { DailyMenuSelectionItem } from '@/components/menu/DailyMenuModal'
 import { PromoConfiguredPayload } from '@/components/menu/PromoConfiguratorModal'
 import { useComanderoData } from '@/hooks/comandero/useComanderoData'
@@ -47,6 +47,7 @@ export default function WaiterComanderoPage() {
     seenCallIdsRef,
     attendedValidationOrderIdsRef,
     recentTogglesRef,
+    recentMutationsRef,
   } = useComanderoData(slug)
 
   // 2. Carritos y configuración aislada por mesa
@@ -274,6 +275,7 @@ export default function WaiterComanderoPage() {
     attendedValidationOrderIdsRef,
     readyOrderAlert,
     setReadyOrderAlert,
+    recentMutationsRef,
   })
 
   // Añadir ítem configurado al carrito de la mesa
@@ -336,6 +338,8 @@ export default function WaiterComanderoPage() {
   const handleServeDrinks = useCallback(async (orderId: string) => {
     setServingDrinkOrderIds(prev => new Set(prev).add(orderId))
 
+    let updatedOrderForRef: Order | null = null
+
     // Actualización inmediata en estado local para feedback visual instantáneo
     setServerOrders(prev =>
       prev.map(o => {
@@ -352,9 +356,15 @@ export default function WaiterComanderoPage() {
           }
           return it
         })
-        return { ...o, order_items: updatedItems }
+        const updated = { ...o, order_items: updatedItems }
+        updatedOrderForRef = updated
+        return updated
       })
     )
+
+    if (updatedOrderForRef) {
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+    }
 
     try {
       const res = await fetch('/api/orders', {
@@ -369,9 +379,9 @@ export default function WaiterComanderoPage() {
       if (res.ok) {
         const data = await res.json()
         if (data.order) {
+          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
-        await syncServerData()
       } else {
         await syncServerData()
       }
@@ -385,7 +395,7 @@ export default function WaiterComanderoPage() {
         return next
       })
     }
-  }, [slug, setServerOrders, syncServerData])
+  }, [slug, setServerOrders, syncServerData, recentMutationsRef])
 
   const handleServeAllDrinks = useCallback(async () => {
     if (pendingDrinksList.length === 0) return

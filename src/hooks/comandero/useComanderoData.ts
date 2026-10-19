@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Product, Category, Table, Restaurant, Order } from '@/types/database.types'
+import { Product, Category, Table, Restaurant, Order, OrderStatus } from '@/types/database.types'
 import { TableStatusType } from '@/components/comandero/TableSelector'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
@@ -42,6 +42,7 @@ export function useComanderoData(slug: string) {
   const attendedValidationOrderIdsRef = useRef<Set<string>>(new Set())
   const pendingOrdersWithoutItemsRef = useRef<Map<string, Order>>(new Map())
   const recentTogglesRef = useRef<Map<string, { status: boolean; until: number }>>(new Map())
+  const recentMutationsRef = useRef<Map<string, { status?: OrderStatus; order?: Order; until: number }>>(new Map())
 
   // 1. WakeLock nativo para mantener pantalla activa en comandero
   useEffect(() => {
@@ -128,6 +129,8 @@ export function useComanderoData(slug: string) {
           )
           .join('|')
 
+      let reconciledOrders: Order[] = []
+
       setServerOrders(prev => {
         const prevMap = new Map(prev.map(o => [o.id, o]))
         const map = new Map<string, Order>()
@@ -135,6 +138,9 @@ export function useComanderoData(slug: string) {
         incomingOrders.forEach(ord => {
           if (ord.status === 'cancelled') return
           const existing = prevMap.get(ord.id)
+          const recentMut = recentMutationsRef.current.get(ord.id)
+          const isMutActive = Boolean(recentMut && Date.now() < recentMut.until)
+
           let effectiveItems = (ord.order_items && ord.order_items.length > 0)
             ? ord.order_items
             : (existing?.order_items && existing.order_items.length > 0 ? existing.order_items : [])
@@ -143,14 +149,26 @@ export function useComanderoData(slug: string) {
             effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
           }
 
-          let effectiveStatus = ord.status
-          if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
-            effectiveStatus = 'delivered'
-          } else if (existing?.status === 'paid' && ord.status !== 'paid') {
-            effectiveStatus = 'paid'
+          if (isMutActive && recentMut?.order?.order_items) {
+            effectiveItems = mergeOrderItemsCourseTags(effectiveItems, recentMut.order.order_items)
           }
 
-          const finalOrd = { ...ord, status: effectiveStatus, order_items: effectiveItems }
+          let effectiveStatus: OrderStatus = ord.status
+          if (isMutActive && recentMut?.status) {
+            effectiveStatus = recentMut.status
+          } else {
+            if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
+              effectiveStatus = 'delivered'
+            } else if (existing?.status === 'paid' && ord.status !== 'paid') {
+              effectiveStatus = 'paid'
+            } else if (existing?.status === 'pending' && ord.status === 'pending_validation') {
+              effectiveStatus = 'pending'
+            } else if (existing?.status === 'preparing' && (ord.status === 'pending_validation' || ord.status === 'pending')) {
+              effectiveStatus = 'preparing'
+            }
+          }
+
+          const finalOrd: Order = { ...ord, status: effectiveStatus, order_items: effectiveItems }
           map.set(ord.id, finalOrd)
         })
 
@@ -166,6 +184,8 @@ export function useComanderoData(slug: string) {
         })
 
         const newOrders = Array.from(map.values()).filter(o => o.status !== 'cancelled')
+        reconciledOrders = newOrders
+
         const prevFinger = computeOrdersFinger(prev)
         const nextFinger = computeOrdersFinger(newOrders)
 
@@ -209,11 +229,12 @@ export function useComanderoData(slug: string) {
         setPendingCalls(formattedPendingCalls)
       }
 
-      // Semáforo de Mesas y tiempos de ocupación
+      // Semáforo de Mesas y tiempos de ocupación (calculado con órdenes reconciliadas)
+      const ordersForStatus = reconciledOrders.length > 0 ? reconciledOrders : incomingOrders
       const statusMap: Record<string | number, TableStatusType> = {}
       const dwellMap: Record<string | number, number> = {}
 
-      incomingOrders.forEach(ord => {
+      ordersForStatus.forEach(ord => {
         if (ord.status === 'cancelled' || ord.status === 'paid') return
         const tblNum = ord.table?.table_number || ord.table_number
         if (tblNum) {
@@ -538,5 +559,6 @@ export function useComanderoData(slug: string) {
     seenCallIdsRef,
     attendedValidationOrderIdsRef,
     recentTogglesRef,
+    recentMutationsRef,
   }
 }

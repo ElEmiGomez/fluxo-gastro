@@ -148,7 +148,21 @@ export function useMenuOrderSync({
           if (prevOrd?.order_items && prevOrd.order_items.length > 0 && items && items.length > 0) {
             items = mergeOrderItemsCourseTags(items, prevOrd.order_items)
           }
-          return { ...ord, order_items: items }
+
+          let effectiveStatus = ord.status
+          if (prevOrd?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
+            effectiveStatus = 'delivered'
+          } else if (prevOrd?.status === 'paid' && ord.status !== 'paid') {
+            effectiveStatus = 'paid'
+          } else if (prevOrd?.status === 'ready' && (ord.status === 'pending' || ord.status === 'preparing' || ord.status === 'pending_validation')) {
+            effectiveStatus = 'ready'
+          } else if (prevOrd?.status === 'preparing' && (ord.status === 'pending' || ord.status === 'pending_validation')) {
+            effectiveStatus = 'preparing'
+          } else if (prevOrd?.status === 'pending' && ord.status === 'pending_validation') {
+            effectiveStatus = 'pending'
+          }
+
+          return { ...ord, status: effectiveStatus, order_items: items }
         })
 
         const allTableOrders = serverOrdersList.filter(o => {

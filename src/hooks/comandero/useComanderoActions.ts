@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Table, Order, Restaurant, CartItem } from '@/types/database.types'
+import { Table, Order, Restaurant, CartItem, OrderStatus } from '@/types/database.types'
 import { TableStatusType } from '@/components/comandero/TableSelector'
 import { PendingServiceCall } from '@/types/comandero.types'
 import {
@@ -35,6 +35,7 @@ interface UseComanderoActionsParams {
   attendedValidationOrderIdsRef: React.MutableRefObject<Set<string>>
   readyOrderAlert: string | number | null
   setReadyOrderAlert: (val: string | number | null) => void
+  recentMutationsRef: React.MutableRefObject<Map<string, { status?: OrderStatus; order?: Order; until: number }>>
 }
 
 export function useComanderoActions({
@@ -55,6 +56,7 @@ export function useComanderoActions({
   attendedValidationOrderIdsRef,
   readyOrderAlert,
   setReadyOrderAlert,
+  recentMutationsRef,
 }: UseComanderoActionsParams) {
   const [validatingOrderIds, setValidatingOrderIds] = useState<Set<string>>(new Set())
   const [deliveringOrderIds, setDeliveringOrderIds] = useState<Set<string>>(new Set())
@@ -86,6 +88,17 @@ export function useComanderoActions({
     const targetOrder = serverOrders.find(o => o.id === orderId)
     const expectedVersion = targetOrder?.version
 
+    // Protección inmediata de mutación reciente contra sobrescrituras por polling
+    recentMutationsRef.current.set(orderId, { status: 'delivered', until: Date.now() + 4500 })
+
+    // Actualización visual inmediata
+    setServerOrders(prev =>
+      prev.map(o => (o.id === orderId ? { ...o, status: 'delivered' } : o))
+    )
+    if (tableNum && readyOrderAlert?.toString() === tableNum.toString()) {
+      setReadyOrderAlert(null)
+    }
+
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -102,28 +115,34 @@ export function useComanderoActions({
 
       if (res.ok) {
         const data = await res.json()
+        const finalOrder = data.order
+          ? { ...data.order, table_number: tableNum || data.order.table_number }
+          : null
+        if (finalOrder) {
+          recentMutationsRef.current.set(orderId, { order: finalOrder, status: 'delivered', until: Date.now() + 4500 })
+        }
         setServerOrders(prev =>
           prev.map(o => {
             if (o.id === orderId) {
-              return data.order
-                ? { ...data.order, table_number: tableNum || data.order.table_number }
+              return finalOrder
+                ? finalOrder
                 : { ...o, status: 'delivered', version: data.version ?? (o.version ? o.version + 1 : 1) }
             }
             return o
           })
         )
-        if (tableNum && readyOrderAlert?.toString() === tableNum.toString()) {
-          setReadyOrderAlert(null)
-        }
       } else if (res.status === 409) {
         console.warn(`[handleDeliverSingleOrder] Conflicto OCC 409 en orden ${orderId}. Reconciliando...`)
+        recentMutationsRef.current.delete(orderId)
         await syncServerData()
       } else {
         console.error(`[handleDeliverSingleOrder] Error entregando orden ${orderId}:`, res.status)
+        recentMutationsRef.current.delete(orderId)
         await syncServerData()
       }
     } catch (e) {
       console.error('Error de red al entregar orden:', e)
+      recentMutationsRef.current.delete(orderId)
       await syncServerData()
     } finally {
       setDeliveringOrderIds(prev => {
@@ -161,6 +180,9 @@ export function useComanderoActions({
     setValidatingOrderIds(prev => new Set(prev).add(orderId))
     attendedValidationOrderIdsRef.current.add(orderId)
 
+    // Bloqueo de mutación reciente contra regresiones en soft-polling
+    recentMutationsRef.current.set(orderId, { status: 'pending', until: Date.now() + 4500 })
+
     const targetOrder = serverOrders.find(o => o.id === orderId)
     const expectedVersion = targetOrder?.version
 
@@ -181,6 +203,9 @@ export function useComanderoActions({
 
       if (res.ok) {
         const data = await res.json()
+        if (data.order) {
+          recentMutationsRef.current.set(orderId, { order: data.order, status: 'pending', until: Date.now() + 4500 })
+        }
         setServerOrders(prev =>
           prev.map(o => {
             if (o.id === orderId) {
@@ -196,13 +221,16 @@ export function useComanderoActions({
         )
       } else if (res.status === 409) {
         console.warn(`[handleValidateOrder] Conflicto OCC 409 en orden ${orderId}. Reconciliando...`)
+        recentMutationsRef.current.delete(orderId)
         await syncServerData()
       } else {
         console.error(`[handleValidateOrder] Error en validación de orden ${orderId}:`, res.status)
+        recentMutationsRef.current.delete(orderId)
         await syncServerData()
       }
     } catch (e) {
       console.error('Error de red al validar comanda hacia cocina:', e)
+      recentMutationsRef.current.delete(orderId)
       await syncServerData()
     } finally {
       setValidatingOrderIds(prev => {
@@ -296,6 +324,7 @@ export function useComanderoActions({
 
   // Marchar postres retenidos de una orden específica a la cocina (Pase 2 dulce)
   const handleFireOrderDesserts = async (orderId: string) => {
+    let updatedOrderForRef: Order | null = null
     // Actualización optimista inmediata en estado local
     setServerOrders(prev =>
       prev.map(o => {
@@ -309,9 +338,14 @@ export function useComanderoActions({
           }
           return it
         })
-        return { ...o, status: 'preparing', order_items: updatedItems }
+        const updated: Order = { ...o, status: 'preparing' as OrderStatus, order_items: updatedItems }
+        updatedOrderForRef = updated
+        return updated
       })
     )
+    if (updatedOrderForRef) {
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+    }
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -321,10 +355,12 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
+          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
+      } else {
+        await syncServerData()
       }
-      await syncServerData()
       setOrderSentToast(true)
       setTimeout(() => setOrderSentToast(false), 2500)
     } catch (e) {
@@ -335,6 +371,7 @@ export function useComanderoActions({
 
   // Entregar postres retenidos de una orden directamente por el mozo (Tachar sin pasar por cocina)
   const handleDeliverOrderDessertsDirect = async (orderId: string) => {
+    let updatedOrderForRef: Order | null = null
     // Actualización optimista inmediata en estado local
     setServerOrders(prev =>
       prev.map(o => {
@@ -349,9 +386,14 @@ export function useComanderoActions({
           }
           return it
         })
-        return { ...o, order_items: updatedItems }
+        const updated = { ...o, order_items: updatedItems }
+        updatedOrderForRef = updated
+        return updated
       })
     )
+    if (updatedOrderForRef) {
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+    }
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -361,10 +403,12 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
+          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
+      } else {
+        await syncServerData()
       }
-      await syncServerData()
     } catch (e) {
       console.error('Error delivering order desserts directly:', e)
       await syncServerData()
@@ -578,6 +622,7 @@ export function useComanderoActions({
 
   const handleDeliverStarters = async (orderId: string) => {
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
@@ -590,9 +635,14 @@ export function useComanderoActions({
           }
           return it
         })
-        return { ...o, order_items: updatedItems }
+        const updated = { ...o, order_items: updatedItems }
+        updatedOrderForRef = updated
+        return updated
       })
     )
+    if (updatedOrderForRef) {
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+    }
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -606,8 +656,10 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
+          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
+      } else {
         await syncServerData()
       }
     } catch (e) {
@@ -624,6 +676,7 @@ export function useComanderoActions({
 
   const handleDeliverMains = async (orderId: string) => {
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
@@ -636,9 +689,14 @@ export function useComanderoActions({
           }
           return it
         })
-        return { ...o, order_items: updatedItems }
+        const updated = { ...o, order_items: updatedItems }
+        updatedOrderForRef = updated
+        return updated
       })
     )
+    if (updatedOrderForRef) {
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+    }
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -652,8 +710,10 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
+          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
+      } else {
         await syncServerData()
       }
     } catch (e) {
@@ -669,6 +729,7 @@ export function useComanderoActions({
   }
 
   const handleFireMains = async (orderId: string) => {
+    let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
@@ -681,9 +742,14 @@ export function useComanderoActions({
           }
           return it
         })
-        return { ...o, order_items: updatedItems }
+        const updated = { ...o, order_items: updatedItems }
+        updatedOrderForRef = updated
+        return updated
       })
     )
+    if (updatedOrderForRef) {
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+    }
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -697,12 +763,14 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
+          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
+      } else {
         await syncServerData()
-        setOrderSentToast(true)
-        setTimeout(() => setOrderSentToast(false), 2500)
       }
+      setOrderSentToast(true)
+      setTimeout(() => setOrderSentToast(false), 2500)
     } catch (e) {
       console.error('Error al marchar principales:', e)
       await syncServerData()
@@ -711,6 +779,7 @@ export function useComanderoActions({
 
   const handleDeliverDesserts = async (orderId: string) => {
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
@@ -723,9 +792,14 @@ export function useComanderoActions({
           }
           return it
         })
-        return { ...o, order_items: updatedItems }
+        const updated = { ...o, order_items: updatedItems }
+        updatedOrderForRef = updated
+        return updated
       })
     )
+    if (updatedOrderForRef) {
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+    }
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -739,8 +813,10 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
+          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
+      } else {
         await syncServerData()
       }
     } catch (e) {

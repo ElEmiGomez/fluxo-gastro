@@ -318,8 +318,11 @@ export async function getRestaurantOrders(
             const supaVersion = Number(o.version || 0)
             const memTime = mem.updated_at ? new Date(mem.updated_at).getTime() : 0
             const supaTime = o.updated_at ? new Date(o.updated_at).getTime() : 0
+            const isRecentMemTransition = memTime > 0 && (Date.now() - memTime < 6000)
 
-            if (memVersion > supaVersion && supaVersion > 0) {
+            if (memVersion > supaVersion) {
+              resolvedStatus = mem.status
+            } else if (isRecentMemTransition && mem.status) {
               resolvedStatus = mem.status
             } else if (memTime > 0 && supaTime > 0 && memTime > supaTime) {
               resolvedStatus = mem.status
@@ -329,6 +332,10 @@ export async function getRestaurantOrders(
               resolvedStatus = 'delivered'
             } else if (mem.status === 'paid' && o.status !== 'paid') {
               resolvedStatus = 'paid'
+            } else if (mem.status === 'preparing' && (o.status === 'pending_validation' || o.status === 'pending')) {
+              resolvedStatus = 'preparing'
+            } else if (mem.status === 'pending' && o.status === 'pending_validation') {
+              resolvedStatus = 'pending'
             }
           }
 
