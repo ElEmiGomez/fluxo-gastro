@@ -19,7 +19,7 @@ import {
 export { getCachedOrderItems }
 import { getTargetRestaurantId } from './restaurants.repository'
 import { inferCourseType, resolveCanonicalProductId } from '@/lib/category-matcher'
-import { getItemCourse } from '@/lib/course-utils'
+import { getItemCourse, mergeOrderItemsCourseTags } from '@/lib/course-utils'
 
 const isUuid = (val?: string | null): boolean =>
   Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val))
@@ -325,13 +325,21 @@ export async function getRestaurantOrders(
               resolvedStatus = mem.status
             } else if (!o.status && mem.status) {
               resolvedStatus = mem.status
+            } else if (mem.status === 'delivered' && o.status !== 'delivered' && o.status !== 'paid') {
+              resolvedStatus = 'delivered'
+            } else if (mem.status === 'paid' && o.status !== 'paid') {
+              resolvedStatus = 'paid'
             }
           }
 
           const cachedItems = getCachedOrderItems(o.id)
+          const referenceItems = (mem?.order_items && mem.order_items.length > 0)
+            ? mem.order_items
+            : (cachedItems && cachedItems.length > 0 ? cachedItems : [])
+
           // Anti-Loss Invariant: Si memoria o cache contiene más items que la respuesta parcial de DB,
           // preservar la comanda íntegra en lugar de truncarla.
-          const resolvedOrderItems = (mem?.order_items && mem.order_items.length > normalizedItems.length)
+          let resolvedOrderItems = (mem?.order_items && mem.order_items.length > normalizedItems.length)
             ? mem.order_items
             : (cachedItems && cachedItems.length > normalizedItems.length)
                 ? cachedItems
@@ -340,6 +348,12 @@ export async function getRestaurantOrders(
                     : ((mem?.order_items && mem.order_items.length > 0)
                         ? mem.order_items
                         : (cachedItems && cachedItems.length > 0 ? cachedItems : [])))
+
+          // ANTI-REVERSION INVARIANT: Preservar todas las etiquetas irreversibles de cocina y barra
+          // ([BARRA_SERVIDA], [ENTRADA_SERVIDA], etc.) ya confirmadas en memoria o caché.
+          if (referenceItems.length > 0 && resolvedOrderItems.length > 0) {
+            resolvedOrderItems = mergeOrderItemsCourseTags(resolvedOrderItems, referenceItems)
+          }
 
           if (resolvedOrderItems.length > 0) {
             saveCachedOrderItems(o.id, resolvedOrderItems)
@@ -730,31 +744,55 @@ export async function updateOrderCourseTags(
           }
         }
 
+        const usedDbItemIds = new Set<string>()
+
         await Promise.all(
           itemsToUpdate.map(async it => {
             if (isUuid(it.id)) {
-              return supabase
+              usedDbItemIds.add(it.id!)
+              const { error } = await supabase
                 .from('order_items')
                 .update({ notes: it.notes })
                 .eq('id', it.id)
+              if (error) {
+                console.warn('[updateOrderCourseTags] Error updating by id:', error)
+              }
+              return
             }
-            const matchedDbItem = dbItems.find(dbi => dbi.product_id === it.product_id)
+            const matchedDbItem = dbItems.find(
+              dbi =>
+                (dbi.product_id === it.product_id || (it.product && dbi.product_id === it.product.id)) &&
+                !usedDbItemIds.has(dbi.id)
+            )
             if (matchedDbItem?.id && isUuid(matchedDbItem.id)) {
+              usedDbItemIds.add(matchedDbItem.id)
               it.id = matchedDbItem.id
-              return supabase
+              const { error } = await supabase
                 .from('order_items')
                 .update({ notes: it.notes })
                 .eq('id', matchedDbItem.id)
+              if (error) {
+                console.warn('[updateOrderCourseTags] Error updating by matchedDbItem.id:', error)
+              }
+              return
             }
             if (isUuid(orderId)) {
               let query = supabase
                 .from('order_items')
                 .update({ notes: it.notes })
                 .eq('order_id', orderId)
-              if (isUuid(it.product_id)) {
-                query = query.eq('product_id', it.product_id)
+              const pid = (it.product_id && isUuid(it.product_id))
+                ? it.product_id
+                : (it.product?.id && isUuid(it.product.id))
+                  ? it.product.id
+                  : null
+              if (pid) {
+                query = query.eq('product_id', pid)
               }
-              return query
+              const { error } = await query
+              if (error) {
+                console.warn('[updateOrderCourseTags] Error updating by order_id/product_id:', error)
+              }
             }
           })
         )

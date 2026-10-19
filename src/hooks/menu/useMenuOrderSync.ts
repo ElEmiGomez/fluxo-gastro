@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Order, OrderStatus, Product, CartItem } from '@/types/database.types'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
+import { mergeOrderItemsCourseTags } from '@/lib/course-utils'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 
@@ -137,13 +138,17 @@ export function useMenuOrderSync({
         const currentSessionId = thisTableSession?.session_id || sessionIdRef.current
         const rawOrders: any[] = ordersRes.orders || []
         const serverOrdersList: any[] = rawOrders.map((ord: any) => {
-          if (!ord.order_items || ord.order_items.length === 0) {
-            const prevOrd = prevTableOrdersMapRef.current.get(ord.id)
+          const prevOrd = prevTableOrdersMapRef.current.get(ord.id)
+          let items = ord.order_items
+          if (!items || items.length === 0) {
             if (prevOrd?.order_items && prevOrd.order_items.length > 0) {
-              return { ...ord, order_items: prevOrd.order_items }
+              items = prevOrd.order_items
             }
           }
-          return ord
+          if (prevOrd?.order_items && prevOrd.order_items.length > 0 && items && items.length > 0) {
+            items = mergeOrderItemsCourseTags(items, prevOrd.order_items)
+          }
+          return { ...ord, order_items: items }
         })
 
         const allTableOrders = serverOrdersList.filter(o => {

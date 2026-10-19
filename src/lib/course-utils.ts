@@ -16,6 +16,105 @@ export const TAG_DESSERT_COOKING = '[POSTRE_EN_MARCHA]'
 export const TAG_DESSERT_PENDING = '[POSTRE_PENDIENTE_ELECCION]'
 export const TAG_PACK_HEADER = '[PACK_HEADER]'
 
+export const STATION_PROGRESSION_TAGS = [
+  TAG_DRINK_SERVED,
+  '[BARRA: SERVIDA]',
+  '[BARRA:SERVIDA]',
+  TAG_FOOD_READY,
+  '[COCINA: LISTA]',
+  '[COCINA:LISTA]',
+  TAG_STARTER_READY,
+  TAG_STARTER_SERVED,
+  '[ENTRADA_COCINANDO]',
+  TAG_MAIN_FIRED,
+  TAG_MAIN_COOKING,
+  '[PRINCIPAL_COCINANDO]',
+  TAG_MAIN_READY,
+  TAG_MAIN_SERVED,
+  TAG_DESSERT_READY,
+  '[POSTRE: LISTO]',
+  '[POSTRE:LISTO]',
+  TAG_DESSERT_SERVED,
+  '[POSTRE: SERVIDO]',
+  '[POSTRE:SERVIDO]',
+  TAG_DESSERT_FIRED,
+  TAG_DESSERT_COOKING,
+  '[POSTRE_COCINANDO]',
+  TAG_DESSERT_PENDING,
+  '[POSTRE_EN_ESPERA]',
+  '[POSTRE: EN ESPERA]',
+]
+
+/**
+ * Fusiona las notas de un ítem con las notas de referencia ya confirmadas,
+ * evitando que un ciclo de polling o respuesta de red revierta etiquetas irreversibles.
+ */
+export function mergeItemNotes(
+  incomingNotes: string | null | undefined,
+  referenceNotes: string | null | undefined
+): string {
+  const inStr = incomingNotes || ''
+  const refStr = referenceNotes || ''
+  if (!refStr) return inStr
+
+  let merged = inStr
+  for (const tag of STATION_PROGRESSION_TAGS) {
+    if (refStr.includes(tag) && !merged.includes(tag)) {
+      merged = merged ? `${merged} ${tag}` : tag
+    }
+  }
+  return merged
+}
+
+/**
+ * Reconcilia un array de ítems de comanda preservando todas las etiquetas de progresión
+ * ya adquiridas en el ciclo de vida (bebida servida, entrada servida, principal marchado, etc.).
+ */
+export function mergeOrderItemsCourseTags(
+  currentItems: OrderItem[] | any[],
+  referenceItems?: OrderItem[] | any[]
+): OrderItem[] {
+  if (!referenceItems || referenceItems.length === 0) return currentItems as OrderItem[]
+  if (!currentItems || currentItems.length === 0) return referenceItems as OrderItem[]
+
+  const usedRefIndices = new Set<number>()
+
+  return currentItems.map((currItem, idx) => {
+    // 1. Coincidencia por id único
+    let matchIdx = currItem.id
+      ? referenceItems.findIndex((r, rIdx) => !usedRefIndices.has(rIdx) && r.id === currItem.id)
+      : -1
+
+    // 2. Coincidencia por product_id
+    if (matchIdx === -1) {
+      matchIdx = referenceItems.findIndex((r, rIdx) => {
+        if (usedRefIndices.has(rIdx)) return false
+        const rProdId = r.product_id || r.product?.id
+        const cProdId = currItem.product_id || currItem.product?.id
+        return Boolean(rProdId && cProdId && rProdId === cProdId)
+      })
+    }
+
+    // 3. Coincidencia posicional 1:1 si las listas tienen el mismo tamaño
+    if (matchIdx === -1 && currentItems.length === referenceItems.length && !usedRefIndices.has(idx)) {
+      matchIdx = idx
+    }
+
+    if (matchIdx !== -1) {
+      usedRefIndices.add(matchIdx)
+      const matchedRef = referenceItems[matchIdx]
+      const mergedNotes = mergeItemNotes(currItem.notes, matchedRef.notes)
+      return {
+        ...currItem,
+        notes: mergedNotes,
+        course: currItem.course || matchedRef.course,
+      } as OrderItem
+    }
+
+    return currItem as OrderItem
+  })
+}
+
 /**
  * Elimina cualquier etiqueta técnica interna entre corchetes de estaciones de cocina/barra
  */

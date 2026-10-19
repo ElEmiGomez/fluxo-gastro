@@ -7,6 +7,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
+import { mergeOrderItemsCourseTags } from '@/lib/course-utils'
 import { PendingServiceCall } from '@/types/comandero.types'
 
 export function useComanderoData(slug: string) {
@@ -134,10 +135,22 @@ export function useComanderoData(slug: string) {
         incomingOrders.forEach(ord => {
           if (ord.status === 'cancelled') return
           const existing = prevMap.get(ord.id)
-          const effectiveItems = (ord.order_items && ord.order_items.length > 0)
+          let effectiveItems = (ord.order_items && ord.order_items.length > 0)
             ? ord.order_items
             : (existing?.order_items && existing.order_items.length > 0 ? existing.order_items : [])
-          const finalOrd = { ...ord, order_items: effectiveItems }
+
+          if (existing?.order_items && existing.order_items.length > 0 && effectiveItems.length > 0) {
+            effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
+          }
+
+          let effectiveStatus = ord.status
+          if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
+            effectiveStatus = 'delivered'
+          } else if (existing?.status === 'paid' && ord.status !== 'paid') {
+            effectiveStatus = 'paid'
+          }
+
+          const finalOrd = { ...ord, status: effectiveStatus, order_items: effectiveItems }
           map.set(ord.id, finalOrd)
         })
 

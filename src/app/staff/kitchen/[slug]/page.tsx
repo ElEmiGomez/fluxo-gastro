@@ -19,6 +19,7 @@ import {
   getItemCourse,
   orderHasMains,
   areOrderMainsReady,
+  mergeOrderItemsCourseTags,
 } from '@/lib/course-utils'
 
 type StationFilterType = 'all' | 'kitchen' | 'bar'
@@ -159,9 +160,12 @@ export default function KitchenKDSPage() {
             const prevMap = new Map(prev.map(o => [o.id, o]))
             const reconciled = sorted.map(ord => {
               const existing = prevMap.get(ord.id)
-              const effectiveItems = (ord.order_items && ord.order_items.length > 0)
+              let effectiveItems = (ord.order_items && ord.order_items.length > 0)
                 ? ord.order_items
                 : (existing?.order_items || [])
+              if (existing?.order_items && existing.order_items.length > 0 && effectiveItems.length > 0) {
+                effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
+              }
               return { ...ord, order_items: effectiveItems }
             })
 

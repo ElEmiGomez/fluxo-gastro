@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
-import { areOrderDrinksPending, areOrderDessertsPendingWaiter, orderHasPendingChoiceDesserts, isOrderReadyToPick } from '@/lib/course-utils'
+import { areOrderDrinksPending, areOrderDessertsPendingWaiter, orderHasPendingChoiceDesserts, isOrderReadyToPick, isDrinkItem, TAG_DRINK_SERVED } from '@/lib/course-utils'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector } from '@/components/comandero/TableSelector'
@@ -335,6 +335,27 @@ export default function WaiterComanderoPage() {
 
   const handleServeDrinks = useCallback(async (orderId: string) => {
     setServingDrinkOrderIds(prev => new Set(prev).add(orderId))
+
+    // Actualización inmediata en estado local para feedback visual instantáneo
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (o.id !== orderId) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isDrinkItem(it)) {
+            const currentNotes = it.notes || ''
+            if (!currentNotes.includes(TAG_DRINK_SERVED)) {
+              return {
+                ...it,
+                notes: currentNotes ? `${currentNotes} ${TAG_DRINK_SERVED}` : TAG_DRINK_SERVED,
+              }
+            }
+          }
+          return it
+        })
+        return { ...o, order_items: updatedItems }
+      })
+    )
+
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
