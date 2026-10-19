@@ -19,7 +19,7 @@ import {
 export { getCachedOrderItems }
 import { getTargetRestaurantId } from './restaurants.repository'
 import { inferCourseType, resolveCanonicalProductId } from '@/lib/category-matcher'
-import { getItemCourse, mergeOrderItemsCourseTags } from '@/lib/course-utils'
+import { getItemCourse, mergeOrderItemsCourseTags, TAG_MAIN_FIRED, TAG_DESSERT_FIRED } from '@/lib/course-utils'
 
 const isUuid = (val?: string | null): boolean =>
   Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val))
@@ -827,8 +827,21 @@ export async function updateOrderCourseTags(
     }
   }
 
+  let updatedOrderNotes = (order as any).notes || ''
+  if ((tag === TAG_MAIN_FIRED || tag === TAG_DESSERT_FIRED) && !updatedOrderNotes.includes(tag)) {
+    updatedOrderNotes = updatedOrderNotes ? `${updatedOrderNotes} ${tag}` : tag
+    if (hasSupabase && isUuid(orderId)) {
+      try {
+        await supabase.from('orders').update({ notes: updatedOrderNotes }).eq('id', orderId)
+      } catch (err) {
+        console.warn('[updateOrderCourseTags] Error updating order notes in DB:', err)
+      }
+    }
+  }
+
   const updatedOrder: Order = {
     ...order,
+    notes: updatedOrderNotes,
     order_items: updatedItems,
   }
   saveCachedOrderItems(orderId, updatedItems)

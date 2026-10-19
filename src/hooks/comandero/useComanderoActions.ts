@@ -290,7 +290,9 @@ export function useComanderoActions({
     const tableOrders = serverOrders.filter(
       o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
     )
-    const fireableOrders = tableOrders.filter(o => o.status === 'pending' || o.status === 'ready' || o.status === 'preparing')
+    const fireableOrders = tableOrders.filter(
+      o => o.status === 'pending' || o.status === 'ready' || o.status === 'preparing' || o.status === 'delivered'
+    )
     const fireableOrderIds = new Set(fireableOrders.map(o => o.id))
 
     // Actualización optimista inmediata en estado local
@@ -306,7 +308,11 @@ export function useComanderoActions({
           }
           return it
         })
-        const updated: Order = { ...o, status: 'preparing' as OrderStatus, order_items: updatedItems }
+        const currentOrderNotes = (o as any).notes || ''
+        const updatedOrderNotes = currentOrderNotes.includes(TAG_MAIN_FIRED)
+          ? currentOrderNotes
+          : (currentOrderNotes ? `${currentOrderNotes} ${TAG_MAIN_FIRED}` : TAG_MAIN_FIRED)
+        const updated: Order = { ...o, status: 'preparing' as OrderStatus, notes: updatedOrderNotes, order_items: updatedItems }
         recentMutationsRef.current.set(o.id, { order: updated, status: 'preparing', until: Date.now() + 4500 })
         return updated
       })
@@ -340,7 +346,11 @@ export function useComanderoActions({
           }
           return it
         })
-        const updated: Order = { ...o, status: 'preparing' as OrderStatus, order_items: updatedItems }
+        const currentOrderNotes = (o as any).notes || ''
+        const updatedOrderNotes = currentOrderNotes.includes(TAG_DESSERT_FIRED)
+          ? currentOrderNotes
+          : (currentOrderNotes ? `${currentOrderNotes} ${TAG_DESSERT_FIRED}` : TAG_DESSERT_FIRED)
+        const updated: Order = { ...o, status: 'preparing' as OrderStatus, notes: updatedOrderNotes, order_items: updatedItems }
         updatedOrderForRef = updated
         return updated
       })
@@ -788,7 +798,11 @@ export function useComanderoActions({
           }
           return it
         })
-        const updated: Order = { ...o, status: 'preparing', order_items: updatedItems }
+        const currentOrderNotes = (o as any).notes || ''
+        const updatedOrderNotes = currentOrderNotes.includes(TAG_MAIN_FIRED)
+          ? currentOrderNotes
+          : (currentOrderNotes ? `${currentOrderNotes} ${TAG_MAIN_FIRED}` : TAG_MAIN_FIRED)
+        const updated: Order = { ...o, status: 'preparing', notes: updatedOrderNotes, order_items: updatedItems }
         updatedOrderForRef = updated
         return updated
       })

@@ -117,6 +117,8 @@ export interface Order {
   table?: Table
   order_items?: OrderItem[]
   discount_percentage?: number
+  notes?: string | null
+  kitchen_notes?: string | null
 }
 
 export interface OrderEvent {

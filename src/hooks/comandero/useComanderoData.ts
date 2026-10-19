@@ -44,12 +44,12 @@ export function useComanderoData(slug: string) {
   const recentTogglesRef = useRef<Map<string, { status: boolean; until: number }>>(new Map())
   const recentMutationsRef = useRef<Map<string, { status?: OrderStatus; order?: Order; until: number }>>(new Map())
 
-  // 1. WakeLock nativo para mantener pantalla activa en comandero
+  // 1. WakeLock nativo para mantener pantalla activa en comandero (con re-adquisición al volver a primer plano)
   useEffect(() => {
     let wakeLock: any = null
     const requestWakeLock = async () => {
       try {
-        if ('wakeLock' in navigator) {
+        if ('wakeLock' in navigator && (!wakeLock || wakeLock.released)) {
           wakeLock = await (navigator as any).wakeLock.request('screen')
         }
       } catch (err) {
@@ -58,8 +58,20 @@ export function useComanderoData(slug: string) {
     }
     requestWakeLock()
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
-      if (wakeLock) wakeLock.release()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (wakeLock) {
+        try {
+          wakeLock.release()
+        } catch {}
+      }
     }
   }, [])
 

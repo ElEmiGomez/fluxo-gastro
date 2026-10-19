@@ -63,8 +63,8 @@ export function StaffPinAuth({ role, restaurantSlug, children }: StaffPinAuthPro
         const stored = sessionStorage.getItem(`fluxo_staff_auth_${role}_${restaurantSlug}`)
         if (stored) {
           const parsed = JSON.parse(stored)
-          // La sesión de pestaña caduca tras 15 minutos para seguridad estricta
-          const isRecent = parsed?.timestamp && Date.now() - parsed.timestamp < 15 * 60 * 1000
+          // La sesión de pestaña es válida durante el turno de servicio (12 horas)
+          const isRecent = parsed?.timestamp && Date.now() - parsed.timestamp < 12 * 60 * 60 * 1000
           if (parsed?.auth && isRecent) {
             setIsAuthenticated(true)
           } else {

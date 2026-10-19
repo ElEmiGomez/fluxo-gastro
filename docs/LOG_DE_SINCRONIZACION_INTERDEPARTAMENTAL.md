@@ -6,6 +6,35 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-19 16:45] — Sincronización Program Data: Fidelización Web Base, Wallet en Backlog y Módulo "El Habitual"
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), Organización General (Depto 1) y Marketing & Ventas (Depto 2).
+* **Documentos Impactados:**
+  - [`docs/departamentos/1_organizacion/registro_ideas_y_decisiones.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/1_organizacion/registro_ideas_y_decisiones.md) (`DEC-32` y Backlog Priorizado).
+  - [`docs/departamentos/1_organizacion/roadmap_y_organigrama.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/1_organizacion/roadmap_y_organigrama.md) (Fase 1 completada en sala/cocina).
+* **Acuerdos Registrados:**
+  1. *Fidelización Web como SSOT y Base de Lanzamiento (DEC-32):* Se ratifica la solución web actual (cuenta de usuario sin descarga de apps, saldo retenido escrow en Supabase, canje automático en comanda) como el estándar de producción. Cero fricción para comensales y sin costes fijos de cuentas de desarrollador de Apple/Google.
+  2. *Pases Apple/Google Wallet a Backlog Suite:* La integración de pases `.pkpass` y notificaciones por geofencing (100m) queda catalogada como módulo avanzado para locales de alta gama o planes superiores.
+  3. *Módulo "El Habitual / Lo de Siempre":* Incorporado al backlog técnico: tarjeta en carta web para reordenar en 1 toque y alerta de clientes inactivos (>30 días) en panel admin.
+  4. *Efecto Dotación en Demos:* Vinculado a la Tarea 2 de Program Data para precargar cartas reales con fotos al visitar locales en Noia.
+
+---
+
+### [2026-10-19 16:15] — Inteligencia de Marketing B2B y Roadmap de Producto (Colección 76 Reels Instagram)
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto (Depto 4).
+* **Documento Consolidado:** [`docs/departamentos/2_marketing/analisis_coleccion_instagram_fluxo_ideas.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/analisis_coleccion_instagram_fluxo_ideas.md).
+* **Hitos e Incorporaciones Realizadas:**
+  1. *Análisis Forense de 76 Reels Guardados:* Clasificados en 4 Ejes Estratégicos (Competencia SaaS Gastro, Neuroventas/Cierre B2B, Creación de Video Marketing Ágil y Confiabilidad/Seguridad como Argumento).
+  2. *Definición de 4 Nuevas Features de Marketing y Producto:*
+     - **Feature 1: Llamador con Motivo en 1 Toque:** Pedir cuenta (tarjeta/efectivo), pedir otra bebida o ayuda; elimina el 50% de los paseos en vacío del camarero.
+     - **Feature 2: Módulo "El Habitual / Memoria de Pedido":** Reordenar "lo de siempre en 1 toque" y detección de clientes inactivos (>30 días) para fidelización y retención.
+     - **Feature 3: Efecto Dotación (Endowment Effect) en Demostraciones Presenciales:** Visitar al hostelero con su carta y fotos ya montadas en Fluxo para multiplicar el valor percibido.
+     - **Feature 4: Fidelización Digital Nativa en Móvil sin Apps:** Tarjeta monedero/sellos digitales sin descargas de App Store.
+  3. *Actualización de Manuales de Campo:*
+     - Incorporadas 3 nuevas objeciones (Objeciones 11, 12 y 13) a [`manual_prospeccion_y_objeciones.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/manual_prospeccion_y_objeciones.md) sobre memoria de camareros veteranos, visibilidad en redes vs gestión en sala, y percepción del móvil en sala.
+  4. *Banco de 10 Guiones para Reels de Captación:* Estructurados con ganchos visuales (0-3s), agitación del problema, solución en pantalla y llamada a la acción hacia el piloto de 14 días.
+
+---
+
 ### [2026-10-18 21:05] — Nueva Tarea Técnica y Comercial: QR Dinámico para Demostraciones de Venta (Tarea 2)
 * **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Diseño de Marca (Depto 3) e Ingeniería & Producto / Program Data (Depto 4).
 * **Definición de la Tarea:**

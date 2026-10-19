@@ -33,6 +33,9 @@ import {
   isDessertCooking,
   isDessertReady,
   isDessertServed,
+  isDessertFired,
+  TAG_MAIN_FIRED,
+  TAG_DESSERT_FIRED,
 } from '@/lib/course-utils'
 
 export type TableStatusType = 'free' | 'busy' | 'calling' | 'ready'
@@ -95,7 +98,14 @@ function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
   const approvedMains = approvedItems.filter(isMainItem)
   const mainsReady = approvedMains.some(m => isMainReady(m) && !isMainServed(m))
   const mainsServed = hasMains && mains.every(isMainServed)
-  const mainsCooking = approvedMains.length > 0 && !mainsReady && !mainsServed && approvedMains.some(m => isMainCooking(m) || isMainFired(m))
+  const orderLevelMainsFired = activeOrders.some(
+    o => (o as any).notes?.includes(TAG_MAIN_FIRED) || (o as any).kitchen_notes?.includes(TAG_MAIN_FIRED)
+  )
+  const mainsCooking =
+    approvedMains.length > 0 &&
+    !mainsReady &&
+    !mainsServed &&
+    (orderLevelMainsFired || approvedMains.some(m => isMainCooking(m) || isMainFired(m)))
   const mainsWaiting = hasMains && !mainsReady && !mainsServed && !mainsCooking
 
   // 4. Postres
@@ -104,7 +114,14 @@ function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
   const approvedDesserts = approvedItems.filter(isDessertItem)
   const dessertsReady = approvedDesserts.some(d => isDessertReady(d) && !isDessertServed(d))
   const dessertsServed = hasDesserts && desserts.every(isDessertServed)
-  const dessertsCooking = approvedDesserts.length > 0 && !dessertsReady && !dessertsServed && approvedDesserts.some(d => isDessertCooking(d))
+  const orderLevelDessertsFired = activeOrders.some(
+    o => (o as any).notes?.includes(TAG_DESSERT_FIRED) || (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)
+  )
+  const dessertsCooking =
+    approvedDesserts.length > 0 &&
+    !dessertsReady &&
+    !dessertsServed &&
+    (orderLevelDessertsFired || approvedDesserts.some(d => isDessertCooking(d) || isDessertFired(d)))
   const dessertsWaiting = hasDesserts && !dessertsReady && !dessertsServed && !dessertsCooking
 
   return {

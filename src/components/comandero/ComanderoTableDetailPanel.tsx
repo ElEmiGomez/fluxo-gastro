@@ -27,9 +27,11 @@ import {
   isDrinkServed,
   isDessertItem,
   isDessertFired,
+  isDessertCooking,
   isDessertReady,
   isDessertServed,
   isDessertPendingChoice,
+  TAG_DESSERT_FIRED,
   orderHasHeldDesserts,
   orderHasPendingChoiceDesserts,
   stripInternalStationTags,
@@ -215,6 +217,15 @@ export function ComanderoTableDetailPanel({
   const hasDessertsReadyToPick = React.useMemo(() => {
     return tableActiveOrders.some(
       o => (o.order_items || []).filter(isDessertItem).some(d => isDessertReady(d) && !isDessertServed(d))
+    )
+  }, [tableActiveOrders])
+
+  const isTableDessertFired = React.useMemo(() => {
+    return tableActiveOrders.some(
+      o =>
+        (o as any).notes?.includes(TAG_DESSERT_FIRED) ||
+        (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED) ||
+        (o.order_items || []).filter(isDessertItem).some(d => isDessertFired(d) || isDessertCooking(d))
     )
   }, [tableActiveOrders])
 
@@ -657,7 +668,15 @@ export function ComanderoTableDetailPanel({
 
             {/* 3º Postres */}
             {tableDesserts.length > 0 && (
-              <div className={`bg-white p-3 rounded-xl border border-slate-200/90 border-l-4 ${!areFoodCoursesServed ? 'border-l-slate-300' : 'border-l-purple-500'} shadow-2xs space-y-2`}>
+              <div className={`bg-white p-3 rounded-xl border border-slate-200/90 border-l-4 ${
+                hasDessertsReadyToPick
+                  ? 'border-l-emerald-500'
+                  : isTableDessertFired
+                  ? 'border-l-amber-500'
+                  : !areFoodCoursesServed
+                  ? 'border-l-slate-300'
+                  : 'border-l-purple-500'
+              } shadow-2xs space-y-2`}>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-slate-800 uppercase flex items-center gap-1.5">
                     <span>🍰 3º Postres</span>
@@ -668,24 +687,24 @@ export function ComanderoTableDetailPanel({
                       ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
                       : tableDesserts.every(it => isDessertServed(it.item))
                       ? 'bg-slate-100 text-emerald-700 border border-emerald-200'
-                      : !areFoodCoursesServed
-                      ? 'bg-slate-100 text-slate-500 border border-slate-200'
+                      : isTableDessertFired
+                      ? 'bg-amber-50 text-amber-800 border border-amber-200'
                       : hasPendingDessertChoiceInTable
                       ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                      : tableDesserts.some(it => isDessertFired(it.item))
-                      ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                      : !areFoodCoursesServed
+                      ? 'bg-slate-100 text-slate-500 border border-slate-200'
                       : 'bg-purple-50 text-purple-800 border border-purple-200'
                   }`}>
                     {hasDessertsReadyToPick
                       ? '✨ Listo en Cocina'
                       : tableDesserts.every(it => isDessertServed(it.item))
                       ? '✅ Entregado'
-                      : !areFoodCoursesServed
-                      ? '⏸️ Esperando 2º'
+                      : isTableDessertFired
+                      ? '🔥 En Cocina'
                       : hasPendingDessertChoiceInTable
                       ? '⏳ Por Definir'
-                      : tableDesserts.some(it => isDessertFired(it.item))
-                      ? '🔥 En Cocina'
+                      : !areFoodCoursesServed
+                      ? '⏸️ Esperando 2º'
                       : '⏳ En Espera del Mozo'}
                   </span>
                 </div>
@@ -738,13 +757,14 @@ export function ComanderoTableDetailPanel({
 
                 {/* Acciones del Mozo para marchar postres */}
                 {hasPendingDesserts && (
-                  !areFoodCoursesServed ? (
-                    <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-xs font-semibold flex items-center gap-2">
-                      <Clock size={14} className="text-purple-600 flex-shrink-0" />
-                      <span>Se habilitará el pase a cocina tras entregar los platos principales.</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 pt-1">
+                  <div className="space-y-1.5 pt-1">
+                    {!areFoodCoursesServed && (
+                      <div className="p-2 rounded-xl bg-purple-50/70 border border-purple-200 text-purple-800 text-[11px] font-semibold flex items-center gap-1.5">
+                        <Clock size={13} className="text-purple-600 flex-shrink-0" />
+                        <span>Aviso: Principales aún en curso en mesa. Puedes marchar postre si el cliente lo prefiere.</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => {
@@ -772,7 +792,7 @@ export function ComanderoTableDetailPanel({
                         </button>
                       )}
                     </div>
-                  )
+                  </div>
                 )}
               </div>
             )}

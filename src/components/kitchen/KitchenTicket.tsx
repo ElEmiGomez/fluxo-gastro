@@ -256,9 +256,9 @@ export function KitchenTicket({
           const mainsReady = areOrderMainsReady(roundOrder)
           const mainsServed = areOrderMainsServed(roundOrder)
 
-          // Bloqueo de principales: si hay entradas, los principales están bloqueados hasta que el mozo los marche a cocina
-          const mainsFired = areOrderMainsFired(roundOrder)
-          const areMainsLocked = hasStarters && !mainsFired
+          // Bloqueo de principales: si hay entradas, los principales están bloqueados hasta que el mozo los marche o se sirvan entradas
+          const mainsFired = areOrderMainsFired(roundOrder) || mainsCooking || mainsReady || mainsServed
+          const areMainsLocked = hasStarters && !mainsFired && !startersServed
 
           const dessertsHeld = orderHasHeldDesserts(roundOrder)
           const dessertsActive = orderHasActiveDesserts(roundOrder) || !orderHasFood(roundOrder)
@@ -291,8 +291,8 @@ export function KitchenTicket({
               disabledReason = 'Inicia la preparación de entradas para poder tacharlas'
             } else if (isMain) {
               if (hasStarters) {
-                isItemCookingOrReady = (mainsFired || mainsCooking || areOrderMainsReady(roundOrder) || areOrderMainsServed(roundOrder)) && (roundOrder.status === 'preparing' || roundOrder.status === 'ready')
-                disabledReason = !mainsFired ? 'Espera a que el mozo marche los platos principales' : 'Inicia la preparación en cocina para poder tachar platos'
+                isItemCookingOrReady = (mainsFired || mainsCooking || startersServed || areOrderMainsReady(roundOrder) || areOrderMainsServed(roundOrder)) && (roundOrder.status === 'preparing' || roundOrder.status === 'ready')
+                disabledReason = (!mainsFired && !startersServed) ? 'Espera a que el mozo marche los platos principales' : 'Inicia la preparación en cocina para poder tachar platos'
               } else {
                 isItemCookingOrReady = roundOrder.status === 'preparing' || roundOrder.status === 'ready'
                 disabledReason = 'Inicia la preparación en cocina para poder tachar platos'
@@ -521,9 +521,21 @@ export function KitchenTicket({
                               <Lock size={13} className="text-slate-400" />
                               <span>🍔 2º Principales ({mains.length})</span>
                             </span>
-                            <span className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">
-                              {!startersReady ? 'En espera del 1º plato' : 'En espera de marcha por el mozo'}
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">
+                                {!startersReady ? 'En espera del 1º plato' : 'En espera de marcha por el mozo'}
+                              </span>
+                              {onKitchenAction && (
+                                <button
+                                  type="button"
+                                  onClick={() => onKitchenAction(roundOrder.id, 'start_mains')}
+                                  className="text-[9px] font-black bg-sky-600 hover:bg-sky-500 text-white px-2 py-0.5 rounded-md active:scale-95 transition-all cursor-pointer shadow-2xs"
+                                  title="Iniciar preparación de principales directamente desde cocina"
+                                >
+                                  ▶️ Iniciar Ahora
+                                </button>
+                              )}
+                            </div>
                           </div>
                           {mains.map((item, idx) =>
                             renderItemCard(

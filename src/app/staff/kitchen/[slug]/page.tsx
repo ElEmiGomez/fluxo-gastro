@@ -72,12 +72,12 @@ export default function KitchenKDSPage() {
     return () => clearInterval(timer)
   }, [orders, soundEnabled])
 
-  // 1. Mantener pantalla siempre encendida (WakeLock API Nativa)
+  // 1. Mantener pantalla siempre encendida (WakeLock API Nativa con re-adquisición al volver a primer plano)
   useEffect(() => {
     let wakeLock: any = null
     const requestWakeLock = async () => {
       try {
-        if ('wakeLock' in navigator) {
+        if ('wakeLock' in navigator && (!wakeLock || wakeLock.released)) {
           wakeLock = await (navigator as any).wakeLock.request('screen')
         }
       } catch (err) {
@@ -86,8 +86,20 @@ export default function KitchenKDSPage() {
     }
     requestWakeLock()
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
-      if (wakeLock) wakeLock.release()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (wakeLock) {
+        try {
+          wakeLock.release()
+        } catch {}
+      }
     }
   }, [])
 

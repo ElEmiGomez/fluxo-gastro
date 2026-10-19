@@ -98,6 +98,21 @@ Saca tu móvil con el QR de demostración impreso en una tarjeta:
 * **Respuesta táctica (Cierre de Doble Alternativa):**
   > *"Por supuesto, no te quito ni un minuto más ahora que estáis preparando todo. Como soy de aquí al lado, dime una cosa rápida: ¿tu socio y tú coincidís aquí un momento el martes sobre las 11:30 o es mejor que me pase el jueves a las 17:30 y se lo enseño en el móvil en 2 minutos?"*
 
+### Objeción 11: *"Ya tenemos un camarero que conoce a todos los clientes por su nombre, no nos hace falta fidelización ni avisadores"*
+* **Por qué lo dice:** Orgullo tradicional de servicio y confianza ciega en la memoria del personal veterano.
+* **Respuesta táctica:**
+  > *"Tener un camarero así es oro puro. Pero piensa en dos cosas: primero, los sábados de terraza llena con 25 mesas a la vez, aunque los conozca a todos, no tiene cuatro ojos para ver quién levantó la mano al fondo. Y segundo: el día que ese camarero libra, se va de vacaciones o cambia de trabajo, ¿quién se acuerda de cómo toma el café cada vecino? Además, el cliente habitual no te avisa cuando deja de venir: viene 3 veces por semana, de repente deja de venir 20 días y nadie se da cuenta. Con el club de fidelización de Fluxo tienes la memoria del negocio guardada y sabes exactamente cuándo recuperar a un cliente que se está enfriando."*
+
+### Objeción 12: *"¿Por qué debería pagar por esto si en Instagram o Facebook ya subo la foto de la pizarra del menú del día gratis?"*
+* **Por qué lo dice:** Confunde visibilidad pasiva en redes con gestión activa y pedidos en sala.
+* **Respuesta táctica:**
+  > *"Subir la foto a Instagram está genial para que la gente sepa que existes cuando está en el sofá de su casa. Pero cuando el cliente ya está sentado en tu terraza un sábado a las dos de la tarde, no se pone a buscar tu perfil de Instagram para ver qué raciones quedan. Necesita una carta rápida que abra en medio segundo sin descargar nada, con los platos agotados desactivados para que no pida algo que la cocina ya no tiene, y un botón para pedir la cuenta sin esperar 15 minutos con la mano levantada."*
+
+### Objeción 13: *"No quiero que los camareros estén mirando el móvil en sala porque da mala imagen ante los comensales"*
+* **Por qué lo dice:** Miedo a que los clientes piensen que los empleados están chateando o usando redes sociales en horas de trabajo.
+* **Respuesta táctica:**
+  > *"Totalmente de acuerdo: ver a un empleado enganchado a WhatsApp da una imagen nefasta. Pero lo que da peor imagen aún es ver a dos camareros gritándose de una punta a otra de la barra '¡Oído dos de calamares!' o a una mesa haciendo señas con los dedos como si fuera un árbitro de fútbol porque nadie les cobra. La pantalla de comandero de Fluxo es de uso discreto: el camarero entra a la mesa, pulsa dos toques y guarda el móvil en el bolsillo. A ojos del cliente, el servicio es silencioso, elegante y el doble de rápido."*
+
 ---
 
 ## 4. Plantilla de Seguimiento Post-Visita (WhatsApp Comercial)
