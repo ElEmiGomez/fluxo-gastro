@@ -559,7 +559,7 @@ export function TableSelector({
                               : badges.dessertsCooking
                               ? 'bg-purple-100 text-purple-900 border border-purple-300 font-bold'
                               : badges.dessertsWaiting
-                              ? 'bg-purple-50 text-purple-600 border border-purple-200 opacity-70'
+                              ? 'bg-slate-200 text-slate-500 opacity-60'
                               : 'bg-emerald-100 text-emerald-800'
                           }`}
                         >

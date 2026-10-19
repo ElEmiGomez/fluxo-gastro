@@ -254,9 +254,9 @@ export function KitchenTicket({
           const mainsReady = areOrderMainsReady(roundOrder)
           const mainsServed = areOrderMainsServed(roundOrder)
 
-          // Bloqueo de principales si hay entradas y aún no están listas O el mozo no ha marchado los principales
+          // Bloqueo de principales: si hay entradas, los principales están estrictamente bloqueados hasta que el mozo los marche
           const mainsFired = areOrderMainsFired(roundOrder)
-          const areMainsLocked = hasStarters && (!startersReady || !mainsFired)
+          const areMainsLocked = hasStarters && !mainsFired
 
           const dessertsHeld = orderHasHeldDesserts(roundOrder)
           const dessertsActive = orderHasActiveDesserts(roundOrder) || !orderHasFood(roundOrder)
@@ -519,7 +519,7 @@ export function KitchenTicket({
                               <span>🍔 2º Principales ({mains.length})</span>
                             </span>
                             <span className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">
-                              {!startersReady ? 'En espera del 1º plato' : 'En espera del mozo'}
+                              {!startersReady ? 'En espera del 1º plato' : !startersServed ? 'Entregando entradas' : 'En espera del mozo'}
                             </span>
                           </div>
                           {mains.map((item, idx) =>
@@ -527,7 +527,7 @@ export function KitchenTicket({
                               item,
                               idx + starters.length,
                               true,
-                              !startersReady ? 'En espera del 1º plato' : 'En espera del mozo'
+                              !startersReady ? 'En espera del 1º plato' : !startersServed ? 'Entregando entradas' : 'En espera del mozo'
                             )
                           )}
                         </div>

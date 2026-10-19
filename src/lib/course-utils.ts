@@ -210,9 +210,11 @@ export function isMainFired(item: OrderItem): boolean {
 }
 
 export function areOrderMainsFired(order: Order): boolean {
-  if (order.status === 'delivered' || order.status === 'ready' || order.status === 'paid') return true
+  if (order.status === 'delivered' || order.status === 'paid') return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
+  // Si la comanda no tiene entrantes, los principales se consideran marchados de inicio
+  if (!orderHasStarters(order)) return true
   return mains.some(isMainFired)
 }
 

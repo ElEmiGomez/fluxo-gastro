@@ -112,6 +112,9 @@ export function MenuLiveTracker({
     if (areStartersCooking) {
       dynamicTitle = '🥗 1º Entrantes en preparación en cocina'
       dynamicSubtitle = 'Cocina está elaborando tus entrantes. Los platos principales se marcharán después.'
+    } else if (hasMains && areStartersServed && !areMainsFired && !areMainsCooking) {
+      dynamicTitle = '🥗 ¡A disfrutar de las entradas! · Principales en espera'
+      dynamicSubtitle = 'Tus entrantes ya están en la mesa. Cuando terminéis, el mozo marchará los platos principales a cocina.'
     } else if (areMainsCooking) {
       dynamicTitle = '🍔 2º Platos principales en los fuegos'
       dynamicSubtitle = 'Cocina está elaborando tus platos principales al momento.'
@@ -197,7 +200,7 @@ export function MenuLiveTracker({
               ? 'bg-emerald-200 text-emerald-950 border-emerald-400 animate-pulse ring-1 ring-emerald-400'
               : areMainsCooking
               ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
-              : hasStarters && !areStartersServed && !areStartersReady
+              : (hasStarters && !areMainsFired) || (hasStarters && !areStartersServed && !areStartersReady)
               ? 'bg-slate-100 text-slate-600 border-slate-200'
               : tableOrderStatus === 'pending'
               ? 'bg-blue-100 text-blue-950 border-blue-200'
@@ -211,7 +214,7 @@ export function MenuLiveTracker({
                 ? '¡Listos! 🍽️'
                 : areMainsCooking
                 ? 'En fuegos 🔥'
-                : hasStarters && !areStartersServed && !areStartersReady
+                : (hasStarters && !areMainsFired) || (hasStarters && !areStartersServed && !areStartersReady)
                 ? 'Tras entradas ⏳'
                 : tableOrderStatus === 'pending'
                 ? 'En cola ⏳'
@@ -560,23 +563,6 @@ export function MenuLiveTracker({
               onClaimLoyaltyBonus={onClaimLoyaltyBonus}
             />
           )}
-        </div>
-      )}
-
-      {/* 4. Google Review Booster durante la sobremesa o servicio si aún no ha sido cobrada */}
-      {!isTablePaid && !isReviewBoosterDismissed && (!loyaltyProfile || !loyaltyProfile.google_review_bonus_awarded) && (
-        <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
-          <GoogleReviewBooster
-            restaurantName={restaurant.name}
-            restaurantSlug={restaurant.slug}
-            googleReviewUrl={restaurant.google_review_url}
-            googlePlaceId={restaurant.google_place_id}
-            variant="card"
-            loyaltyMode={loyaltyMode}
-            onDismiss={onDismissReviewBooster}
-            loyaltyProfile={loyaltyProfile}
-            onClaimLoyaltyBonus={onClaimLoyaltyBonus}
-          />
         </div>
       )}
     </>
