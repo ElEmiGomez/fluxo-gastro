@@ -745,13 +745,13 @@ export function useComanderoActions({
           }
           return it
         })
-        const updated = { ...o, order_items: updatedItems }
+        const updated: Order = { ...o, status: 'preparing', order_items: updatedItems }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: 'preparing', until: Date.now() + 4500 })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -766,7 +766,7 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
+          recentMutationsRef.current.set(orderId, { order: data.order, status: 'preparing', until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
       } else {

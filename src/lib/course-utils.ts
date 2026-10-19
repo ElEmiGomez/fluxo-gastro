@@ -335,6 +335,7 @@ export function isMainFired(item: OrderItem): boolean {
     item.notes &&
       (item.notes.includes(TAG_MAIN_FIRED) ||
         item.notes.includes(TAG_MAIN_COOKING) ||
+        item.notes.includes('[PRINCIPAL_COCINANDO]') ||
         item.notes.includes(TAG_MAIN_READY) ||
         item.notes.includes(TAG_MAIN_SERVED))
   )
@@ -342,6 +343,7 @@ export function isMainFired(item: OrderItem): boolean {
 
 export function areOrderMainsFired(order: Order): boolean {
   if (order.status === 'paid') return true
+  if ((order as any).notes?.includes(TAG_MAIN_FIRED) || (order as any).kitchen_notes?.includes(TAG_MAIN_FIRED)) return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
   if (mains.every(isMainServed)) return true

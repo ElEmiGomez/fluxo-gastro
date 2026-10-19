@@ -192,8 +192,8 @@ export function ComanderoTableDetailPanel({
     if (allMainsServed) return false
     if (hasMainsReadyToPick) return false
     if (areMainsFired) return false
-    return hasStartersDone
-  }, [tableMains, allMainsServed, hasMainsReadyToPick, areMainsFired, hasStartersDone])
+    return true
+  }, [tableMains, allMainsServed, hasMainsReadyToPick, areMainsFired])
 
   // 3. Postres de la mesa con sus nombres específicos
   const tableDesserts = React.useMemo(() => {
@@ -594,20 +594,20 @@ export function ComanderoTableDetailPanel({
                       ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
                       : tableMains.every(it => isMainServed(it.item))
                       ? 'bg-slate-100 text-emerald-700 border border-emerald-200'
-                      : tableStarters.length > 0 && !hasStartersDone
-                      ? 'bg-slate-100 text-slate-500 border border-slate-200'
                       : !areMainsFired
-                      ? 'bg-sky-50 text-sky-800 border border-sky-200'
+                      ? (tableStarters.length > 0 && !hasStartersDone
+                          ? 'bg-slate-100 text-slate-500 border border-slate-200'
+                          : 'bg-sky-50 text-sky-800 border border-sky-200')
                       : 'bg-amber-50 text-amber-800 border border-amber-200'
                   }`}>
                     {hasMainsReadyToPick
                       ? '✨ Listo en Cocina'
                       : tableMains.every(it => isMainServed(it.item))
                       ? '✅ Entregado'
-                      : tableStarters.length > 0 && !hasStartersDone
-                      ? '⏸️ Esperando 1º'
                       : !areMainsFired
-                      ? '⏳ En Espera del Mozo'
+                      ? (tableStarters.length > 0 && !hasStartersDone
+                          ? '⏸️ Esperando 1º'
+                          : '⏳ En Espera del Mozo')
                       : '🔥 En Cocina'}
                   </span>
                 </div>

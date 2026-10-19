@@ -254,9 +254,9 @@ export function KitchenTicket({
           const mainsReady = areOrderMainsReady(roundOrder)
           const mainsServed = areOrderMainsServed(roundOrder)
 
-          // Bloqueo de principales: si hay entradas, los principales están estrictamente bloqueados hasta entregar entradas y marcha del mozo
+          // Bloqueo de principales: si hay entradas, los principales están bloqueados hasta que el mozo los marche a cocina
           const mainsFired = areOrderMainsFired(roundOrder)
-          const areMainsLocked = hasStarters && (!startersServed || !mainsFired)
+          const areMainsLocked = hasStarters && !mainsFired
 
           const dessertsHeld = orderHasHeldDesserts(roundOrder)
           const dessertsActive = orderHasActiveDesserts(roundOrder) || !orderHasFood(roundOrder)
@@ -519,7 +519,7 @@ export function KitchenTicket({
                               <span>🍔 2º Principales ({mains.length})</span>
                             </span>
                             <span className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">
-                              {!startersReady ? 'En espera del 1º plato' : !startersServed ? 'Entregando entradas' : 'En espera del mozo'}
+                              {!startersReady ? 'En espera del 1º plato' : 'En espera de marcha por el mozo'}
                             </span>
                           </div>
                           {mains.map((item, idx) =>
@@ -527,7 +527,7 @@ export function KitchenTicket({
                               item,
                               idx + starters.length,
                               true,
-                              !startersReady ? 'En espera del 1º plato' : !startersServed ? 'Entregando entradas' : 'En espera del mozo'
+                              !startersReady ? 'En espera del 1º plato' : 'En espera de marcha por el mozo'
                             )
                           )}
                         </div>
@@ -658,11 +658,7 @@ export function KitchenTicket({
                       return (
                         <div className="w-full h-14 py-3 px-4 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-200 text-slate-600 text-xs sm:text-sm font-black flex items-center justify-center gap-2 select-none uppercase tracking-wide">
                           <Lock size={16} className="text-slate-400 flex-shrink-0" />
-                          <span>
-                            {!startersServed
-                              ? '2º PRINCIPALES BLOQUEADOS HASTA ENTREGAR ENTRADAS'
-                              : '2º PRINCIPALES EN ESPERA DE MARCHA POR EL MOZO'}
-                          </span>
+                          <span>2º PRINCIPALES EN ESPERA DE MARCHA POR EL MOZO</span>
                         </div>
                       )
                     }
