@@ -63,55 +63,6 @@ export function MenuCategoryBar({
 
   return (
     <div className="space-y-3.5">
-      {/* Buscador & Controles de Vista */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder={t('searchPlaceholder')}
-            className="w-full pl-9 pr-9 py-2 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 shadow-xs transition-all"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={onClearSearch}
-              aria-label="Borrar búsqueda"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => onViewModeChange('list')}
-            aria-label="Vista Carta Detallada"
-            className={`p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl transition-all cursor-pointer ${
-              viewMode === 'list' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-            }`}
-            title="Vista Carta Detallada"
-          >
-            <LayoutList className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('grid')}
-            aria-label="Vista Galería de Fotos"
-            className={`p-2 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl transition-all cursor-pointer ${
-              viewMode === 'grid' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-slate-900'
-            }`}
-            title="Vista Galería de Fotos"
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
       {/* Carrusel de Categorías Gastronómicas con Filtros Dietéticos */}
       <div id="menu-category-tabs" className="space-y-1.5 scroll-mt-16">
         <div className="flex items-center gap-1.5 w-full">
@@ -255,22 +206,6 @@ export function MenuCategoryBar({
         )}
       </div>
 
-      {/* Sugerencia Inteligente del Chef (Oculta si el Menú del Día está activo y vigente) */}
-      {isInitialSection && !hasActiveDailyMenu && (
-        <div className="p-3 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl shadow-xs flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-            <Sparkles size={16} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 block">
-              Recomendado para Comenzar
-            </span>
-            <p className="text-xs text-slate-100 font-semibold leading-tight mt-0.5">
-              Prueba nuestro Combo Pareja con 2 Dobles Monster y 2 Pintas bien frías.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

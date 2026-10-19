@@ -108,7 +108,7 @@ export function useMenuOrderSync({
       isChecking = true
       try {
         const [ordersRes, callsRes, tablesRes] = await Promise.all([
-          fetch(`/api/orders?slug=${slug}`).then(r => r.json()).catch(() => ({ orders: [] })),
+          fetch(`/api/orders?slug=${slug}&table=${tableNumber}`).then(r => r.json()).catch(() => ({ orders: [] })),
           fetch(`/api/service-calls?slug=${slug}`).then(r => r.json()).catch(() => ({ calls: [] })),
           fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
         ])
@@ -278,11 +278,12 @@ export function useMenuOrderSync({
         }
 
         if (
-          (hasRequestedBillRef.current || userRequestedBillTimeRef.current) &&
           activeTableOrders.length === 0 &&
-          hasPaidOrder
+          hasPaidOrder &&
+          (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0)
         ) {
           prevTableOrdersMapRef.current.clear()
+          hasHadActiveOrderInThisSessionRef.current = false
           handleTableMarkedPaidRef.current()
           return
         }
@@ -403,7 +404,8 @@ export function useMenuOrderSync({
           const newSession = payload?.new
           const matchesTable = newSession && newSession.table_number?.toString() === tableNumber?.toString()
           if (matchesTable && (newSession.status === 'closed' || newSession.status === 'free')) {
-            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
+            const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
+            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
               handleTableMarkedPaidRef.current()
               return
             }

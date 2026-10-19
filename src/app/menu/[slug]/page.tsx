@@ -681,38 +681,18 @@ function DinerMenuContent() {
             </div>
           )}
 
-          {/* Listado de Platos: Vista Lista vs Vista Galería */}
-          {viewMode === 'list' ? (
-            <MenuListCatalog
-              products={products}
-              filteredProducts={filteredProducts}
-              currentLang={currentLang}
-              isFixedMenu={isFixedMenu}
-              isInSituAdmin={isInSituAdmin}
-              totalCartCount={totalCartCount}
-              expandedProductIds={expandedProductIds}
-              onToggleExpand={toggleExpand}
-              getProductQuantity={getProductQuantityInCart}
-              onUpdateQuantity={handleUpdateProductQuantity}
-              onToggleAvailability={handleToggleAvailability}
-              onOpenEditModal={handleOpenEditProductModal}
-              onOpenAddProductModal={() => handleOpenAddProductModal(selectedCategory !== 'all' ? selectedCategory : undefined)}
-              onCustomizeProduct={(prod) => isPromoProduct(prod) ? setCustomizingPromoProduct(prod) : setCustomizingProduct(prod)}
-              searchQuery={searchQuery}
-            />
-          ) : (
-            <MenuGridCatalog
-              filteredProducts={filteredProducts}
-              currentLang={currentLang}
-              isFixedMenu={isFixedMenu}
-              isInSituAdmin={isInSituAdmin}
-              getProductQuantity={getProductQuantityInCart}
-              onUpdateQuantity={handleUpdateProductQuantity}
-              onToggleAvailability={handleToggleAvailability}
-              onOpenEditModal={handleOpenEditProductModal}
-              onCustomizeProduct={(prod) => isPromoProduct(prod) ? setCustomizingPromoProduct(prod) : setCustomizingProduct(prod)}
-            />
-          )}
+          {/* Listado de Platos: Vista Galería Fija */}
+          <MenuGridCatalog
+            filteredProducts={filteredProducts}
+            currentLang={currentLang}
+            isFixedMenu={isFixedMenu}
+            isInSituAdmin={isInSituAdmin}
+            getProductQuantity={getProductQuantityInCart}
+            onUpdateQuantity={handleUpdateProductQuantity}
+            onToggleAvailability={handleToggleAvailability}
+            onOpenEditModal={handleOpenEditProductModal}
+            onCustomizeProduct={(prod) => isPromoProduct(prod) ? setCustomizingPromoProduct(prod) : setCustomizingProduct(prod)}
+          />
 
           {/* Footer Legal Informativo */}
           <MenuFooterLegal

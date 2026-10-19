@@ -263,16 +263,16 @@ export const CATEGORY_TRANSLATIONS: Record<SupportedLanguage, Record<string, str
 
 export const PRODUCT_NAMES: Record<string, Record<SupportedLanguage, string>> = {
   "p-promo-1": {
-    "es": "Combo Pareja: 2 Burgers Dobles + Papas + 2 Pintas",
-    "gl": "Combo Parella: 2 Burgers Dobres + Patacas + 2 Pintas",
-    "en": "Couple Combo: 2 Double Burgers + Fries + 2 Pints",
-    "fr": "Menu Duo: 2 Double Burgers + Frites + 2 Pintes",
-    "de": "Paar-Kombi: 2 Doppel-Burger + Pommes + 2 Pints",
-    "pt": "Combo Casal: 2 Hambúrgueres Duplos + Batatas + 2 Canecas",
-    "it": "Combo Coppia: 2 Doppi Burger + Patatine + 2 Pinte",
-    "nl": "Koppel Combo: 2 Dubbele Burgers + Friet + 2 Pinten",
-    "ca": "Combo Parella: 2 Burgers Dobles + Patates + 2 Pintes",
-    "eu": "Bikote Konboa: 2 Burger Bikoitz + Patatak + 2 Pinta"
+    "es": "Combo Pareja",
+    "gl": "Combo Parella",
+    "en": "Couple Combo",
+    "fr": "Menu Duo",
+    "de": "Paar-Kombi",
+    "pt": "Combo Casal",
+    "it": "Combo Coppia",
+    "nl": "Koppel Combo",
+    "ca": "Combo Parella",
+    "eu": "Bikote Konboa"
   },
   "p-ent-1": {
     "es": "Bastones de Mozzarella Crocantes",

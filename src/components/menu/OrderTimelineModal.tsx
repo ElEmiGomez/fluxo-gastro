@@ -32,6 +32,7 @@ interface OrderTimelineModalProps {
   tableNumber: string | null
   status: OrderStatus | null
   orders?: Order[]
+  onCallWaiter?: () => void
   onRequestService?: () => void
   onRequestBill?: () => void
 }
@@ -42,6 +43,7 @@ export function OrderTimelineModal({
   tableNumber,
   status,
   orders = [],
+  onCallWaiter,
   onRequestService,
   onRequestBill,
 }: OrderTimelineModalProps) {
@@ -510,15 +512,27 @@ export function OrderTimelineModal({
 
         {/* Acciones Rápidas */}
         <div className="p-4 bg-white border-t border-slate-200 flex items-center gap-2 flex-shrink-0">
+          {onCallWaiter && (
+            <button
+              onClick={() => {
+                onCallWaiter()
+                onClose()
+              }}
+              className="flex-1 py-3 px-2 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-95 shadow-xs"
+            >
+              <Bell size={14} className="stroke-[2.5]" />
+              <span>Llamar al Mozo</span>
+            </button>
+          )}
           {onRequestService && (
             <button
               onClick={() => {
                 onRequestService()
                 onClose()
               }}
-              className="flex-1 py-3 px-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-95"
+              className="flex-1 py-3 px-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-95"
             >
-              <Bell size={14} className="text-blue-700" />
+              <UtensilsCrossed size={14} className="text-blue-700" />
               <span>Pedir Servicio</span>
             </button>
           )}
@@ -528,7 +542,7 @@ export function OrderTimelineModal({
                 onRequestBill()
                 onClose()
               }}
-              className="flex-1 py-3 px-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer active:scale-95"
+              className="flex-1 py-3 px-2 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer active:scale-95"
             >
               <Receipt size={14} />
               <span>Pedir Cuenta</span>

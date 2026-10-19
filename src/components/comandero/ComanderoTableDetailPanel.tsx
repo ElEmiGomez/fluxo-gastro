@@ -764,7 +764,18 @@ export function ComanderoTableDetailPanel({
                         <span>Aviso: Principales aún en curso en mesa. Puedes marchar postre si el cliente lo prefiere.</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      {onDeliverDessertsDirect && (
+                        <button
+                          type="button"
+                          onClick={() => onDeliverDessertsDirect(selectedTable.table_number)}
+                          className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 cursor-pointer uppercase tracking-wider"
+                          title="El mozo busca el postre de la heladera o freezer y lo sirve directamente"
+                        >
+                          <CheckCircle2 size={15} className="stroke-[2.5]" />
+                          <span>🍦 Entregar Directo (Heladera / Freezer)</span>
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => {
@@ -774,23 +785,12 @@ export function ComanderoTableDetailPanel({
                             onFireDesserts(selectedTable.table_number)
                           }
                         }}
-                        className="flex-1 h-9 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                        title={hasPendingDessertChoiceInTable ? 'Elegir qué postre desea el comensal' : 'Avisar a cocina que prepare los postres de esta mesa'}
+                        className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer flex-shrink-0"
+                        title={hasPendingDessertChoiceInTable ? 'Elegir qué postre desea el comensal' : 'Avisar a cocina si el postre requiere elaboración en fuegos'}
                       >
-                        <Sparkles size={13} />
-                        <span>{hasPendingDessertChoiceInTable ? '▶️ Elegir y Marchar a Cocina' : '▶️ Marchar Postres a Cocina'}</span>
+                        <Sparkles size={12} className="text-purple-600" />
+                        <span>{hasPendingDessertChoiceInTable ? 'Elegir y Marchar a Cocina' : 'Marchar a Cocina'}</span>
                       </button>
-                      {onDeliverDessertsDirect && (
-                        <button
-                          type="button"
-                          onClick={() => onDeliverDessertsDirect(selectedTable.table_number)}
-                          className="flex-1 sm:flex-initial h-9 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition-all shadow-xs flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                          title="Tachar y marcar postres como entregados directamente por el mozo"
-                        >
-                          <CheckCircle2 size={13} />
-                          <span>Entregar Directo</span>
-                        </button>
-                      )}
                     </div>
                   </div>
                 )}

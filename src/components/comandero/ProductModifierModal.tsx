@@ -54,7 +54,7 @@ export function ProductModifierModal({
       // Determinar pase de cocina inicial inteligente
       const cat = (product.category_id || '').toLowerCase()
       const pName = product.name.toLowerCase()
-      if (cat.includes('bebida') || cat.includes('trago') || pName.includes('cerveza')) {
+      if (cat.includes('bebida') || cat.includes('trago') || pName.includes('cerveza') || pName.includes('gin') || pName.includes('vino')) {
         setCourse('drink')
       } else if (cat.includes('postre') || pName.includes('helado') || pName.includes('tarta')) {
         setCourse('dessert')
@@ -65,15 +65,12 @@ export function ProductModifierModal({
       }
 
       // Valores por defecto inteligentes
-      const name = product.name.toLowerCase()
-      const isBurgerOrMeat =
-        product.category_id === 'cat-7' ||
-        product.category_id === 'cat-5' ||
-        name.includes('burger') ||
-        name.includes('bife') ||
-        name.includes('ojo')
+      const isMeat =
+        (cat.includes('burger') || cat.includes('carne') || cat.includes('parrilla') ||
+         pName.includes('burger') || pName.includes('bife') || pName.includes('ojo') || pName.includes('milanesa')) &&
+        !cat.includes('bebida') && !pName.includes('gin') && !pName.includes('cerveza') && !pName.includes('trago') && !pName.includes('vino')
 
-      if (isBurgerOrMeat) {
+      if (isMeat) {
         setSelectedCookingPoint('A Punto')
         setSelectedSide('Papas Fritas')
       } else {
@@ -85,19 +82,73 @@ export function ProductModifierModal({
 
   if (!product) return null
 
+  const prodCat = (product.category_id || '').toLowerCase()
   const prodName = product.name.toLowerCase()
-  const isMeatOrBurger =
-    product.category_id === 'cat-7' ||
-    product.category_id === 'cat-5' ||
-    prodName.includes('burger') ||
-    prodName.includes('bife') ||
-    prodName.includes('ojo') ||
-    prodName.includes('milanesa')
 
-  const hasSideOptions =
-    isMeatOrBurger ||
-    product.category_id === 'cat-3' || // Milanesas
-    prodName.includes('milanesa')
+  const isDrink =
+    prodCat.includes('bebida') ||
+    prodCat.includes('trago') ||
+    prodCat.includes('gin') ||
+    prodCat.includes('cocktail') ||
+    prodCat.includes('cerveza') ||
+    prodCat.includes('vino') ||
+    prodName.includes('gin') ||
+    prodName.includes('tonic') ||
+    prodName.includes('cerveza') ||
+    prodName.includes('pinta') ||
+    prodName.includes('trago') ||
+    prodName.includes('mojito') ||
+    prodName.includes('vino') ||
+    prodName.includes('agua') ||
+    prodName.includes('refresco') ||
+    prodName.includes('coca')
+
+  const isCoffee =
+    !isDrink && (
+      prodCat.includes('cafe') ||
+      prodCat.includes('café') ||
+      prodCat.includes('infusion') ||
+      prodCat.includes('infusión') ||
+      prodName.includes('café') ||
+      prodName.includes('cafe') ||
+      prodName.includes('cortado') ||
+      prodName.includes('espresso') ||
+      prodName.includes('capuchino') ||
+      prodName.includes('cappuccino') ||
+      prodName.includes('té ') ||
+      prodName.includes('infusión')
+    )
+
+  const isDessert =
+    !isDrink && !isCoffee && (
+      prodCat.includes('postre') ||
+      prodCat.includes('dulce') ||
+      prodCat.includes('helado') ||
+      prodName.includes('tarta') ||
+      prodName.includes('volcán') ||
+      prodName.includes('volcan') ||
+      prodName.includes('helado') ||
+      prodName.includes('flan') ||
+      prodName.includes('postre')
+    )
+
+  const isMeatOrBurger =
+    !isDrink && !isCoffee && !isDessert && (
+      prodCat.includes('burger') ||
+      prodCat.includes('carne') ||
+      prodCat.includes('parrilla') ||
+      prodName.includes('burger') ||
+      prodName.includes('bife') ||
+      prodName.includes('ojo') ||
+      prodName.includes('chuletón') ||
+      prodName.includes('chuleton') ||
+      prodName.includes('milanesa') ||
+      prodName.includes('entraña') ||
+      prodName.includes('vacío') ||
+      prodName.includes('vacio')
+    )
+
+  const hasSideOptions = isMeatOrBurger
 
   // Opciones de Puntos de Cocción
   const cookingPoints = ['Jugoso', 'A Punto', 'Bien Cocido']
@@ -105,15 +156,26 @@ export function ProductModifierModal({
   // Opciones de Guarnición
   const sideOptions = ['Papas Fritas', 'Papas Rústicas', 'Ensalada']
 
-  // Opciones de Preferencias Rápidas / Alergias
-  const preferenceOptions = [
-    'Sin Sal',
-    'Sin Cebolla',
-    'Sin TACC',
-    'Sin Tomate',
-    'Sin Mayonesa',
-    'Extra Queso',
-  ]
+  // Opciones de Preferencias Rápidas / Alergias según tipo de producto
+  const preferenceOptions = isDrink
+    ? ['Con hielo', 'Sin hielo', 'Extra hielo', 'Con limón', 'Sin limón', 'Tónica aparte', 'Vaso frío']
+    : isCoffee
+    ? ['Leche entera', 'Leche desnatada', 'Leche de avena', 'Leche de soja', 'Sacarina', 'Azúcar blanco', 'Azúcar moreno']
+    : isDessert
+    ? ['Con nata', 'Sin nata', 'Con sirope', 'Sin sirope', 'Para compartir', 'Cucharas extra']
+    : isMeatOrBurger
+    ? ['Sin Sal', 'Sin Cebolla', 'Sin TACC', 'Sin Tomate', 'Sin Mayonesa', 'Extra Queso']
+    : ['Sin Sal', 'Sin Cebolla', 'Sin TACC', 'Salsa Aparte', 'Para Compartir', 'Sin Gluten']
+
+  const quickNotesList = isDrink
+    ? ['Sin alcohol', 'Hielo al vaso', 'Sin pajita', 'Poco hielo', 'Vaso grande']
+    : isCoffee
+    ? ['Muy caliente', 'Tibio', 'Descafeinado de máquina', 'Descafeinado de sobre', 'En vaso', 'En taza']
+    : isDessert
+    ? ['Para compartir', 'Sin azúcar añadido', 'Helado aparte', '2 cucharas', '3 cucharas']
+    : isMeatOrBurger
+    ? ['Sin mayonesa', 'Sin cebolla', 'Salsa aparte', 'Sin sal', 'Pan bien tostado', 'Para compartir']
+    : ['Salsa aparte', 'Sin sal', 'Para compartir', 'Sin picante', 'Aliño aparte']
 
   const handleSelectCookingPoint = (pt: string) => {
     setSelectedCookingPoint(prev => (prev === pt ? '' : pt))
@@ -337,12 +399,20 @@ export function ProductModifierModal({
             </div>
           )}
 
-          {/* SECCIÓN 3: PREFERENCIAS & ALERGIAS */}
+          {/* SECCIÓN 3: PREFERENCIAS & OPCIONES DE PRODUCTO */}
           <div className="space-y-2 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-blue-700" />
-                <span>Preferencias / Alergias</span>
+                <span>
+                  {isDrink
+                    ? 'Opciones de Bebida'
+                    : isCoffee
+                    ? 'Opciones de Cafetería'
+                    : isDessert
+                    ? 'Opciones del Postre'
+                    : 'Preferencias / Alergias'}
+                </span>
               </label>
               <span className="text-[10px] text-slate-400 font-medium">Opcional múltiple</span>
             </div>
@@ -374,61 +444,65 @@ export function ProductModifierModal({
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
                 <Edit3 className="w-3.5 h-3.5 text-slate-600" />
-                <span>Punto de Cocción y Preferencias</span>
+                <span>
+                  {isDrink
+                    ? 'Aclaraciones para Barra'
+                    : isCoffee
+                    ? 'Aclaraciones de Cafetería'
+                    : isDessert
+                    ? 'Aclaraciones de Repostería'
+                    : isMeatOrBurger
+                    ? 'Punto de Cocción y Notas'
+                    : 'Aclaraciones de Cocina'}
+                </span>
               </label>
               <span className="text-[10px] text-slate-400 font-medium">Opciones estándar</span>
             </div>
 
-            {/* Puntos de Cocción (Píldoras fijas) */}
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Término de la carne / Cocción:</span>
-              <div className="grid grid-cols-3 gap-1.5">
-                {['Poco hecha', 'Al punto', 'Bien hecha'].map((cookingPoint) => {
-                  const isSelected = notes.includes(cookingPoint)
-                  return (
-                    <button
-                      key={cookingPoint}
-                      type="button"
-                      onClick={() => {
-                        // Reemplazar punto de cocción anterior
-                        const cleaned = notes
-                          .split(',')
-                          .map(s => s.trim())
-                          .filter(s => !['Poco hecha', 'Al punto', 'Bien hecha'].includes(s))
-                          .join(', ')
-                        if (isSelected) {
-                          setNotes(cleaned)
-                        } else {
-                          setNotes(cleaned ? `${cleaned}, ${cookingPoint}` : cookingPoint)
-                        }
-                      }}
-                      className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition-all text-center border ${
-                        isSelected
-                          ? 'bg-amber-500 text-slate-950 border-amber-500 font-black shadow-xs ring-1 ring-amber-400'
-                          : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
-                      }`}
-                    >
-                      {cookingPoint}
-                    </button>
-                  )
-                })}
+            {/* Puntos de Cocción (Exclusivo Carnes / Burgers) */}
+            {isMeatOrBurger && (
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Término de la carne / Cocción:</span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {['Poco hecha', 'Al punto', 'Bien hecha'].map((cookingPoint) => {
+                    const isSelected = notes.includes(cookingPoint)
+                    return (
+                      <button
+                        key={cookingPoint}
+                        type="button"
+                        onClick={() => {
+                          const cleaned = notes
+                            .split(',')
+                            .map(s => s.trim())
+                            .filter(s => !['Poco hecha', 'Al punto', 'Bien hecha'].includes(s))
+                            .join(', ')
+                          if (isSelected) {
+                            setNotes(cleaned)
+                          } else {
+                            setNotes(cleaned ? `${cleaned}, ${cookingPoint}` : cookingPoint)
+                          }
+                        }}
+                        className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition-all text-center border ${
+                          isSelected
+                            ? 'bg-amber-500 text-slate-950 border-amber-500 font-black shadow-xs ring-1 ring-amber-400'
+                            : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
+                        }`}
+                      >
+                        {cookingPoint}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Exclusiones Rápidas (Checkboxes / Píldoras) */}
+            {/* Exclusiones / Aclaraciones Rápidas contextualizadas */}
             <div className="space-y-1 pt-1">
-              <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Aclaraciones de Cocina:</span>
+              <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">
+                {isDrink ? 'Aclaraciones de servicio:' : isCoffee ? 'Detalles de servicio:' : 'Aclaraciones de Cocina:'}
+              </span>
               <div className="flex flex-wrap gap-1.5">
-                {[
-                  'Sin mayonesa',
-                  'Sin cebolla',
-                  'Salsa aparte',
-                  'Sin sal',
-                  'Pan bien tostado',
-                  'Sin hielo',
-                  'Extra limón',
-                  'Para compartir',
-                ].map((quickNote) => {
+                {quickNotesList.map((quickNote) => {
                   const isIncluded = notes.toLowerCase().includes(quickNote.toLowerCase())
                   return (
                     <button
@@ -470,54 +544,56 @@ export function ProductModifierModal({
             </div>
           </div>
 
-          {/* SECCIÓN 5: PASE DE COCINA (TIEMPOS DE MARCHA) */}
-          <div className="space-y-2 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-blue-600" />
-                <span>Pase de Cocina</span>
-              </label>
-              <span className="text-[10px] text-slate-400 font-medium">Tiempos</span>
+          {/* SECCIÓN 5: PASE DE COCINA (TIEMPOS DE MARCHA - EXCLUSIVO PERSONAL DE SALA / MOZO) */}
+          {isStaff && (
+            <div className="space-y-2 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Pase de Cocina</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">Tiempos de sala</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCourse('first')}
+                  className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1 ${
+                    course === 'first'
+                      ? 'bg-emerald-600 text-white shadow-xs font-black ring-2 ring-emerald-400'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+                  }`}
+                >
+                  <span>🔥 1º Marcha</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCourse('second')}
+                  className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1 ${
+                    course === 'second'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs font-black ring-2 ring-amber-400'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+                  }`}
+                >
+                  <span>⏳ 2º En Espera</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCourse('dessert')}
+                  className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1 ${
+                    course === 'dessert'
+                      ? 'bg-purple-600 text-white shadow-xs font-black ring-2 ring-purple-400'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+                  }`}
+                >
+                  <span>🍰 Postre</span>
+                </button>
+              </div>
             </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setCourse('first')}
-                className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1 ${
-                  course === 'first'
-                    ? 'bg-emerald-600 text-white shadow-xs font-black ring-2 ring-emerald-400'
-                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                <span>🔥 1º Marcha</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCourse('second')}
-                className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1 ${
-                  course === 'second'
-                    ? 'bg-amber-500 text-slate-950 shadow-xs font-black ring-2 ring-amber-400'
-                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                <span>⏳ 2º En Espera</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setCourse('dessert')}
-                className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center gap-1 ${
-                  course === 'dessert'
-                    ? 'bg-purple-600 text-white shadow-xs font-black ring-2 ring-purple-400'
-                    : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
-                }`}
-              >
-                <span>🍰 Postre</span>
-              </button>
-            </div>
-          </div>
+          )}
 
           {/* SECCIÓN 6: PRODUCTO AL PESO (SI APLICA) */}
           {product.price_type === 'weight' && (

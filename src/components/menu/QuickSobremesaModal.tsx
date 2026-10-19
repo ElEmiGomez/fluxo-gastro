@@ -22,12 +22,18 @@ export function QuickSobremesaModal({
   availableItems = [],
   onOrderSingleItem,
 }: QuickSobremesaModalProps) {
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [submittingId, setSubmittingId] = useState<string | null>(null)
   const [orderedSuccessName, setOrderedSuccessName] = useState<string | null>(null)
 
   if (!isOpen) return null
 
-  const handleSelect = async (product: Product) => {
+  const handleSelect = (product: Product) => {
+    setSelectedProduct(product)
+    triggerHaptic(HAPTIC_PATTERNS.TAP)
+  }
+
+  const handleConfirmOrder = async (product: Product) => {
     if (submittingId) return
     setSubmittingId(product.id)
     triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
@@ -38,10 +44,11 @@ export function QuickSobremesaModal({
       setTimeout(() => {
         setOrderedSuccessName(null)
         setSubmittingId(null)
+        setSelectedProduct(null)
         onClose()
       }, 1500)
     } catch (err) {
-      console.error('Error al pedir café o postre en 1 toque:', err)
+      console.error('Error al pedir café o postre:', err)
       setSubmittingId(null)
     }
   }
@@ -60,10 +67,10 @@ export function QuickSobremesaModal({
               <div className="flex items-center gap-1.5">
                 <h3 className="text-sm font-black uppercase tracking-wider">Café & Postres</h3>
                 <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 text-[9px] font-black uppercase">
-                  1 Toque
+                  Sobremesa
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400">Mesa #{tableNumber} &middot; Sobremesa</span>
+              <span className="text-[10px] text-slate-400">Mesa #{tableNumber} &middot; Ronda de cierre</span>
             </div>
           </div>
           <button
@@ -84,15 +91,7 @@ export function QuickSobremesaModal({
           </div>
         )}
 
-        {/* Subtítulo explicativo */}
-        <div className="px-4 py-2 bg-amber-50/70 border-b border-amber-200/60 flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-          <p className="text-[11px] text-amber-950 font-bold leading-tight">
-            Toca cualquier opción para enviarla directamente a aprobación del mozo.
-          </p>
-        </div>
-
-        {/* Catálogo de Opciones en 1 Toque */}
+        {/* Catálogo de Opciones */}
         <div className="p-3.5 overflow-y-auto space-y-2.5 flex-1 divide-y divide-slate-100">
           {availableItems.length === 0 ? (
             <div className="py-8 text-center text-xs text-slate-500 font-medium">
@@ -100,6 +99,7 @@ export function QuickSobremesaModal({
             </div>
           ) : (
             availableItems.map((prod) => {
+              const isSelected = selectedProduct?.id === prod.id
               const isSubmittingThis = submittingId === prod.id
               const isCoffee = (prod.name || '').toLowerCase().includes('café') || (prod.name || '').toLowerCase().includes('cafe')
 
@@ -108,9 +108,9 @@ export function QuickSobremesaModal({
                   key={prod.id}
                   onClick={() => !submittingId && handleSelect(prod)}
                   className={`pt-2.5 first:pt-0 flex items-center gap-3 p-2.5 rounded-2xl border transition-all cursor-pointer ${
-                    isSubmittingThis
-                      ? 'bg-amber-50 border-amber-400 scale-[0.98]'
-                      : 'bg-white border-slate-200 hover:border-amber-300 hover:bg-amber-50/30 active:scale-95 shadow-xs'
+                    isSelected
+                      ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400/60 shadow-xs'
+                      : 'bg-white border-slate-200 hover:border-amber-300 hover:bg-amber-50/20 active:scale-95 shadow-xs'
                   }`}
                 >
                   {/* Imagen */}
@@ -152,33 +152,51 @@ export function QuickSobremesaModal({
                     </span>
                   </div>
 
-                  {/* Botón de 1 toque */}
-                  <button
-                    type="button"
-                    disabled={Boolean(submittingId)}
-                    className={`px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1 shadow-xs transition-all flex-shrink-0 ${
-                      isSubmittingThis
-                        ? 'bg-amber-500 text-slate-950'
-                        : 'bg-slate-900 hover:bg-slate-800 text-white active:scale-95'
-                    }`}
-                  >
-                    {isSubmittingThis ? (
-                      <>
-                        <Loader2 size={12} className="animate-spin" />
-                        <span>Enviando...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Pedir</span>
-                        <ChevronRight size={12} />
-                      </>
-                    )}
-                  </button>
+                  {/* Indicador de Selección */}
+                  <div className="flex-shrink-0">
+                    <div
+                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                        isSelected
+                          ? 'bg-amber-500 text-slate-950 font-black'
+                          : 'border-2 border-slate-300 text-transparent'
+                      }`}
+                    >
+                      <CheckCircle2 size={18} className={isSelected ? 'text-slate-950' : 'text-slate-300'} />
+                    </div>
+                  </div>
                 </div>
               )
             })
           )}
         </div>
+
+        {/* Barra Inferior de Confirmación Explícita */}
+        {selectedProduct && (
+          <div className="p-3.5 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-3 animate-in slide-in-from-bottom-2 flex-shrink-0">
+            <div className="min-w-0 flex-1">
+              <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Has seleccionado:</span>
+              <p className="text-xs text-white font-black truncate">{selectedProduct.name}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleConfirmOrder(selectedProduct)}
+              disabled={Boolean(submittingId)}
+              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-lg active:scale-95 transition-all flex-shrink-0 cursor-pointer"
+            >
+              {submittingId ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Enviando...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={14} className="stroke-[2.5]" />
+                  <span>Confirmar pedido · {formatCurrency(selectedProduct.price)}</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

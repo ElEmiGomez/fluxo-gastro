@@ -15,6 +15,7 @@ interface BillModalProps {
   totalAmount?: number
   hasPendingDesserts?: boolean
   onOpenSobremesa?: () => void
+  tableOrders?: any[]
 }
 
 export function BillModal({
@@ -29,11 +30,26 @@ export function BillModal({
   totalAmount,
   hasPendingDesserts = false,
   onOpenSobremesa,
+  tableOrders = [],
 }: BillModalProps) {
   const [billRequested, setBillRequested] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [splitCount, setSplitCount] = useState(1)
+
+  const consumedItems = React.useMemo(() => {
+    return (tableOrders || []).flatMap((o: any) => o.order_items || [])
+  }, [tableOrders])
+
+  const calculatedTotal = React.useMemo(() => {
+    if (typeof totalAmount === 'number' && totalAmount > 0) return totalAmount
+    const sum = consumedItems.reduce((acc: number, item: any) => {
+      if (item.is_complimentary) return acc
+      const price = Number(item.unit_price || item.product?.price || item.price || 0)
+      return acc + price * (Number(item.quantity) || 1)
+    }, 0)
+    return sum > 0 ? sum : 0
+  }, [totalAmount, consumedItems])
 
   if (!isOpen) return null
 
@@ -95,9 +111,40 @@ export function BillModal({
         </div>
 
         <div className="p-5 space-y-4">
-          
+
+          {/* DESGLOSE DETALLADO DE PLATOS CONSUMIDOS (TRANSPARENCIA TOTAL) */}
+          {consumedItems.length > 0 && (
+            <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/90 space-y-2">
+              <div className="flex items-center justify-between text-xs pb-1 border-b border-slate-200">
+                <span className="font-extrabold text-slate-800 flex items-center gap-1.5">
+                  <Receipt size={13} className="text-blue-600" />
+                  Detalle de lo consumido:
+                </span>
+                <span className="text-[10px] text-slate-500 font-bold">
+                  {consumedItems.length} {consumedItems.length === 1 ? 'ítem' : 'ítems'}
+                </span>
+              </div>
+              <div className="max-h-32 overflow-y-auto space-y-1 divide-y divide-slate-100 pr-1">
+                {consumedItems.map((item: any, idx: number) => {
+                  const pPrice = Number(item.unit_price || item.product?.price || item.price || 0)
+                  const pQty = Number(item.quantity) || 1
+                  return (
+                    <div key={idx} className="pt-1 first:pt-0 flex items-center justify-between text-xs">
+                      <span className="text-slate-700 font-medium truncate flex-1 pr-2">
+                        <strong className="text-slate-900">{pQty}x</strong> {item.product?.name || item.name || 'Plato'}
+                      </span>
+                      <span className="font-black text-slate-900 tabular-nums flex-shrink-0">
+                        {item.is_complimentary ? '0,00 €' : `${(pPrice * pQty).toFixed(2)} €`}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* CALCULADORA SUTIL DE DIVISIÓN DE CUENTA (SPLIT BILL) */}
-          {Boolean(totalAmount && totalAmount > 0) && (
+          {Boolean(calculatedTotal && calculatedTotal > 0) && (
             <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/90 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-600 font-bold flex items-center gap-1.5">
@@ -105,7 +152,7 @@ export function BillModal({
                   Dividir entre comensales:
                 </span>
                 <span className="font-black text-slate-900 tabular-nums">
-                  Total: {totalAmount?.toFixed(2)} €
+                  Total: {calculatedTotal.toFixed(2)} €
                 </span>
               </div>
 
@@ -126,9 +173,9 @@ export function BillModal({
                 ))}
               </div>
 
-              {splitCount > 1 && totalAmount && (
+              {splitCount > 1 && (
                 <div className="pt-1 text-center text-xs text-blue-700 font-extrabold bg-blue-50/60 py-1.5 rounded-xl border border-blue-100">
-                  👉 {(totalAmount / splitCount).toFixed(2)} € por persona
+                  👉 {(calculatedTotal / splitCount).toFixed(2)} € por persona
                 </div>
               )}
             </div>

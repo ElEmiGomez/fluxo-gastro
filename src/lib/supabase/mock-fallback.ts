@@ -162,7 +162,7 @@ export const MOCK_PRODUCTS: Record<string, Product[]> = {
       id: 'b0000000-0000-0000-0000-000000000001',
       restaurant_id: 'a0000000-0000-0000-0000-000000000001',
       category_id: 'c0000000-0000-0000-0000-000000000001',
-      name: 'Combo Pareja: 2 Burgers Dobles + Papas + 2 Pintas',
+      name: 'Combo Pareja',
       description: '2 Burgers Doble Monster con panceta y cheddar, porción gigante de papas rústicas y 2 cervezas artesanales.',
       price: 24.50,
       cost_price: 7.20,

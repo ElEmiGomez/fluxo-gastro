@@ -62,7 +62,7 @@ export function CookieConsentBanner() {
                   onClick={handleAccept}
                   className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-sm transition-colors active:scale-95"
                 >
-                  Aceptar esenciales
+                  Aceptar cookies
                 </button>
 
                 <button

@@ -37,11 +37,18 @@ export function MenuGridCatalog({
     <div className="grid grid-cols-2 gap-3">
       {filteredProducts.map((product, idx) => {
         const qty = getProductQuantity(product.id)
+        const rawTranslatedName = translateProductName(currentLang, product.id, product.name)
+        const displayName = rawTranslatedName.includes(':')
+          ? rawTranslatedName.split(':')[0].trim()
+          : rawTranslatedName
 
         return (
           <div
             key={product.id}
-            className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
+            onClick={() => {
+              if (!isInSituAdmin) onCustomizeProduct(product)
+            }}
+            className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between cursor-pointer active:scale-[0.99] select-none"
           >
             <div>
               {product.image_url && (
@@ -61,7 +68,7 @@ export function MenuGridCatalog({
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <h3 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug">
-                      {translateProductName(currentLang, product.id, product.name)}
+                      {displayName}
                     </h3>
                     {isInSituAdmin && product.is_available === false && (
                       <span className="inline-block mt-0.5 text-[9px] font-black text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md">
@@ -138,20 +145,10 @@ export function MenuGridCatalog({
             )}
 
             {!isFixedMenu ? (
-              <div className="p-3.5 pt-0 flex items-center justify-between gap-2">
-                <button
-                  onClick={() => {
-                    if (!isInSituAdmin) onCustomizeProduct(product)
-                  }}
-                  disabled={isInSituAdmin}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
-                    isInSituAdmin
-                      ? 'bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed pointer-events-none'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer'
-                  }`}
-                >
-                  {t('customize')}
-                </button>
+              <div className="p-3.5 pt-0 flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                <span className="text-[10px] font-bold text-slate-400">
+                  {isInSituAdmin ? '' : 'Toca para ver detalles'}
+                </span>
 
                 <div className="flex items-center">
                   {isInSituAdmin ? (
@@ -164,9 +161,12 @@ export function MenuGridCatalog({
                   ) : qty === 0 ? (
                     <button
                       type="button"
-                      onClick={(e) => onUpdateQuantity(product, 1, e)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onUpdateQuantity(product, 1, e)
+                      }}
                       aria-label={`Añadir ${product.name} a la comanda`}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs cursor-pointer"
+                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs cursor-pointer active:scale-95"
                     >
                       <Plus size={16} />
                     </button>
@@ -174,7 +174,10 @@ export function MenuGridCatalog({
                     <div className="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100">
                       <button
                         type="button"
-                        onClick={(e) => onUpdateQuantity(product, -1, e)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onUpdateQuantity(product, -1, e)
+                        }}
                         aria-label={`Disminuir ${product.name}`}
                         className="w-7 h-7 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs hover:bg-blue-100 transition-colors cursor-pointer"
                       >
@@ -183,7 +186,10 @@ export function MenuGridCatalog({
                       <span className="text-xs font-black text-blue-900 px-1 tabular-nums">{qty}</span>
                       <button
                         type="button"
-                        onClick={(e) => onUpdateQuantity(product, 1, e)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onUpdateQuantity(product, 1, e)
+                        }}
                         aria-label={`Aumentar ${product.name}`}
                         className="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-xs hover:bg-blue-800 transition-colors cursor-pointer"
                       >

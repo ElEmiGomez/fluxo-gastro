@@ -539,6 +539,14 @@ export function MenuLiveTracker({
               <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
                 El personal se acerca a tu mesa con el desglose para abonar en efectivo o con tarjeta.
               </p>
+              <button
+                type="button"
+                onClick={onOpenDirectBillModal}
+                className="mt-2.5 px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 border border-emerald-600/60 shadow-xs cursor-pointer active:scale-95 transition-all"
+              >
+                <Receipt size={13} className="text-emerald-400" />
+                <span>Ver detalle de consumos</span>
+              </button>
             </div>
           </div>
         </div>

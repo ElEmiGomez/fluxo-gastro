@@ -256,6 +256,7 @@ export function MenuModals({
         tableNumber={tableNumber}
         status={tableOrderStatus}
         orders={tableOrders}
+        onCallWaiter={() => onRequestMicroService('waiter')}
         onRequestService={() => setShowServiceModal(true)}
         onRequestBill={() => setShowDirectBillModal(true)}
       />
@@ -273,6 +274,7 @@ export function MenuModals({
         totalAmount={tableTotalAmount}
         hasPendingDesserts={hasPendingDesserts}
         onOpenSobremesa={onOpenSobremesa}
+        tableOrders={tableOrders}
       />
 
       {/* 8. Modal Legal y RGPD */}

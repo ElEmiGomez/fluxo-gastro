@@ -28,6 +28,7 @@ export function useComanderoData(slug: string) {
   const [readyOrderAlert, setReadyOrderAlert] = useState<string | number | null>(null)
   const [dismissedReadyBannerOrderIds, setDismissedReadyBannerOrderIds] = useState<Set<string>>(new Set())
   const [serverOrders, setServerOrders] = useState<Order[]>([])
+  const serverOrdersRef = useRef<Order[]>([])
   const [pendingCalls, setPendingCalls] = useState<PendingServiceCall[]>([])
 
   // State locks y referencias anti-flicker
@@ -141,73 +142,69 @@ export function useComanderoData(slug: string) {
           )
           .join('|')
 
-      let reconciledOrders: Order[] = []
+      const currentOrders = serverOrdersRef.current
+      const prevMap = new Map(currentOrders.map(o => [o.id, o]))
+      const map = new Map<string, Order>()
 
-      setServerOrders(prev => {
-        const prevMap = new Map(prev.map(o => [o.id, o]))
-        const map = new Map<string, Order>()
+      incomingOrders.forEach(ord => {
+        if (ord.status === 'cancelled') return
+        const existing = prevMap.get(ord.id)
+        const recentMut = recentMutationsRef.current.get(ord.id)
+        const isMutActive = Boolean(recentMut && Date.now() < recentMut.until)
 
-        incomingOrders.forEach(ord => {
-          if (ord.status === 'cancelled') return
-          const existing = prevMap.get(ord.id)
-          const recentMut = recentMutationsRef.current.get(ord.id)
-          const isMutActive = Boolean(recentMut && Date.now() < recentMut.until)
+        let effectiveItems = (ord.order_items && ord.order_items.length > 0)
+          ? ord.order_items
+          : (existing?.order_items && existing.order_items.length > 0 ? existing.order_items : [])
 
-          let effectiveItems = (ord.order_items && ord.order_items.length > 0)
-            ? ord.order_items
-            : (existing?.order_items && existing.order_items.length > 0 ? existing.order_items : [])
-
-          if (existing?.order_items && existing.order_items.length > 0 && effectiveItems.length > 0) {
-            effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
-          }
-
-          if (isMutActive && recentMut?.order?.order_items) {
-            effectiveItems = mergeOrderItemsCourseTags(effectiveItems, recentMut.order.order_items)
-          }
-
-          let effectiveStatus: OrderStatus = ord.status
-          if (isMutActive && recentMut?.status) {
-            effectiveStatus = recentMut.status
-          } else {
-            if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
-              effectiveStatus = 'delivered'
-            } else if (existing?.status === 'paid' && ord.status !== 'paid') {
-              effectiveStatus = 'paid'
-            } else if (existing?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || ord.status === 'preparing')) {
-              effectiveStatus = 'ready'
-            } else if (existing?.status === 'pending' && ord.status === 'pending_validation') {
-              effectiveStatus = 'pending'
-            } else if (existing?.status === 'preparing' && (ord.status === 'pending_validation' || ord.status === 'pending')) {
-              effectiveStatus = 'preparing'
-            }
-          }
-
-          const finalOrd: Order = { ...ord, status: effectiveStatus, order_items: effectiveItems }
-          map.set(ord.id, finalOrd)
-        })
-
-        // Preservar órdenes no terminales pendientes
-        prev.forEach(prevOrd => {
-          if (!map.has(prevOrd.id)) {
-            const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || prevOrd.status === 'delivered'
-            const isHandledLocally = attendedValidationOrderIdsRef.current.has(prevOrd.id)
-            if (!isTerminal && !isHandledLocally) {
-              map.set(prevOrd.id, prevOrd)
-            }
-          }
-        })
-
-        const newOrders = Array.from(map.values()).filter(o => o.status !== 'cancelled')
-        reconciledOrders = newOrders
-
-        const prevFinger = computeOrdersFinger(prev)
-        const nextFinger = computeOrdersFinger(newOrders)
-
-        if (nextFinger === prevFinger) {
-          return prev
+        if (existing?.order_items && existing.order_items.length > 0 && effectiveItems.length > 0) {
+          effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
         }
-        return newOrders
+
+        if (isMutActive && recentMut?.order?.order_items) {
+          effectiveItems = mergeOrderItemsCourseTags(effectiveItems, recentMut.order.order_items)
+        }
+
+        let effectiveStatus: OrderStatus = ord.status
+        if (isMutActive && recentMut?.status) {
+          effectiveStatus = recentMut.status
+        } else {
+          if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
+            effectiveStatus = 'delivered'
+          } else if (existing?.status === 'paid' && ord.status !== 'paid') {
+            effectiveStatus = 'paid'
+          } else if (existing?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || ord.status === 'preparing')) {
+            effectiveStatus = 'ready'
+          } else if (existing?.status === 'pending' && ord.status === 'pending_validation') {
+            effectiveStatus = 'pending'
+          } else if (existing?.status === 'preparing' && (ord.status === 'pending_validation' || ord.status === 'pending')) {
+            effectiveStatus = 'preparing'
+          }
+        }
+
+        const finalOrd: Order = { ...ord, status: effectiveStatus, order_items: effectiveItems }
+        map.set(ord.id, finalOrd)
       })
+
+      // Preservar órdenes no terminales pendientes
+      currentOrders.forEach(prevOrd => {
+        if (!map.has(prevOrd.id)) {
+          const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || prevOrd.status === 'delivered'
+          const isHandledLocally = attendedValidationOrderIdsRef.current.has(prevOrd.id)
+          if (!isTerminal && !isHandledLocally) {
+            map.set(prevOrd.id, prevOrd)
+          }
+        }
+      })
+
+      const reconciledOrders = Array.from(map.values()).filter(o => o.status !== 'cancelled')
+      serverOrdersRef.current = reconciledOrders
+
+      const prevFinger = computeOrdersFinger(currentOrders)
+      const nextFinger = computeOrdersFinger(reconciledOrders)
+
+      if (nextFinger !== prevFinger) {
+        setServerOrders(reconciledOrders)
+      }
 
       // Actualizar referencias de respaldo fuera del updater puro
       const nextPendingWithoutItems = new Map<string, Order>()

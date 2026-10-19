@@ -113,38 +113,39 @@ export default function KitchenKDSPage() {
           // La cocina solo recibe comandas que requieren elaboración gastronómica (comida o postres)
           // y retiene comandas entregadas si tienen postres pendientes de pase 2
           const rawOrders: Order[] = data.orders || []
-          const incomingOrders: Order[] = rawOrders
-            .filter((o: Order) => {
-              const mut = recentMutationsRef.current.get(o.id)
-              const isMutActive = Boolean(mut && Date.now() < mut.until)
-              if (isMutActive && (mut?.status === 'delivered' || mut?.status === 'cancelled')) {
-                if (!orderHasDesserts(o) || isOrderDessertsReady(o)) {
-                  return false
-                }
+          const hydratedOrders: Order[] = rawOrders.map((o: Order) => {
+            const cached = prevOrdersMapRef.current.get(o.id)
+            const items = (o.order_items && o.order_items.length > 0)
+              ? o.order_items
+              : (cached?.order_items || [])
+            return {
+              ...o,
+              order_items: items.map((it: any) => ({
+                ...it,
+                product: it.product || it.products,
+                course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
+                  ? it.course
+                  : getItemCourse(it),
+              })),
+            }
+          })
+
+          const incomingOrders: Order[] = hydratedOrders.filter((o: Order) => {
+            const mut = recentMutationsRef.current.get(o.id)
+            const isMutActive = Boolean(mut && Date.now() < mut.until)
+            if (isMutActive && (mut?.status === 'delivered' || mut?.status === 'cancelled')) {
+              if (!orderHasDesserts(o) || isOrderDessertsReady(o)) {
+                return false
               }
-              const isEligibleStatus =
-                ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) ||
-                (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
-              return (
-                isEligibleStatus &&
-                (orderHasFood(o) || orderHasActiveDesserts(o) || (!orderHasFood(o) && orderHasDesserts(o) && !isOrderDessertsReady(o)))
-              )
-            })
-            .map((o: Order) => {
-              const items = (o.order_items && o.order_items.length > 0)
-                ? o.order_items
-                : (prevOrdersMapRef.current.get(o.id)?.order_items || [])
-              return {
-                ...o,
-                order_items: items.map((it: any) => ({
-                  ...it,
-                  product: it.product || it.products,
-                  course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
-                    ? it.course
-                    : getItemCourse(it),
-                })),
-              }
-            })
+            }
+            const isEligibleStatus =
+              ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) ||
+              (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
+            return (
+              isEligibleStatus &&
+              (orderHasFood(o) || orderHasActiveDesserts(o) || (!orderHasFood(o) && orderHasDesserts(o) && !isOrderDessertsReady(o)))
+            )
+          })
 
           // Detectar nueva orden entrante o marcha de postres para sonar campana
           let hasNewUnseenOrder = false
