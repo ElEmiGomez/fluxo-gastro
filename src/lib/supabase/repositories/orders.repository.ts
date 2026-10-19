@@ -776,10 +776,19 @@ export async function updateOrderCourseTags(
               }
               return
             }
+            const itPid = it.product_id || it.product?.id
+            const itCanon = resolveCanonicalProductId(itPid) || itPid
+
             const matchedDbItem = dbItems.find(
-              dbi =>
-                (dbi.product_id === it.product_id || (it.product && dbi.product_id === it.product.id)) &&
-                !usedDbItemIds.has(dbi.id)
+              dbi => {
+                if (usedDbItemIds.has(dbi.id)) return false
+                const dbiPid = dbi.product_id || (dbi as any).product?.id
+                const dbiCanon = resolveCanonicalProductId(dbiPid) || dbiPid
+                return (
+                  dbiPid === itPid ||
+                  (dbiCanon && itCanon && dbiCanon === itCanon)
+                )
+              }
             )
             if (matchedDbItem?.id && isUuid(matchedDbItem.id)) {
               usedDbItemIds.add(matchedDbItem.id)
@@ -794,21 +803,20 @@ export async function updateOrderCourseTags(
               return
             }
             if (isUuid(orderId)) {
-              let query = supabase
-                .from('order_items')
-                .update({ notes: it.notes })
-                .eq('order_id', orderId)
-              const pid = (it.product_id && isUuid(it.product_id))
-                ? it.product_id
-                : (it.product?.id && isUuid(it.product.id))
-                  ? it.product.id
+              const pid = (itPid && isUuid(itPid))
+                ? itPid
+                : (itCanon && isUuid(itCanon))
+                  ? itCanon
                   : null
               if (pid) {
-                query = query.eq('product_id', pid)
-              }
-              const { error } = await query
-              if (error) {
-                console.warn('[updateOrderCourseTags] Error updating by order_id/product_id:', error)
+                const { error } = await supabase
+                  .from('order_items')
+                  .update({ notes: it.notes })
+                  .eq('order_id', orderId)
+                  .eq('product_id', pid)
+                if (error) {
+                  console.warn('[updateOrderCourseTags] Error updating by order_id/product_id:', error)
+                }
               }
             }
           })

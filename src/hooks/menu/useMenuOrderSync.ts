@@ -51,6 +51,7 @@ export function useMenuOrderSync({
   const [tableOrders, setTableOrders] = useState<Order[]>([])
   const [tableTotalAmount, setTableTotalAmount] = useState<number>(0)
   const prevTableOrdersMapRef = useRef<Map<string, any>>(new Map())
+  const hasHadActiveOrderInThisSessionRef = useRef<boolean>(false)
 
   // Estabilización de referencias para evitar desmontaje y re-suscripción innecesaria del canal Realtime
   const handleTableMarkedPaidRef = useRef(handleTableMarkedPaid)
@@ -154,8 +155,6 @@ export function useMenuOrderSync({
             effectiveStatus = 'delivered'
           } else if (prevOrd?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
-          } else if (prevOrd?.status === 'ready' && (ord.status === 'pending' || ord.status === 'preparing' || ord.status === 'pending_validation')) {
-            effectiveStatus = 'ready'
           } else if (prevOrd?.status === 'preparing' && (ord.status === 'pending' || ord.status === 'pending_validation')) {
             effectiveStatus = 'preparing'
           } else if (prevOrd?.status === 'pending' && ord.status === 'pending_validation') {
@@ -192,6 +191,10 @@ export function useMenuOrderSync({
           o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
         )
 
+        if (activeTableOrders.length > 0 || hasRequestedBillRef.current) {
+          hasHadActiveOrderInThisSessionRef.current = true
+        }
+
         // Si hay órdenes activas en la mesa, la mesa NO puede estar en estado cobrado/pagado
         if (activeTableOrders.length > 0) {
           if (isTablePaidRef.current) {
@@ -209,7 +212,7 @@ export function useMenuOrderSync({
         }
 
         if (thisTableSession && thisTableSession.status === 'free' && activeTableOrders.length === 0) {
-          const hadOrdersInSession = prevTableOrdersMapRef.current.size > 0
+          const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current && prevTableOrdersMapRef.current.size > 0
           const prevSessionTotal = Array.from(prevTableOrdersMapRef.current.values()).reduce(
             (sum, o) => sum + (Number(o.total_amount) || 0),
             0
@@ -217,6 +220,7 @@ export function useMenuOrderSync({
           prevTableOrdersMapRef.current.clear()
           setTableOrderStatus(null)
           if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
+            hasHadActiveOrderInThisSessionRef.current = false
             if (prevSessionTotal > 0 && typeof window !== 'undefined') {
               try {
                 sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(prevSessionTotal))
@@ -225,6 +229,7 @@ export function useMenuOrderSync({
             handleTableMarkedPaidRef.current()
             return
           }
+          hasHadActiveOrderInThisSessionRef.current = false
           setIsTablePaidRef.current(false)
           setHasRequestedBillRef.current(false)
           hasRequestedBillRef.current = false
@@ -418,13 +423,14 @@ export function useMenuOrderSync({
               data.type === 'table_freed' &&
               (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
             ) {
-              const hadOrdersInSession = prevTableOrdersMapRef.current.size > 0
+              const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current && prevTableOrdersMapRef.current.size > 0
               const prevSessionTotal = Array.from(prevTableOrdersMapRef.current.values()).reduce(
                 (sum, o) => sum + (Number(o.total_amount) || 0),
                 0
               )
               prevTableOrdersMapRef.current.clear()
               if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
+                hasHadActiveOrderInThisSessionRef.current = false
                 if (prevSessionTotal > 0 && typeof window !== 'undefined') {
                   try {
                     sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(prevSessionTotal))
@@ -433,6 +439,7 @@ export function useMenuOrderSync({
                 handleTableMarkedPaidRef.current()
                 return
               }
+              hasHadActiveOrderInThisSessionRef.current = false
               setCartRef.current([])
               setTableOrderStatus(null)
               setIsTablePaidRef.current(false)
@@ -509,13 +516,14 @@ export function useMenuOrderSync({
 
     const handleLocalTableFreed = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        const hadOrdersInSession = prevTableOrdersMapRef.current.size > 0
+        const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current && prevTableOrdersMapRef.current.size > 0
         const prevSessionTotal = Array.from(prevTableOrdersMapRef.current.values()).reduce(
           (sum, o) => sum + (Number(o.total_amount) || 0),
           0
         )
         prevTableOrdersMapRef.current.clear()
         if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
+          hasHadActiveOrderInThisSessionRef.current = false
           if (prevSessionTotal > 0 && typeof window !== 'undefined') {
             try {
               sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(prevSessionTotal))
@@ -524,6 +532,7 @@ export function useMenuOrderSync({
           handleTableMarkedPaidRef.current()
           return
         }
+        hasHadActiveOrderInThisSessionRef.current = false
         setCartRef.current([])
         setTableOrderStatus(null)
         setIsTablePaidRef.current(false)

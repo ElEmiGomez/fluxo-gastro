@@ -187,9 +187,7 @@ export default function KitchenKDSPage() {
               if (isMutActive && mut?.status) {
                 effectiveStatus = mut.status
               } else {
-                if (existing?.status === 'ready' && (ord.status === 'pending' || ord.status === 'preparing')) {
-                  effectiveStatus = 'ready'
-                } else if (existing?.status === 'preparing' && ord.status === 'pending') {
+                if (existing?.status === 'preparing' && ord.status === 'pending') {
                   effectiveStatus = 'preparing'
                 }
               }

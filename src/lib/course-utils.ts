@@ -1,5 +1,5 @@
 import { Order, OrderItem, CourseType } from '@/types/database.types'
-import { inferCourseType } from './category-matcher'
+import { inferCourseType, resolveCanonicalProductId } from './category-matcher'
 
 export const TAG_DRINK_SERVED = '[BARRA_SERVIDA]'
 export const TAG_FOOD_READY = '[COCINA_LISTA]'
@@ -85,13 +85,18 @@ export function mergeOrderItemsCourseTags(
       ? referenceItems.findIndex((r, rIdx) => !usedRefIndices.has(rIdx) && r.id === currItem.id)
       : -1
 
-    // 2. Coincidencia por product_id
+    // 2. Coincidencia por product_id o id canónico
     if (matchIdx === -1) {
+      const cProdId = currItem.product_id || currItem.product?.id
+      const cCanon = resolveCanonicalProductId(cProdId) || cProdId
       matchIdx = referenceItems.findIndex((r, rIdx) => {
         if (usedRefIndices.has(rIdx)) return false
         const rProdId = r.product_id || r.product?.id
-        const cProdId = currItem.product_id || currItem.product?.id
-        return Boolean(rProdId && cProdId && rProdId === cProdId)
+        const rCanon = resolveCanonicalProductId(rProdId) || rProdId
+        return Boolean(
+          (rProdId && cProdId && rProdId === cProdId) ||
+          (rCanon && cCanon && rCanon === cCanon)
+        )
       })
     }
 
@@ -336,9 +341,10 @@ export function isMainFired(item: OrderItem): boolean {
 }
 
 export function areOrderMainsFired(order: Order): boolean {
-  if (order.status === 'delivered' || order.status === 'paid') return true
+  if (order.status === 'paid') return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
+  if (mains.every(isMainServed)) return true
   // Si la comanda no tiene entrantes, los principales se consideran marchados de inicio
   if (!orderHasStarters(order)) return true
   return mains.some(isMainFired)

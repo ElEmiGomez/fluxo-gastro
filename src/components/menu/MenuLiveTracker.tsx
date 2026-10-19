@@ -97,7 +97,7 @@ export function MenuLiveTracker({
   const areMainsServed = hasMains && mains.every(isMainServed)
   const areMainsReady = hasMains && mains.every(isMainReady)
   const areMainsFired = (tableOrders || []).some(areOrderMainsFired)
-  const areMainsCooking = mains.some(isMainCooking) || (hasMains && !hasStarters && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))) || (hasMains && areStartersServed && areMainsFired)
+  const areMainsCooking = mains.some(isMainCooking) || (hasMains && !hasStarters && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))) || (hasMains && areStartersServed && areMainsFired && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing')))
 
   const areDessertsServed = hasDesserts && desserts.every(isDessertServed)
   const areDessertsReady = hasDesserts && desserts.every(isDessertReady)
@@ -112,7 +112,7 @@ export function MenuLiveTracker({
     if (areStartersCooking) {
       dynamicTitle = '🥗 1º Entrantes en preparación en cocina'
       dynamicSubtitle = 'Cocina está elaborando tus entrantes. Los platos principales se marcharán después.'
-    } else if (hasMains && areStartersServed && !areMainsFired && !areMainsCooking) {
+    } else if (hasMains && areStartersServed && !areMainsFired) {
       dynamicTitle = '🥗 ¡A disfrutar de las entradas! · Principales en espera'
       dynamicSubtitle = 'Tus entrantes ya están en la mesa. Cuando terminéis, el mozo marchará los platos principales a cocina.'
     } else if (areMainsCooking) {
@@ -264,19 +264,35 @@ export function MenuLiveTracker({
           {tableOrderStatus === 'preparing' && (
             <div
               onClick={onOpenTimelineModal}
-              className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-400/40 text-amber-950 shadow-xs space-y-2 animate-in fade-in cursor-pointer hover:bg-amber-500/15 transition-all"
+              className={`p-3.5 rounded-2xl ${
+                hasMains && areStartersServed && !areMainsFired
+                  ? 'bg-sky-500/10 border border-sky-400/40 text-sky-950 hover:bg-sky-500/15'
+                  : 'bg-amber-500/10 border border-amber-400/40 text-amber-950 hover:bg-amber-500/15'
+              } shadow-xs space-y-2 animate-in fade-in cursor-pointer transition-all`}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                    <Flame className="w-4 h-4 animate-pulse" />
+                  <div className={`w-8 h-8 rounded-xl ${
+                    hasMains && areStartersServed && !areMainsFired
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-amber-500 text-slate-950'
+                  } flex items-center justify-center flex-shrink-0 font-black shadow-xs`}>
+                    {hasMains && areStartersServed && !areMainsFired ? (
+                      <UtensilsCrossed className="w-4 h-4" />
+                    ) : (
+                      <Flame className="w-4 h-4 animate-pulse" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">
+                      <span className={`text-[10px] font-black uppercase tracking-wider ${
+                        hasMains && areStartersServed && !areMainsFired ? 'text-sky-700' : 'text-amber-700'
+                      }`}>
                         {t('tableNumberLabel')} #{tableNumber}
                       </span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        hasMains && areStartersServed && !areMainsFired ? 'bg-sky-500' : 'bg-amber-500 animate-ping'
+                      }`} />
                     </div>
                     <h4 className="font-extrabold text-xs text-slate-900 leading-tight truncate">
                       {dynamicTitle}
@@ -286,7 +302,11 @@ export function MenuLiveTracker({
                     </p>
                   </div>
                 </div>
-                <div className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-[11px] font-black text-amber-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
+                <div className={`px-2.5 py-1 rounded-xl bg-white border ${
+                  hasMains && areStartersServed && !areMainsFired
+                    ? 'border-sky-300 text-sky-950'
+                    : 'border-amber-300 text-amber-950'
+                } text-[11px] font-black flex items-center gap-1 flex-shrink-0 shadow-xs`}>
                   <span>{t('viewPhases')}</span>
                   <ChevronRight size={12} />
                 </div>

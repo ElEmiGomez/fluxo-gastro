@@ -173,7 +173,7 @@ export function ComanderoTableDetailPanel({
 
   const hasStartersDone = React.useMemo(() => {
     if (tableStarters.length === 0) return true
-    return tableActiveOrders.every(o => areOrderStartersReady(o) || areOrderStartersServed(o))
+    return tableActiveOrders.every(o => areOrderStartersServed(o))
   }, [tableStarters, tableActiveOrders])
 
   const allMainsServed = React.useMemo(() => {
@@ -657,7 +657,7 @@ export function ComanderoTableDetailPanel({
 
             {/* 3º Postres */}
             {tableDesserts.length > 0 && (
-              <div className="bg-white p-3 rounded-xl border border-slate-200/90 border-l-4 border-l-purple-500 shadow-2xs space-y-2">
+              <div className={`bg-white p-3 rounded-xl border border-slate-200/90 border-l-4 ${!areFoodCoursesServed ? 'border-l-slate-300' : 'border-l-purple-500'} shadow-2xs space-y-2`}>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-slate-800 uppercase flex items-center gap-1.5">
                     <span>🍰 3º Postres</span>

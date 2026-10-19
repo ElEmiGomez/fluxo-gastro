@@ -254,9 +254,9 @@ export function KitchenTicket({
           const mainsReady = areOrderMainsReady(roundOrder)
           const mainsServed = areOrderMainsServed(roundOrder)
 
-          // Bloqueo de principales: si hay entradas, los principales están estrictamente bloqueados hasta que el mozo los marche
+          // Bloqueo de principales: si hay entradas, los principales están estrictamente bloqueados hasta entregar entradas y marcha del mozo
           const mainsFired = areOrderMainsFired(roundOrder)
-          const areMainsLocked = hasStarters && !mainsFired
+          const areMainsLocked = hasStarters && (!startersServed || !mainsFired)
 
           const dessertsHeld = orderHasHeldDesserts(roundOrder)
           const dessertsActive = orderHasActiveDesserts(roundOrder) || !orderHasFood(roundOrder)
@@ -561,12 +561,12 @@ export function KitchenTicket({
                     {/* Bloque 3: Postres */}
                     {desserts.length > 0 && (
                       dessertsHeld ? (
-                        <div className="p-2.5 rounded-2xl bg-purple-50/60 border border-dashed border-purple-200 text-purple-900 text-xs flex items-center justify-between">
+                        <div className="p-2.5 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 text-slate-500 text-xs flex items-center justify-between">
                           <span className="flex items-center gap-1.5 font-bold">
-                            <Lock size={12} className="text-purple-400" />
+                            <Lock size={12} className="text-slate-400" />
                             <span>🍰 Postres ({desserts.length}) en espera del mozo</span>
                           </span>
-                          <span className="text-[9px] font-black uppercase bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md">
+                          <span className="text-[9px] font-black uppercase bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">
                             Tras los principales
                           </span>
                         </div>
@@ -658,7 +658,11 @@ export function KitchenTicket({
                       return (
                         <div className="w-full h-14 py-3 px-4 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-200 text-slate-600 text-xs sm:text-sm font-black flex items-center justify-center gap-2 select-none uppercase tracking-wide">
                           <Lock size={16} className="text-slate-400 flex-shrink-0" />
-                          <span>2º PRINCIPALES EN ESPERA DE MARCHA POR EL MOZO</span>
+                          <span>
+                            {!startersServed
+                              ? '2º PRINCIPALES BLOQUEADOS HASTA ENTREGAR ENTRADAS'
+                              : '2º PRINCIPALES EN ESPERA DE MARCHA POR EL MOZO'}
+                          </span>
                         </div>
                       )
                     }

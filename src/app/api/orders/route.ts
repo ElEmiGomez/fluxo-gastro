@@ -786,8 +786,9 @@ export async function PATCH(req: NextRequest) {
       if (currentOrder) {
         const startersDone = (currentOrder.order_items || []).filter(isStarterItem).every(isStarterServed)
         const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(isMainServed)
-        const dessertsDone = !orderHasPendingDesserts(currentOrder)
-        if (startersDone && mainsDone && dessertsDone) {
+        // Al entregar los platos principales (o si no había principales), la comanda pasa a 'delivered'
+        // permitiendo que los postres en espera se activen en la cola de tareas del mozo para el 2º pase dulce.
+        if (startersDone && mainsDone) {
           const transRes = await transitionOrderStatus({
             orderId: targetOrderId,
             slug,
