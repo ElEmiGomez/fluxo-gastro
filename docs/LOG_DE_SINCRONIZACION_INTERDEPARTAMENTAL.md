@@ -6,6 +6,19 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-19 23:20] — Estrategia de Dominio Oficial: Disponibilidad y Precios (fluxogastro.com y fluxogastro.es)
+* **Departamentos Sincronizados:** Diseño de Marca & UI/UX (Depto 3), Dirección General y Organización (Depto 1).
+* **Documentos Actualizados / Creados:**
+  - [`docs/departamentos/3_diseno_marca/dominio_y_presencia_web.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/3_diseno_marca/dominio_y_presencia_web.md) (Nueva especificación técnica).
+  - [`docs/departamentos/1_organizacion/registro_ideas_y_decisiones.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/1_organizacion/registro_ideas_y_decisiones.md) (`DEC-33`).
+* **Hitos Consolidados:**
+  1. *Disponibilidad de Dominio Principal:* Verificado que **`fluxogastro.com`** está disponible para registro inmediato.
+  2. *Benchmark de Precios Mayoristas:* Vercel Domains ahora opera con el programa *Domains at cost* a **11,25 $/año** (~10,35 €/año), igualando prácticamente a registradores mayoristas como Cloudflare (10,44 $/año) y Porkbun (11,08 $/año), con la ventaja añadida de automatización total en 1 clic de DNS y SSL.
+  3. *Protección de Marca Nacional:* Confirmado que **`fluxogastro.es`** está disponible a **6,95 €/año** en DonDominio para redirección 301.
+  4. *Descarte Definitivo:* `fluxosystem.com` queda descartado por estar ocupado desde 2023 por un tercero.
+
+---
+
 ### [2026-10-19 16:45] — Sincronización Program Data: Fidelización Web Base, Wallet en Backlog y Módulo "El Habitual"
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), Organización General (Depto 1) y Marketing & Ventas (Depto 2).
 * **Documentos Impactados:**
