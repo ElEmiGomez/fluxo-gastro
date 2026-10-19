@@ -1,5 +1,15 @@
 import { Product } from './database.types'
 
+export type LoyaltyMode = 'stamps' | 'points' | 'disabled'
+
+export interface LoyaltySettings {
+  mode: LoyaltyMode
+  target_stamps: number
+  min_spend_per_stamp: number
+  reward_label: string
+  reward_category_filter: string[]
+}
+
 export interface LoyaltyProfile {
   id: string
   restaurant_slug: string
@@ -10,6 +20,10 @@ export interface LoyaltyProfile {
   held_points: number
   available_points: number
   google_review_bonus_awarded: boolean
+  stamps_count?: number
+  stamps_target?: number
+  unlocked_rewards_count?: number
+  total_stamps_earned?: number
   created_at: string
   updated_at: string
 }
@@ -55,6 +69,11 @@ export interface LoyaltySettlementResult {
   customer_email?: string
   diners_count?: number
   breakdown?: LoyaltyDinerSettlement[]
+  stamp_awarded?: boolean
+  stamps_count?: number
+  stamps_target?: number
+  unlocked_rewards_count?: number
+  stamp_reward_unlocked_now?: boolean
 }
 
 export interface LoyaltyTableMember {

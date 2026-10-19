@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
-import { areOrderDrinksPending, areOrderDessertsPendingWaiter, orderHasPendingChoiceDesserts } from '@/lib/course-utils'
+import { areOrderDrinksPending, areOrderDessertsPendingWaiter, orderHasPendingChoiceDesserts, isOrderReadyToPick } from '@/lib/course-utils'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector } from '@/components/comandero/TableSelector'
@@ -240,6 +240,10 @@ export default function WaiterComanderoPage() {
     orderSentToast,
     handleAttendCall,
     handleDeliverSingleOrder,
+    handleDeliverStarters,
+    handleFireMains,
+    handleDeliverMains,
+    handleDeliverDesserts,
     handleMarkDelivered,
     handleValidateOrder,
     handleCancelValidationOrder,
@@ -324,7 +328,7 @@ export default function WaiterComanderoPage() {
   const [servingDrinkOrderIds, setServingDrinkOrderIds] = useState<Set<string>>(new Set())
 
   // Listas de comanda reactivas
-  const readyOrdersList = useMemo(() => serverOrders.filter(o => o.status === 'ready'), [serverOrders])
+  const readyOrdersList = useMemo(() => serverOrders.filter(isOrderReadyToPick), [serverOrders])
   const validationOrdersList = useMemo(() => serverOrders.filter(o => o.status === 'pending_validation'), [serverOrders])
   const pendingDrinksList = useMemo(() => serverOrders.filter(areOrderDrinksPending), [serverOrders])
   const pendingDessertsList = useMemo(() => serverOrders.filter(areOrderDessertsPendingWaiter), [serverOrders])
@@ -336,15 +340,23 @@ export default function WaiterComanderoPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: orderId,
+          slug,
+          orderId,
           action: 'serve_drinks',
         }),
       })
       if (res.ok) {
+        const data = await res.json()
+        if (data.order) {
+          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+        }
+        await syncServerData()
+      } else {
         await syncServerData()
       }
     } catch (err) {
       console.error('Error serving drinks:', err)
+      await syncServerData()
     } finally {
       setServingDrinkOrderIds(prev => {
         const next = new Set(prev)
@@ -352,7 +364,7 @@ export default function WaiterComanderoPage() {
         return next
       })
     }
-  }, [syncServerData])
+  }, [slug, setServerOrders, syncServerData])
 
   const handleServeAllDrinks = useCallback(async () => {
     if (pendingDrinksList.length === 0) return
@@ -401,6 +413,8 @@ export default function WaiterComanderoPage() {
               if (target) setSelectedTable(target)
               setIsQuickDessertModalOpen(true)
             }}
+            onDeliverStarters={handleDeliverStarters}
+            onDeliverMains={handleDeliverMains}
           />
 
           {/* Toast de confirmación de envío */}
@@ -416,12 +430,14 @@ export default function WaiterComanderoPage() {
             </div>
           )}
 
-          {/* Selector de Mesas con Semáforo */}
+          {/* Selector de Mesas con Semáforo y Cubitos Gastronómicos */}
           <TableSelector
             tables={tables}
             selectedTable={selectedTable?.table_number || null}
             tableStatuses={tableStatuses}
             tableDwellMinutes={tableDwellMinutes}
+            serverOrders={serverOrders}
+            pendingCalls={pendingCalls}
             onSelectTable={setSelectedTable}
             onOpenQuickStock={() => setShowQuickStockModal(true)}
             pausedItemsCount={products.filter(p => p.is_available === false).length}
@@ -460,6 +476,12 @@ export default function WaiterComanderoPage() {
                 })
                 handleFireSecondCourses(selectedTable.table_number)
               }}
+              servingDrinkOrderIds={servingDrinkOrderIds}
+              onServeDrinks={handleServeDrinks}
+              onDeliverStarters={handleDeliverStarters}
+              onFireMains={handleFireMains}
+              onDeliverMains={handleDeliverMains}
+              onDeliverDesserts={handleDeliverDesserts}
             />
           )}
 

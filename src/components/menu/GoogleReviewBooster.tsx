@@ -225,7 +225,7 @@ export function GoogleReviewBooster({
           }}
           className="text-amber-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
         >
-          <span>Abrir Google Maps (+50 pts)</span>
+          <span>{loyaltyProfile?.google_review_bonus_awarded ? 'Abrir Google Maps' : 'Abrir Google Maps (+50 pts)'}</span>
           <ExternalLink size={10} />
         </a>
       </div>

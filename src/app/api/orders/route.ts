@@ -15,6 +15,8 @@ import {
   resolveCanonicalProductId,
   CANONICAL_PRODUCT_MAP,
   getProductAvailabilityOverrides,
+  getServerOrders,
+  getCachedOrderItems,
 } from '@/lib/server-state'
 import {
   getRestaurantBySlug,
@@ -33,13 +35,30 @@ import { updateOrderCourseTags, resolvePendingDessertInOrder } from '@/lib/supab
 import {
   TAG_DRINK_SERVED,
   TAG_FOOD_READY,
+  TAG_STARTER_READY,
+  TAG_STARTER_SERVED,
+  TAG_MAIN_FIRED,
+  TAG_MAIN_COOKING,
+  TAG_MAIN_READY,
+  TAG_MAIN_SERVED,
   TAG_DESSERT_READY,
   TAG_DESSERT_SERVED,
   TAG_DESSERT_FIRED,
+  TAG_DESSERT_COOKING,
   isDrinkItem,
   isFoodItem,
+  isStarterItem,
+  isMainItem,
   isDessertItem,
   orderHasDesserts,
+  orderHasStarters,
+  orderHasMains,
+  isStarterServed,
+  isMainServed,
+  isDessertServed,
+  areOrderStartersServed,
+  areOrderMainsServed,
+  orderHasPendingDesserts,
   isDrinkOnlyOrder,
   evaluateOrderStations,
 } from '@/lib/course-utils'
@@ -68,14 +87,12 @@ export async function GET(req: NextRequest) {
     const slug = searchParams.get('slug') || 'burger-gourmet'
     const restaurant = await getRestaurantBySlug(slug)
     const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
-    const orders = await getRestaurantOrders(restaurantId, slug)
     const tableParam = searchParams.get('table') || searchParams.get('table_number')
+    const parsedT = tableParam ? parseInt(tableParam, 10) : NaN
+    const orders = await getRestaurantOrders(restaurantId, slug, !isNaN(parsedT) ? parsedT : undefined)
     let returnedOrders = orders
-    if (tableParam) {
-      const parsedT = parseInt(tableParam, 10)
-      if (!isNaN(parsedT)) {
-        returnedOrders = orders.filter(o => Number(o.table_number) === parsedT || Number(o.table?.table_number) === parsedT)
-      }
+    if (!isNaN(parsedT)) {
+      returnedOrders = orders.filter(o => Number(o.table_number) === parsedT || Number(o.table?.table_number) === parsedT)
     }
     const catalogProducts = getServerProducts(slug)
     const overrides = getProductAvailabilityOverrides(slug)
@@ -595,7 +612,176 @@ export async function PATCH(req: NextRequest) {
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar bebidas como servidas' }, { status: 404 })
       }
+
+      const currentOrder = tagRes.order
+      if (currentOrder && currentOrder.status !== 'delivered' && currentOrder.status !== 'paid') {
+        const isDrinkOnly = isDrinkOnlyOrder(currentOrder)
+        const startersDone = areOrderStartersServed(currentOrder)
+        const mainsDone = areOrderMainsServed(currentOrder)
+        const dessertsDone = !orderHasPendingDesserts(currentOrder)
+
+        if (isDrinkOnly || (startersDone && mainsDone && dessertsDone)) {
+          const restaurant = await getRestaurantBySlug(slug)
+          const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
+          const transRes = await transitionOrderStatus({
+            orderId: targetOrderId,
+            restaurantId,
+            slug,
+            nextStatus: 'delivered',
+            actorType: 'waiter',
+          })
+          return NextResponse.json({
+            success: true,
+            order: transRes.order || currentOrder,
+            message: 'Bebidas entregadas y comanda completada en mesa',
+          })
+        }
+      }
+
       return NextResponse.json({ success: true, order: tagRes.order, message: 'Bebidas marcadas como servidas' })
+    }
+
+    if (body.action === 'ready_starters') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_READY, isStarterItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marcar entradas listas' }, { status: 404 })
+      }
+      await transitionOrderStatus({
+        orderId: targetOrderId,
+        slug,
+        nextStatus: 'ready',
+        actorType: 'kitchen',
+      })
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Entradas listas para retirar en cocina' })
+    }
+
+    if (body.action === 'fire_mains') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_FIRED, isMainItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marchar principales' }, { status: 404 })
+      }
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Platos principales marchados a cocina' })
+    }
+
+    if (body.action === 'start_mains') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_COOKING, isMainItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al iniciar principales' }, { status: 404 })
+      }
+      await transitionOrderStatus({
+        orderId: targetOrderId,
+        slug,
+        nextStatus: 'preparing',
+        actorType: 'kitchen',
+      })
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Preparación de platos principales iniciada' })
+    }
+
+    if (body.action === 'ready_mains') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_READY, isMainItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marcar principales listos' }, { status: 404 })
+      }
+      await transitionOrderStatus({
+        orderId: targetOrderId,
+        slug,
+        nextStatus: 'ready',
+        actorType: 'kitchen',
+      })
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Platos principales listos para retirar en cocina' })
+    }
+
+    if (body.action === 'start_desserts') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_COOKING, isDessertItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al iniciar postres' }, { status: 404 })
+      }
+      await transitionOrderStatus({
+        orderId: targetOrderId,
+        slug,
+        nextStatus: 'preparing',
+        actorType: 'kitchen',
+      })
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Preparación de postres iniciada' })
+    }
+
+    if (body.action === 'deliver_starters') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marcar entradas entregadas' }, { status: 404 })
+      }
+
+      // Si la comanda todavía tiene principales o postres que NO han sido servidos,
+      // la orden debe volver a 'preparing' para que NO figure como 'ready' en el pase ni en la barra de avisos superiores.
+      // Si ya no quedan principales ni postres (o no tenía), entonces pasa a 'delivered'.
+      const currentOrder = tagRes.order
+      if (currentOrder) {
+        const hasMains = orderHasMains(currentOrder)
+        const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(isMainServed)
+        const hasDesserts = orderHasDesserts(currentOrder)
+        const dessertsDone = (currentOrder.order_items || []).filter(isDessertItem).every(isDessertServed)
+
+        if ((hasMains && !mainsDone) || (hasDesserts && !dessertsDone)) {
+          await transitionOrderStatus({
+            orderId: targetOrderId,
+            slug,
+            nextStatus: 'preparing',
+            actorType: 'waiter',
+          })
+        } else {
+          await transitionOrderStatus({
+            orderId: targetOrderId,
+            slug,
+            nextStatus: 'delivered',
+            actorType: 'waiter',
+          })
+        }
+      }
+
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Entradas entregadas en mesa' })
+    }
+
+    if (body.action === 'deliver_mains') {
+      if (!targetOrderId) {
+        return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
+      }
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem)
+      if (!tagRes.success) {
+        return NextResponse.json({ error: tagRes.error || 'Error al marcar principales entregados' }, { status: 404 })
+      }
+      // Si la comanda ya tiene las entradas servidas (o no tenía entradas) y no tiene postres en marcha, pasar a delivered
+      const currentOrder = tagRes.order
+      if (currentOrder) {
+        const startersDone = (currentOrder.order_items || []).filter(isStarterItem).every(i => Boolean(i.notes?.includes(TAG_STARTER_SERVED)))
+        const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(i => Boolean(i.notes?.includes(TAG_MAIN_SERVED)))
+        if (startersDone && mainsDone) {
+          await transitionOrderStatus({
+            orderId: targetOrderId,
+            slug,
+            nextStatus: 'delivered',
+            actorType: 'waiter',
+          })
+        }
+      }
+      return NextResponse.json({ success: true, order: tagRes.order, message: 'Principales entregados en mesa' })
     }
 
     if (body.action === 'ready_food') {
@@ -656,7 +842,7 @@ export async function PATCH(req: NextRequest) {
       })
     }
 
-    if (body.action === 'deliver_desserts_direct') {
+    if (body.action === 'deliver_desserts' || body.action === 'deliver_desserts_direct') {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
@@ -743,8 +929,26 @@ export async function PATCH(req: NextRequest) {
     let targetStatus: OrderStatus = status
     // Enrutamiento automático de órdenes 100% bebidas al validar: van directo a ready en Comandero
     if (status === 'pending') {
-      const orders = await getRestaurantOrders(restaurantId, slug)
-      const currentOrd = orders.find(o => o.id === targetOrderId)
+      const memOrders = getServerOrders(slug)
+      let currentOrd = memOrders.find(o => o.id === targetOrderId)
+      if (!currentOrd) {
+        const cachedItems = getCachedOrderItems(targetOrderId)
+        if (cachedItems && cachedItems.length > 0) {
+          currentOrd = { order_items: cachedItems } as any
+        }
+      }
+      if (!currentOrd && isUuid(targetOrderId)) {
+        const supabase = createServerClient()
+        if (supabase && isSupabaseConfigured()) {
+          const { data: dbItems } = await supabase
+            .from('order_items')
+            .select('id, product_id, notes, products(id, name, category_id)')
+            .eq('order_id', targetOrderId)
+          if (dbItems && dbItems.length > 0) {
+            currentOrd = { order_items: dbItems } as any
+          }
+        }
+      }
       if (currentOrd?.order_items && currentOrd.order_items.length > 0 && isDrinkOnlyOrder(currentOrd.order_items)) {
         targetStatus = 'ready'
       }
@@ -795,6 +999,14 @@ export async function PATCH(req: NextRequest) {
         },
         { status: 400 }
       )
+    }
+
+    // Si la comanda se entregó en sala, asegurar que las bebidas queden marcadas como servidas
+    if (targetStatus === 'delivered' && result.success && result.order) {
+      const hasUnservedDrinks = (result.order.order_items || []).some(it => isDrinkItem(it) && !it.notes?.includes(TAG_DRINK_SERVED))
+      if (hasUnservedDrinks) {
+        await updateOrderCourseTags(slug, targetOrderId, TAG_DRINK_SERVED, isDrinkItem)
+      }
     }
 
     // Caso 4: Transición exitosa o idempotente

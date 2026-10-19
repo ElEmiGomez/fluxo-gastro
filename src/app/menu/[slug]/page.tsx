@@ -13,7 +13,8 @@ import { DailyMenuModal, DailyMenuSelectionItem } from '@/components/menu/DailyM
 import { DailyMenuCard } from '@/components/menu/DailyMenuCard'
 import { PromoConfiguratorModal, PromoConfiguredPayload } from '@/components/menu/PromoConfiguratorModal'
 import { QuickDessertSelectorModal } from '@/components/comandero/QuickDessertSelectorModal'
-import { orderHasPendingChoiceDesserts } from '@/lib/course-utils'
+import { QuickSobremesaModal } from '@/components/menu/QuickSobremesaModal'
+import { orderHasPendingChoiceDesserts, ordersHavePendingDesserts } from '@/lib/course-utils'
 import { isDailyMenuActive } from '@/lib/daily-menu-utils'
 import { MenuListCatalog } from '@/components/menu/MenuListCatalog'
 import { MenuGridCatalog } from '@/components/menu/MenuGridCatalog'
@@ -28,6 +29,7 @@ import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
 import { getTranslation, translateProductName } from '@/lib/i18n'
 import { useLoyalty } from '@/hooks/menu/useLoyalty'
 import { LoyaltyModal } from '@/components/menu/LoyaltyModal'
+import { StampCardModal } from '@/components/menu/StampCardModal'
 import { LoyaltyReward } from '@/types/loyalty.types'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
@@ -60,6 +62,7 @@ function DinerMenuContent() {
   const [isDailyMenuModalOpen, setIsDailyMenuModalOpen] = useState(false)
   const [customizingPromoProduct, setCustomizingPromoProduct] = useState<Product | null>(null)
   const [isQuickDessertModalOpen, setIsQuickDessertModalOpen] = useState(false)
+  const [isSobremesaModalOpen, setIsSobremesaModalOpen] = useState(false)
 
   // 1.1 Carga del Menú del Día Dinámico
   useEffect(() => {
@@ -210,6 +213,13 @@ function DinerMenuContent() {
     handleTableMarkedPaid,
   })
 
+  // Refrescar saldo de fidelización automáticamente cuando se completa el pago de la cuenta
+  useEffect(() => {
+    if (isTablePaid) {
+      loyalty.refresh()
+    }
+  }, [isTablePaid])
+
   // 6. Persistencia y recuperación del carrito en localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -259,12 +269,11 @@ function DinerMenuContent() {
     }
   }, [cart, slug, tableNumber])
 
-  // Obtener cantidad de producto básico en el carrito
+  // Obtener cantidad de producto en el carrito (incluye personalizados y estándar)
   const getProductQuantityInCart = (productId: string): number => {
-    const match = cart.find(
-      item => item.product?.id === productId && (!item.selectedPills || item.selectedPills.length === 0) && (!item.notes || item.notes === '')
-    )
-    return match ? match.quantity : 0
+    return cart
+      .filter(item => item.product?.id === productId)
+      .reduce((sum, item) => sum + (item.quantity || 1), 0)
   }
 
   // Helper para identificar productos tipo combo o promo
@@ -278,6 +287,7 @@ function DinerMenuContent() {
   // Comprobar si hay alguna orden activa con comodín de postre por elegir
   const activeOrderWithPendingDessert = tableOrders.find(o => orderHasPendingChoiceDesserts(o))
   const hasPendingDessertChoice = Boolean(activeOrderWithPendingDessert)
+  const hasPendingDesserts = ordersHavePendingDesserts(tableOrders)
 
   // Modificar cantidad inline (+ / -) con haptic feedback
   const handleUpdateProductQuantity = (product: Product, delta: number, e?: React.MouseEvent) => {
@@ -293,17 +303,28 @@ function DinerMenuContent() {
     triggerHaptic(delta > 0 ? HAPTIC_PATTERNS.QUANTITY : HAPTIC_PATTERNS.TAP)
 
     setCart(prev => {
-      const existingIdx = prev.findIndex(
+      // Buscar primero un ítem sin modificaciones específicas (estándar)
+      let targetIdx = prev.findIndex(
         item => item.product?.id === product.id && (!item.selectedPills || item.selectedPills.length === 0) && (!item.notes || item.notes === '')
       )
 
-      if (existingIdx >= 0) {
-        const nextQty = prev[existingIdx].quantity + delta
+      // Si no existe ítem estándar, buscar el último ítem de este producto
+      if (targetIdx === -1) {
+        for (let i = prev.length - 1; i >= 0; i--) {
+          if (prev[i].product?.id === product.id) {
+            targetIdx = i
+            break
+          }
+        }
+      }
+
+      if (targetIdx >= 0) {
+        const nextQty = prev[targetIdx].quantity + delta
         if (nextQty <= 0) {
-          return prev.filter((_, idx) => idx !== existingIdx)
+          return prev.filter((_, idx) => idx !== targetIdx)
         }
         const copy = [...prev]
-        copy[existingIdx].quantity = nextQty
+        copy[targetIdx] = { ...copy[targetIdx], quantity: nextQty }
         return copy
       } else if (delta > 0) {
         return [...prev, { product, quantity: 1, selectedPills: [], notes: '' }]
@@ -361,7 +382,9 @@ function DinerMenuContent() {
         name: `${menuPayload.title} #${packNumber}`,
         description: 'Menú del Día Completo (1º, 2º, Postre/Café, Bebida)',
         price: menuPayload.price,
-        image_url: null,
+        image_url:
+          dailyMenu?.sections?.[0]?.items?.[0]?.product?.image_url ||
+          'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
         model_3d_url: null,
         is_available: true,
       },
@@ -495,6 +518,30 @@ function DinerMenuContent() {
   const totalCartAmount = cart.reduce((sum, item) => sum + (Number(item?.product?.price) || 0) * (Number(item?.quantity) || 1), 0)
   const t = (key: string) => getTranslation(currentLang, key)
 
+  const handleOrderSubmitted = (newOrder: any) => {
+    if (newOrder) {
+      setIsTablePaid(false)
+      setIsPaidBannerDismissed(false)
+      setIsReviewBoosterDismissed(false)
+      setHasRequestedBill(false)
+      hasRequestedBillRef.current = false
+      userRequestedBillTimeRef.current = null
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+          sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+          sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
+        } catch {}
+      }
+      prevTableOrdersMapRef.current.set(newOrder.id, newOrder)
+      setTableOrderStatus(newOrder.status || 'pending_validation')
+      if (newOrder.total_amount) {
+        setTableTotalAmount(prev => Math.max(prev, Number(newOrder.total_amount) || 0))
+      }
+      loyalty.refresh()
+    }
+  }
+
   return (
     <TenantProvider restaurant={restaurant} initialTable={tableNumber}>
       <div className="min-h-screen bg-slate-50 text-slate-900 pb-36 font-sans antialiased selection:bg-blue-100 selection:text-blue-900" style={{ touchAction: 'manipulation' }}>
@@ -516,6 +563,10 @@ function DinerMenuContent() {
           onLogoTouchStart={handleLogoTouchStart}
           onLogoTouchMove={handleLogoTouchMove}
           loyaltyPoints={loyalty.profile?.available_points}
+          loyaltyMode={loyalty.settings?.mode || 'stamps'}
+          stampsCount={loyalty.stampsCount}
+          stampsTarget={loyalty.stampsTarget}
+          unlockedRewardsCount={loyalty.unlockedRewardsCount}
           onOpenLoyaltyModal={() => loyalty.setIsModalOpen(true)}
         />
 
@@ -559,6 +610,7 @@ function DinerMenuContent() {
           isTablePaid={isTablePaid}
           hasRequestedBill={hasRequestedBill}
           tableOrderStatus={tableOrderStatus}
+          tableOrders={tableOrders}
           tableNumber={tableNumber}
           currentLang={currentLang}
           isPaidBannerDismissed={isPaidBannerDismissed}
@@ -582,13 +634,7 @@ function DinerMenuContent() {
             triggerHaptic(HAPTIC_PATTERNS.TAP)
           }}
           onGoToDesserts={() => {
-            const dessertCat = categories.find(c => {
-              const n = (c.name || '').toUpperCase()
-              return n.includes('POSTRE') || n.includes('CAFÉ') || n.includes('CAFE') || n.includes('DULCE') || n.includes('SOBREMESA')
-            }) || categories[0]
-            if (dessertCat) setSelectedCategory(dessertCat.id)
-            const catEl = document.getElementById('menu-category-tabs') || document.getElementById('menu-catalog')
-            if (catEl) catEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            setIsSobremesaModalOpen(true)
             triggerHaptic(HAPTIC_PATTERNS.TAP)
           }}
           loyaltyProfile={loyalty.profile}
@@ -596,6 +642,7 @@ function DinerMenuContent() {
           onOpenLoyaltyModal={() => loyalty.setIsModalOpen(true)}
           hasPendingDessertChoice={hasPendingDessertChoice}
           onOpenDessertSelector={() => setIsQuickDessertModalOpen(true)}
+          hasPendingDesserts={hasPendingDesserts}
         />
 
         {/* Carta Gastronómica Principal */}
@@ -702,6 +749,7 @@ function DinerMenuContent() {
           setSessionId={setSessionId}
           tableOrderStatus={tableOrderStatus}
           tableOrders={tableOrders}
+          hasPendingDesserts={hasPendingDesserts}
           tableTotalAmount={tableTotalAmount}
           isTablePaid={isTablePaid}
           customizingProduct={customizingProduct}
@@ -733,32 +781,11 @@ function DinerMenuContent() {
           onAddCustomized={handleAddCustomized}
           onRequestMicroService={handleRequestMicroService}
           onBillRequested={handleBillRequested}
+          onOpenSobremesa={() => setIsSobremesaModalOpen(true)}
           onAdminAuthSuccess={handleAdminAuthSuccess}
           onSaveInSituProduct={handleSaveInSituProduct}
           onDeleteInSituProduct={handleDeleteInSituProduct}
-          onOrderSubmitted={(newOrder) => {
-            if (newOrder) {
-              setIsTablePaid(false)
-              setIsPaidBannerDismissed(false)
-              setIsReviewBoosterDismissed(false)
-              setHasRequestedBill(false)
-              hasRequestedBillRef.current = false
-              userRequestedBillTimeRef.current = null
-              if (typeof window !== 'undefined') {
-                try {
-                  sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-                  sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
-                  sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
-                } catch {}
-              }
-              prevTableOrdersMapRef.current.set(newOrder.id, newOrder)
-              setTableOrderStatus(newOrder.status || 'pending_validation')
-              if (newOrder.total_amount) {
-                setTableTotalAmount(prev => Math.max(prev, Number(newOrder.total_amount) || 0))
-              }
-              loyalty.refresh()
-            }
-          }}
+          onOrderSubmitted={handleOrderSubmitted}
           onUpdateCartQuantity={(index, newQty) => {
             if (newQty <= 0) {
               setCart(prev => prev.filter((_, idx) => idx !== index))
@@ -842,17 +869,142 @@ function DinerMenuContent() {
           />
         )}
 
-        {/* Modal de Tarjeta de Fidelización y Canje de Puntos */}
-        <LoyaltyModal
-          isOpen={loyalty.isModalOpen}
-          onClose={() => loyalty.setIsModalOpen(false)}
-          profile={loyalty.profile}
-          rewards={loyalty.rewards}
-          isLoading={loyalty.isLoading}
-          onLoginOrRegister={loyalty.loginOrRegister}
-          onLogout={loyalty.logout}
-          onRedeemReward={handleRedeemLoyaltyReward}
+        {/* Modal Rápido de Sobremesa (Cafés & Postres en 1 Toque) */}
+        <QuickSobremesaModal
+          isOpen={isSobremesaModalOpen}
+          onClose={() => setIsSobremesaModalOpen(false)}
+          tableNumber={tableNumber}
+          availableItems={products.filter(p => {
+            if (p.is_available === false) return false
+            const cat = (p.category_id || '').toLowerCase()
+            const n = (p.name || '').toLowerCase()
+            return (
+              cat.includes('postre') ||
+              cat.includes('cafe') ||
+              n.includes('café') ||
+              n.includes('cafe') ||
+              n.includes('postre') ||
+              n.includes('tarta') ||
+              n.includes('helado') ||
+              n.includes('volcán') ||
+              n.includes('volcan') ||
+              n.includes('cheesecake')
+            )
+          })}
+          onOrderSingleItem={async (product) => {
+            const parsedTableNum = parseInt(tableNumber || '1', 10)
+            const sessionToken = sessionId || (typeof window !== 'undefined' ? localStorage.getItem(`gastro_session_${slug}_${parsedTableNum}`) : null)
+            const loyaltyEmail = (() => {
+              try {
+                const raw = typeof window !== 'undefined' ? localStorage.getItem(`fluxo_loyalty_user_${slug}`) : null
+                return raw ? JSON.parse(raw).email : undefined
+              } catch {
+                return undefined
+              }
+            })()
+
+            const res = await fetch('/api/orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                slug,
+                table_number: parsedTableNum,
+                session_token: sessionToken,
+                items: [
+                  {
+                    product_id: product.id,
+                    quantity: 1,
+                    unit_price: product.price,
+                    notes: 'Sobremesa (1 Toque)',
+                  },
+                ],
+                loyalty_email: loyaltyEmail,
+              }),
+            })
+
+            const data = await res.json().catch(() => ({}))
+            if (res.ok && data.success) {
+              if (data.order) handleOrderSubmitted(data.order)
+              triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+              setAddedToast(`¡${product.name} marchando al mozo!`)
+              setTimeout(() => setAddedToast(null), 3500)
+              loadData()
+            } else {
+              throw new Error(data.error || 'Error al enviar pedido de sobremesa')
+            }
+          }}
         />
+
+        {/* Modal de Tarjeta de Fidelización: Cartilla de Sellos o Puntos */}
+        {loyalty.settings?.mode === 'points' ? (
+          <LoyaltyModal
+            isOpen={loyalty.isModalOpen}
+            onClose={() => loyalty.setIsModalOpen(false)}
+            profile={loyalty.profile}
+            rewards={loyalty.rewards}
+            isLoading={loyalty.isLoading}
+            onLoginOrRegister={loyalty.loginOrRegister}
+            onLogout={loyalty.logout}
+            onRedeemReward={handleRedeemLoyaltyReward}
+          />
+        ) : (
+          <StampCardModal
+            isOpen={loyalty.isModalOpen}
+            onClose={() => loyalty.setIsModalOpen(false)}
+            profile={loyalty.profile}
+            settings={loyalty.settings}
+            availableRewardItems={products.filter((p) => {
+              const catName = categories.find((c) => c.id === p.category_id)?.name?.toLowerCase() || ''
+              const prodName = p.name.toLowerCase()
+              return (
+                catName.includes('postre') ||
+                catName.includes('bebida') ||
+                catName.includes('caf') ||
+                catName.includes('infus') ||
+                prodName.includes('caf') ||
+                prodName.includes('tarta') ||
+                prodName.includes('volcán') ||
+                prodName.includes('postre')
+              )
+            })}
+            isLoading={loyalty.isLoading}
+            onLoginOrRegister={loyalty.loginOrRegister}
+            onLogout={loyalty.logout}
+            onRedeemReward={async (product) => {
+              await loyalty.redeemStampReward(product.id)
+              const loyaltyEmail = loyalty.profile?.email || null
+              const res = await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  restaurant_slug: slug,
+                  table_number: Number(tableNumber) || 1,
+                  session_token: sessionId,
+                  items: [
+                    {
+                      product_id: product.id,
+                      quantity: 1,
+                      unit_price: 0,
+                      notes: '🎁 PREMIO CARTILLA DE SELLOS (0,00 €)',
+                    },
+                  ],
+                  loyalty_email: loyaltyEmail,
+                }),
+              })
+
+              const data = await res.json().catch(() => ({}))
+              if (res.ok && data.success) {
+                if (data.order) handleOrderSubmitted(data.order)
+                triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+                setAddedToast(`¡${product.name} gratis marchando al mozo!`)
+                setTimeout(() => setAddedToast(null), 3500)
+                loadData()
+              } else {
+                throw new Error(data.error || 'Error al enviar pedido de premio')
+              }
+            }}
+          />
+        )}
 
       </div>
     </TenantProvider>

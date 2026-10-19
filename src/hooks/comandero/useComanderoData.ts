@@ -116,11 +116,20 @@ export function useComanderoData(slug: string) {
       })
       const incomingCalls: any[] = callsRes.calls || []
 
-      // Reconciliación de Órdenes (SSOT)
+      // Reconciliación de Órdenes (SSOT) — Updater 100% puro compatible con React 18 Strict Mode
+      const computeOrdersFinger = (list: Order[]) =>
+        list
+          .map(
+            o =>
+              `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}:${(o.order_items || [])
+                .map(i => `${i.product_id}:${i.quantity}:${i.notes || ''}`)
+                .join(',')}`
+          )
+          .join('|')
+
       setServerOrders(prev => {
         const prevMap = new Map(prev.map(o => [o.id, o]))
         const map = new Map<string, Order>()
-        const nextPendingWithoutItems = new Map<string, Order>()
 
         incomingOrders.forEach(ord => {
           if (ord.status === 'cancelled') return
@@ -130,12 +139,7 @@ export function useComanderoData(slug: string) {
             : (existing?.order_items && existing.order_items.length > 0 ? existing.order_items : [])
           const finalOrd = { ...ord, order_items: effectiveItems }
           map.set(ord.id, finalOrd)
-          if (!effectiveItems || effectiveItems.length === 0) {
-            nextPendingWithoutItems.set(ord.id, finalOrd)
-          }
         })
-
-        pendingOrdersWithoutItemsRef.current = nextPendingWithoutItems
 
         // Preservar órdenes no terminales pendientes
         prev.forEach(prevOrd => {
@@ -149,15 +153,26 @@ export function useComanderoData(slug: string) {
         })
 
         const newOrders = Array.from(map.values()).filter(o => o.status !== 'cancelled')
-        prevOrdersMapRef.current = new Map(newOrders.map(o => [o.id, o]))
+        const prevFinger = computeOrdersFinger(prev)
+        const nextFinger = computeOrdersFinger(newOrders)
 
-        const finger = newOrders.map(o => `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}`).join('|')
-        if (finger === ordersFingerRef.current) {
+        if (nextFinger === prevFinger) {
           return prev
         }
-        ordersFingerRef.current = finger
         return newOrders
       })
+
+      // Actualizar referencias de respaldo fuera del updater puro
+      const nextPendingWithoutItems = new Map<string, Order>()
+      incomingOrders.forEach(ord => {
+        if (ord.status === 'cancelled') return
+        if (!ord.order_items || ord.order_items.length === 0) {
+          nextPendingWithoutItems.set(ord.id, ord)
+        } else {
+          prevOrdersMapRef.current.set(ord.id, ord)
+        }
+      })
+      pendingOrdersWithoutItemsRef.current = nextPendingWithoutItems
 
       // Reconciliación de Avisos de Servicio
       const serverPendingCalls = incomingCalls.filter((c: any) => c.status === 'pending')

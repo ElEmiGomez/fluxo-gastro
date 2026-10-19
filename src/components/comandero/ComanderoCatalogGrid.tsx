@@ -38,6 +38,9 @@ export function ComanderoCatalogGrid({
   onOpenDailyMenu,
 }: ComanderoCatalogGridProps) {
   const filteredProducts = products.filter(prod => {
+    if (prod.id === 'b0000000-0000-0000-0000-000000000099' || prod.id === 'p-dessert-pending-later') {
+      return false
+    }
     const matchesCat = isProductInCategory(prod, selectedCategory, categories)
     const matchesSearch = searchQuery === '' || prod.name.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCat && matchesSearch
@@ -170,12 +173,20 @@ export function ComanderoCatalogGrid({
             {filteredProducts.map((prod) => {
               const isUnavailable = prod.is_available === false
               return (
-                <button
+                <div
                   key={prod.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     if (isUnavailable) return
                     onCustomizeProduct(prod)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      if (isUnavailable) return
+                      onCustomizeProduct(prod)
+                    }
                   }}
                   className={`group bg-white border active:scale-97 rounded-2xl overflow-hidden text-left flex flex-col justify-between shadow-sm hover:shadow-md transition-all touch-press h-48 relative cursor-pointer ${
                     isUnavailable
@@ -271,7 +282,7 @@ export function ComanderoCatalogGrid({
                       )}
                     </span>
                   </div>
-                </button>
+                </div>
               )
             })}
           </div>

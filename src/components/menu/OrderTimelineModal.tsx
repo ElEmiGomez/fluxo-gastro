@@ -9,8 +9,21 @@ import {
   getItemCourse,
   isDrinkServed,
   isDessertReady,
+  isDessertServed,
   isDessertFired,
+  isDessertPendingChoice,
   isFoodReady,
+  isStarterItem,
+  isStarterReady,
+  isStarterServed,
+  isMainItem,
+  isMainCooking,
+  isMainReady,
+  isMainServed,
+  isDrinkItem,
+  isDessertItem,
+  areOrderMainsFired,
+  ordersHavePendingDesserts,
 } from '@/lib/course-utils'
 
 interface OrderTimelineModalProps {
@@ -34,51 +47,180 @@ export function OrderTimelineModal({
 }: OrderTimelineModalProps) {
   if (!isOpen || !status) return null
 
-  // Mapeo de etapas generales
-  const currentStep = 
-    status === 'pending_validation' ? 0 :
-    status === 'pending' ? 1 :
-    status === 'preparing' ? 2 :
-    status === 'ready' ? 3 :
-    status === 'delivered' ? 4 : 0
+  // Agrupar ítems activos de todas las comandas de la mesa
+  const allTableItems = orders.flatMap(o => o.order_items || [])
+  const hasDrinks = allTableItems.some(isDrinkItem)
+  const hasStarters = allTableItems.some(isStarterItem)
+  const hasMains = allTableItems.some(isMainItem)
+  const hasDesserts = allTableItems.some(isDessertItem)
 
-  const steps = [
-    {
-      step: 0,
-      title: 'Validación del Mozo',
-      desc: 'El mozo confirmará tu pedido en mesa.',
-      icon: Clock,
-      activeColor: 'bg-amber-500 text-slate-950 ring-amber-300',
-    },
-    {
-      step: 1,
-      title: 'Enviado a Cocina',
-      desc: 'Comanda verificada e ingresada al monitor KDS.',
-      icon: Clock,
-      activeColor: 'bg-blue-600 text-white ring-blue-400',
-    },
-    {
-      step: 2,
-      title: 'En Preparación',
-      desc: 'Nuestros chefs están preparando tus platos.',
-      icon: Flame,
-      activeColor: 'bg-amber-500 text-slate-950 ring-amber-300',
-    },
-    {
-      step: 3,
-      title: 'Listo para Servir',
-      desc: 'Retirando de la cocina hacia tu mesa.',
-      icon: Sparkles,
-      activeColor: 'bg-emerald-500 text-white ring-emerald-300',
-    },
-    {
-      step: 4,
-      title: 'Servido en Mesa',
-      desc: '¡Buen provecho! Que disfrutes tu comida.',
-      icon: UtensilsCrossed,
-      activeColor: 'bg-indigo-600 text-white ring-indigo-400',
-    },
-  ]
+  // 1. Estado Validación
+  const isValidating = orders.some(o => o.status === 'pending_validation')
+  const isAllValidated = !isValidating && orders.length > 0
+
+  // 2. Estado Bebidas
+  const drinks = allTableItems.filter(isDrinkItem)
+  const areDrinksServed = drinks.length > 0 && drinks.every(isDrinkServed)
+
+  // 3. Estado Entradas
+  const starters = allTableItems.filter(isStarterItem)
+  const areStartersServed = starters.length > 0 && starters.every(isStarterServed)
+  const areStartersReady = starters.length > 0 && starters.every(isStarterReady)
+  const areStartersPreparing = starters.length > 0 && !areStartersReady && !areStartersServed && orders.some(o => o.status === 'preparing')
+
+  // 4. Estado Principales
+  const mains = allTableItems.filter(isMainItem)
+  const areMainsServed = mains.length > 0 && mains.every(isMainServed)
+  const areMainsReady = mains.length > 0 && mains.every(isMainReady)
+  const areMainsFired = orders.some(areOrderMainsFired)
+  const areMainsCooking = mains.some(isMainCooking) || (mains.length > 0 && starters.length === 0 && orders.some(o => o.status === 'preparing')) || (mains.length > 0 && areStartersServed && areMainsFired)
+  const areMainsPreparing = mains.length > 0 && !areMainsReady && !areMainsServed && areMainsCooking
+
+  // 5. Estado Postres
+  const desserts = allTableItems.filter(isDessertItem)
+  const areDessertsServed = desserts.length > 0 && desserts.every(isDessertServed)
+  const areDessertsReady = desserts.length > 0 && desserts.every(isDessertReady)
+  const areDessertsFired = desserts.some(isDessertFired)
+  const areDessertsPreparing = desserts.length > 0 && !areDessertsReady && !areDessertsServed && areDessertsFired
+  const hasPendingDessertChoice = desserts.some(isDessertPendingChoice)
+  const hasPendingDesserts = ordersHavePendingDesserts(orders)
+
+  type PhaseState = 'waiting' | 'preparing' | 'ready' | 'delivered'
+
+  interface CoursePhase {
+    key: string
+    title: string
+    desc: string
+    state: PhaseState
+    badge: string
+    icon: any
+  }
+
+  const dynamicPhases: CoursePhase[] = []
+
+  // Fase 1: Validación del Mozo
+  dynamicPhases.push({
+    key: 'validation',
+    title: 'Validación del Mozo',
+    desc: isValidating
+      ? 'El mozo confirmará tu comanda en tu mesa.'
+      : 'Comanda validada por el personal de sala.',
+    state: isValidating ? 'preparing' : 'delivered',
+    badge: isValidating ? 'En revisión' : 'Validada',
+    icon: isValidating ? Clock : CheckCircle2,
+  })
+
+  // Fase 2: Bebidas (si hay)
+  if (hasDrinks) {
+    let state: PhaseState = 'waiting'
+    let desc = 'En espera de validación de comanda.'
+    let badge = 'En espera'
+    if (areDrinksServed || status === 'delivered') {
+      state = 'delivered'
+      desc = 'Bebidas servidas en tu mesa.'
+      badge = 'Entregadas'
+    } else if (isAllValidated) {
+      state = 'preparing'
+      desc = 'Preparando bebidas en barra.'
+      badge = 'En barra'
+    }
+    dynamicPhases.push({
+      key: 'drinks',
+      title: 'Bebidas',
+      desc,
+      state,
+      badge,
+      icon: state === 'delivered' ? CheckCircle2 : Sparkles,
+    })
+  }
+
+  // Fase 3: Entradas (si hay)
+  if (hasStarters) {
+    let state: PhaseState = 'waiting'
+    let desc = 'En cola de preparación de cocina.'
+    let badge = 'En espera'
+    if (areStartersServed || status === 'delivered') {
+      state = 'delivered'
+      desc = 'Entradas servidas en tu mesa.'
+      badge = 'Entregadas'
+    } else if (areStartersReady) {
+      state = 'ready'
+      desc = '¡Listas en cocina! El mozo las lleva a tu mesa.'
+      badge = 'Listas'
+    } else if (areStartersPreparing) {
+      state = 'preparing'
+      desc = 'Cocineros preparando tus entradas en cocina.'
+      badge = 'En preparación'
+    }
+    dynamicPhases.push({
+      key: 'starters',
+      title: '1º Entradas',
+      desc,
+      state,
+      badge,
+      icon: state === 'delivered' ? CheckCircle2 : Flame,
+    })
+  }
+
+  // Fase 4: Principales (si hay)
+  if (hasMains) {
+    let state: PhaseState = 'waiting'
+    let desc = hasStarters ? 'En espera del momento oportuno tras el 1º plato.' : 'En cola de cocina.'
+    let badge = 'En espera'
+    if (areMainsServed || (status === 'delivered' && !areDessertsPreparing && !areDessertsReady)) {
+      state = 'delivered'
+      desc = 'Platos principales servidos en tu mesa.'
+      badge = 'Entregados'
+    } else if (areMainsReady) {
+      state = 'ready'
+      desc = '¡Listos en cocina! El mozo los lleva a tu mesa.'
+      badge = 'Listos'
+    } else if (areMainsPreparing) {
+      state = 'preparing'
+      desc = 'Cocinando platos principales en cocina.'
+      badge = 'En preparación'
+    }
+    dynamicPhases.push({
+      key: 'mains',
+      title: '2º Platos Principales',
+      desc,
+      state,
+      badge,
+      icon: state === 'delivered' ? CheckCircle2 : Flame,
+    })
+  }
+
+  // Fase 5: Postres (si hay)
+  if (hasDesserts) {
+    let state: PhaseState = 'waiting'
+    let desc = (hasStarters || hasMains) ? 'En espera tras terminar la comida principal.' : 'En cola de cocina.'
+    let badge = 'En espera'
+    if (areDessertsServed) {
+      state = 'delivered'
+      desc = 'Postres servidos en tu mesa.'
+      badge = 'Entregados'
+    } else if (areDessertsReady) {
+      state = 'ready'
+      desc = '¡Listos en cocina! El mozo los lleva a tu mesa.'
+      badge = 'Listos'
+    } else if (hasPendingDessertChoice) {
+      state = 'waiting'
+      desc = 'Postre incluido pendiente de tu elección.'
+      badge = 'Por definir'
+    } else if (areDessertsPreparing) {
+      state = 'preparing'
+      desc = 'Marchados en cocina para el pase dulce.'
+      badge = 'En preparación'
+    }
+    dynamicPhases.push({
+      key: 'desserts',
+      title: 'Postres',
+      desc,
+      state,
+      badge,
+      icon: state === 'delivered' ? CheckCircle2 : Sparkles,
+    })
+  }
 
   // Ordenar comandas activas cronológicamente (Ronda 1 la primera, Ronda 2 posterior)
   const chronologicalOrders = [...orders].sort(
@@ -133,54 +275,65 @@ export function OrderTimelineModal({
         {/* Contenido con Scroll Fluido */}
         <div className="p-5 overflow-y-auto space-y-6 flex-1">
           
-          {/* Fases del Servicio */}
+          {/* Fases del Servicio por Tiempos Gastronómicos */}
           <div className="space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Fases del Servicio
+              Fases de tu Servicio
             </h4>
             <div className="relative space-y-4 before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-              {steps.map((s) => {
-                const isPast = currentStep > s.step
-                const isCurrent = currentStep === s.step
-                const Icon = s.icon
+              {dynamicPhases.map((phase) => {
+                const isDelivered = phase.state === 'delivered'
+                const isReady = phase.state === 'ready'
+                const isPreparing = phase.state === 'preparing'
+                const Icon = phase.icon
 
                 return (
-                  <div key={s.step} className="relative flex items-start gap-3.5">
+                  <div key={phase.key} className="relative flex items-start gap-3.5">
                     {/* Icono de Etapa */}
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 z-10 transition-all ${
-                        isPast
-                          ? 'bg-emerald-600 text-white ring-4 ring-emerald-100'
-                          : isCurrent
-                          ? `${s.activeColor} ring-4 animate-pulse`
+                        isDelivered
+                          ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 shadow-xs'
+                          : isReady
+                          ? 'bg-[#4d7c67] text-white ring-4 ring-slate-200 shadow-xs border border-[#3b6352] animate-pulse'
+                          : isPreparing
+                          ? 'bg-amber-500 text-slate-950 ring-4 ring-amber-200 animate-pulse shadow-xs'
                           : 'bg-slate-100 text-slate-400 border border-slate-300'
                       }`}
                     >
-                      {isPast ? <CheckCircle2 size={16} /> : <Icon size={16} />}
+                      {isDelivered ? <CheckCircle2 size={16} /> : isReady ? <Sparkles size={16} /> : <Icon size={16} />}
                     </div>
 
                     {/* Detalle de Etapa */}
                     <div className="flex-1 min-w-0 pt-0.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <h5
                           className={`text-xs font-black uppercase tracking-wide ${
-                            isCurrent
-                              ? 'text-blue-900'
-                              : isPast
-                              ? 'text-slate-800'
+                            isDelivered
+                              ? 'text-emerald-950'
+                              : isReady
+                              ? 'text-[#234839]'
+                              : isPreparing
+                              ? 'text-amber-950 font-black'
                               : 'text-slate-400'
                           }`}
                         >
-                          {s.title}
+                          {phase.title}
                         </h5>
-                        {isCurrent && (
-                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 animate-pulse">
-                            Fase Actual
-                          </span>
-                        )}
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+                          isDelivered
+                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                            : isReady
+                            ? 'bg-[#e2ede7] text-[#284c3d] border-[#9dbcb0] animate-pulse'
+                            : isPreparing
+                            ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
+                            : 'bg-slate-100 text-slate-500 border-slate-200'
+                        }`}>
+                          {phase.badge}
+                        </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
-                        {s.desc}
+                      <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                        {phase.desc}
                       </p>
                     </div>
                   </div>
@@ -369,7 +522,7 @@ export function OrderTimelineModal({
               <span>Pedir Servicio</span>
             </button>
           )}
-          {onRequestBill && currentStep === 4 && (
+          {onRequestBill && !hasPendingDesserts && (status === 'delivered' || areDessertsServed || (areMainsServed && desserts.length === 0)) && (
             <button
               onClick={() => {
                 onRequestBill()

@@ -23,7 +23,7 @@ assert.strictEqual(inferCourseType({ name: 'Cerveza Estrella Galicia', category_
 assert.strictEqual(inferCourseType({ name: 'Croquetas de Jamón', category_id: 'cat-entrantes' }), 'first')
 assert.strictEqual(inferCourseType({ name: 'Burger Clásica con Queso', category_id: 'cat-principales' }), 'second')
 assert.strictEqual(inferCourseType({ name: 'Tarta de Queso Horneada', category_id: 'cat-postres' }), 'dessert')
-assert.strictEqual(inferCourseType({ name: 'Café solo', category_id: 'cat-postres' }), 'dessert')
+assert.strictEqual(inferCourseType({ name: 'Café solo', category_id: 'cat-postres' }), 'drink')
 console.log('✓ Inferencia gastronómica 100% precisa.')
 
 // 2. Ordenamiento para Cocina KDS (Entradas -> Principales -> Postres -> Bebidas Sala)

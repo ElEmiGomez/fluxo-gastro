@@ -155,6 +155,22 @@ button, a, input, select, textarea {
   animation: soft-glow-emerald 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
 }
 
+/* Utilidades de difuminado progresivo para carruseles y listas con scroll horizontal */
+.mask-fade-edges-x {
+  mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 32px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 32px), transparent);
+}
+
+.mask-fade-right {
+  mask-image: linear-gradient(to right, black calc(100% - 36px), transparent);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 36px), transparent);
+}
+
+.mask-fade-left {
+  mask-image: linear-gradient(to left, black calc(100% - 36px), transparent);
+  -webkit-mask-image: linear-gradient(to left, black calc(100% - 36px), transparent);
+}
+
 /* ============================================================ */
 /*  PRINT / PDF — Reporte Mensual Ejecutivo                     */
 /* ============================================================ */

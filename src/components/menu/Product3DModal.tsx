@@ -50,7 +50,7 @@ export function Product3DModal({ product, onClose }: Product3DModalProps) {
               style={{ backgroundColor: 'var(--brand-primary)' }}
             />
             <div
-              className="w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center shadow-lg animate-bounce"
+              className="w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center shadow-lg animate-pulse"
               style={{
                 borderColor: 'var(--brand-primary)',
                 backgroundColor: 'color-mix(in srgb, var(--brand-primary) 10%, transparent)',

@@ -61,20 +61,79 @@ export function PromoConfiguratorModal({
   const steps: PromoStep[] = React.useMemo(() => {
     if (!product) return []
 
-    // Obtener bebidas disponibles del catálogo
+    // Obtener bebidas disponibles del catálogo (excluyendo packs, combos y el propio producto)
     const drinksInCatalog = catalogProducts.filter(p => {
+      if (!p || p.id === product.id) return false
+      if (p.is_available === false) return false
       const cat = (p.category_id || '').toLowerCase()
       const n = (p.name || '').toLowerCase()
+      // Excluir terminantemente cualquier combo, promo o menú del catálogo
+      if (n.startsWith('combo') || n.startsWith('promo') || n.includes('combo pareja') || n.includes('menú del día') || n.includes('menu del dia')) return false
+      if (cat.includes('promo') || cat.includes('combo')) return false
       return cat.includes('bebida') || cat.includes('trago') || n.includes('cerveza') || n.includes('pinta') || n.includes('refresco') || n.includes('agua')
     }).slice(0, 8)
 
-    const defaultDrinkOptions = drinksInCatalog.length > 0
-      ? drinksInCatalog.map(d => ({ id: d.id, name: d.name, description: d.description, image_url: d.image_url }))
+    const getDrinkFallbackImage = (name: string) => {
+      const lower = (name || '').toLowerCase()
+      if (lower.includes('agua')) return '/images/agua-mineral.jpg'
+      if (lower.includes('gin') || lower.includes('trago') || lower.includes('verm')) {
+        return 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80'
+      }
+      if (lower.includes('refresco') || lower.includes('gaseosa') || lower.includes('coca')) {
+        return 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80'
+      }
+      return 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=80'
+    }
+
+    const fallbackDrinks = [
+      {
+        id: 'drk-pinta-1',
+        name: 'Pinta Cerveza Artesanal Rubia',
+        description: 'Cerveza de barril 500ml bien fría',
+        image_url: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=80',
+      },
+      {
+        id: 'drk-pinta-2',
+        name: 'Pinta Cerveza Artesanal Tostada',
+        description: 'Cerveza tostada de malta 500ml',
+        image_url: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=80',
+      },
+      {
+        id: 'drk-refresco',
+        name: 'Refresco / Gaseosa',
+        description: 'Coca-Cola, Fanta o Sprite',
+        image_url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80',
+      },
+      {
+        id: 'drk-agua',
+        name: 'Agua Mineral',
+        description: 'Con o sin gas 500ml',
+        image_url: '/images/agua-mineral.jpg',
+      },
+    ]
+
+    const mappedCatalogDrinks = drinksInCatalog.map(d => ({
+      id: d.id,
+      name: d.name,
+      description: d.description,
+      image_url: d.image_url || getDrinkFallbackImage(d.name),
+    }))
+
+    const defaultDrinkOptions = mappedCatalogDrinks.length >= 3
+      ? mappedCatalogDrinks
       : [
-          { id: 'drk-pinta-1', name: 'Pinta Cerveza Artesanal Rubia', description: 'Cerveza de barril 500ml bien fría' },
-          { id: 'drk-pinta-2', name: 'Pinta Cerveza Artesanal Tostada', description: 'Cerveza tostada de malta 500ml' },
-          { id: 'drk-refresco', name: 'Refresco / Gaseosa', description: 'Coca-Cola, Fanta o Sprite' },
-          { id: 'drk-agua', name: 'Agua Mineral', description: 'Con o sin gas 500ml' },
+          ...mappedCatalogDrinks,
+          ...fallbackDrinks.filter(fb => {
+            const fbName = fb.name.toLowerCase()
+            return !mappedCatalogDrinks.some(cd => {
+              const cdName = cd.name.toLowerCase()
+              return (
+                (fbName.includes('agua') && cdName.includes('agua')) ||
+                (fbName.includes('refresco') && (cdName.includes('refresco') || cdName.includes('coca') || cdName.includes('fanta') || cdName.includes('gaseosa'))) ||
+                (fbName.includes('cerveza') && (cdName.includes('cerveza') || cdName.includes('pinta') || cdName.includes('caña') || cdName.includes('estrella')))
+              )
+            })
+          }),
         ]
 
     const burgerOptions = [
@@ -98,10 +157,17 @@ export function PromoConfiguratorModal({
       },
     ]
 
+    const SIDE_IMAGES: Record<string, string> = {
+      'Papas Rústicas': 'https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?auto=format&fit=crop&w=800&q=80',
+      'Papas Fritas': 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=800&q=80',
+      'Ensalada Mixta': 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=800&q=80',
+    }
+
     const sideOpts = SIDE_OPTIONS.map((s, idx) => ({
       id: `side-opt-${idx}`,
       name: `Porción de ${s}`,
       description: 'Guarnición gigante incluida en el combo',
+      image_url: SIDE_IMAGES[s] || 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=800&q=80',
     }))
 
     return [
@@ -196,9 +262,13 @@ export function PromoConfiguratorModal({
       // Construir o asociar producto real
       const catalogMatch = catalogProducts.find(p => p.id === opt.id || p.name.toLowerCase() === opt.name.toLowerCase())
       const finalProduct: Product = catalogMatch
-        ? { ...catalogMatch, price: 0 }
+        ? {
+            ...catalogMatch,
+            price: 0,
+            image_url: opt.image_url || catalogMatch.image_url || null,
+          }
         : {
-            id: `p-promo-sub-${idx}-${Date.now()}`,
+            id: opt.id || `p-promo-sub-${idx}-${Date.now()}`,
             restaurant_id: product.restaurant_id,
             category_id: st.course === 'drink' ? 'cat-bebidas' : 'cat-principales',
             name: opt.name,
@@ -333,7 +403,14 @@ export function PromoConfiguratorModal({
                       {/* Icono / Imagen */}
                       <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-100 relative flex-shrink-0 border border-slate-200 flex items-center justify-center">
                         {opt.image_url ? (
-                          <Image src={opt.image_url} alt={opt.name} fill sizes="56px" className="object-cover" />
+                          <Image
+                            src={opt.image_url}
+                            alt={opt.name}
+                            fill
+                            sizes="56px"
+                            className="object-cover"
+                            unoptimized={opt.image_url.startsWith('http')}
+                          />
                         ) : currentStep.type === 'drink' ? (
                           <Wine className="w-6 h-6 text-purple-500" />
                         ) : currentStep.type === 'burger' ? (

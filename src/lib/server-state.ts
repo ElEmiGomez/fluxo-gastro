@@ -277,7 +277,7 @@ export function saveIdempotentOrder(key: string, order: Order, ttlMs: number = 3
 // MÁQUINA DE ESTADOS FORMAL DE COMANDAS
 // ==============================================================================
 export const VALID_ORDER_TRANSITIONS: Record<string, string[]> = {
-  pending_validation: ['pending', 'confirmed', 'preparing', 'ready', 'cancelled'], // Mozo valida; órdenes de solo bebidas van directo a ready
+  pending_validation: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'], // Mozo valida; órdenes de solo bebidas van directo a ready o delivered
   pending: ['confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
   confirmed: ['preparing', 'ready', 'delivered', 'cancelled'],
   preparing: ['ready', 'delivered', 'cancelled'],

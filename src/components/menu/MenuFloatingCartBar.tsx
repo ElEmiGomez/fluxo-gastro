@@ -58,8 +58,8 @@ export function MenuFloatingCartBar({
       {/* Barra de Carrito para Comensal */}
       {totalCartCount > 0 && !isInSituAdmin && (
         <div className="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 gpu-layer">
-          <div className="flex justify-end pr-2 pb-1.5 animate-in fade-in">
-            <div className="bg-slate-900/95 text-white border border-blue-400/40 text-[10px] sm:text-[11px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 animate-bounce backdrop-blur-md">
+          <div className="flex justify-end pr-2 pb-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="bg-slate-900/95 text-white border border-blue-400/40 text-[10px] sm:text-[11px] font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 animate-pulse backdrop-blur-md">
               <Sparkles size={11} className="text-amber-300 flex-shrink-0" />
               <span>{t('tooltipAddToCartNotice')}</span>
             </div>

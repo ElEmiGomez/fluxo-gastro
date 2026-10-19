@@ -13,6 +13,8 @@ interface BillModalProps {
   googleReviewUrl?: string | null
   googlePlaceId?: string | null
   totalAmount?: number
+  hasPendingDesserts?: boolean
+  onOpenSobremesa?: () => void
 }
 
 export function BillModal({
@@ -25,6 +27,8 @@ export function BillModal({
   googleReviewUrl,
   googlePlaceId,
   totalAmount,
+  hasPendingDesserts = false,
+  onOpenSobremesa,
 }: BillModalProps) {
   const [billRequested, setBillRequested] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -130,6 +134,46 @@ export function BillModal({
             </div>
           )}
 
+          {/* AVISO DE POSTRES PENDIENTES */}
+          {hasPendingDesserts && (
+            <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl text-amber-950 text-xs font-semibold space-y-1 animate-in fade-in">
+              <div className="flex items-center gap-1.5 font-black text-amber-900">
+                <AlertCircle size={16} className="text-amber-600 flex-shrink-0" />
+                <span>Postres pendientes por disfrutar</span>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-snug">
+                Tienes postres pendientes en tu comanda. Por favor disfruta de tus postres antes de solicitar la cuenta al personal.
+              </p>
+            </div>
+          )}
+
+          {/* ACCESO RÁPIDO A SOBREMESA (CAFÉ & POSTRE) */}
+          {onOpenSobremesa && !hasPendingDesserts && (
+            <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl flex items-center justify-between gap-2.5 shadow-2xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xl flex-shrink-0">☕🍰</span>
+                <div className="min-w-0">
+                  <span className="text-xs font-black text-amber-950 block leading-tight">
+                    ¿Sumamos café o postre?
+                  </span>
+                  <span className="text-[10px] text-amber-800 font-medium block">
+                    Pídelo en 1 toque antes de cerrar cuenta
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenSobremesa()
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs active:scale-95 transition-all flex items-center gap-1 flex-shrink-0 cursor-pointer"
+              >
+                <span>Pedir</span>
+              </button>
+            </div>
+          )}
+
           {/* Opciones de Pago */}
           <p className="text-xs text-slate-600 font-medium text-center">
             Selecciona cómo prefieres abonar en la <strong>Mesa #{tableNumber}</strong>:
@@ -138,7 +182,7 @@ export function BillModal({
           <div className="space-y-2.5">
             <button
               onClick={() => handleRequestBill('Efectivo')}
-              disabled={isSubmitting}
+              disabled={isSubmitting || hasPendingDesserts}
               className="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-800 font-bold text-xs flex items-center justify-between transition-all active:scale-95 disabled:opacity-50"
             >
               <div className="flex items-center gap-2.5">
@@ -150,7 +194,7 @@ export function BillModal({
 
             <button
               onClick={() => handleRequestBill('Tarjeta (Traer Posnet)')}
-              disabled={isSubmitting}
+              disabled={isSubmitting || hasPendingDesserts}
               className="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-800 font-bold text-xs flex items-center justify-between transition-all active:scale-95 disabled:opacity-50"
             >
               <div className="flex items-center gap-2.5">
@@ -162,7 +206,7 @@ export function BillModal({
 
             <button
               onClick={() => handleRequestBill('QR / Transferencia')}
-              disabled={isSubmitting}
+              disabled={isSubmitting || hasPendingDesserts}
               className="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-300 text-slate-800 font-bold text-xs flex items-center justify-between transition-all active:scale-95 disabled:opacity-50"
             >
               <div className="flex items-center gap-2.5">

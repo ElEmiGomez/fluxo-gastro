@@ -498,6 +498,121 @@ export function useComanderoActions({
     }
   }
 
+  const handleDeliverStarters = async (orderId: string) => {
+    setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          orderId,
+          action: 'deliver_starters',
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.order) {
+          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+        }
+        await syncServerData()
+      }
+    } catch (e) {
+      console.error('Error al entregar entradas:', e)
+    } finally {
+      setDeliveringOrderIds(prev => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
+    }
+  }
+
+  const handleDeliverMains = async (orderId: string) => {
+    setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          orderId,
+          action: 'deliver_mains',
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.order) {
+          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+        }
+        await syncServerData()
+      }
+    } catch (e) {
+      console.error('Error al entregar principales:', e)
+    } finally {
+      setDeliveringOrderIds(prev => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
+    }
+  }
+
+  const handleFireMains = async (orderId: string) => {
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          orderId,
+          action: 'fire_mains',
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.order) {
+          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+        }
+        await syncServerData()
+        setOrderSentToast(true)
+        setTimeout(() => setOrderSentToast(false), 2500)
+      }
+    } catch (e) {
+      console.error('Error al marchar principales:', e)
+    }
+  }
+
+  const handleDeliverDesserts = async (orderId: string) => {
+    setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug,
+          orderId,
+          action: 'deliver_desserts',
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.order) {
+          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+        }
+        await syncServerData()
+      }
+    } catch (e) {
+      console.error('Error al entregar postres:', e)
+    } finally {
+      setDeliveringOrderIds(prev => {
+        const next = new Set(prev)
+        next.delete(orderId)
+        return next
+      })
+    }
+  }
+
   return {
     validatingOrderIds,
     deliveringOrderIds,
@@ -506,6 +621,10 @@ export function useComanderoActions({
     setOrderSentToast,
     handleAttendCall,
     handleDeliverSingleOrder,
+    handleDeliverStarters,
+    handleFireMains,
+    handleDeliverMains,
+    handleDeliverDesserts,
     handleMarkDelivered,
     handleValidateOrder,
     handleCancelValidationOrder,

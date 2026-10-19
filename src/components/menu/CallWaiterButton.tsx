@@ -165,7 +165,7 @@ export function CallWaiterButton({
         aria-label={called ? t('waiterNotified') : t('callWaiter')}
         className={`px-3 py-2 sm:px-4 sm:py-2.5 min-h-[40px] sm:min-h-[44px] rounded-xl sm:rounded-full font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 whitespace-nowrap cursor-pointer ${
           called
-            ? 'bg-emerald-600 text-white animate-bounce'
+            ? 'bg-emerald-600 text-white animate-pulse ring-2 ring-emerald-400/80 shadow-md'
             : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-300'
         }`}
         title="Llamar al mozo a la mesa"

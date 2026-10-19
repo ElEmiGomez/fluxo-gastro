@@ -17,6 +17,8 @@ import {
   isOrderDessertsReady,
   orderHasActiveDesserts,
   getItemCourse,
+  orderHasMains,
+  areOrderMainsReady,
 } from '@/lib/course-utils'
 
 type StationFilterType = 'all' | 'kitchen' | 'bar'
@@ -143,6 +145,16 @@ export default function KitchenKDSPage() {
             (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           )
 
+          const computeKdsFinger = (list: Order[]) =>
+            list
+              .map(
+                o =>
+                  `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}:${(o.order_items || [])
+                    .map(i => `${i.product_id}:${i.quantity}:${i.notes || ''}`)
+                    .join(',')}`
+              )
+              .join('|')
+
           setOrders(prev => {
             const prevMap = new Map(prev.map(o => [o.id, o]))
             const reconciled = sorted.map(ord => {
@@ -153,14 +165,18 @@ export default function KitchenKDSPage() {
               return { ...ord, order_items: effectiveItems }
             })
 
-            prevOrdersMapRef.current = new Map(reconciled.map(o => [o.id, o]))
-
-            const finger = reconciled.map(o => `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}`).join('|')
-            if (finger === ordersFingerRef.current) {
+            const prevFinger = computeKdsFinger(prev)
+            const nextFinger = computeKdsFinger(reconciled)
+            if (nextFinger === prevFinger) {
               return prev
             }
-            ordersFingerRef.current = finger
             return reconciled
+          })
+
+          sorted.forEach(ord => {
+            if (ord.order_items && ord.order_items.length > 0) {
+              prevOrdersMapRef.current.set(ord.id, ord)
+            }
           })
         }
       }
@@ -212,8 +228,8 @@ export default function KitchenKDSPage() {
         .subscribe()
     }
 
-    // B. SSE de respaldo para modo offline/local (solo si no hay canal de Supabase y en desarrollo local)
-    if (!supabase && process.env.NODE_ENV === 'development') {
+    // B. SSE en desarrollo local para sincronización inmediata sub-50ms
+    if (process.env.NODE_ENV === 'development') {
       try {
         let sseDebounceTimer: any = null
         const triggerDebouncedFetch = () => {
@@ -323,8 +339,11 @@ export default function KitchenKDSPage() {
     }
   }
 
-  // Ejecutar acciones de pase gastronómico (Comida lista pase 1 / Postres listos pase 2)
-  const handleKitchenAction = async (orderId: string, action: 'ready_food' | 'ready_desserts' | 'fire_desserts') => {
+  // Ejecutar acciones de pase gastronómico (Comida lista pase 1 / Postres listos pase 2 / Turnos de cocina)
+  const handleKitchenAction = async (
+    orderId: string,
+    action: 'ready_food' | 'ready_desserts' | 'fire_desserts' | 'ready_starters' | 'start_mains' | 'ready_mains' | 'start_desserts'
+  ) => {
     if (updatingOrderIds.has(orderId)) return
     setUpdatingOrderIds(prev => new Set(prev).add(orderId))
 
@@ -357,11 +376,12 @@ export default function KitchenKDSPage() {
     }
   }
 
-  // Filtrado de comandas por estado (incluye comandas con platos principales entregados pero postres pendientes de pase 2)
+  // Filtrado de comandas por estado (incluye comandas con entradas listas pero principales pendientes, o platos entregados con postres marchados)
   const activeOrders = orders.filter(o =>
     o.status === 'pending' ||
     o.status === 'confirmed' ||
     o.status === 'preparing' ||
+    (o.status === 'ready' && orderHasMains(o) && !areOrderMainsReady(o)) ||
     (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
   )
   const readyOrders = orders.filter(o => o.status === 'ready')

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getLoyaltyProfile, registerOrGetLoyaltyProfile } from '@/lib/supabase/repositories/loyalty.repository'
+import {
+  getLoyaltyProfile,
+  registerOrGetLoyaltyProfile,
+  resetOrDeleteLoyaltyProfile,
+  getLoyaltySettings,
+} from '@/lib/supabase/repositories/loyalty.repository'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,9 +32,12 @@ export async function GET(req: NextRequest) {
       })
     }
 
+    const settings = await getLoyaltySettings(slug)
+
     return NextResponse.json({
       success: true,
       profile,
+      settings,
     })
   } catch (error: any) {
     console.error('[GET /api/loyalty/profile] Error:', error)
@@ -62,9 +70,12 @@ export async function POST(req: NextRequest) {
     })
 
 
+    const settings = await getLoyaltySettings(slug)
+
     return NextResponse.json({
       success: true,
       profile,
+      settings,
     })
   } catch (error: any) {
     console.error('[POST /api/loyalty/profile] Error:', error)
@@ -74,3 +85,33 @@ export async function POST(req: NextRequest) {
     )
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const slug = searchParams.get('slug') || 'burger-gourmet'
+    const email = searchParams.get('email')
+
+    if (!email) {
+      return NextResponse.json(
+        { success: false, error: 'Email requerido para resetear fidelización' },
+        { status: 400 }
+      )
+    }
+
+    const profile = await resetOrDeleteLoyaltyProfile(slug, email)
+
+    return NextResponse.json({
+      success: true,
+      message: `Puntos reseteados a 0 para ${email}`,
+      profile,
+    })
+  } catch (error: any) {
+    console.error('[DELETE /api/loyalty/profile] Error:', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Error al resetear perfil de fidelización' },
+      { status: 500 }
+    )
+  }
+}
+

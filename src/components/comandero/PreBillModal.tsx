@@ -26,7 +26,7 @@ export function PreBillModal({
   discountPercentage = 0,
   onProceedToCharge,
 }: PreBillModalProps) {
-  const [splitCount, setSplitCount] = useState<number>(paxCount || 1)
+  const [splitCount, setSplitCount] = useState<number>(1)
 
   if (!isOpen) return null
 

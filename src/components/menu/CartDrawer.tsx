@@ -103,6 +103,9 @@ export function CartDrawer({
   }).slice(0, 6)
 
   const suggestedDessertsList = (products || []).filter(p => {
+    if (p.id === 'b0000000-0000-0000-0000-000000000099' || p.id === 'p-dessert-pending-later') {
+      return false
+    }
     const name = (p.name || '').toLowerCase()
     const catId = p.category_id || ''
     return (
@@ -515,17 +518,17 @@ export function CartDrawer({
           {/* LISTA DE PLATOS DEL CARRITO CON SCROLL COMPLETO */}
           <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-3">
             {orderSuccess ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center animate-bounce">
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 animate-in fade-in duration-300">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center ring-4 ring-emerald-200/80 shadow-md animate-pulse">
                   <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
                 </div>
                 <h3 className="text-xl font-black text-slate-900">
-                  {isWaiter ? '¡Comanda Enviada a Cocina!' : '¡Pedido Recibido!'}
+                  {isWaiter ? '¡Comanda Enviada a Cocina!' : '¡Comanda Enviada al Mozo!'}
                 </h3>
                 <p className="text-sm text-slate-600 max-w-xs leading-relaxed">
                   {isWaiter
                     ? `La comanda de la Mesa #${tableNumber} ya está en la pantalla de Cocina KDS.`
-                    : `Tu mozo se acercará en unos instantes a la Mesa #${tableNumber} para confirmar verbalmente tu pedido antes de enviarlo a cocina.`}
+                    : `Tu mozo revisará la comanda en la Mesa #${tableNumber} para confirmarla antes de enviarla a cocina.`}
                 </p>
               </div>
             ) : validCart.length === 0 ? (
@@ -593,12 +596,23 @@ export function CartDrawer({
                                 className="bg-white border border-blue-200/90 rounded-2xl p-3 space-y-2.5 shadow-xs"
                               >
                                 <div className="flex items-start gap-3">
-                                  {/* Icono del Pack */}
+                                  {/* Foto / Icono del Pack */}
                                   <div
                                     style={{ position: 'relative', width: '52px', height: '52px', minWidth: '52px', minHeight: '52px', overflow: 'hidden', borderRadius: '12px' }}
                                     className="bg-blue-50 border border-blue-200 flex-shrink-0 flex items-center justify-center text-blue-700"
                                   >
-                                    <Utensils className="w-6 h-6 stroke-[1.8]" />
+                                    {item.product?.image_url ? (
+                                      <Image
+                                        src={item.product.image_url}
+                                        alt={item.product?.name || 'Pack'}
+                                        fill
+                                        className="object-cover"
+                                        sizes="52px"
+                                        unoptimized={item.product.image_url.startsWith('http')}
+                                      />
+                                    ) : (
+                                      <Utensils className="w-6 h-6 stroke-[1.8]" />
+                                    )}
                                   </div>
 
                                   {/* Nombre y Precio del Pack */}
@@ -669,6 +683,18 @@ export function CartDrawer({
                                               className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50/90 border border-slate-200/70 text-xs"
                                             >
                                               <div className="flex items-center gap-2 min-w-0">
+                                                {comp.product?.image_url && (
+                                                  <div className="relative w-7 h-7 rounded-lg overflow-hidden bg-slate-200 border border-slate-300 flex-shrink-0">
+                                                    <Image
+                                                      src={comp.product.image_url}
+                                                      alt={comp.product?.name || 'Plato'}
+                                                      fill
+                                                      className="object-cover"
+                                                      sizes="28px"
+                                                      unoptimized={comp.product.image_url.startsWith('http')}
+                                                    />
+                                                  </div>
+                                                )}
                                                 {courseLabel && (
                                                   <span className="text-[9px] font-black uppercase text-blue-700 bg-blue-100/80 px-1.5 py-0.2 rounded border border-blue-200 flex-shrink-0">
                                                     {courseLabel}

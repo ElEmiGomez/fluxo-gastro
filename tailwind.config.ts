@@ -23,14 +23,24 @@ const config: Config = {
         pulseGlow: {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
-        }
+        },
+        glowPulseAmber: {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(245, 158, 11, 0)" },
+          "50%": { boxShadow: "0 0 0 4px rgba(245, 158, 11, 0.5)" },
+        },
+        glowPulseEmerald: {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(16, 185, 129, 0)" },
+          "50%": { boxShadow: "0 0 0 4px rgba(16, 185, 129, 0.5)" },
+        },
       },
       animation: {
         "flash-ticket": "flashTicket 1s ease-in-out 3",
         "pulse-glow": "pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "glow-amber": "glowPulseAmber 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "glow-emerald": "glowPulseEmerald 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
 export default config;

@@ -226,59 +226,6 @@ export function DailyMenuModal({
 
               {/* Lista de Platos para esta Sección */}
               <div className="space-y-2.5">
-                {/* Comodín de Postre Pendiente: Elegir postre/café después de comer */}
-                {isDessertStep && (
-                  <div
-                    onClick={() => {
-                      const placeholderProd: Product = {
-                        id: PENDING_DESSERT_ID,
-                        restaurant_id: dailyMenu.restaurant_id,
-                        category_id: 'cat-postres',
-                        name: '⏳ Decidir postre/café después de comer',
-                        description: 'Podrás elegir el postre o café más adelante cuando terminen los platos principales (Incluido).',
-                        price: 0,
-                        image_url: null,
-                        model_3d_url: null,
-                        is_available: true,
-                      }
-                      handleSelectItem(placeholderProd)
-                    }}
-                    className={`py-2 px-3 rounded-xl border transition-all cursor-pointer flex items-center gap-2.5 ${
-                      selectedItems[activeStepIndex]?.id === PENDING_DESSERT_ID
-                        ? 'bg-amber-50/90 border-amber-500 shadow-xs ring-1 ring-amber-300'
-                        : 'bg-amber-50/30 hover:bg-amber-50/80 border-amber-200 hover:border-amber-300'
-                    }`}
-                  >
-                    <div className="w-9 h-9 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 flex-shrink-0 shadow-2xs">
-                      <Clock className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[8px] font-black uppercase tracking-wider text-amber-800 bg-amber-200/70 px-1 py-0.2 rounded border border-amber-300/80">
-                          Comodín
-                        </span>
-                        <h5 className="text-xs font-bold text-slate-900 leading-tight">
-                          ⏳ Decidir postre/café después de comer
-                        </h5>
-                      </div>
-                      <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5 font-medium">
-                        Podrás elegir tu postre o café más adelante cuando terminen los platos principales (Incluido).
-                      </p>
-                    </div>
-                    <div
-                      className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border transition-all ${
-                        selectedItems[activeStepIndex]?.id === PENDING_DESSERT_ID
-                          ? 'bg-amber-600 border-amber-600 text-white shadow-xs'
-                          : 'border-slate-300 bg-white'
-                      }`}
-                    >
-                      {selectedItems[activeStepIndex]?.id === PENDING_DESSERT_ID && (
-                        <Check className="w-3 h-3 stroke-[3]" />
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {(currentSection.items || [])
                   .filter(it => it.is_available && it.product)
                   .map(it => {

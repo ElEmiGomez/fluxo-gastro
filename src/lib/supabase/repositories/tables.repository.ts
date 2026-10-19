@@ -239,6 +239,20 @@ export async function closeTableSession(
     }
   }
 
+  // Marcar en memoria las órdenes activas de esta mesa como 'paid' antes de liquidar fidelización
+  const tableNumStr = tableNumber.toString()
+  const memOrders = (globalThis as any).__GASTRO_ORDERS__?.[slug] || []
+  memOrders.forEach((o: any) => {
+    const isThisTable =
+      o.table_number?.toString() === tableNumStr ||
+      o.table?.table_number?.toString() === tableNumStr
+    if (isThisTable && o.status !== 'cancelled') {
+      o.status = 'paid'
+      o.version = (o.version || 1) + 1
+      o.updated_at = new Date().toISOString()
+    }
+  })
+
   // 4. Liquidar puntos canjeados y acreditar puntos ganados en el sistema de fidelización
   try {
     const finalBillAmount = Number(calculatedAmount) || 0

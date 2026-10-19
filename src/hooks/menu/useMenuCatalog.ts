@@ -271,6 +271,9 @@ export function useMenuCatalog({ slug, isInSituAdmin }: UseMenuCatalogParams) {
   // Filtrado reactivo de platos
   const filteredProducts = useMemo(() => {
     return products.filter(prod => {
+      if (prod.id === 'b0000000-0000-0000-0000-000000000099' || prod.id === 'p-dessert-pending-later') {
+        return false
+      }
       if (!isInSituAdmin && prod.is_available === false) {
         return false
       }

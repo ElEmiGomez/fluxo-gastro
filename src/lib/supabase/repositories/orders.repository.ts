@@ -15,9 +15,14 @@ import {
   saveCachedOrderItems,
   getCachedOrderItems,
 } from '@/lib/server-state'
+
+export { getCachedOrderItems }
 import { getTargetRestaurantId } from './restaurants.repository'
 import { inferCourseType, resolveCanonicalProductId } from '@/lib/category-matcher'
 import { getItemCourse } from '@/lib/course-utils'
+
+const isUuid = (val?: string | null): boolean =>
+  Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val))
 
 export interface TransitionOrderParams {
   orderId: string
@@ -253,13 +258,17 @@ export async function createOrder(
 /**
  * 5. COMANDAS: Obtener órdenes del restaurante (SSOT PostgreSQL)
  */
-export async function getRestaurantOrders(restaurantId: string, slug: string): Promise<Order[]> {
+export async function getRestaurantOrders(
+  restaurantId: string,
+  slug: string,
+  tableNumber?: number | string
+): Promise<Order[]> {
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
       const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           *,
@@ -268,17 +277,27 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
             product_id,
             quantity,
             notes,
-            products (*)
+            products (id, name, price, category_id, image_url, is_available)
           )
         `)
         .eq('restaurant_id', targetRestaurantId)
-        .order('created_at', { ascending: false })
-        .limit(60)
+
+      const parsedTableNum = tableNumber !== undefined && tableNumber !== null && tableNumber !== ''
+        ? parseInt(String(tableNumber), 10)
+        : null
+
+      if (parsedTableNum !== null && !isNaN(parsedTableNum)) {
+        query = query.eq('table_number', parsedTableNum).order('created_at', { ascending: false }).limit(20)
+      } else {
+        query = query.order('created_at', { ascending: false }).limit(60)
+      }
+
+      const { data, error } = await query
 
       if (!error && data) {
         const memOrders = getServerOrders(slug)
         const mappedOrders = (data as unknown as any[]).map(o => {
-          const tableNum = o.table_number || (o.table ? o.table.table_number : 1)
+          const tableNum = o.table_number || (o.table ? o.table.table_number : (parsedTableNum ?? 1))
           const token = o.session_token || o.table_session_id
           const normalizedItems = (o.order_items || []).map((it: any) => ({
             ...it,
@@ -337,7 +356,10 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
         })
         const seenIds = new Set(mappedOrders.map(o => o.id))
         const unindexedMemOrders = memOrders.filter(
-          m => !seenIds.has(m.id) && m.status !== 'cancelled' && m.status !== 'paid'
+          m => !seenIds.has(m.id) && m.status !== 'cancelled' && m.status !== 'paid' &&
+            (parsedTableNum !== null && !isNaN(parsedTableNum)
+              ? (Number(m.table_number) === parsedTableNum || Number(m.table?.table_number) === parsedTableNum)
+              : true)
         )
         return [...mappedOrders, ...unindexedMemOrders]
       }
@@ -346,7 +368,14 @@ export async function getRestaurantOrders(restaurantId: string, slug: string): P
     }
   }
 
-  return getServerOrders(slug)
+  const allMem = getServerOrders(slug)
+  if (tableNumber !== undefined && tableNumber !== null && tableNumber !== '') {
+    const num = parseInt(String(tableNumber), 10)
+    if (!isNaN(num)) {
+      return allMem.filter(o => Number(o.table_number) === num || Number(o.table?.table_number) === num)
+    }
+  }
+  return allMem
 }
 
 /**
@@ -688,13 +717,47 @@ export async function updateOrderCourseTags(
   // Persistir en Supabase (order_items)
   if (hasSupabase) {
     try {
-      for (const it of updatedItems) {
-        if (itemFilter(it) && it.id) {
-          await supabase
+      const itemsToUpdate = updatedItems.filter(it => itemFilter(it))
+      if (itemsToUpdate.length > 0) {
+        let dbItems: any[] = []
+        if (isUuid(orderId)) {
+          const { data } = await supabase
             .from('order_items')
-            .update({ notes: it.notes })
-            .eq('id', it.id)
+            .select('id, product_id, notes')
+            .eq('order_id', orderId)
+          if (data && data.length > 0) {
+            dbItems = data
+          }
         }
+
+        await Promise.all(
+          itemsToUpdate.map(async it => {
+            if (isUuid(it.id)) {
+              return supabase
+                .from('order_items')
+                .update({ notes: it.notes })
+                .eq('id', it.id)
+            }
+            const matchedDbItem = dbItems.find(dbi => dbi.product_id === it.product_id)
+            if (matchedDbItem?.id && isUuid(matchedDbItem.id)) {
+              it.id = matchedDbItem.id
+              return supabase
+                .from('order_items')
+                .update({ notes: it.notes })
+                .eq('id', matchedDbItem.id)
+            }
+            if (isUuid(orderId)) {
+              let query = supabase
+                .from('order_items')
+                .update({ notes: it.notes })
+                .eq('order_id', orderId)
+              if (isUuid(it.product_id)) {
+                query = query.eq('product_id', it.product_id)
+              }
+              return query
+            }
+          })
+        )
       }
     } catch (dbErr) {
       console.warn('[updateOrderCourseTags] DB update error:', dbErr)
@@ -794,15 +857,40 @@ export async function resolvePendingDessertInOrder(
   // Persistir en Supabase
   if (hasSupabase) {
     try {
+      let dbItems: any[] = []
+      if (isUuid(orderId)) {
+        const { data } = await supabase
+          .from('order_items')
+          .select('id, product_id, notes')
+          .eq('order_id', orderId)
+        if (data && data.length > 0) {
+          dbItems = data
+        }
+      }
+
       for (const it of updatedItems) {
-        if (it.id) {
+        if (isUuid(it.id)) {
           await supabase
             .from('order_items')
             .update({ notes: it.notes, product_id: it.product_id })
             .eq('id', it.id)
+        } else {
+          const matchedDbItem = dbItems.find(dbi => dbi.product_id === it.product_id)
+          if (matchedDbItem?.id && isUuid(matchedDbItem.id)) {
+            it.id = matchedDbItem.id
+            await supabase
+              .from('order_items')
+              .update({ notes: it.notes, product_id: it.product_id })
+              .eq('id', matchedDbItem.id)
+          } else if (isUuid(orderId)) {
+            await supabase
+              .from('order_items')
+              .update({ notes: it.notes, product_id: it.product_id })
+              .eq('order_id', orderId)
+          }
         }
       }
-      if (nextStatus !== order.status) {
+      if (nextStatus !== order.status && isUuid(orderId)) {
         await supabase
           .from('orders')
           .update({ status: nextStatus })

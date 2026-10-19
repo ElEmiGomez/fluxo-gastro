@@ -3,9 +3,16 @@ import { inferCourseType } from './category-matcher'
 
 export const TAG_DRINK_SERVED = '[BARRA_SERVIDA]'
 export const TAG_FOOD_READY = '[COCINA_LISTA]'
+export const TAG_STARTER_READY = '[ENTRADA_LISTA]'
+export const TAG_STARTER_SERVED = '[ENTRADA_SERVIDA]'
+export const TAG_MAIN_FIRED = '[MARCHAR_PRINCIPAL]'
+export const TAG_MAIN_COOKING = '[PRINCIPAL_EN_MARCHA]'
+export const TAG_MAIN_READY = '[PRINCIPAL_LISTO]'
+export const TAG_MAIN_SERVED = '[PRINCIPAL_SERVIDO]'
 export const TAG_DESSERT_READY = '[POSTRE_LISTO]'
 export const TAG_DESSERT_SERVED = '[POSTRE_SERVIDO]'
 export const TAG_DESSERT_FIRED = '[MARCHAR_POSTRE]'
+export const TAG_DESSERT_COOKING = '[POSTRE_EN_MARCHA]'
 export const TAG_DESSERT_PENDING = '[POSTRE_PENDIENTE_ELECCION]'
 export const TAG_PACK_HEADER = '[PACK_HEADER]'
 
@@ -15,7 +22,7 @@ export const TAG_PACK_HEADER = '[PACK_HEADER]'
 export function stripInternalStationTags(rawNotes?: string | null): string {
   if (!rawNotes) return ''
   return rawNotes
-    .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_SERVIDO|POSTRE:\s*SERVIDO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|PASE_1|PASE_2|MARCHAR_POSTRE|POSTRE_PENDIENTE_ELECCION|PACK_HEADER|PACK_SUBITEM|COURSE:\s*[a-z]+).*?\]/gi, '')
+    .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|ENTRADA_LISTA|ENTRADA_SERVIDA|MARCHAR_PRINCIPAL|PRINCIPAL_EN_MARCHA|PRINCIPAL_LISTO|PRINCIPAL_SERVIDO|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_SERVIDO|POSTRE:\s*SERVIDO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|POSTRE_EN_MARCHA|PASE_1|PASE_2|MARCHAR_POSTRE|POSTRE_PENDIENTE_ELECCION|PACK_HEADER|PACK_SUBITEM|PACK_COMPONENT|COURSE:\s*[a-z]+|Combo[^\]]*|Menú[^\]]*|Menu[^\]]*|Promo[^\]]*|Pack[^\]]*).*?\]/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim()
 }
@@ -79,12 +86,60 @@ export function isDessertItem(item: OrderItem): boolean {
   return getItemCourse(item) === 'dessert'
 }
 
+export function isStarterItem(item: OrderItem): boolean {
+  if (isPackHeaderItem(item)) return false
+  return getItemCourse(item) === 'first'
+}
+
+export function isMainItem(item: OrderItem): boolean {
+  if (isPackHeaderItem(item)) return false
+  return getItemCourse(item) === 'second'
+}
+
 export function isDrinkServed(item: OrderItem): boolean {
   return Boolean(item.notes && item.notes.includes(TAG_DRINK_SERVED))
 }
 
 export function isFoodReady(item: OrderItem): boolean {
+  if (isStarterItem(item)) return isStarterReady(item)
+  if (isMainItem(item)) return isMainReady(item)
   return Boolean(item.notes && item.notes.includes(TAG_FOOD_READY))
+}
+
+export function isFoodServed(item: OrderItem): boolean {
+  if (isStarterItem(item)) return isStarterServed(item)
+  if (isMainItem(item)) return isMainServed(item)
+  return false
+}
+
+export function isStarterReady(item: OrderItem): boolean {
+  return Boolean(
+    item.notes &&
+      (item.notes.includes(TAG_STARTER_READY) ||
+        item.notes.includes(TAG_STARTER_SERVED) ||
+        item.notes.includes(TAG_FOOD_READY))
+  )
+}
+
+export function isStarterServed(item: OrderItem): boolean {
+  return Boolean(item.notes && item.notes.includes(TAG_STARTER_SERVED))
+}
+
+export function isMainCooking(item: OrderItem): boolean {
+  return Boolean(item.notes && item.notes.includes(TAG_MAIN_COOKING))
+}
+
+export function isMainReady(item: OrderItem): boolean {
+  return Boolean(
+    item.notes &&
+      (item.notes.includes(TAG_MAIN_READY) ||
+        item.notes.includes(TAG_MAIN_SERVED) ||
+        item.notes.includes(TAG_FOOD_READY))
+  )
+}
+
+export function isMainServed(item: OrderItem): boolean {
+  return Boolean(item.notes && item.notes.includes(TAG_MAIN_SERVED))
 }
 
 export function isDessertServed(item: OrderItem): boolean {
@@ -99,6 +154,16 @@ export function isDessertFired(item: OrderItem): boolean {
   return Boolean(item.notes && item.notes.includes(TAG_DESSERT_FIRED))
 }
 
+export function isDessertCooking(item: OrderItem): boolean {
+  return Boolean(item.notes && item.notes.includes(TAG_DESSERT_COOKING))
+}
+
+export function areOrderDessertsCooking(order: Order): boolean {
+  const desserts = (order.order_items || []).filter(isDessertItem)
+  if (desserts.length === 0) return true
+  return desserts.some(isDessertCooking)
+}
+
 export function orderHasDrinks(order: Order): boolean {
   return (order.order_items || []).some(isDrinkItem)
 }
@@ -107,8 +172,83 @@ export function orderHasFood(order: Order): boolean {
   return (order.order_items || []).some(isFoodItem)
 }
 
+export function orderHasStarters(order: Order): boolean {
+  return (order.order_items || []).some(isStarterItem)
+}
+
+export function orderHasMains(order: Order): boolean {
+  return (order.order_items || []).some(isMainItem)
+}
+
+export function areOrderStartersReady(order: Order): boolean {
+  const starters = (order.order_items || []).filter(isStarterItem)
+  if (starters.length === 0) return true
+  return starters.every(isStarterReady)
+}
+
+export function areOrderStartersServed(order: Order): boolean {
+  const starters = (order.order_items || []).filter(isStarterItem)
+  if (starters.length === 0) return true
+  return starters.every(isStarterServed)
+}
+
+export function isMainFired(item: OrderItem): boolean {
+  return Boolean(item.notes && item.notes.includes(TAG_MAIN_FIRED))
+}
+
+export function areOrderMainsFired(order: Order): boolean {
+  const mains = (order.order_items || []).filter(isMainItem)
+  if (mains.length === 0) return true
+  return mains.some(isMainFired)
+}
+
+export function areOrderMainsReady(order: Order): boolean {
+  const mains = (order.order_items || []).filter(isMainItem)
+  if (mains.length === 0) return true
+  return mains.every(isMainReady)
+}
+
+export function areOrderMainsServed(order: Order): boolean {
+  const mains = (order.order_items || []).filter(isMainItem)
+  if (mains.length === 0) return true
+  return mains.every(isMainServed)
+}
+
 export function orderHasDesserts(order: Order): boolean {
   return (order.order_items || []).some(isDessertItem)
+}
+
+/**
+ * Retorna true si la orden tiene postres que aún no han sido servidos en mesa.
+ * Esto incluye postres comodín pendientes de elección, postres retenidos en espera del mozo,
+ * postres en preparación en cocina, o postres listos esperando ser llevados a la mesa.
+ */
+export function orderHasPendingDesserts(order: Order): boolean {
+  if (['cancelled', 'paid'].includes(order.status)) return false
+  const desserts = (order.order_items || []).filter(isDessertItem)
+  if (desserts.length === 0) return false
+  return desserts.some(d => !isDessertServed(d))
+}
+
+export function ordersHavePendingDesserts(orders: Order[]): boolean {
+  return orders.some(orderHasPendingDesserts)
+}
+
+/**
+ * Retorna true si la comanda tiene platos listos en cocina pendientes de ser retirados por el mozo.
+ * Previene mostrar pedidos en 'Recoger en cocina' si sus entradas ya se sirvieron y los principales siguen esperando marcha.
+ */
+export function isOrderReadyToPick(order: Order): boolean {
+  if (order.status !== 'ready') return false
+  const items = order.order_items || []
+  if (items.length === 0) return true
+
+  const hasReadyStarters = items.some(it => isStarterItem(it) && isStarterReady(it) && !isStarterServed(it))
+  const hasReadyMains = items.some(it => isMainItem(it) && isMainReady(it) && !isMainServed(it))
+  const hasReadyDesserts = items.some(it => isDessertItem(it) && isDessertReady(it) && !isDessertServed(it))
+  const hasGeneralFood = items.some(it => isFoodItem(it) && isFoodReady(it) && !isFoodServed(it))
+
+  return hasReadyStarters || hasReadyMains || hasReadyDesserts || hasGeneralFood
 }
 
 export function isDrinkOnlyOrder(input?: Order | OrderItem[] | null): boolean {

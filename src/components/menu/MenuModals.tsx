@@ -26,6 +26,7 @@ interface MenuModalsProps {
   setSessionId: (s: string | null) => void
   tableOrderStatus: OrderStatus | null
   tableOrders: Order[]
+  hasPendingDesserts?: boolean
   tableTotalAmount: number
   isTablePaid: boolean
   customizingProduct: Product | null
@@ -57,6 +58,7 @@ interface MenuModalsProps {
   onAddCustomized: (product: Product, quantity: number, selectedPills: string[], notes: string) => void
   onRequestMicroService: (serviceName: string) => void
   onBillRequested: () => void
+  onOpenSobremesa?: () => void
   onAdminAuthSuccess: (token: string) => void
   onSaveInSituProduct: (product: Product) => void
   onDeleteInSituProduct: (id: string) => void
@@ -79,6 +81,7 @@ export function MenuModals({
   setSessionId,
   tableOrderStatus,
   tableOrders,
+  hasPendingDesserts = false,
   tableTotalAmount,
   isTablePaid,
   customizingProduct,
@@ -110,6 +113,7 @@ export function MenuModals({
   onAddCustomized,
   onRequestMicroService,
   onBillRequested,
+  onOpenSobremesa,
   onAdminAuthSuccess,
   onSaveInSituProduct,
   onDeleteInSituProduct,
@@ -230,7 +234,7 @@ export function MenuModals({
         lang={currentLang}
         products={products}
         onAddProduct={onAddProductInline}
-        canRequestBill={Boolean(tableOrderStatus && !isTablePaid)}
+        canRequestBill={Boolean(tableOrderStatus && !isTablePaid && !hasPendingDesserts)}
         onAddSuggestedDrink={(drinkId) => {
           const drink = products.find(p => p.id === drinkId)
           if (drink) {
@@ -267,6 +271,8 @@ export function MenuModals({
         googleReviewUrl={restaurant.google_review_url}
         googlePlaceId={restaurant.google_place_id}
         totalAmount={tableTotalAmount}
+        hasPendingDesserts={hasPendingDesserts}
+        onOpenSobremesa={onOpenSobremesa}
       />
 
       {/* 8. Modal Legal y RGPD */}

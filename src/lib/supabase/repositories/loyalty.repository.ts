@@ -7,6 +7,8 @@ import {
   LoyaltySettlementResult,
   LoyaltyTableMember,
   LoyaltyDinerSettlement,
+  LoyaltySettings,
+  LoyaltyMode,
 } from '@/types/loyalty.types'
 import { Product } from '@/types/database.types'
 import { MOCK_PRODUCTS } from '../mock-fallback'
@@ -19,6 +21,54 @@ const globalStore = globalThis as unknown as {
   __GASTRO_LOYALTY_ESCROW__?: Record<string, LoyaltyEscrowHold>
   __GASTRO_TABLE_LOYALTY_MEMBERS__?: Record<string, Record<string, LoyaltyTableMember>>
   __GASTRO_LOYALTY_AWARDED_ORDERS__?: Set<string>
+  __GASTRO_LOYALTY_SETTINGS__?: Record<string, LoyaltySettings>
+}
+
+export const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
+  mode: 'stamps',
+  target_stamps: 5,
+  min_spend_per_stamp: 50,
+  reward_label: 'Postre o Café gratis',
+  reward_category_filter: ['postres', 'bebidas'],
+}
+
+if (!globalStore.__GASTRO_LOYALTY_SETTINGS__) {
+  globalStore.__GASTRO_LOYALTY_SETTINGS__ = {
+    'burger-gourmet': { ...DEFAULT_LOYALTY_SETTINGS },
+    'taperia-casco-antigo': { ...DEFAULT_LOYALTY_SETTINGS, min_spend_per_stamp: 40 },
+    'terraza-malecon': { ...DEFAULT_LOYALTY_SETTINGS, min_spend_per_stamp: 45 },
+  }
+}
+
+export async function getLoyaltySettings(slug: string): Promise<LoyaltySettings> {
+  if (!globalStore.__GASTRO_LOYALTY_SETTINGS__) {
+    globalStore.__GASTRO_LOYALTY_SETTINGS__ = {}
+  }
+  let settings = globalStore.__GASTRO_LOYALTY_SETTINGS__[slug]
+  if (!settings) {
+    settings = { ...DEFAULT_LOYALTY_SETTINGS }
+    globalStore.__GASTRO_LOYALTY_SETTINGS__[slug] = settings
+  }
+  return settings
+}
+
+export async function updateLoyaltySettings(
+  slug: string,
+  newSettings: Partial<LoyaltySettings>
+): Promise<LoyaltySettings> {
+  const current = await getLoyaltySettings(slug)
+  const updated: LoyaltySettings = {
+    ...current,
+    ...newSettings,
+    target_stamps: newSettings.target_stamps !== undefined ? Number(newSettings.target_stamps) : current.target_stamps,
+    min_spend_per_stamp: newSettings.min_spend_per_stamp !== undefined ? Number(newSettings.min_spend_per_stamp) : current.min_spend_per_stamp,
+  }
+
+  if (globalStore.__GASTRO_LOYALTY_SETTINGS__) {
+    globalStore.__GASTRO_LOYALTY_SETTINGS__[slug] = updated
+  }
+
+  return updated
 }
 
 if (!globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__) {
@@ -76,6 +126,19 @@ if (!globalStore.__GASTRO_LOYALTY_PROFILES__) {
       available_points: 120,
       google_review_bonus_awarded: true,
       created_at: new Date(Date.now() - 60 * 86400000).toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    'burger-gourmet:emilianogomez445@gmail.com': {
+      id: 'lprof-emiliano-001',
+      restaurant_slug: 'burger-gourmet',
+      name: 'Emiliano Gomez',
+      email: 'emilianogomez445@gmail.com',
+      phone: '',
+      total_points: 0,
+      held_points: 0,
+      available_points: 0,
+      google_review_bonus_awarded: false,
+      created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
   }
@@ -174,7 +237,7 @@ export async function getLoyaltyProfile(slug: string, email: string): Promise<Lo
 
   if (!profile) return null
 
-  // Calcular saldo retenido en tiempo real
+  const settings = await getLoyaltySettings(slug)
   const held = computeHeldPointsForProfile(profile.id, slug)
   const available = Math.max(0, profile.total_points - held)
 
@@ -182,6 +245,10 @@ export async function getLoyaltyProfile(slug: string, email: string): Promise<Lo
     ...profile,
     held_points: held,
     available_points: available,
+    stamps_count: profile.stamps_count ?? 0,
+    stamps_target: settings.target_stamps || 5,
+    unlocked_rewards_count: profile.unlocked_rewards_count ?? 0,
+    total_stamps_earned: profile.total_stamps_earned ?? 0,
   }
 }
 
@@ -241,9 +308,14 @@ export async function clearTableLoyaltyMembers(
 export async function getUncreditedServiceOrdersForTable(
   slug: string,
   tableNumber: number | string
-): Promise<{ uncreditedOrders: Array<{ id: string; total_amount: number; status: string }>; uncreditedPoints: number }> {
+): Promise<{
+  uncreditedOrders: Array<{ id: string; total_amount: number; status: string }>
+  uncreditedPoints: number
+  hasUnpaidActiveOrders?: boolean
+  totalOrdersInWindow?: number
+}> {
   const normTable = Number(tableNumber)
-  if (!normTable) return { uncreditedOrders: [], uncreditedPoints: 0 }
+  if (!normTable) return { uncreditedOrders: [], uncreditedPoints: 0, hasUnpaidActiveOrders: false, totalOrdersInWindow: 0 }
 
   if (!globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__) {
     globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__ = new Set<string>()
@@ -265,7 +337,7 @@ export async function getUncreditedServiceOrdersForTable(
         .select('id, table_number, total_amount, status, created_at, loyalty_credited')
         .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', normTable)
-        .in('status', ['approved', 'in_preparation', 'ready', 'delivered', 'paid', 'pending', 'confirmed', 'preparing'])
+        .neq('status', 'cancelled')
         .gte('created_at', windowStart)
         .order('created_at', { ascending: false })
         .limit(40)
@@ -277,7 +349,7 @@ export async function getUncreditedServiceOrdersForTable(
           .select('id, table_number, total_amount, status, created_at')
           .eq('restaurant_id', targetRestaurantId)
           .eq('table_number', normTable)
-          .in('status', ['approved', 'in_preparation', 'ready', 'delivered', 'paid', 'pending', 'confirmed', 'preparing'])
+          .neq('status', 'cancelled')
           .gte('created_at', windowStart)
           .order('created_at', { ascending: false })
           .limit(40)
@@ -290,7 +362,7 @@ export async function getUncreditedServiceOrdersForTable(
     } catch (_) {}
   }
 
-  // Deduplicar órdenes por ID
+  // Deduplicar órdenes por ID reconciliando el estado más avanzado ('paid') y flag de acreditación
   const ordersMap = new Map<string, { id: string; total_amount: number; status: string; created_at?: string; loyalty_credited?: boolean }>()
   memOrders.forEach((o: any) => {
     const orderTable = Number(o.table_number || o.table?.table_number)
@@ -306,38 +378,66 @@ export async function getUncreditedServiceOrdersForTable(
   })
   dbOrders.forEach(o => {
     const orderTable = Number(o.table_number)
-    if (orderTable === normTable && !ordersMap.has(o.id)) {
-      ordersMap.set(o.id, {
-        id: o.id,
-        total_amount: Number(o.total_amount) || 0,
-        status: o.status,
-        created_at: o.created_at,
-        loyalty_credited: Boolean(o.loyalty_credited),
-      })
+    if (orderTable === normTable) {
+      const existing = ordersMap.get(o.id)
+      if (!existing) {
+        ordersMap.set(o.id, {
+          id: o.id,
+          total_amount: Number(o.total_amount) || 0,
+          status: o.status,
+          created_at: o.created_at,
+          loyalty_credited: Boolean(o.loyalty_credited),
+        })
+      } else {
+        if (o.status === 'paid' || o.status === 'cancelled') {
+          existing.status = o.status
+        }
+        if (o.loyalty_credited) {
+          existing.loyalty_credited = true
+        }
+      }
     }
   })
 
   // Ventana de servicio (órdenes de las últimas 2 horas / 120 minutos no canceladas)
   const windowStartMs = Date.now() - 120 * 60 * 1000
-  const relevantOrders = Array.from(ordersMap.values()).filter(o => {
+  const nonCancelledInWindow = Array.from(ordersMap.values()).filter(o => {
     if (o.status === 'cancelled') return false
     const time = o.created_at ? new Date(o.created_at).getTime() : Date.now()
     return time >= windowStartMs
   })
 
+  // Regla de negocio: Los puntos SOLO se ganan cuando se completa el pago de la cuenta.
+  // Si la mesa tiene órdenes activas pendientes de cobro (pending_validation, pending, preparing, ready, delivered),
+  // la cuenta aún no se ha pagado y no se deben acreditar puntos.
+  const hasUnpaidActiveOrders = nonCancelledInWindow.some(o => o.status !== 'paid')
+  if (hasUnpaidActiveOrders) {
+    return {
+      uncreditedOrders: [],
+      uncreditedPoints: 0,
+      hasUnpaidActiveOrders: true,
+      totalOrdersInWindow: nonCancelledInWindow.length,
+    }
+  }
+
+  // Filtrar estrictamente órdenes con pago completado (status === 'paid')
+  const paidOrders = nonCancelledInWindow.filter(o => o.status === 'paid')
+
   // Excluir órdenes ya acreditadas (tanto en PostgreSQL como en Set local de memoria)
-  const uncredited = relevantOrders.filter(o => !awardedSet.has(o.id) && !o.loyalty_credited)
+  const uncredited = paidOrders.filter(o => !awardedSet.has(o.id) && !o.loyalty_credited)
   const uncreditedTotal = uncredited.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
   const uncreditedPoints = Math.max(0, Math.floor(uncreditedTotal))
 
   return {
     uncreditedOrders: uncredited,
     uncreditedPoints,
+    hasUnpaidActiveOrders: false,
+    totalOrdersInWindow: nonCancelledInWindow.length,
   }
 }
 
 /**
- * 2. REGISTRAR O RECUPERAR PERFIL ZERO-FRICCIÓN (NOMBRE + EMAIL + MESA) CON RETROACTIVIDAD
+ * 2. REGISTRAR O RECUPERAR PERFIL ZERO-FRICCIÓN (NOMBRE + EMAIL + MESA) CON RETROACTIVIDAD POST-PAGO
  */
 export async function registerOrGetLoyaltyProfile(
   slug: string,
@@ -355,18 +455,28 @@ export async function registerOrGetLoyaltyProfile(
   const memKey = getMemoryKey(slug, normEmail)
 
   return withProfileLock(memKey, async () => {
-    // Calcular puntos retroactivos del servicio si se proporciona mesa
+    // Calcular puntos retroactivos SOLO de órdenes ya cobradas ('paid') si se proporciona mesa
     let retroactivePoints = 0
     let uncreditedOrdersToMark: Array<{ id: string }> = []
+    let hasUnpaidActiveOrders = false
+    let totalOrdersInWindow = 0
     if (params.tableNumber) {
       const res = await getUncreditedServiceOrdersForTable(slug, params.tableNumber)
       retroactivePoints = res.uncreditedPoints
       uncreditedOrdersToMark = res.uncreditedOrders
+      hasUnpaidActiveOrders = Boolean(res.hasUnpaidActiveOrders)
+      totalOrdersInWindow = res.totalOrdersInWindow ?? 0
     }
 
-    // Fallback de contingencia: si la mesa se limpió o las órdenes en BD no se localizaron,
-    // pero el cliente envía lastPaidSessionTotal del banner verde de pago confirmado
-    if (retroactivePoints === 0 && params.lastPaidSessionTotal && params.lastPaidSessionTotal > 0) {
+    // Fallback de contingencia: únicamente cuando la cuenta ya fue pagada (!hasUnpaidActiveOrders),
+    // no se localizaron órdenes en memoria/BD (totalOrdersInWindow === 0) y el cliente envía lastPaidSessionTotal
+    if (
+      retroactivePoints === 0 &&
+      !hasUnpaidActiveOrders &&
+      totalOrdersInWindow === 0 &&
+      params.lastPaidSessionTotal &&
+      params.lastPaidSessionTotal > 0
+    ) {
       retroactivePoints = Math.max(0, Math.floor(Number(params.lastPaidSessionTotal) || 0))
     }
 
@@ -792,15 +902,21 @@ export async function settleLoyaltySession(
 
   // 2. Reparto multi-comensal proporcional
   // Consultar si hay órdenes aún no acreditadas de esta mesa
-  const { uncreditedOrders, uncreditedPoints } = await getUncreditedServiceOrdersForTable(slug, params.tableNumber)
+  const { uncreditedOrders, uncreditedPoints, totalOrdersInWindow } = await getUncreditedServiceOrdersForTable(slug, params.tableNumber)
 
-  // Si encontramos órdenes sin acreditar, acreditamos esas. Si no hay órdenes registradas o se pasa un finalAmount explícito, usamos finalAmount
+  // Si encontramos órdenes sin acreditar, acreditamos esas. Si no hay órdenes registradas en la ventana, usamos finalAmount
   const totalBillPoints = uncreditedOrders.length > 0
     ? uncreditedPoints
-    : Math.max(0, Math.floor(Number(params.finalAmount) || 0))
+    : ((totalOrdersInWindow ?? 0) === 0 ? Math.max(0, Math.floor(Number(params.finalAmount) || 0)) : 0)
 
   // Marcar las órdenes como acreditadas para evitar doble acumulación
-  uncreditedOrders.forEach(o => globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id))
+  uncreditedOrders.forEach(o => {
+    globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id)
+    const memOrd = (globalStore as any).__GASTRO_ORDERS__?.[slug]?.find((x: any) => x.id === o.id)
+    if (memOrd) {
+      memOrd.loyalty_credited = true
+    }
+  })
 
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured() && uncreditedOrders.length > 0) {
@@ -898,6 +1014,58 @@ export async function settleLoyaltySession(
   // Limpiar lista de comensales en la mesa cerrada
   await clearTableLoyaltyMembers(slug, params.tableNumber)
 
+  // 4. Lógica de Cartilla de Sellos por Compras
+  const settings = await getLoyaltySettings(slug)
+  const finalBillAmount = Number(params.finalAmount) || totalBillPoints || 0
+  const qualifiesForStamp = finalBillAmount >= settings.min_spend_per_stamp
+  let stampAwarded = false
+  let stampRewardUnlockedNow = false
+
+  if (qualifiesForStamp) {
+    stampAwarded = true
+    for (const profile of identifiedProfiles) {
+      const currentStamps = (profile.stamps_count || 0) + 1
+      const totalEarnedStamps = (profile.total_stamps_earned || 0) + 1
+      let unlockedRewards = profile.unlocked_rewards_count || 0
+      let newStamps = currentStamps
+
+      if (currentStamps >= settings.target_stamps) {
+        // Meta alcanzada: desbloquea 1 premio y resetea la cartilla a 0
+        unlockedRewards += 1
+        newStamps = 0
+        stampRewardUnlockedNow = true
+      }
+
+      profile.stamps_count = newStamps
+      profile.stamps_target = settings.target_stamps
+      profile.unlocked_rewards_count = unlockedRewards
+      profile.total_stamps_earned = totalEarnedStamps
+
+      const memKey = getMemoryKey(slug, profile.email)
+      const storeProfile = globalStore.__GASTRO_LOYALTY_PROFILES__?.[memKey]
+      if (storeProfile) {
+        storeProfile.stamps_count = newStamps
+        storeProfile.stamps_target = settings.target_stamps
+        storeProfile.unlocked_rewards_count = unlockedRewards
+        storeProfile.total_stamps_earned = totalEarnedStamps
+      }
+
+      if (supabase && isSupabaseConfigured()) {
+        try {
+          await supabase
+            .from('loyalty_profiles')
+            .update({
+              stamps_count: newStamps,
+              unlocked_rewards_count: unlockedRewards,
+              total_stamps_earned: totalEarnedStamps,
+              updated_at: new Date().toISOString(),
+            })
+            .match({ restaurant_slug: slug, email: profile.email })
+        } catch (_) {}
+      }
+    }
+  }
+
   // Comensal principal para compatibilidad con llamadas individuales
   const primary = breakdown[0]
 
@@ -911,7 +1079,65 @@ export async function settleLoyaltySession(
     customer_email: primary.customer_email,
     diners_count: numDiners,
     breakdown,
+    stamp_awarded: stampAwarded,
+    stamps_count: identifiedProfiles[0]?.stamps_count ?? 0,
+    stamps_target: settings.target_stamps,
+    unlocked_rewards_count: identifiedProfiles[0]?.unlocked_rewards_count ?? 0,
+    stamp_reward_unlocked_now: stampRewardUnlockedNow,
   }
+}
+
+/**
+ * 6B. CANJEAR 1 PREMIO DE CARTILLA DE SELLOS (POSTRE O CAFÉ GRATIS)
+ */
+export async function redeemStampReward(
+  slug: string,
+  email: string,
+  productId?: string
+): Promise<{ success: boolean; error?: string; remaining_rewards?: number; profile?: LoyaltyProfile }> {
+  const normEmail = normalizeEmail(email)
+  if (!normEmail) return { success: false, error: 'Email requerido para canjear premio' }
+
+  return withProfileLock(`stamp-redeem:${slug}:${normEmail}`, async () => {
+    const profile = await getLoyaltyProfile(slug, normEmail)
+    if (!profile) return { success: false, error: 'Perfil de comensal no encontrado' }
+
+    if ((profile.unlocked_rewards_count || 0) <= 0) {
+      return { success: false, error: 'No tienes premios desbloqueados para canjear' }
+    }
+
+    const updatedUnlocked = Math.max(0, (profile.unlocked_rewards_count || 1) - 1)
+    profile.unlocked_rewards_count = updatedUnlocked
+    profile.updated_at = new Date().toISOString()
+
+    const memKey = getMemoryKey(slug, normEmail)
+    if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
+      globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = profile
+    }
+
+    const supabase = createServerClient()
+    if (supabase && isSupabaseConfigured()) {
+      try {
+        await supabase
+          .from('loyalty_profiles')
+          .update({
+            unlocked_rewards_count: updatedUnlocked,
+            updated_at: profile.updated_at,
+          })
+          .match({ restaurant_slug: slug, email: normEmail })
+      } catch (e) {
+        console.warn('[redeemStampReward] Fallback a memoria:', e)
+      }
+    }
+
+    const freshProfile = await getLoyaltyProfile(slug, normEmail)
+
+    return {
+      success: true,
+      remaining_rewards: updatedUnlocked,
+      profile: freshProfile || profile,
+    }
+  })
 }
 
 
@@ -1092,5 +1318,60 @@ export async function getAllLoyaltyProfiles(
 
   // Ordenar por puntos totales descendente
   return computed.sort((a, b) => b.total_points - a.total_points)
+}
+
+/**
+ * 8. RESETEAR O ELIMINAR PUNTOS DE FIDELIZACIÓN DE UN USUARIO
+ */
+export async function resetOrDeleteLoyaltyProfile(
+  slug: string,
+  email: string
+): Promise<LoyaltyProfile | null> {
+  const normEmail = normalizeEmail(email)
+  const memKey = getMemoryKey(slug, normEmail)
+
+  const targetProfileIds = new Set<string>()
+  if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
+    Object.keys(globalStore.__GASTRO_LOYALTY_PROFILES__).forEach(k => {
+      if (k.endsWith(`:${normEmail}`) || k === memKey) {
+        const prof = globalStore.__GASTRO_LOYALTY_PROFILES__![k]
+        if (prof?.id) targetProfileIds.add(prof.id)
+        prof.total_points = 0
+        prof.available_points = 0
+        prof.held_points = 0
+        prof.google_review_bonus_awarded = false
+        prof.stamps_count = 0
+        prof.unlocked_rewards_count = 0
+        prof.total_stamps_earned = 0
+        prof.updated_at = new Date().toISOString()
+      }
+    })
+  }
+
+  // Eliminar holds activos del usuario
+  if (globalStore.__GASTRO_LOYALTY_ESCROW__) {
+    Object.entries(globalStore.__GASTRO_LOYALTY_ESCROW__).forEach(([k, h]) => {
+      if (targetProfileIds.has(h.profile_id)) {
+        delete globalStore.__GASTRO_LOYALTY_ESCROW__![k]
+      }
+    })
+  }
+
+  // Supabase si existe
+  const supabase = createServerClient()
+  if (supabase && isSupabaseConfigured()) {
+    try {
+      await supabase
+        .from('loyalty_profiles')
+        .update({
+          total_points: 0,
+          google_review_bonus_awarded: false,
+          updated_at: new Date().toISOString(),
+        })
+        .match({ email: normEmail })
+    } catch (_) {}
+  }
+
+  return getLoyaltyProfile(slug, normEmail)
 }
 

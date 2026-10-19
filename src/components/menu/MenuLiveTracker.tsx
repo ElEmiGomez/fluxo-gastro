@@ -1,17 +1,35 @@
 'use client'
 
 import React from 'react'
-import { Flame, Sparkles, ChevronRight, UtensilsCrossed, Receipt, X, Award } from 'lucide-react'
-import { OrderStatus, Restaurant } from '@/types/database.types'
+import { Flame, Sparkles, ChevronRight, UtensilsCrossed, Receipt, X, Award, Clock } from 'lucide-react'
+import { Order, OrderStatus, Restaurant } from '@/types/database.types'
 import { LoyaltyProfile } from '@/types/loyalty.types'
 import { getTranslation } from '@/lib/i18n'
 import { GoogleReviewBooster } from '@/components/menu/GoogleReviewBooster'
+import {
+  isDrinkItem,
+  isDrinkServed,
+  isStarterItem,
+  isStarterReady,
+  isStarterServed,
+  isMainItem,
+  isMainCooking,
+  isMainReady,
+  isMainServed,
+  isDessertItem,
+  isDessertCooking,
+  isDessertReady,
+  isDessertServed,
+  isDessertPendingChoice,
+  areOrderMainsFired,
+} from '@/lib/course-utils'
 
 interface MenuLiveTrackerProps {
   isFixedMenu: boolean
   isTablePaid: boolean
   hasRequestedBill: boolean
   tableOrderStatus: OrderStatus | null
+  tableOrders?: Order[]
   tableNumber: string
   currentLang: string
   isPaidBannerDismissed: boolean
@@ -27,6 +45,7 @@ interface MenuLiveTrackerProps {
   onOpenLoyaltyModal?: () => void
   hasPendingDessertChoice?: boolean
   onOpenDessertSelector?: () => void
+  hasPendingDesserts?: boolean
 }
 
 export function MenuLiveTracker({
@@ -34,6 +53,7 @@ export function MenuLiveTracker({
   isTablePaid,
   hasRequestedBill,
   tableOrderStatus,
+  tableOrders = [],
   tableNumber,
   currentLang,
   isPaidBannerDismissed,
@@ -49,10 +69,187 @@ export function MenuLiveTracker({
   onOpenLoyaltyModal,
   hasPendingDessertChoice = false,
   onOpenDessertSelector,
+  hasPendingDesserts = false,
 }: MenuLiveTrackerProps) {
   const t = (key: string) => getTranslation(currentLang, key)
 
   if (isFixedMenu) return null
+
+  // Análisis detallado en vivo de los platos y fases por categoría
+  const allItems = (tableOrders || []).flatMap(o => o.order_items || [])
+  const drinks = allItems.filter(isDrinkItem)
+  const starters = allItems.filter(isStarterItem)
+  const mains = allItems.filter(isMainItem)
+  const desserts = allItems.filter(isDessertItem)
+
+  const hasDrinks = drinks.length > 0
+  const hasStarters = starters.length > 0
+  const hasMains = mains.length > 0
+  const hasDesserts = desserts.length > 0
+
+  const areDrinksServed = hasDrinks && drinks.every(isDrinkServed)
+  const areStartersServed = hasStarters && starters.every(isStarterServed)
+  const areStartersReady = hasStarters && starters.every(isStarterReady)
+  const areStartersCooking = hasStarters && !areStartersReady && !areStartersServed && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))
+
+  const areMainsServed = hasMains && mains.every(isMainServed)
+  const areMainsReady = hasMains && mains.every(isMainReady)
+  const areMainsFired = (tableOrders || []).some(areOrderMainsFired)
+  const areMainsCooking = mains.some(isMainCooking) || (hasMains && !hasStarters && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))) || (hasMains && areStartersServed && areMainsFired)
+
+  const areDessertsServed = hasDesserts && desserts.every(isDessertServed)
+  const areDessertsReady = hasDesserts && desserts.every(isDessertReady)
+  const areDessertsCooking = desserts.some(isDessertCooking)
+  const hasChoicePending = hasPendingDessertChoice || desserts.some(isDessertPendingChoice)
+
+  // Título y subtítulo contextual según qué plato está en marcha en este instante
+  let dynamicTitle = t('orderInKitchenTitle')
+  let dynamicSubtitle = t('orderPreparingSubtitle')
+
+  if (tableOrderStatus === 'preparing') {
+    if (areStartersCooking) {
+      dynamicTitle = '🥗 1º Entrantes en preparación en cocina'
+      dynamicSubtitle = 'Cocina está elaborando tus entrantes. Los platos principales se marcharán después.'
+    } else if (areMainsCooking) {
+      dynamicTitle = '🍔 2º Platos principales en los fuegos'
+      dynamicSubtitle = 'Cocina está elaborando tus platos principales al momento.'
+    } else if (areDessertsCooking) {
+      dynamicTitle = '🍰 Postres y cafés en preparación'
+      dynamicSubtitle = 'Elaborando tus postres y cafés para cerrar tu experiencia.'
+    } else if (hasMains && !areStartersServed && hasStarters) {
+      dynamicTitle = '🥗 Entrantes en cocina · Principales en espera'
+      dynamicSubtitle = 'Los platos principales se cocinarán en cuanto disfrutes de tus entrantes.'
+    }
+  } else if (tableOrderStatus === 'ready') {
+    if (areStartersReady && !areStartersServed) {
+      dynamicTitle = '🥗 ¡Entrantes listos para servir!'
+      dynamicSubtitle = `El personal ya traslada tus entrantes a la Mesa #${tableNumber}.`
+    } else if (areMainsReady && !areMainsServed) {
+      dynamicTitle = '🍔 ¡Platos principales listos!'
+      dynamicSubtitle = `Tus platos principales marchan hacia la Mesa #${tableNumber}.`
+    } else if (areDessertsReady && !areDessertsServed) {
+      dynamicTitle = '🍰 ¡Postres listos para servir!'
+      dynamicSubtitle = `Tus postres y cafés marchan hacia la Mesa #${tableNumber}.`
+    } else {
+      dynamicTitle = '✨ ¡Comanda lista para servir!'
+      dynamicSubtitle = `El personal traslada tus platos a la Mesa #${tableNumber}.`
+    }
+  }
+
+  // Componente de pastillas / chips de estado en vivo para cada pase gastronómico
+  const renderCourseProgressPills = () => {
+    if (!hasDrinks && !hasStarters && !hasMains && !hasDesserts) return null
+
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap pt-2 mt-1.5 border-t border-slate-200/50 text-[10px]">
+        {/* 1. Bebidas */}
+        {hasDrinks && (
+          <span className={`px-2 py-0.5 rounded-lg border font-bold flex items-center gap-1 ${
+            areDrinksServed
+              ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+              : tableOrderStatus === 'pending_validation'
+              ? 'bg-slate-100 text-slate-700 border-slate-200'
+              : 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
+          }`}>
+            <span>🥤 Bebidas:</span>
+            <span className="font-black">
+              {areDrinksServed ? 'Servidas ✓' : tableOrderStatus === 'pending_validation' ? 'En comanda' : 'Marchando ⏳'}
+            </span>
+          </span>
+        )}
+
+        {/* 2. Entrantes */}
+        {hasStarters && (
+          <span className={`px-2 py-0.5 rounded-lg border font-bold flex items-center gap-1 ${
+            areStartersServed
+              ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+              : areStartersReady
+              ? 'bg-emerald-200 text-emerald-950 border-emerald-400 animate-pulse ring-1 ring-emerald-400'
+              : areStartersCooking
+              ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
+              : tableOrderStatus === 'pending'
+              ? 'bg-blue-100 text-blue-950 border-blue-200'
+              : 'bg-slate-100 text-slate-700 border-slate-200'
+          }`}>
+            <span>🥗 Entrantes:</span>
+            <span className="font-black">
+              {areStartersServed
+                ? 'Servidos ✓'
+                : areStartersReady
+                ? '¡Listos! 🍽️'
+                : areStartersCooking
+                ? 'En fuegos 🔥'
+                : tableOrderStatus === 'pending'
+                ? 'En cola ⏳'
+                : 'En comanda'}
+            </span>
+          </span>
+        )}
+
+        {/* 3. Principales */}
+        {hasMains && (
+          <span className={`px-2 py-0.5 rounded-lg border font-bold flex items-center gap-1 ${
+            areMainsServed
+              ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+              : areMainsReady
+              ? 'bg-emerald-200 text-emerald-950 border-emerald-400 animate-pulse ring-1 ring-emerald-400'
+              : areMainsCooking
+              ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
+              : hasStarters && !areStartersServed && !areStartersReady
+              ? 'bg-slate-100 text-slate-600 border-slate-200'
+              : tableOrderStatus === 'pending'
+              ? 'bg-blue-100 text-blue-950 border-blue-200'
+              : 'bg-slate-100 text-slate-700 border-slate-200'
+          }`}>
+            <span>🍔 Principales:</span>
+            <span className="font-black">
+              {areMainsServed
+                ? 'Servidos ✓'
+                : areMainsReady
+                ? '¡Listos! 🍽️'
+                : areMainsCooking
+                ? 'En fuegos 🔥'
+                : hasStarters && !areStartersServed && !areStartersReady
+                ? 'Tras entradas ⏳'
+                : tableOrderStatus === 'pending'
+                ? 'En cola ⏳'
+                : 'En comanda'}
+            </span>
+          </span>
+        )}
+
+        {/* 4. Postres */}
+        {hasDesserts && (
+          <span className={`px-2 py-0.5 rounded-lg border font-bold flex items-center gap-1 ${
+            areDessertsServed
+              ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+              : areDessertsReady
+              ? 'bg-emerald-200 text-emerald-950 border-emerald-400 animate-pulse ring-1 ring-emerald-400'
+              : areDessertsCooking
+              ? 'bg-purple-100 text-purple-950 border-purple-300 animate-pulse'
+              : hasChoicePending
+              ? 'bg-purple-200 text-purple-950 border-purple-400 font-black animate-pulse'
+              : 'bg-slate-100 text-slate-600 border-slate-200'
+          }`}>
+            <span>🍰 Postres:</span>
+            <span className="font-black">
+              {areDessertsServed
+                ? 'Servidos ✓'
+                : areDessertsReady
+                ? '¡Listos! 🍽️'
+                : areDessertsCooking
+                ? 'En preparación 🔥'
+                : hasChoicePending
+                ? '1 por elegir 🎁'
+                : (hasStarters || hasMains)
+                ? 'Para el final ⏸️'
+                : 'En cola ⏳'}
+            </span>
+          </span>
+        )}
+      </div>
+    )
+  }
 
   return (
     <>
@@ -62,93 +259,111 @@ export function MenuLiveTracker({
           {tableOrderStatus === 'preparing' && (
             <div
               onClick={onOpenTimelineModal}
-              className="p-3 rounded-2xl bg-amber-500/10 border border-amber-400/40 text-amber-950 shadow-xs flex items-center justify-between gap-3 animate-in fade-in cursor-pointer hover:bg-amber-500/15 transition-all"
+              className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-400/40 text-amber-950 shadow-xs space-y-2 animate-in fade-in cursor-pointer hover:bg-amber-500/15 transition-all"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                  <Flame className="w-4 h-4 animate-pulse" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">
-                      {t('tableNumberLabel')} #{tableNumber}
-                    </span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                    <Flame className="w-4 h-4 animate-pulse" />
                   </div>
-                  <h4 className="font-extrabold text-xs text-slate-900 leading-tight truncate">
-                    {t('orderInKitchenTitle')}
-                  </h4>
-                  <p className="text-[10px] text-slate-600 mt-0.5 leading-snug">
-                    {t('orderPreparingSubtitle')}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-700">
+                        {t('tableNumberLabel')} #{tableNumber}
+                      </span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                    </div>
+                    <h4 className="font-extrabold text-xs text-slate-900 leading-tight truncate">
+                      {dynamicTitle}
+                    </h4>
+                    <p className="text-[10px] text-slate-600 mt-0.5 leading-snug">
+                      {dynamicSubtitle}
+                    </p>
+                  </div>
+                </div>
+                <div className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-[11px] font-black text-amber-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
+                  <span>{t('viewPhases')}</span>
+                  <ChevronRight size={12} />
                 </div>
               </div>
-              <div className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-[11px] font-black text-amber-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
-                <span>{t('viewPhases')}</span>
-                <ChevronRight size={12} />
-              </div>
+              {renderCourseProgressPills()}
             </div>
           )}
 
           {tableOrderStatus === 'ready' && (
             <div
               onClick={onOpenTimelineModal}
-              className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-400/40 text-emerald-950 shadow-xs flex items-center justify-between gap-3 animate-bounce cursor-pointer hover:bg-emerald-500/15 transition-all"
+              className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-400/40 text-emerald-950 shadow-xs space-y-2 animate-glow-emerald ring-1 ring-emerald-400/60 cursor-pointer hover:bg-emerald-500/15 transition-all"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
-                      {t('tableNumberLabel')} #{tableNumber}
-                    </span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                    <Sparkles className="w-4 h-4" />
                   </div>
-                  <h4 className="font-extrabold text-xs text-emerald-950 leading-tight truncate">
-                    {t('orderReadyTitle')}
-                  </h4>
-                  <p className="text-[10px] text-emerald-800 mt-0.5 leading-snug">
-                    {t('orderReadySubtitle')}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                        {t('tableNumberLabel')} #{tableNumber}
+                      </span>
+                    </div>
+                    <h4 className="font-extrabold text-xs text-emerald-950 leading-tight truncate">
+                      {dynamicTitle}
+                    </h4>
+                    <p className="text-[10px] text-emerald-800 mt-0.5 leading-snug">
+                      {dynamicSubtitle}
+                    </p>
+                  </div>
+                </div>
+                <div className="px-2.5 py-1 rounded-xl bg-white border border-emerald-300 text-[11px] font-black text-emerald-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
+                  <span>{t('viewPhases')}</span>
+                  <ChevronRight size={12} />
                 </div>
               </div>
-              <div className="px-2.5 py-1 rounded-xl bg-white border border-emerald-300 text-[11px] font-black text-emerald-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
-                <span>{t('viewPhases')}</span>
-                <ChevronRight size={12} />
-              </div>
+              {renderCourseProgressPills()}
             </div>
           )}
 
           {tableOrderStatus === 'pending_validation' && (
             <div
               onClick={onOpenTimelineModal}
-              className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs font-semibold flex items-center justify-between gap-2 shadow-xs cursor-pointer hover:bg-amber-100/70 transition-all animate-in fade-in"
+              className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 shadow-xs cursor-pointer hover:bg-amber-100/70 transition-all animate-in fade-in space-y-2"
             >
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
-                <span className="text-[11px]">Comanda enviada &middot; Pendiente de validación en mesa</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                  <span className="text-xs font-black text-amber-950">Comanda enviada &middot; Pendiente de validación en mesa</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-[10px] font-bold text-amber-800">
+                  <span>{t('viewPhases')}</span>
+                  <ChevronRight size={12} />
+                </div>
               </div>
-              <div className="flex items-center gap-0.5 text-[10px] font-bold text-amber-800">
-                <span>{t('viewPhases')}</span>
-                <ChevronRight size={12} />
-              </div>
+              <p className="text-[10px] text-amber-800 leading-snug">
+                El mozo confirmará los platos y bebidas contigo en la Mesa #{tableNumber} antes de enviarlos a cocina.
+              </p>
+              {renderCourseProgressPills()}
             </div>
           )}
 
           {tableOrderStatus === 'pending' && (
             <div
               onClick={onOpenTimelineModal}
-              className="p-2.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-950 text-xs font-semibold flex items-center justify-between gap-2 shadow-xs cursor-pointer hover:bg-blue-100/70 transition-all"
+              className="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-blue-950 shadow-xs cursor-pointer hover:bg-blue-100/70 transition-all space-y-2"
             >
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse flex-shrink-0" />
-                <span className="text-[11px]">Comanda validada &middot; En cola de cocina</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse flex-shrink-0" />
+                  <span className="text-xs font-black text-blue-950">Comanda validada &middot; En cola de cocina</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-[10px] font-bold text-blue-800">
+                  <span>{t('viewPhases')}</span>
+                  <ChevronRight size={12} />
+                </div>
               </div>
-              <div className="flex items-center gap-0.5 text-[10px] font-bold text-blue-800">
-                <span>{t('viewPhases')}</span>
-                <ChevronRight size={12} />
-              </div>
+              <p className="text-[10px] text-blue-800 leading-snug">
+                Tus platos han entrado en cola en la pantalla de cocina KDS.
+              </p>
+              {renderCourseProgressPills()}
             </div>
           )}
 
@@ -182,6 +397,8 @@ export function MenuLiveTracker({
                     <ChevronRight size={11} />
                   </button>
                 </div>
+                {renderCourseProgressPills()}
+              </div>
 
                 {/* Banner destacado: Elegir postre comodín incluido */}
                 {hasPendingDessertChoice && onOpenDessertSelector ? (
@@ -206,33 +423,56 @@ export function MenuLiveTracker({
                       <span>Elegir Postre</span>
                     </button>
                   </div>
+                ) : hasPendingDesserts ? (
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="text-xl flex-shrink-0">🍨</span>
+                      <div className="min-w-0">
+                        <span className="text-xs font-black text-amber-950 block leading-tight">
+                          Postres en marcha
+                        </span>
+                        <span className="text-[11px] text-amber-800 font-medium truncate block">
+                          Disfruta de tus postres antes de solicitar la cuenta
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onOpenTimelineModal}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer flex-shrink-0"
+                    >
+                      <span>Ver Fases</span>
+                      <ChevronRight size={12} />
+                    </button>
+                  </div>
                 ) : (
-                  <p className="text-[11px] text-slate-600 font-medium leading-snug">
-                    ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
-                  </p>
+                  <>
+                    <p className="text-[11px] text-slate-600 font-medium leading-snug">
+                      ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={onGoToDesserts}
+                        className="p-2.5 rounded-xl bg-white hover:bg-amber-100/60 text-amber-950 border border-amber-300 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                      >
+                        <span className="text-sm">☕🍰</span>
+                        <span>Café / Postres</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={onOpenDirectBillModal}
+                        className="p-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span>{t('billButton')}</span>
+                      </button>
+                    </div>
+                  </>
                 )}
-
-                <div className="grid grid-cols-2 gap-2 pt-0.5">
-                  <button
-                    type="button"
-                    onClick={onGoToDesserts}
-                    className="p-2.5 rounded-xl bg-white hover:bg-amber-100/60 text-amber-950 border border-amber-300 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                  >
-                    <span className="text-sm">☕🍰</span>
-                    <span>Café / Postres</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={onOpenDirectBillModal}
-                    className="p-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                  >
-                    <Receipt className="w-3.5 h-3.5" />
-                    <span>{t('billButton')}</span>
-                  </button>
-                </div>
               </div>
-            </div>
           )}
         </div>
       )}

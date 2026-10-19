@@ -67,7 +67,7 @@ export function getCategoryGroup(idOrName?: string | null): CategoryGroup {
     return 'burgers'
   }
 
-  // 5. Bebidas / Cócteles / Vinos / Cervezas
+  // 5. Bebidas / Cócteles / Vinos / Cervezas / Cafés & Infusiones
   if (
     s === 'c0000000-0000-0000-0000-000000000005' ||
     ['cat-12', 'cat-13', 'cat-14', 'cat-15', 'cat-tca-8', 'cat-tca-9', 'cat-tca-10', 'cat-tm-2', 'cat-tm-3', 'cat-tm-5', 'cat-tm-6', 'cat-tm-8'].includes(s) ||
@@ -79,18 +79,21 @@ export function getCategoryGroup(idOrName?: string | null): CategoryGroup {
     s.includes('gin') ||
     s.includes('refresco') ||
     s.includes('cóctel') ||
-    s.includes('coctel')
+    s.includes('coctel') ||
+    s.includes('café') ||
+    s.includes('cafe') ||
+    s.includes('infusión') ||
+    s.includes('infusion') ||
+    s.includes('té')
   ) {
     return 'bebidas'
   }
 
-  // 6. Postres & Café / Dulces / Sobremesa
+  // 6. Postres / Dulces / Repostería
   if (
     s === 'c0000000-0000-0000-0000-000000000006' ||
     ['cat-10', 'cat-tca-7', 'cat-tm-1', 'cat-tm-7'].includes(s) ||
     s.includes('postre') ||
-    s.includes('café') ||
-    s.includes('cafe') ||
     s.includes('dulce') ||
     s.includes('sobremesa')
   ) {
@@ -119,6 +122,28 @@ export function getProductGroup(product: Product, categories: Category[] = []): 
     pName.includes('menu del dia')
   ) {
     return 'promos'
+  }
+
+  // Protección de servicio: Cafés, infusiones y tés son SIEMPRE Bebidas (operación de Mozo/Barra, nunca Cocina)
+  if (
+    pName.includes('café') ||
+    pName.includes('cafe') ||
+    pName.includes('cortado') ||
+    pName.includes('espresso') ||
+    pName.includes('cappuccino') ||
+    pName.includes('capuchino') ||
+    pName.includes('carajillo') ||
+    pName.includes('descafeinado') ||
+    pName.includes('bombón') ||
+    pName.includes('bombon') ||
+    pName.includes('infusión') ||
+    pName.includes('infusion') ||
+    pName.includes('té') ||
+    pName.includes('te verde') ||
+    pName.includes('manzanilla') ||
+    pName.includes('poleo')
+  ) {
+    return 'bebidas'
   }
 
   // 1. Verificar por product.category_id directo
@@ -172,7 +197,12 @@ export function getProductGroup(product: Product, categories: Category[] = []): 
     pName.includes('cerveza') ||
     pName.includes('gin') ||
     pName.includes('vino') ||
-    pName.includes('tonica')
+    pName.includes('tonica') ||
+    pName.includes('café') ||
+    pName.includes('cafe') ||
+    pName.includes('infusión') ||
+    pName.includes('infusion') ||
+    pName.includes('té')
   ) {
     return 'bebidas'
   }
@@ -180,8 +210,6 @@ export function getProductGroup(product: Product, categories: Category[] = []): 
     pName.includes('volcán') ||
     pName.includes('volcan') ||
     pName.includes('tarta') ||
-    pName.includes('café') ||
-    pName.includes('cafe') ||
     pName.includes('cheesecake')
   ) {
     return 'postres'
@@ -255,6 +283,13 @@ export function deduplicateProducts(products: Product[]): Product[] {
 
   for (const prod of products) {
     if (!prod) continue
+    if (
+      prod.id === 'b0000000-0000-0000-0000-000000000099' ||
+      prod.id === 'p-dessert-pending-later' ||
+      (prod.name || '').toLowerCase().includes('decidir postre')
+    ) {
+      continue
+    }
     const normName = (prod.name || '')
       .toLowerCase()
       .trim()
@@ -276,6 +311,7 @@ export function deduplicateProducts(products: Product[]): Product[] {
         result[idx] = {
           ...result[idx],
           ...prod,
+          image_url: prod.image_url || result[idx].image_url || null,
           is_available: effectiveAvailable,
           allergens:
             Array.isArray(prod.allergens) && prod.allergens.length > 0
@@ -302,6 +338,7 @@ export function deduplicateProducts(products: Product[]): Product[] {
         ...existing,
         ...prod,
         id: chosenId,
+        image_url: prod.image_url || existing.image_url || null,
         is_available: effectiveAvailable,
         allergens:
           Array.isArray(prod.allergens) && prod.allergens.length > 0
@@ -342,6 +379,17 @@ export const CANONICAL_PRODUCT_MAP: Record<string, string> = {
   'p-dessert-pending-later': 'b0000000-0000-0000-0000-000000000099',
   'b0000000-0000-0000-0000-000000000099': 'b0000000-0000-0000-0000-000000000099',
   'b0000000-0000-0000-0000-000000000021': 'b0000000-0000-0000-0000-000000000021',
+  'b0000000-0000-0000-0000-000000000022': 'b0000000-0000-0000-0000-000000000022',
+  'side-opt-0': 'b0000000-0000-0000-0000-000000000022',
+  'side-opt-1': 'b0000000-0000-0000-0000-000000000022',
+  'side-opt-2': 'b0000000-0000-0000-0000-000000000013',
+  'bur-opt-1': 'b0000000-0000-0000-0000-000000000002',
+  'bur-opt-2': 'b0000000-0000-0000-0000-000000000002',
+  'bur-opt-3': 'b0000000-0000-0000-0000-000000000016',
+  'drk-pinta-1': 'b0000000-0000-0000-0000-000000000009',
+  'drk-pinta-2': 'b0000000-0000-0000-0000-000000000009',
+  'drk-refresco': 'b0000000-0000-0000-0000-000000000021',
+  'drk-agua': 'b0000000-0000-0000-0000-000000000021',
   'b0000000-0000-0000-0000-000000000020': 'b0000000-0000-0000-0000-000000000009',
   'b0000000-0000-0000-0000-000000000018': 'b0000000-0000-0000-0000-000000000007',
   'b0000000-0000-0000-0000-000000000019': 'b0000000-0000-0000-0000-000000000008',

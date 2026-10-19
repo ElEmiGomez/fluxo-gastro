@@ -145,11 +145,21 @@ export async function attendServiceCall(
   // Si la llamada atendida era de cobro / cuenta, emitir table_bill_paid y marcar órdenes de mesa como paid
   if (attendedCall && attendedCall.call_type && attendedCall.call_type.startsWith('bill_')) {
     const tableNum = Number(attendedCall.table_number)
-    broadcastEvent({
-      type: 'table_bill_paid',
-      slug,
-      table_number: tableNum,
-      callId,
+    const tableNumStr = String(tableNum)
+    const memOrders = (globalThis as any).__GASTRO_ORDERS__?.[slug] || []
+    let billAmount = 0
+    memOrders.forEach((o: any) => {
+      const isThisTable =
+        o.table_number?.toString() === tableNumStr ||
+        o.table?.table_number?.toString() === tableNumStr
+      if (isThisTable && o.status !== 'cancelled') {
+        if (o.status !== 'paid') {
+          billAmount += Number(o.total_amount) || 0
+        }
+        o.status = 'paid'
+        o.version = (o.version || 1) + 1
+        o.updated_at = new Date().toISOString()
+      }
     })
 
     if (supabase && isSupabaseConfigured() && tableNum) {
@@ -167,5 +177,22 @@ export async function attendServiceCall(
         console.warn('Error marking table orders as paid on bill attended:', err)
       }
     }
+
+    try {
+      const { settleLoyaltySession } = await import('./loyalty.repository')
+      await settleLoyaltySession(slug, {
+        tableNumber: tableNum,
+        finalAmount: billAmount,
+      })
+    } catch (loyaltyErr) {
+      console.warn('Error settling loyalty session on bill attended:', loyaltyErr)
+    }
+
+    broadcastEvent({
+      type: 'table_bill_paid',
+      slug,
+      table_number: tableNum,
+      callId,
+    })
   }
 }
