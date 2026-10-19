@@ -209,8 +209,8 @@ export function useComanderoData(slug: string) {
       })
       pendingOrdersWithoutItemsRef.current = nextPendingWithoutItems
 
-      // Reconciliación de Avisos de Servicio
-      const serverPendingCalls = incomingCalls.filter((c: any) => c.status === 'pending')
+      // Reconciliación de Avisos de Servicio (protegida contra llamadas atendidas en tránsito)
+      const serverPendingCalls = incomingCalls.filter((c: any) => c.status === 'pending' && !attendedCallIdsRef.current.has(c.id))
       const formattedPendingCalls: PendingServiceCall[] = serverPendingCalls.map((c: any) => {
         let desc = 'Solicita atención del mozo'
         if (c.call_type === 'order_dictate') desc = 'Comanda lista para dictar al mozo'

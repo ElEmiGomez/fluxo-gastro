@@ -14,12 +14,14 @@ import {
   orderHasHeldDesserts,
   orderHasActiveDesserts,
   isOrderFoodReady,
+  isFoodReady,
   isOrderDessertsReady,
   isDrinkServed,
   isDessertReady,
   isDessertFired,
   isDessertCooking,
   isDessertItem,
+  TAG_DESSERT_FIRED,
   isPackHeaderItem,
   isDessertPendingChoice,
   isStarterItem,
@@ -95,10 +97,10 @@ export function KitchenTicket({
     })
   }, [])
 
-  const toggleItemCompleted = (itemId: string) => {
+  const toggleItemCompleted = (itemId: string, initialDoneState?: boolean) => {
     setCompletedItemIds(prev => ({
       ...prev,
-      [itemId]: !prev[itemId]
+      [itemId]: prev[itemId] !== undefined ? !prev[itemId] : !initialDoneState
     }))
   }
 
@@ -266,12 +268,13 @@ export function KitchenTicket({
             const productName = prod?.name || `Plato #${item.product_id?.substring?.(0, 6) || idx + 1}`
             const imageUrl = prod?.image_url
             const itemKey = item.id || `${item.product_id}-${roundIdx}-${idx}`
-            const isDone = Boolean(completedItemIds[itemKey])
             const courseType = getItemCourse(item)
             const isRoundPending = ['pending', 'confirmed', 'pending_validation'].includes(roundOrder.status)
             const isStarter = isStarterItem(item) || courseType === 'first'
             const isMain = isMainItem(item) || courseType === 'second'
             const isDessert = isDessertItem(item) || courseType === 'dessert'
+            const isItemReadyFromDb = isStarter ? isStarterReady(item) : isMain ? isMainReady(item) : isDessert ? isDessertReady(item) : isFoodReady(item)
+            const isDone = completedItemIds[itemKey] !== undefined ? Boolean(completedItemIds[itemKey]) : isItemReadyFromDb
 
             // Comprobar estrictamente si la preparación específica de este plato ya fue iniciada
             let isItemCookingOrReady = false
@@ -288,14 +291,14 @@ export function KitchenTicket({
               disabledReason = 'Inicia la preparación de entradas para poder tacharlas'
             } else if (isMain) {
               if (hasStarters) {
-                isItemCookingOrReady = mainsCooking || areOrderMainsReady(roundOrder) || areOrderMainsServed(roundOrder)
-                disabledReason = 'Inicia la preparación de los platos principales para poder tacharlos'
+                isItemCookingOrReady = (mainsFired || mainsCooking || areOrderMainsReady(roundOrder) || areOrderMainsServed(roundOrder)) && (roundOrder.status === 'preparing' || roundOrder.status === 'ready')
+                disabledReason = !mainsFired ? 'Espera a que el mozo marche los platos principales' : 'Inicia la preparación en cocina para poder tachar platos'
               } else {
                 isItemCookingOrReady = roundOrder.status === 'preparing' || roundOrder.status === 'ready'
                 disabledReason = 'Inicia la preparación en cocina para poder tachar platos'
               }
             } else if (isDessert) {
-              isItemCookingOrReady = isDessertCooking(item) || isDessertReady(item)
+              isItemCookingOrReady = isDessertCooking(item) || isDessertReady(item) || (orderHasActiveDesserts(roundOrder) && (roundOrder.status === 'preparing' || roundOrder.status === 'ready'))
               disabledReason = 'Inicia la preparación del postre en cocina para poder tacharlo'
             } else {
               isItemCookingOrReady = roundOrder.status === 'preparing' || roundOrder.status === 'ready'
@@ -308,7 +311,7 @@ export function KitchenTicket({
             return (
               <div
                 key={itemKey}
-                onClick={canClick ? () => toggleItemCompleted(itemKey) : undefined}
+                onClick={canClick ? () => toggleItemCompleted(itemKey, isItemReadyFromDb) : undefined}
                 className={`p-2.5 rounded-2xl border transition-all duration-200 select-none flex gap-3 items-start ${
                   !canClick
                     ? 'bg-slate-100/70 border-dashed border-slate-300 opacity-60 cursor-not-allowed'
@@ -663,31 +666,6 @@ export function KitchenTicket({
                       )
                     }
 
-                    if (!mainsCooking) {
-                      return (
-                        <button
-                          onClick={() => {
-                            if (onKitchenAction) onKitchenAction(roundOrder.id, 'start_mains')
-                            else onUpdateStatus(roundOrder.id, 'preparing')
-                          }}
-                          disabled={isRoundUpdating}
-                          className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-amber-500 hover:bg-amber-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-amber-600/30 cursor-pointer"
-                        >
-                          {isRoundUpdating ? (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              <span>INICIANDO...</span>
-                            </>
-                          ) : (
-                            <>
-                              <ChefHat className="w-5 h-5 stroke-[2.5]" />
-                              <span>🍔 INICIAR PRINCIPALES {hasStarters ? '(PASE 2)' : ''}</span>
-                            </>
-                          )}
-                        </button>
-                      )
-                    }
-
                     return (
                       <button
                         onClick={() => {
@@ -715,32 +693,6 @@ export function KitchenTicket({
 
                   // Caso 3: Postres marchados por el mozo (o comanda de solo postres)
                   if (desserts.length > 0 && (dessertsActive || !orderHasFood(roundOrder)) && !isOrderDessertsReady(roundOrder)) {
-                    const dessertsCooking = desserts.some(isDessertCooking)
-                    if (!dessertsCooking) {
-                      return (
-                        <button
-                          onClick={() => {
-                            if (onKitchenAction) onKitchenAction(roundOrder.id, 'start_desserts')
-                            else onUpdateStatus(roundOrder.id, 'preparing')
-                          }}
-                          disabled={isRoundUpdating}
-                          className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-purple-700/30 cursor-pointer"
-                        >
-                          {isRoundUpdating ? (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              <span>INICIANDO...</span>
-                            </>
-                          ) : (
-                            <>
-                              <ChefHat className="w-5 h-5 stroke-[2.5]" />
-                              <span>🍰 1. INICIAR PREPARACIÓN DE POSTRES</span>
-                            </>
-                          )}
-                        </button>
-                      )
-                    }
-
                     return (
                       <button
                         onClick={() => {
@@ -758,8 +710,8 @@ export function KitchenTicket({
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-5 h-5" />
-                            <span>🍰 2. AVISAR AL MOZO (POSTRES LISTOS)</span>
+                            <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                            <span>🍰 AVISAR AL MOZO (POSTRES LISTOS)</span>
                           </>
                         )}
                       </button>
@@ -795,7 +747,9 @@ export function KitchenTicket({
                 {roundOrder.status === 'delivered' && (() => {
                   const hasDesserts = orderHasDesserts(roundOrder)
                   const dessertsReady = isOrderDessertsReady(roundOrder)
-                  const dessertsFired = (roundOrder.order_items || []).some(it => isDessertItem(it) && isDessertFired(it))
+                  const dessertsFired =
+                    Boolean((roundOrder as any).notes?.includes(TAG_DESSERT_FIRED) || (roundOrder as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)) ||
+                    (roundOrder.order_items || []).some(it => isDessertItem(it) && isDessertFired(it))
 
                   if (hasDesserts && !dessertsReady) {
                     return (
@@ -807,50 +761,28 @@ export function KitchenTicket({
                           </span>
                         </div>
                         {dessertsFired ? (
-                          (() => {
-                            const dessertsCooking = (roundOrder.order_items || []).filter(isDessertItem).some(isDessertCooking)
-                            if (!dessertsCooking) {
-                              return (
-                                <button
-                                  onClick={() => onKitchenAction ? onKitchenAction(roundOrder.id, 'start_desserts') : onUpdateStatus(roundOrder.id, 'preparing')}
-                                  disabled={isRoundUpdating}
-                                  className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-purple-700/30 cursor-pointer"
-                                >
-                                  {isRoundUpdating ? (
-                                    <>
-                                      <Loader2 className="w-5 h-5 animate-spin" />
-                                      <span>INICIANDO...</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ChefHat className="w-5 h-5 stroke-[2.5]" />
-                                      <span>🍰 1. INICIAR PREPARACIÓN DE POSTRES</span>
-                                    </>
-                                  )}
-                                </button>
-                              )
-                            }
-
-                            return (
-                              <button
-                                onClick={() => onKitchenAction ? onKitchenAction(roundOrder.id, 'ready_desserts') : onUpdateStatus(roundOrder.id, 'ready')}
-                                disabled={isRoundUpdating}
-                                className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-purple-700/30 cursor-pointer"
-                              >
-                                {isRoundUpdating ? (
-                                  <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    <span>AVISANDO AL MOZO...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Sparkles className="w-5 h-5" />
-                                    <span>🍰 2. AVISAR AL MOZO (POSTRES LISTOS)</span>
-                                  </>
-                                )}
-                              </button>
-                            )
-                          })()
+                          <button
+                            onClick={() => {
+                              const dessertsList = (roundOrder.order_items || []).filter(isDessertItem)
+                              markItemsAsDone(dessertsList, roundIdx)
+                              if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_desserts')
+                              else onUpdateStatus(roundOrder.id, 'ready')
+                            }}
+                            disabled={isRoundUpdating}
+                            className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-purple-700/30 cursor-pointer"
+                          >
+                            {isRoundUpdating ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>AVISANDO AL MOZO...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+                                <span>🍰 AVISAR AL MOZO (POSTRES LISTOS)</span>
+                              </>
+                            )}
+                          </button>
                         ) : (
                           <div className="w-full h-14 py-3 px-4 rounded-2xl bg-purple-50/60 border-2 border-dashed border-purple-200 text-purple-900 text-xs sm:text-sm font-black flex items-center justify-center gap-2 select-none uppercase tracking-wide">
                             <Lock size={16} className="text-purple-400 flex-shrink-0" />

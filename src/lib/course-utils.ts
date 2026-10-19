@@ -417,6 +417,7 @@ export function orderHasHeldDesserts(order: Order): boolean {
   if (!orderHasFood(order)) return false
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
+  if ((order as any).notes?.includes(TAG_DESSERT_FIRED) || (order as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)) return false
   return desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
 }
 
@@ -424,6 +425,7 @@ export function orderHasHeldDesserts(order: Order): boolean {
  * Retorna la lista de postres retenidos pendientes de decisión del mozo (marchar a cocina o entregar directo).
  */
 export function getHeldDesserts(order: Order): OrderItem[] {
+  if ((order as any).notes?.includes(TAG_DESSERT_FIRED) || (order as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)) return []
   return (order.order_items || []).filter(d => isDessertItem(d) && !isDessertFired(d) && !isDessertReady(d))
 }
 
@@ -444,10 +446,13 @@ export function areOrderDessertsPendingWaiter(order: Order): boolean {
 export function orderHasActiveDesserts(order: Order): boolean {
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
+  const orderLevelFired = Boolean(
+    (order as any).notes?.includes(TAG_DESSERT_FIRED) || (order as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)
+  )
   if (!orderHasFood(order)) {
     return desserts.some(d => !isDessertReady(d))
   }
-  return desserts.some(d => isDessertFired(d) && !isDessertReady(d))
+  return desserts.some(d => (orderLevelFired || isDessertFired(d)) && !isDessertReady(d))
 }
 
 export function orderHasPendingChoiceDesserts(order: Order): boolean {

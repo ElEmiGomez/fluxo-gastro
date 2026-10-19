@@ -110,8 +110,11 @@ export default function KitchenKDSPage() {
                   return false
                 }
               }
+              const isEligibleStatus =
+                ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) ||
+                (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
               return (
-                ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) &&
+                isEligibleStatus &&
                 (orderHasFood(o) || orderHasActiveDesserts(o) || (!orderHasFood(o) && orderHasDesserts(o) && !isOrderDessertsReady(o)))
               )
             })
