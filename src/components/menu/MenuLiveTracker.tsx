@@ -46,6 +46,7 @@ interface MenuLiveTrackerProps {
   hasPendingDessertChoice?: boolean
   onOpenDessertSelector?: () => void
   hasPendingDesserts?: boolean
+  loyaltyMode?: 'points' | 'stamps'
 }
 
 export function MenuLiveTracker({
@@ -70,6 +71,7 @@ export function MenuLiveTracker({
   hasPendingDessertChoice = false,
   onOpenDessertSelector,
   hasPendingDesserts = false,
+  loyaltyMode = 'points',
 }: MenuLiveTrackerProps) {
   const t = (key: string) => getTranslation(currentLang, key)
 
@@ -503,7 +505,7 @@ export function MenuLiveTracker({
       )}
 
       {/* 3. Vista cuando la mesa ya ha sido cobrada */}
-      {isTablePaid && (!isPaidBannerDismissed || !isReviewBoosterDismissed) && (
+      {isTablePaid && (
         <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full space-y-3 animate-in fade-in duration-300">
           {!isPaidBannerDismissed && (
             <div className="p-3.5 bg-emerald-950 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center justify-between gap-3">
@@ -545,18 +547,36 @@ export function MenuLiveTracker({
               </button>
             </div>
           )}
-          {!isReviewBoosterDismissed && (
+          {!isReviewBoosterDismissed && (!loyaltyProfile || !loyaltyProfile.google_review_bonus_awarded) && (
             <GoogleReviewBooster
               restaurantName={restaurant.name}
               restaurantSlug={restaurant.slug}
               googleReviewUrl={restaurant.google_review_url}
               googlePlaceId={restaurant.google_place_id}
               variant="card"
+              loyaltyMode={loyaltyMode}
               onDismiss={onDismissReviewBooster}
               loyaltyProfile={loyaltyProfile}
               onClaimLoyaltyBonus={onClaimLoyaltyBonus}
             />
           )}
+        </div>
+      )}
+
+      {/* 4. Google Review Booster durante la sobremesa o servicio si aún no ha sido cobrada */}
+      {!isTablePaid && !isReviewBoosterDismissed && (!loyaltyProfile || !loyaltyProfile.google_review_bonus_awarded) && (
+        <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
+          <GoogleReviewBooster
+            restaurantName={restaurant.name}
+            restaurantSlug={restaurant.slug}
+            googleReviewUrl={restaurant.google_review_url}
+            googlePlaceId={restaurant.google_place_id}
+            variant="card"
+            loyaltyMode={loyaltyMode}
+            onDismiss={onDismissReviewBooster}
+            loyaltyProfile={loyaltyProfile}
+            onClaimLoyaltyBonus={onClaimLoyaltyBonus}
+          />
         </div>
       )}
     </>

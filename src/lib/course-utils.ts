@@ -151,7 +151,13 @@ export function isDessertReady(item: OrderItem): boolean {
 }
 
 export function isDessertFired(item: OrderItem): boolean {
-  return Boolean(item.notes && item.notes.includes(TAG_DESSERT_FIRED))
+  return Boolean(
+    item.notes &&
+      (item.notes.includes(TAG_DESSERT_FIRED) ||
+        item.notes.includes(TAG_DESSERT_COOKING) ||
+        item.notes.includes(TAG_DESSERT_READY) ||
+        item.notes.includes(TAG_DESSERT_SERVED))
+  )
 }
 
 export function isDessertCooking(item: OrderItem): boolean {
@@ -187,16 +193,24 @@ export function areOrderStartersReady(order: Order): boolean {
 }
 
 export function areOrderStartersServed(order: Order): boolean {
+  if (order.status === 'delivered' || order.status === 'paid') return true
   const starters = (order.order_items || []).filter(isStarterItem)
   if (starters.length === 0) return true
   return starters.every(isStarterServed)
 }
 
 export function isMainFired(item: OrderItem): boolean {
-  return Boolean(item.notes && item.notes.includes(TAG_MAIN_FIRED))
+  return Boolean(
+    item.notes &&
+      (item.notes.includes(TAG_MAIN_FIRED) ||
+        item.notes.includes(TAG_MAIN_COOKING) ||
+        item.notes.includes(TAG_MAIN_READY) ||
+        item.notes.includes(TAG_MAIN_SERVED))
+  )
 }
 
 export function areOrderMainsFired(order: Order): boolean {
+  if (order.status === 'delivered' || order.status === 'ready' || order.status === 'paid') return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
   return mains.some(isMainFired)
@@ -209,6 +223,7 @@ export function areOrderMainsReady(order: Order): boolean {
 }
 
 export function areOrderMainsServed(order: Order): boolean {
+  if (order.status === 'delivered' || order.status === 'paid') return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
   return mains.every(isMainServed)

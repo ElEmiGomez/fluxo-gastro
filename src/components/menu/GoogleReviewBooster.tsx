@@ -15,6 +15,7 @@ interface GoogleReviewBoosterProps {
   onDismiss?: () => void
   loyaltyProfile?: LoyaltyProfile | null
   onClaimLoyaltyBonus?: () => void
+  loyaltyMode?: 'points' | 'stamps'
 }
 
 export function GoogleReviewBooster({
@@ -27,6 +28,7 @@ export function GoogleReviewBooster({
   onDismiss,
   loyaltyProfile,
   onClaimLoyaltyBonus,
+  loyaltyMode = 'points',
 }: GoogleReviewBoosterProps) {
   const storageKey = `fluxo_review_dismissed_${restaurantSlug}`
   const [isDismissed, setIsDismissed] = useState<boolean>(() => {
@@ -168,7 +170,9 @@ export function GoogleReviewBooster({
         <div className="p-2.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/5 border border-amber-300 text-amber-950 flex items-center gap-2 shadow-2xs">
           <Award className="w-4 h-4 text-amber-700 flex-shrink-0" />
           <span className="text-[11px] font-black leading-tight">
-            ⭐ ¡Gana +50 PUNTOS EXTRA al instante en tu tarjeta al valorar el servicio!
+            {loyaltyMode === 'stamps'
+              ? '⭐ ¡Gana +1 SELLO EXTRA al instante en tu cartilla al valorar el servicio!'
+              : '⭐ ¡Gana +50 PUNTOS EXTRA al instante en tu tarjeta al valorar el servicio!'}
           </span>
         </div>
       )}
@@ -176,7 +180,11 @@ export function GoogleReviewBooster({
       {loyaltyProfile?.google_review_bonus_awarded && (
         <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-          <span>Bonus de +50 puntos de fidelización concedido con éxito.</span>
+          <span>
+            {loyaltyMode === 'stamps'
+              ? 'Bonus de +1 sello en tu cartilla concedido con éxito.'
+              : 'Bonus de +50 puntos de fidelización concedido con éxito.'}
+          </span>
         </div>
       )}
 
@@ -225,7 +233,13 @@ export function GoogleReviewBooster({
           }}
           className="text-amber-700 font-bold hover:underline flex items-center gap-1 cursor-pointer"
         >
-          <span>{loyaltyProfile?.google_review_bonus_awarded ? 'Abrir Google Maps' : 'Abrir Google Maps (+50 pts)'}</span>
+          <span>
+            {loyaltyProfile?.google_review_bonus_awarded
+              ? 'Abrir Google Maps'
+              : loyaltyMode === 'stamps'
+              ? 'Abrir Google Maps (+1 Sello)'
+              : 'Abrir Google Maps (+50 pts)'}
+          </span>
           <ExternalLink size={10} />
         </a>
       </div>

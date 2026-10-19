@@ -17,6 +17,8 @@ import {
   ChevronRight,
   Loader2,
   Calendar,
+  Star,
+  ExternalLink,
 } from 'lucide-react'
 import { LoyaltyProfile, LoyaltySettings } from '@/types/loyalty.types'
 import { Product } from '@/types/database.types'
@@ -33,6 +35,11 @@ interface StampCardModalProps {
   onLoginOrRegister: (name: string, email: string, phone?: string) => Promise<any>
   onLogout: () => void
   onRedeemReward: (product: Product) => Promise<void>
+  restaurantName?: string
+  restaurantSlug?: string
+  googleReviewUrl?: string | null
+  googlePlaceId?: string | null
+  onClaimLoyaltyBonus?: () => Promise<any> | void
 }
 
 export function StampCardModal({
@@ -45,6 +52,11 @@ export function StampCardModal({
   onLoginOrRegister,
   onLogout,
   onRedeemReward,
+  restaurantName,
+  restaurantSlug,
+  googleReviewUrl,
+  googlePlaceId,
+  onClaimLoyaltyBonus,
 }: StampCardModalProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -62,6 +74,29 @@ export function StampCardModal({
   const unlockedRewards = profile?.unlocked_rewards_count ?? 0
   const minSpend = settings?.min_spend_per_stamp || 50
   const rewardLabel = settings?.reward_label || 'Postre o Café gratis'
+
+  const directReviewLink =
+    googleReviewUrl ||
+    (googlePlaceId
+      ? `https://search.google.com/local/writereview?placeid=${googlePlaceId}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurantName || 'Restaurante')}`)
+
+  const handleOpenGoogleReview = async () => {
+    triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+    if (onClaimLoyaltyBonus && !profile?.google_review_bonus_awarded) {
+      try {
+        await onClaimLoyaltyBonus()
+      } catch (e) {
+        console.warn('[StampCardModal] Error reclamando bonus:', e)
+      }
+    } else if (!profile) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+        localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+      }
+    }
+    window.open(directReviewLink, '_blank', 'noopener,noreferrer')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -171,6 +206,35 @@ export function StampCardModal({
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* Opción de Ganar 1 Sello Gratis con Google Maps */}
+              <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 p-4 rounded-2xl border-2 border-amber-300 shadow-xs space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-xs flex-shrink-0">
+                    <Star className="w-4 h-4 fill-white" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
+                      Bonus de Bienvenida
+                    </span>
+                    <h4 className="text-xs font-black text-slate-900 leading-tight">
+                      ⭐ ¡Consigue tu 1º Sello GRATIS con Google Maps!
+                    </h4>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Valora el restaurante en Google Maps y suma tu primer sello al instante al abrir tu cartilla digital.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleOpenGoogleReview}
+                  className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                  <span>Valorar en Google Maps (+1 Sello)</span>
+                  <ExternalLink className="w-3 h-3 ml-0.5" />
+                </button>
               </div>
 
               {formError && (
@@ -472,6 +536,47 @@ export function StampCardModal({
                   </div>
                 </div>
               </div>
+
+              {/* Bloque Google Maps para Comensal Conectado */}
+              {!profile.google_review_bonus_awarded ? (
+                <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 p-4 rounded-2xl border-2 border-amber-300 shadow-xs space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-xs flex-shrink-0">
+                        <Star className="w-4 h-4 fill-white" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
+                          Bonus Google Maps
+                        </span>
+                        <h4 className="text-xs font-black text-slate-900 leading-tight">
+                          ⭐ ¡Suma +1 Sello GRATIS dejando tu reseña!
+                        </h4>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 shrink-0">
+                      +1 SELLO
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Valora a nuestro equipo en Google Maps y sumaremos 1 sello adicional a tu cartilla inmediatamente.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenGoogleReview}
+                    className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                    <span>Valorar en Google Maps (+1 Sello)</span>
+                    <ExternalLink className="w-3 h-3 ml-0.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                  <span>¡Sello extra por valoración en Google Maps canjeado con éxito!</span>
+                </div>
+              )}
 
               {/* Explicación de Funcionamiento */}
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 space-y-1.5 text-xs">

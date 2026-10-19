@@ -643,6 +643,7 @@ function DinerMenuContent() {
           hasPendingDessertChoice={hasPendingDessertChoice}
           onOpenDessertSelector={() => setIsQuickDessertModalOpen(true)}
           hasPendingDesserts={hasPendingDesserts}
+          loyaltyMode={loyalty.settings?.mode === 'points' ? 'points' : 'stamps'}
         />
 
         {/* Carta Gastronómica Principal */}
@@ -946,6 +947,11 @@ function DinerMenuContent() {
             onLoginOrRegister={loyalty.loginOrRegister}
             onLogout={loyalty.logout}
             onRedeemReward={handleRedeemLoyaltyReward}
+            restaurantName={restaurant?.name || ''}
+            restaurantSlug={restaurant?.slug || slug}
+            googleReviewUrl={restaurant?.google_review_url || null}
+            googlePlaceId={restaurant?.google_place_id || null}
+            onClaimLoyaltyBonus={loyalty.claimGoogleReviewBonus}
           />
         ) : (
           <StampCardModal
@@ -953,6 +959,11 @@ function DinerMenuContent() {
             onClose={() => loyalty.setIsModalOpen(false)}
             profile={loyalty.profile}
             settings={loyalty.settings}
+            restaurantName={restaurant?.name || ''}
+            restaurantSlug={restaurant?.slug || slug}
+            googleReviewUrl={restaurant?.google_review_url || null}
+            googlePlaceId={restaurant?.google_place_id || null}
+            onClaimLoyaltyBonus={loyalty.claimGoogleReviewBonus}
             availableRewardItems={products.filter((p) => {
               const catName = categories.find((c) => c.id === p.category_id)?.name?.toLowerCase() || ''
               const prodName = p.name.toLowerCase()

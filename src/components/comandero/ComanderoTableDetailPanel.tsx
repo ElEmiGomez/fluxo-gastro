@@ -176,16 +176,24 @@ export function ComanderoTableDetailPanel({
     return tableActiveOrders.every(o => areOrderStartersReady(o) || areOrderStartersServed(o))
   }, [tableStarters, tableActiveOrders])
 
+  const allMainsServed = React.useMemo(() => {
+    if (tableMains.length === 0) return false
+    return tableMains.every(it => isMainServed(it.item)) || tableActiveOrders.every(o => areOrderMainsServed(o))
+  }, [tableMains, tableActiveOrders])
+
   const areMainsFired = React.useMemo(() => {
     if (tableMains.length === 0) return true
+    if (allMainsServed) return true
     return tableActiveOrders.every(o => areOrderMainsFired(o))
-  }, [tableMains, tableActiveOrders])
+  }, [tableMains, allMainsServed, tableActiveOrders])
 
   const canFireMains = React.useMemo(() => {
     if (tableMains.length === 0) return false
+    if (allMainsServed) return false
+    if (hasMainsReadyToPick) return false
     if (areMainsFired) return false
     return hasStartersDone
-  }, [tableMains, areMainsFired, hasStartersDone])
+  }, [tableMains, allMainsServed, hasMainsReadyToPick, areMainsFired, hasStartersDone])
 
   // 3. Postres de la mesa con sus nombres específicos
   const tableDesserts = React.useMemo(() => {
@@ -618,7 +626,7 @@ export function ComanderoTableDetailPanel({
                     </div>
                   ))}
                 </div>
-                {canFireMains && (
+                {canFireMains && !allMainsServed && !hasMainsReadyToPick && (
                   <button
                     type="button"
                     onClick={() => {

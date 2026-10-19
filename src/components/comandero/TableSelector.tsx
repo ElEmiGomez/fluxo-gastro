@@ -160,8 +160,10 @@ export function TableSelector({
     const el = scrollRef.current
     if (!el) return
     const { scrollLeft, scrollWidth, clientWidth } = el
-    setCanScrollLeft(scrollLeft > 6)
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6)
+    const nextLeft = scrollLeft > 6
+    const nextRight = scrollLeft < scrollWidth - clientWidth - 6
+    setCanScrollLeft(prev => (prev !== nextLeft ? nextLeft : prev))
+    setCanScrollRight(prev => (prev !== nextRight ? nextRight : prev))
   }, [])
 
   useEffect(() => {
@@ -301,7 +303,7 @@ export function TableSelector({
               <Package className="w-3.5 h-3.5 text-amber-400 stroke-[2.5]" />
               <span>Stock</span>
               {pausedItemsCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black animate-pulse">
+                <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-black">
                   {pausedItemsCount}
                 </span>
               )}
@@ -314,14 +316,14 @@ export function TableSelector({
                 Comanda: <strong className="font-black text-sm text-slate-900">Mesa #{selectedTable}</strong>
               </span>
               {currentStatus === 'ready' && (
-                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black animate-pulse flex items-center gap-1 shadow-xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center gap-1 shadow-xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
                   ¡LISTO!
                 </span>
               )}
               {currentStatus === 'calling' && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black animate-pulse flex items-center gap-1 shadow-xs ring-1 ring-amber-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-ping" />
+                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black flex items-center gap-1 shadow-xs ring-1 ring-amber-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
                   AVISO
                 </span>
               )}
@@ -354,18 +356,10 @@ export function TableSelector({
             <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white via-white/90 to-transparent z-10 transition-opacity duration-300" />
           )}
 
-          {/* Contenedor con Scroll Suave y Máscara Progresiva */}
+          {/* Contenedor con Scroll Suave */}
           <div
             ref={scrollRef}
-            className={`flex gap-2.5 overflow-x-auto py-1.5 scroll-smooth no-scrollbar transition-all ${
-              canScrollLeft && canScrollRight
-                ? 'mask-fade-edges-x'
-                : canScrollRight
-                ? 'mask-fade-right'
-                : canScrollLeft
-                ? 'mask-fade-left'
-                : ''
-            }`}
+            className="flex gap-2.5 overflow-x-auto py-1.5 scroll-smooth no-scrollbar"
           >
           {filteredTables.length === 0 ? (
             <div className="flex-1 flex items-center justify-center py-2 text-xs text-slate-400 font-bold">
@@ -399,24 +393,24 @@ export function TableSelector({
               const hasOrderedItems =
                 badges.hasDrinks || badges.hasStarters || badges.hasMains || badges.hasDesserts
 
-              // Estilos del cubito según estado con halos luminosos sin sacudidas
+              // Estilos del cubito según estado con colores sólidos y descansados
               let cubitoStyle = 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
               let dotColor = 'bg-slate-300'
 
               if (status === 'ready' || badges.startersReady || badges.mainsReady || badges.dessertsReady) {
                 cubitoStyle = isSelected
-                  ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-500 shadow-md text-emerald-950 animate-glow-emerald'
-                  : 'border-emerald-400 bg-emerald-50/80 hover:bg-emerald-100/70 ring-2 ring-emerald-400/80 shadow-xs text-emerald-950 animate-glow-emerald'
+                  ? 'border-emerald-600 bg-emerald-100 ring-2 ring-emerald-500 shadow-md text-emerald-950'
+                  : 'border-emerald-500 bg-emerald-50/90 hover:bg-emerald-100/80 shadow-xs text-emerald-950 ring-1 ring-emerald-400/80'
                 dotColor = 'bg-emerald-500'
               } else if (isBill) {
                 cubitoStyle = isSelected
-                  ? 'border-emerald-500 bg-emerald-100 ring-2 ring-emerald-500 shadow-md text-emerald-950 animate-glow-emerald'
-                  : 'border-emerald-400 bg-emerald-50 hover:bg-emerald-100 shadow-xs text-emerald-950 ring-2 ring-emerald-400/80 animate-glow-emerald'
+                  ? 'border-emerald-600 bg-emerald-100 ring-2 ring-emerald-500 shadow-md text-emerald-950'
+                  : 'border-emerald-500 bg-emerald-50 hover:bg-emerald-100 shadow-xs text-emerald-950 ring-1 ring-emerald-400/80'
                 dotColor = 'bg-emerald-600'
               } else if (isCall || status === 'calling') {
                 cubitoStyle = isSelected
-                  ? 'border-amber-500 bg-amber-100 ring-2 ring-amber-400 shadow-md text-slate-950 animate-glow-amber'
-                  : 'border-amber-400 bg-amber-50 hover:bg-amber-100 shadow-xs text-slate-950 ring-2 ring-amber-400/80 animate-glow-amber'
+                  ? 'border-amber-500 bg-amber-100 ring-2 ring-amber-400 shadow-md text-slate-950'
+                  : 'border-amber-400 bg-amber-50 hover:bg-amber-100 shadow-xs text-slate-950 ring-1 ring-amber-400/80'
                 dotColor = 'bg-amber-500'
               } else if (hasPendingValidation) {
                 cubitoStyle = isSelected
@@ -458,22 +452,22 @@ export function TableSelector({
                   {/* Fila 2: Badge de Aviso Urgente (Llamada, Cuenta, Listo, Validar) */}
                   <div className="w-full flex items-center justify-center my-0.5">
                     {isBill ? (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-emerald-600 text-white font-black uppercase shadow-xs flex items-center gap-0.5 animate-pulse">
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-emerald-600 text-white font-black uppercase shadow-xs flex items-center gap-0.5">
                         <Receipt className="w-2.5 h-2.5 stroke-[2.5]" />
                         <span>CUENTA</span>
                       </span>
                     ) : isCall ? (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-500 text-slate-950 font-black uppercase shadow-xs flex items-center gap-0.5 animate-pulse">
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-500 text-slate-950 font-black uppercase shadow-xs flex items-center gap-0.5">
                         <Bell className="w-2.5 h-2.5 stroke-[2.5]" />
                         <span>AVISO</span>
                       </span>
                     ) : hasPendingValidation ? (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black uppercase shadow-xs flex items-center gap-0.5 animate-pulse">
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black uppercase shadow-xs flex items-center gap-0.5">
                         <UserCheck className="w-2.5 h-2.5 stroke-[2.5]" />
                         <span>VALIDAR</span>
                       </span>
                     ) : badges.startersReady || badges.mainsReady || badges.dessertsReady ? (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-emerald-600 text-white font-black uppercase shadow-xs flex items-center gap-0.5 animate-pulse">
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-emerald-600 text-white font-black uppercase shadow-xs flex items-center gap-0.5">
                         <Sparkles className="w-2.5 h-2.5" />
                         <span>¡LISTO!</span>
                       </span>
@@ -491,7 +485,7 @@ export function TableSelector({
                           title={badges.drinksPending ? 'Bebidas pendientes de servir en barra' : 'Bebidas entregadas en mesa'}
                           className={`p-1 rounded-md text-[10px] flex items-center justify-center transition-all ${
                             badges.drinksPending
-                              ? 'bg-cyan-500 text-slate-950 font-black animate-pulse shadow-xs ring-1 ring-cyan-300'
+                              ? 'bg-cyan-500 text-slate-950 font-black shadow-xs ring-1 ring-cyan-300'
                               : 'bg-emerald-100 text-emerald-800'
                           }`}
                         >
@@ -511,7 +505,7 @@ export function TableSelector({
                           }
                           className={`p-1 rounded-md text-[10px] flex items-center justify-center transition-all ${
                             badges.startersReady
-                              ? 'bg-emerald-500 text-white font-black animate-pulse shadow-xs ring-1 ring-emerald-300'
+                              ? 'bg-emerald-500 text-white font-black shadow-xs ring-1 ring-emerald-300'
                               : badges.startersCooking
                               ? 'bg-amber-100 text-amber-900 border border-amber-300'
                               : 'bg-emerald-100 text-emerald-800'
@@ -535,7 +529,7 @@ export function TableSelector({
                           }
                           className={`p-1 rounded-md text-[10px] flex items-center justify-center transition-all ${
                             badges.mainsReady
-                              ? 'bg-emerald-500 text-white font-black animate-pulse shadow-xs ring-1 ring-emerald-300'
+                              ? 'bg-emerald-500 text-white font-black shadow-xs ring-1 ring-emerald-300'
                               : badges.mainsCooking
                               ? 'bg-blue-100 text-blue-900 border border-blue-300 font-bold'
                               : badges.mainsWaiting
@@ -561,9 +555,9 @@ export function TableSelector({
                           }
                           className={`p-1 rounded-md text-[10px] flex items-center justify-center transition-all ${
                             badges.dessertsReady
-                              ? 'bg-emerald-500 text-white font-black animate-pulse shadow-xs ring-1 ring-emerald-300'
+                              ? 'bg-emerald-500 text-white font-black shadow-xs ring-1 ring-emerald-300'
                               : badges.dessertsCooking
-                              ? 'bg-purple-100 text-purple-900 border border-purple-300 animate-pulse font-bold'
+                              ? 'bg-purple-100 text-purple-900 border border-purple-300 font-bold'
                               : badges.dessertsWaiting
                               ? 'bg-purple-50 text-purple-600 border border-purple-200 opacity-70'
                               : 'bg-emerald-100 text-emerald-800'
