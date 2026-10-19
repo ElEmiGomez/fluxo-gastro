@@ -161,6 +161,8 @@ export function useComanderoData(slug: string) {
               effectiveStatus = 'delivered'
             } else if (existing?.status === 'paid' && ord.status !== 'paid') {
               effectiveStatus = 'paid'
+            } else if (existing?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || ord.status === 'preparing')) {
+              effectiveStatus = 'ready'
             } else if (existing?.status === 'pending' && ord.status === 'pending_validation') {
               effectiveStatus = 'pending'
             } else if (existing?.status === 'preparing' && (ord.status === 'pending_validation' || ord.status === 'pending')) {

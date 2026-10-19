@@ -155,6 +155,8 @@ export function useMenuOrderSync({
             effectiveStatus = 'delivered'
           } else if (prevOrd?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
+          } else if (prevOrd?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || ord.status === 'preparing')) {
+            effectiveStatus = 'ready'
           } else if (prevOrd?.status === 'preparing' && (ord.status === 'pending' || ord.status === 'pending_validation')) {
             effectiveStatus = 'preparing'
           } else if (prevOrd?.status === 'pending' && ord.status === 'pending_validation') {

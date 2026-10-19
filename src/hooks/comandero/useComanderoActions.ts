@@ -306,7 +306,9 @@ export function useComanderoActions({
           }
           return it
         })
-        return { ...o, status: 'preparing', order_items: updatedItems }
+        const updated: Order = { ...o, status: 'preparing' as OrderStatus, order_items: updatedItems }
+        recentMutationsRef.current.set(o.id, { order: updated, status: 'preparing', until: Date.now() + 4500 })
+        return updated
       })
     )
 
@@ -344,7 +346,7 @@ export function useComanderoActions({
       })
     )
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: 'preparing', until: Date.now() + 4500 })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -355,7 +357,7 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
+          recentMutationsRef.current.set(orderId, { order: data.order, status: 'preparing', until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
@@ -386,13 +388,13 @@ export function useComanderoActions({
           }
           return it
         })
-        const updated = { ...o, order_items: updatedItems }
+        const updated: Order = { ...o, status: 'delivered' as OrderStatus, order_items: updatedItems }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: 'delivered', until: Date.now() + 4500 })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -403,7 +405,7 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
+          recentMutationsRef.current.set(orderId, { order: data.order, status: 'delivered', until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
@@ -424,6 +426,26 @@ export function useComanderoActions({
       const desserts = (o.order_items || []).filter(isDessertItem)
       return desserts.length > 0 && desserts.some(d => !isDessertReady(d))
     })
+    const dessertOrderIds = new Set(dessertOrders.map(o => o.id))
+
+    // Actualización optimista inmediata en estado local
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (!dessertOrderIds.has(o.id)) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isDessertItem(it)) {
+            const currentNotes = it.notes || ''
+            if (!currentNotes.includes(TAG_DESSERT_FIRED)) {
+              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_DESSERT_FIRED}` : TAG_DESSERT_FIRED }
+            }
+          }
+          return it
+        })
+        const updated: Order = { ...o, status: 'preparing' as OrderStatus, order_items: updatedItems }
+        recentMutationsRef.current.set(o.id, { order: updated, status: 'preparing', until: Date.now() + 4500 })
+        return updated
+      })
+    )
 
     for (const ord of dessertOrders) {
       await fetch('/api/orders', {
@@ -446,6 +468,27 @@ export function useComanderoActions({
       const desserts = (o.order_items || []).filter(isDessertItem)
       return desserts.length > 0 && desserts.some(d => !isDessertReady(d))
     })
+    const dessertOrderIds = new Set(dessertOrders.map(o => o.id))
+
+    // Actualización optimista inmediata en estado local
+    setServerOrders(prev =>
+      prev.map(o => {
+        if (!dessertOrderIds.has(o.id)) return o
+        const updatedItems = (o.order_items || []).map(it => {
+          if (isDessertItem(it)) {
+            const currentNotes = it.notes || ''
+            const tags = `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
+            if (!currentNotes.includes(TAG_DESSERT_SERVED)) {
+              return { ...it, notes: currentNotes ? `${currentNotes} ${tags}` : tags }
+            }
+          }
+          return it
+        })
+        const updated: Order = { ...o, status: 'delivered' as OrderStatus, order_items: updatedItems }
+        recentMutationsRef.current.set(o.id, { order: updated, status: 'delivered', until: Date.now() + 4500 })
+        return updated
+      })
+    )
 
     for (const ord of dessertOrders) {
       await fetch('/api/orders', {
@@ -713,7 +756,7 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
+          recentMutationsRef.current.set(orderId, { order: data.order, status: data.order.status || 'delivered', until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
       } else {
@@ -795,13 +838,13 @@ export function useComanderoActions({
           }
           return it
         })
-        const updated = { ...o, order_items: updatedItems }
+        const updated: Order = { ...o, status: 'delivered' as OrderStatus, order_items: updatedItems }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: 'delivered', until: Date.now() + 4500 })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -816,7 +859,7 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
+          recentMutationsRef.current.set(orderId, { order: data.order, status: data.order.status || 'delivered', until: Date.now() + 4500 })
           setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
         }
       } else {

@@ -187,7 +187,11 @@ export default function KitchenKDSPage() {
               if (isMutActive && mut?.status) {
                 effectiveStatus = mut.status
               } else {
-                if (existing?.status === 'preparing' && ord.status === 'pending') {
+                if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
+                  effectiveStatus = 'delivered'
+                } else if (existing?.status === 'ready' && (ord.status === 'pending' || ord.status === 'preparing')) {
+                  effectiveStatus = 'ready'
+                } else if (existing?.status === 'preparing' && ord.status === 'pending') {
                   effectiveStatus = 'preparing'
                 }
               }
@@ -380,7 +384,8 @@ export default function KitchenKDSPage() {
   ) => {
     if (updatingOrderIds.has(orderId)) return
     setUpdatingOrderIds(prev => new Set(prev).add(orderId))
-    recentMutationsRef.current.set(orderId, { until: Date.now() + 4500 })
+    const expectedNextStatus: OrderStatus = (action === 'start_mains' || action === 'start_desserts' || action === 'fire_desserts') ? 'preparing' : 'ready'
+    recentMutationsRef.current.set(orderId, { status: expectedNextStatus, until: Date.now() + 4500 })
 
     try {
       const res = await fetch('/api/orders', {
@@ -396,7 +401,7 @@ export default function KitchenKDSPage() {
       const data = await res.json().catch(() => null)
       if (res.ok) {
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
+          recentMutationsRef.current.set(orderId, { order: data.order, status: data.order.status || expectedNextStatus, until: Date.now() + 4500 })
           setOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
