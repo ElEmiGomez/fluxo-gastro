@@ -54,17 +54,22 @@ interface TableSelectorProps {
 
 interface TableCourseBadges {
   hasDrinks: boolean
+  drinksPendingValidation: boolean
   drinksPending: boolean
+  drinksServed: boolean
   hasStarters: boolean
+  startersPendingValidation: boolean
   startersReady: boolean
   startersCooking: boolean
   startersServed: boolean
   hasMains: boolean
+  mainsPendingValidation: boolean
   mainsReady: boolean
   mainsCooking: boolean
   mainsWaiting: boolean
   mainsServed: boolean
   hasDesserts: boolean
+  dessertsPendingValidation: boolean
   dessertsReady: boolean
   dessertsCooking: boolean
   dessertsWaiting: boolean
@@ -74,31 +79,39 @@ interface TableCourseBadges {
 function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
   const activeOrders = tableOrders.filter(o => o.status !== 'cancelled' && o.status !== 'paid')
   const approvedOrders = activeOrders.filter(o => o.status !== 'pending_validation')
+  const unapprovedOrders = activeOrders.filter(o => o.status === 'pending_validation')
 
   const allItems = activeOrders.flatMap(o => o.order_items || [])
   const approvedItems = approvedOrders.flatMap(o => o.order_items || [])
+  const unapprovedItems = unapprovedOrders.flatMap(o => o.order_items || [])
 
   // 1. Bebidas (Barra)
   const drinks = allItems.filter(isDrinkItem)
   const hasDrinks = drinks.length > 0
   const approvedDrinks = approvedItems.filter(isDrinkItem)
+  const unapprovedDrinks = unapprovedItems.filter(isDrinkItem)
   const drinksPending = approvedDrinks.some(d => !isDrinkServed(d))
+  const drinksPendingValidation = unapprovedDrinks.length > 0 && !drinksPending
+  const drinksServed = approvedDrinks.length > 0 && approvedDrinks.every(isDrinkServed)
 
   // 2. Entradas (Papitas / 1º Pase)
   const starters = allItems.filter(isStarterItem)
   const hasStarters = starters.length > 0
   const approvedStarters = approvedItems.filter(isStarterItem)
+  const unapprovedStarters = unapprovedItems.filter(isStarterItem)
   const startersReady = approvedStarters.some(s => isStarterReady(s) && !isStarterServed(s))
-  const startersServed = hasStarters && starters.every(isStarterServed)
+  const startersServed = approvedStarters.length > 0 && approvedStarters.every(isStarterServed)
   const startersCooking = approvedStarters.length > 0 && !startersReady && !startersServed
+  const startersPendingValidation = unapprovedStarters.length > 0 && !startersReady && !startersCooking
 
   // 3. Platos Principales (Comida / 2º Pase)
   const mains = allItems.filter(isMainItem)
   const hasMains = mains.length > 0
   const approvedMains = approvedItems.filter(isMainItem)
+  const unapprovedMains = unapprovedItems.filter(isMainItem)
   const mainsReady = approvedMains.some(m => isMainReady(m) && !isMainServed(m))
-  const mainsServed = hasMains && mains.every(isMainServed)
-  const orderLevelMainsFired = activeOrders.some(
+  const mainsServed = approvedMains.length > 0 && approvedMains.every(isMainServed)
+  const orderLevelMainsFired = approvedOrders.some(
     o => (o as any).notes?.includes(TAG_MAIN_FIRED) || (o as any).kitchen_notes?.includes(TAG_MAIN_FIRED)
   )
   const mainsCooking =
@@ -106,15 +119,17 @@ function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
     !mainsReady &&
     !mainsServed &&
     (orderLevelMainsFired || approvedMains.some(m => isMainCooking(m) || isMainFired(m)))
-  const mainsWaiting = hasMains && !mainsReady && !mainsServed && !mainsCooking
+  const mainsPendingValidation = unapprovedMains.length > 0 && !mainsReady && !mainsCooking && !mainsServed
+  const mainsWaiting = hasMains && !mainsPendingValidation && !mainsReady && !mainsServed && !mainsCooking
 
   // 4. Postres
   const desserts = allItems.filter(isDessertItem)
   const hasDesserts = desserts.length > 0
   const approvedDesserts = approvedItems.filter(isDessertItem)
+  const unapprovedDesserts = unapprovedItems.filter(isDessertItem)
   const dessertsReady = approvedDesserts.some(d => isDessertReady(d) && !isDessertServed(d))
-  const dessertsServed = hasDesserts && desserts.every(isDessertServed)
-  const orderLevelDessertsFired = activeOrders.some(
+  const dessertsServed = approvedDesserts.length > 0 && approvedDesserts.every(isDessertServed)
+  const orderLevelDessertsFired = approvedOrders.some(
     o => (o as any).notes?.includes(TAG_DESSERT_FIRED) || (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)
   )
   const dessertsCooking =
@@ -122,21 +137,27 @@ function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
     !dessertsReady &&
     !dessertsServed &&
     (orderLevelDessertsFired || approvedDesserts.some(d => isDessertCooking(d) || isDessertFired(d)))
-  const dessertsWaiting = hasDesserts && !dessertsReady && !dessertsServed && !dessertsCooking
+  const dessertsPendingValidation = unapprovedDesserts.length > 0 && !dessertsReady && !dessertsCooking && !dessertsServed
+  const dessertsWaiting = hasDesserts && !dessertsPendingValidation && !dessertsReady && !dessertsServed && !dessertsCooking
 
   return {
     hasDrinks,
+    drinksPendingValidation,
     drinksPending,
+    drinksServed,
     hasStarters,
+    startersPendingValidation,
     startersReady,
     startersCooking,
     startersServed,
     hasMains,
+    mainsPendingValidation,
     mainsReady,
     mainsCooking,
     mainsWaiting,
     mainsServed,
     hasDesserts,
+    dessertsPendingValidation,
     dessertsReady,
     dessertsCooking,
     dessertsWaiting,
@@ -507,10 +528,18 @@ export function TableSelector({
                       {/* 1. Bebidas (Barra) */}
                       {badges.hasDrinks && (
                         <span
-                          title={badges.drinksPending ? 'Bebidas pendientes de servir en barra' : 'Bebidas entregadas en mesa'}
+                          title={
+                            badges.drinksPending
+                              ? 'Bebidas pendientes de servir en barra'
+                              : badges.drinksPendingValidation
+                              ? 'Bebidas pendientes de validación por el mozo'
+                              : 'Bebidas entregadas en mesa'
+                          }
                           className={`p-1 rounded-md text-[10px] flex items-center justify-center transition-all ${
                             badges.drinksPending
                               ? 'bg-cyan-500 text-slate-950 font-black shadow-xs ring-1 ring-cyan-300'
+                              : badges.drinksPendingValidation
+                              ? 'bg-orange-200 text-orange-900 border border-orange-400 font-bold shadow-2xs'
                               : 'bg-emerald-100 text-emerald-800'
                           }`}
                         >
@@ -526,6 +555,8 @@ export function TableSelector({
                               ? '¡Entradas listas en cocina para retirar!'
                               : badges.startersCooking
                               ? 'Entradas en preparación'
+                              : badges.startersPendingValidation
+                              ? 'Entradas pendientes de validación por el mozo'
                               : 'Entradas entregadas en mesa'
                           }
                           className={`p-1 rounded-md text-[10px] flex items-center justify-center transition-all ${
@@ -533,6 +564,8 @@ export function TableSelector({
                               ? 'bg-emerald-500 text-white font-black shadow-xs ring-1 ring-emerald-300'
                               : badges.startersCooking
                               ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                              : badges.startersPendingValidation
+                              ? 'bg-orange-200 text-orange-900 border border-orange-400 font-bold shadow-2xs'
                               : 'bg-emerald-100 text-emerald-800'
                           }`}
                         >
@@ -548,6 +581,8 @@ export function TableSelector({
                               ? '¡Principales listos en cocina para retirar!'
                               : badges.mainsCooking
                               ? 'Principales en fuego (cocina)'
+                              : badges.mainsPendingValidation
+                              ? 'Principales pendientes de validación por el mozo'
                               : badges.mainsWaiting
                               ? 'Principales esperando habilitación del mozo'
                               : 'Principales entregados en mesa'
@@ -557,6 +592,8 @@ export function TableSelector({
                               ? 'bg-emerald-500 text-white font-black shadow-xs ring-1 ring-emerald-300'
                               : badges.mainsCooking
                               ? 'bg-blue-100 text-blue-900 border border-blue-300 font-bold'
+                              : badges.mainsPendingValidation
+                              ? 'bg-orange-200 text-orange-900 border border-orange-400 font-bold shadow-2xs'
                               : badges.mainsWaiting
                               ? 'bg-slate-200 text-slate-500 opacity-60'
                               : 'bg-emerald-100 text-emerald-800'
@@ -574,6 +611,8 @@ export function TableSelector({
                               ? '¡Postres listos en cocina para retirar!'
                               : badges.dessertsCooking
                               ? 'Postres en preparación en cocina'
+                              : badges.dessertsPendingValidation
+                              ? 'Postres pendientes de validación por el mozo'
                               : badges.dessertsWaiting
                               ? 'Postres en espera de marcha del mozo'
                               : 'Postres entregados en mesa'
@@ -583,6 +622,8 @@ export function TableSelector({
                               ? 'bg-emerald-500 text-white font-black shadow-xs ring-1 ring-emerald-300'
                               : badges.dessertsCooking
                               ? 'bg-purple-100 text-purple-900 border border-purple-300 font-bold'
+                              : badges.dessertsPendingValidation
+                              ? 'bg-orange-200 text-orange-900 border border-orange-400 font-bold shadow-2xs'
                               : badges.dessertsWaiting
                               ? 'bg-slate-200 text-slate-500 opacity-60'
                               : 'bg-emerald-100 text-emerald-800'
