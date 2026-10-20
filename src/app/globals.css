@@ -230,3 +230,75 @@ button, a, input, select, textarea {
     margin-top: 6px !important;
   }
 }
+
+
+/* =========================================================================
+   ANIMACIONES DE FONDO AURORA (HERO B2B HIGH-TECH)
+   ========================================================================= */
+@keyframes auroraDrift1 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(40px, 25px, 0) scale(1.08);
+  }
+  66% {
+    transform: translate3d(-30px, 45px, 0) scale(0.96);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes auroraDrift2 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(-50px, -30px, 0) scale(0.94);
+  }
+  66% {
+    transform: translate3d(25px, -45px, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes auroraDrift3 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate3d(35px, -20px, 0) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.8;
+  }
+}
+
+.animate-aurora-drift-1 {
+  animation: auroraDrift1 22s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+
+.animate-aurora-drift-2 {
+  animation: auroraDrift2 28s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+
+.animate-aurora-drift-3 {
+  animation: auroraDrift3 24s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-aurora-drift-1,
+  .animate-aurora-drift-2,
+  .animate-aurora-drift-3 {
+    animation: none !important;
+  }
+}

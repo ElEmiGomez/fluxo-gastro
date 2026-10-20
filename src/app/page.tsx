@@ -24,6 +24,7 @@ import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
 import { MonthlyReportModal } from '@/components/analytics/MonthlyReportModal'
 import { ScrollReveal } from '@/components/landing/ScrollReveal'
+import { HeroAuroraBackground } from '@/components/landing/HeroAuroraBackground'
 
 const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '5493585187430'
 const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para mi restaurante.'
@@ -105,9 +106,8 @@ export default function LandingPage() {
         {/* ── 2. HERO SECTION ── */}
         <section className="relative overflow-hidden pt-12 pb-20 sm:pt-20 sm:pb-28 border-b border-slate-800/80">
           
-          {/* Luces de Fondo (Ambient Glows) */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-cyan-500/15 via-blue-600/10 to-transparent blur-[120px] pointer-events-none" />
-          <div className="absolute top-1/2 right-10 w-72 h-72 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+          {/* Fondo Dinámico Aurora B2B */}
+          <HeroAuroraBackground />
 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
