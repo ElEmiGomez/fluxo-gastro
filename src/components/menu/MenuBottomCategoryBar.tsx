@@ -133,20 +133,20 @@ export function MenuBottomCategoryBar({
           className="relative flex-1 min-w-0 flex items-center overflow-hidden py-0.5"
           style={{
             WebkitMaskImage: `linear-gradient(to right, ${
-              canScrollLeft ? 'transparent 0px, black 32px' : 'black 0px'
+              canScrollLeft ? 'transparent 0px, black 14px' : 'black 0px'
             }, ${
-              canScrollRight ? 'black calc(100% - 32px), transparent 100%' : 'black 100%'
+              canScrollRight ? 'black calc(100% - 14px), transparent 100%' : 'black 100%'
             })`,
             maskImage: `linear-gradient(to right, ${
-              canScrollLeft ? 'transparent 0px, black 32px' : 'black 0px'
+              canScrollLeft ? 'transparent 0px, black 14px' : 'black 0px'
             }, ${
-              canScrollRight ? 'black calc(100% - 32px), transparent 100%' : 'black 100%'
+              canScrollRight ? 'black calc(100% - 14px), transparent 100%' : 'black 100%'
             })`,
           }}
         >
           {/* Difuminado / Frosted Blur Izquierdo */}
           <div
-            className={`absolute left-0 inset-y-0 w-8 bg-gradient-to-r from-white via-white/80 to-transparent backdrop-blur-[3px] z-10 pointer-events-none transition-opacity duration-200 ${
+            className={`absolute left-0 inset-y-0 w-4 bg-gradient-to-r from-white/40 to-transparent backdrop-blur-[1px] z-10 pointer-events-none transition-opacity duration-200 ${
               canScrollLeft ? 'opacity-100' : 'opacity-0'
             }`}
           />
@@ -218,7 +218,7 @@ export function MenuBottomCategoryBar({
 
           {/* Difuminado / Frosted Blur Derecho */}
           <div
-            className={`absolute right-0 inset-y-0 w-8 bg-gradient-to-l from-white via-white/80 to-transparent backdrop-blur-[3px] z-10 pointer-events-none transition-opacity duration-200 ${
+            className={`absolute right-0 inset-y-0 w-4 bg-gradient-to-l from-white/40 to-transparent backdrop-blur-[1px] z-10 pointer-events-none transition-opacity duration-200 ${
               canScrollRight ? 'opacity-100' : 'opacity-0'
             }`}
           />
