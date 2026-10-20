@@ -14,6 +14,7 @@ import { AdminAiImporter } from '@/components/admin/AdminAiImporter'
 import { AdminProductModal } from '@/components/admin/AdminProductModal'
 import { AdminDailyMenuManager } from '@/components/admin/AdminDailyMenuManager'
 import { AdminLoyaltyManager } from '@/components/admin/AdminLoyaltyManager'
+import { FluxoCopilot } from '@/components/admin/FluxoCopilot'
 
 
 export default function AdminMenuPage() {
@@ -71,7 +72,7 @@ export default function AdminMenuPage() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-cyan-500/10 via-blue-600/5 to-transparent pointer-events-none blur-3xl -z-10" />
           {/* Toast Notification */}
           {toastMsg && (
-            <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-800/95 text-white font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-5 border border-cyan-500/40 shadow-cyan-500/10 backdrop-blur-md">
+            <div className="fixed bottom-24 right-6 z-50 px-4 py-3 rounded-xl bg-slate-800/95 text-white font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-5 border border-cyan-500/40 shadow-cyan-500/10 backdrop-blur-md">
               <Sparkles className="w-4 h-4 text-cyan-400" />
               <span>{toastMsg}</span>
             </div>
@@ -164,6 +165,21 @@ export default function AdminMenuPage() {
 
 
           {/* MODAL DE CREAR / EDITAR PLATO */}
+
+          {/* ASISTENTE VIRTUAL COPILOT PARA EL DUEÑO */}
+          <FluxoCopilot
+            slug={slug}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onOpenNewProduct={() => {
+              setEditingProduct(null)
+              setSelectedAllergens([])
+              setIsNewProductModalOpen(true)
+            }}
+            productsCount={products.length}
+            categoriesCount={categories.length}
+          />
+
           <AdminProductModal
             isOpen={isNewProductModalOpen}
             editingProduct={editingProduct}
