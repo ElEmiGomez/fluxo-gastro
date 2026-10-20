@@ -19,6 +19,8 @@ import { isDailyMenuActive } from '@/lib/daily-menu-utils'
 import { MenuListCatalog } from '@/components/menu/MenuListCatalog'
 import { MenuGridCatalog } from '@/components/menu/MenuGridCatalog'
 import { MenuFloatingCartBar } from '@/components/menu/MenuFloatingCartBar'
+import { MenuBottomCategoryBar } from '@/components/menu/MenuBottomCategoryBar'
+import { useScrollDirection } from '@/hooks/menu/useScrollDirection'
 import { MenuFooterLegal } from '@/components/menu/MenuFooterLegal'
 import { MenuModals } from '@/components/menu/MenuModals'
 import { useMenuCatalog } from '@/hooks/menu/useMenuCatalog'
@@ -63,6 +65,10 @@ function DinerMenuContent() {
   const [customizingPromoProduct, setCustomizingPromoProduct] = useState<Product | null>(null)
   const [isQuickDessertModalOpen, setIsQuickDessertModalOpen] = useState(false)
   const [isSobremesaModalOpen, setIsSobremesaModalOpen] = useState(false)
+
+  // 1.2 Detección de Scroll para ocultar/mostrar barra de categorías inferior
+  const { isScrollingDown, isAtTop } = useScrollDirection({ threshold: 10 })
+  const isBottomCategoryBarVisible = !isScrollingDown || isAtTop
 
   // 1.1 Carga del Menú del Día Dinámico
   useEffect(() => {
@@ -544,7 +550,7 @@ function DinerMenuContent() {
 
   return (
     <TenantProvider restaurant={restaurant} initialTable={tableNumber}>
-      <div className="min-h-screen bg-slate-50 text-slate-900 pb-36 font-sans antialiased selection:bg-blue-100 selection:text-blue-900" style={{ touchAction: 'manipulation' }}>
+      <div className="min-h-screen bg-slate-50 text-slate-900 pb-44 font-sans antialiased selection:bg-blue-100 selection:text-blue-900" style={{ touchAction: 'manipulation' }}>
         
         {/* Cabecera Ergonómica */}
         <MenuHeader
@@ -703,6 +709,20 @@ function DinerMenuContent() {
             onExitAdminMode={handleExitAdminMode}
           />
         </main>
+
+        {/* Barra Flotante Inferior de Categorías con Scroll Inteligente */}
+        <MenuBottomCategoryBar
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={(catId) => {
+            setSelectedCategory(catId)
+            setSearchQuery('')
+          }}
+          currentLang={currentLang}
+          hasCartItems={(totalCartCount > 0 && !isInSituAdmin) || isFixedMenu}
+          isVisible={isBottomCategoryBarVisible}
+          onClearSearch={() => setSearchQuery('')}
+        />
 
         {/* Barra Flotante Inferior de Comanda */}
         <MenuFloatingCartBar
