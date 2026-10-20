@@ -22,6 +22,18 @@ export interface ProductKindClassification {
   defaultCourse: CourseType
 }
 
+function matchesKeyword(text: string, kw: string): boolean {
+  if (!text || !kw) return false
+  // Si la palabra clave tiene menos de 5 caracteres, requerir coincidencia de palabra completa
+  // para evitar falsos positivos (ej. 'ron' en 'padron' o 'chicharron', 'gin' en 'original', 'cola' en 'chocolate')
+  if (kw.length <= 4) {
+    const escaped = kw.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
+    const regex = new RegExp('(^|[^a-z0-9])' + escaped + '([^a-z0-9]|$)', 'i')
+    return regex.test(text)
+  }
+  return text.includes(kw)
+}
+
 /**
  * Detector universal de categoría y tipo gastronómico para cualquier producto,
  * previniendo anomalías o desconfiguraciones cuando se añade un plato nuevo en sala o administración.
@@ -69,7 +81,7 @@ export function classifyProductKind(
     'infusion', 'te ', 'te verde', 'te negro', 'manzanilla', 'poleo', 'menta', 'tila',
     'rooibos', 'descafeinado', 'carajillo', 'bombon', 'cafeteria'
   ]
-  const isCoffee = coffeeKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+  const isCoffee = coffeeKeywords.some(kw => matchesKeyword(pName, kw) || matchesKeyword(combinedCat, kw))
 
   // 2. Bebidas / Cócteles / Vinos / Cervezas
   const drinkKeywords = [
@@ -79,7 +91,7 @@ export function classifyProductKind(
     'mezcal', 'vermut', 'vermouth', 'aperitivo', 'refresco', 'soda', 'gaseosa', 'cola',
     'coca', 'fanta', 'sprite', 'agua', 'zumo', 'jugo', 'mojito', 'caipiri', 'fernet', 'sangria'
   ]
-  const isDrink = !isCoffee && drinkKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+  const isDrink = !isCoffee && drinkKeywords.some(kw => matchesKeyword(pName, kw) || matchesKeyword(combinedCat, kw))
 
   // 3. Postres / Dulces / Helados
   const dessertKeywords = [
@@ -87,7 +99,7 @@ export function classifyProductKind(
     'sorbete', 'volcan', 'coulant', 'flan', 'pudding', 'panna cotta', 'tiramisu',
     'cheesecake', 'brownie', 'crepe', 'gofre', 'mousse', 'churros', 'filloas', 'santiago'
   ]
-  const isDessert = !isCoffee && !isDrink && dessertKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+  const isDessert = !isCoffee && !isDrink && dessertKeywords.some(kw => matchesKeyword(pName, kw) || matchesKeyword(combinedCat, kw))
 
   // 4. Carnes / Hamburguesas / Parrilla (requieren punto y guarnición)
   const meatKeywords = [
@@ -97,7 +109,7 @@ export function classifyProductKind(
     'secreto', 'presa', 'pluma', 'cochinillo', 'cordero', 'lechal', 'ternera', 'buey',
     'vaca', 'angus', 'wagyu'
   ]
-  const isMeatOrBurger = !isCoffee && !isDrink && !isDessert && meatKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+  const isMeatOrBurger = !isCoffee && !isDrink && !isDessert && meatKeywords.some(kw => matchesKeyword(pName, kw) || matchesKeyword(combinedCat, kw))
 
   // 5. Entrantes / Tapas / Picoteo / Ensaladas
   const starterKeywords = [
@@ -105,14 +117,14 @@ export function classifyProductKind(
     'croquetas', 'bastones', 'mozzarella', 'rabas', 'calamares', 'zamburiñas', 'pulpo',
     'mejillones', 'padron', 'bravas', 'empanada', 'provoleta'
   ]
-  const isStarter = !isCoffee && !isDrink && !isDessert && !isMeatOrBurger && starterKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+  const isStarter = !isCoffee && !isDrink && !isDessert && !isMeatOrBurger && starterKeywords.some(kw => matchesKeyword(pName, kw) || matchesKeyword(combinedCat, kw))
 
   // 6. Platos Principales Generales (pastas, pizzas, arroces, guisos, pescados)
   const mainKeywords = [
     'principal', 'segundo', 'pasta', 'pizza', 'arroz', 'paella', 'risotto', 'pescado',
     'marisco', 'guiso', 'sandwich', 'bocadillo', 'wrap', 'lasaña', 'ravioli', 'gnocchi'
   ]
-  const isMain = !isCoffee && !isDrink && !isDessert && !isMeatOrBurger && !isStarter && mainKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+  const isMain = !isCoffee && !isDrink && !isDessert && !isMeatOrBurger && !isStarter && mainKeywords.some(kw => matchesKeyword(pName, kw) || matchesKeyword(combinedCat, kw))
 
   let kind: 'drink' | 'coffee' | 'dessert' | 'meat' | 'starter' | 'main' | 'generic' = 'generic'
   let defaultCourse: CourseType = 'second'
@@ -149,6 +161,157 @@ export function classifyProductKind(
     hasSideOptions: isMeatOrBurger,
     defaultCourse,
   }
+}
+
+/**
+ * Infiere y sugiere la categoría óptima para un producto a partir de su nombre y descripción
+ * comparándola con la lista de categorías del restaurante.
+ * Diseñado exclusivamente para uso en el Administrador de Carta (lógica backend/admin).
+ */
+export function suggestCategoryForProduct(
+  name: string,
+  description: string = '',
+  categories: Category[] = []
+): string | null {
+  if (!name || !name.trim() || !categories || categories.length === 0) return null
+
+  const normalize = (str?: string | null) =>
+    (str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+
+  const pName = normalize(name)
+  const pDesc = normalize(description)
+  const fullText = `${pName} ${pDesc}`
+
+  // 1. Obtener la clasificación base del producto
+  const classification = classifyProductKind({ name, description }, categories)
+
+  // 2. Mapear grupos objetivo según el tipo detectado con afinidad granular
+  if (classification.isCoffee) {
+    const specificMatch = categories.find(c => {
+      const n = normalize(c.name)
+      return n.includes('cafe') || n.includes('infusion') || n.includes('desayun')
+    })
+    if (specificMatch) return specificMatch.id
+
+    const fallbackDrink = categories.find(c => normalize(c.name).includes('bebida'))
+    if (fallbackDrink) return fallbackDrink.id
+  }
+
+  if (classification.isDrink) {
+    const match = categories.find(c => {
+      const n = normalize(c.name)
+      return (
+        n.includes('bebida') ||
+        n.includes('trago') ||
+        n.includes('coctel') ||
+        n.includes('cocktail') ||
+        n.includes('copa') ||
+        n.includes('vino') ||
+        n.includes('cerveza') ||
+        n.includes('refresco') ||
+        n.includes('bar')
+      )
+    })
+    if (match) return match.id
+  }
+
+  if (classification.isDessert) {
+    const match = categories.find(c => {
+      const n = normalize(c.name)
+      return (
+        n.includes('postre') ||
+        n.includes('dulce') ||
+        n.includes('reposteria') ||
+        n.includes('helado') ||
+        n.includes('sobremesa')
+      )
+    })
+    if (match) return match.id
+  }
+
+  if (classification.isMeatOrBurger) {
+    // Si el texto menciona explícitamente burger/hamburguesa, preferir categoría de burgers
+    const isExplicitBurger = fullText.includes('burger') || fullText.includes('hamburguesa') || fullText.includes('smash')
+    if (isExplicitBurger) {
+      const burgerCat = categories.find(c => {
+        const n = normalize(c.name)
+        return n.includes('burger') || n.includes('hamburguesa')
+      })
+      if (burgerCat) return burgerCat.id
+    }
+
+    // Si el texto menciona carnes nobles (chuletón, solomillo, bife, vaca, brasa), preferir categoría de carnes
+    const isExplicitMeat = fullText.includes('chuleton') || fullText.includes('vaca') || fullText.includes('brasa') || fullText.includes('parrilla') || fullText.includes('solomillo') || fullText.includes('entrecot') || fullText.includes('buey') || fullText.includes('ternera') || fullText.includes('costilla') || fullText.includes('asado')
+    if (isExplicitMeat) {
+      const meatCat = categories.find(c => {
+        const n = normalize(c.name)
+        return n.includes('carne') || n.includes('brasa') || n.includes('parrilla') || n.includes('asado')
+      })
+      if (meatCat) return meatCat.id
+    }
+
+    const genericMeatMatch = categories.find(c => {
+      const n = normalize(c.name)
+      return (
+        n.includes('burger') ||
+        n.includes('hamburguesa') ||
+        n.includes('carne') ||
+        n.includes('parrilla') ||
+        n.includes('brasa') ||
+        n.includes('asado')
+      )
+    })
+    if (genericMeatMatch) return genericMeatMatch.id
+  }
+
+  if (classification.isStarter) {
+    const match = categories.find(c => {
+      const n = normalize(c.name)
+      return (
+        n.includes('entrante') ||
+        n.includes('entrada') ||
+        n.includes('tapa') ||
+        n.includes('racion') ||
+        n.includes('picoteo') ||
+        n.includes('ensalada') ||
+        n.includes('empezar') ||
+        n.includes('tabla')
+      )
+    })
+    if (match) return match.id
+  }
+
+  if (classification.isMain) {
+    const match = categories.find(c => {
+      const n = normalize(c.name)
+      return (
+        n.includes('principal') ||
+        n.includes('segundo') ||
+        n.includes('plato') ||
+        n.includes('pasta') ||
+        n.includes('arroz') ||
+        n.includes('pizza')
+      )
+    })
+    if (match) return match.id
+  }
+
+  // 3. Coincidencia directa de palabras clave entre la categoría y el nombre/descripción
+  for (const cat of categories) {
+    const catNorm = normalize(cat.name)
+    const tokens = catNorm.split(/\s+/).filter(t => t.length > 3)
+    for (const token of tokens) {
+      if (fullText.includes(token)) {
+        return cat.id
+      }
+    }
+  }
+
+  return null
 }
 
 /**

@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
       raw_text = '',
       save_to_menu = false,
       mode = 'append', // 'append' | 'overwrite'
+      custom_parsed = null,
     } = body
 
     if (save_to_menu && !verifyStaffRequest(req, slug, ['admin'])) {
@@ -73,20 +74,43 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!raw_text || typeof raw_text !== 'string' || raw_text.trim().length === 0) {
+    if (!custom_parsed && (!raw_text || typeof raw_text !== 'string' || raw_text.trim().length === 0)) {
       return NextResponse.json({ success: false, error: 'Texto de la carta no proporcionado' }, { status: 400 })
     }
 
     const rest = await getRestaurantBySlug(slug)
     const targetRestId = getTargetRestaurantId(rest?.id, slug)
 
-    const lines = raw_text
-      .split('\n')
-      .map(l => l.trim())
-      .filter(Boolean)
+    let parsedCategories: Category[] = []
+    let parsedProducts: Product[] = []
 
-    const parsedCategories: Category[] = []
-    const parsedProducts: Product[] = []
+    if (custom_parsed && Array.isArray(custom_parsed.categories) && Array.isArray(custom_parsed.products)) {
+      parsedCategories = custom_parsed.categories.map((c: any, idx: number) => ({
+        id: c.id || crypto.randomUUID(),
+        restaurant_id: targetRestId,
+        name: sanitizeText(c.name || 'CATEGORÍA', 50).toUpperCase(),
+        order_index: c.order_index ?? (idx + 1),
+      }))
+
+      parsedProducts = custom_parsed.products.map((p: any) => ({
+        id: p.id || crypto.randomUUID(),
+        restaurant_id: targetRestId,
+        category_id: p.category_id,
+        name: sanitizeText(p.name || 'Plato', 80),
+        description: p.description ? sanitizeText(p.description, 250) : '',
+        price: typeof p.price === 'number' && !isNaN(p.price) ? Number(p.price.toFixed(2)) : 10.0,
+        price_type: p.price_type === 'weight' ? 'weight' : 'unit',
+        price_unit: p.price_unit || undefined,
+        image_url: p.image_url || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+        model_3d_url: null,
+        is_available: true,
+        allergens: Array.isArray(p.allergens) ? p.allergens : [],
+      }))
+    } else {
+      const lines = raw_text
+        .split('\n')
+        .map((l: string) => l.trim())
+        .filter(Boolean)
     let currentCategory: Category = {
       id: crypto.randomUUID(),
       restaurant_id: targetRestId,
@@ -187,6 +211,7 @@ export async function POST(req: NextRequest) {
         }
         parsedProducts.push(product)
       }
+    }
     }
 
     // Si save_to_menu es true, aplicar según el modo seleccionado (append u overwrite)

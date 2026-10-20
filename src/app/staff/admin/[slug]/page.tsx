@@ -141,6 +141,8 @@ export default function AdminMenuPage() {
 
             {activeTab === 'ai_import' && (
               <AdminAiImporter
+                slug={slug}
+                categories={categories}
                 aiRawText={aiRawText}
                 onAiRawTextChange={setAiRawText}
                 aiParsing={aiParsing}

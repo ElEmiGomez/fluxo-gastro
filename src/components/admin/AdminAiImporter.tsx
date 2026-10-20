@@ -1,17 +1,20 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Sparkles, RefreshCw, CheckCircle2, Plus, AlertTriangle, X, ShieldAlert } from 'lucide-react'
+import { Sparkles, RefreshCw, CheckCircle2, Plus, AlertTriangle, X, ShieldAlert, Trash2 } from 'lucide-react'
+import { Category } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { AiParsedMenuResult } from '@/types/admin.types'
 
 interface AdminAiImporterProps {
+  slug?: string
+  categories?: Category[]
   aiRawText: string
   onAiRawTextChange: (val: string) => void
   aiParsing: boolean
   aiParsedResult: AiParsedMenuResult | null
   onParseWithAI: () => void
-  onApplyAiMenu: (mode: 'append' | 'overwrite') => void
+  onApplyAiMenu: (mode: 'append' | 'overwrite', customParsed?: AiParsedMenuResult | null) => void
 }
 
 const TAPERIA_PRESET = `TAPAS Y RACIONES
@@ -38,6 +41,8 @@ Pinta Cerveza Artesanal IPA 4.50€
 Agua Mineral 500ml 2,00€`
 
 export function AdminAiImporter({
+  slug,
+  categories: existingCategories = [],
   aiRawText,
   onAiRawTextChange,
   aiParsing,
@@ -46,12 +51,67 @@ export function AdminAiImporter({
   onApplyAiMenu,
 }: AdminAiImporterProps) {
   const [confirmModalMode, setConfirmModalMode] = useState<'append' | 'overwrite' | null>(null)
+  const [editableResult, setEditableResult] = useState<AiParsedMenuResult | null>(aiParsedResult)
+
+  React.useEffect(() => {
+    setEditableResult(aiParsedResult)
+  }, [aiParsedResult])
 
   const handleConfirm = () => {
     if (confirmModalMode) {
-      onApplyAiMenu(confirmModalMode)
+      onApplyAiMenu(confirmModalMode, editableResult || undefined)
       setConfirmModalMode(null)
     }
+  }
+
+  // Lista unificada de categorías disponibles para el selector
+  const availableCategories = React.useMemo(() => {
+    const list: { id: string; name: string }[] = []
+    const seenNames = new Set<string>()
+
+    if (editableResult?.categories) {
+      for (const cat of editableResult.categories) {
+        const norm = cat.name.trim().toLowerCase()
+        if (!seenNames.has(norm)) {
+          seenNames.add(norm)
+          list.push({ id: cat.id, name: cat.name })
+        }
+      }
+    }
+
+    for (const cat of existingCategories) {
+      const norm = cat.name.trim().toLowerCase()
+      if (!seenNames.has(norm)) {
+        seenNames.add(norm)
+        list.push({ id: cat.id, name: cat.name })
+      }
+    }
+
+    return list
+  }, [editableResult, existingCategories])
+
+  const handleDishCategoryChange = (dishId: string, newCategoryId: string) => {
+    if (!editableResult) return
+    setEditableResult({
+      ...editableResult,
+      products: editableResult.products.map(p =>
+        p.id === dishId ? { ...p, category_id: newCategoryId } : p
+      ),
+    })
+  }
+
+  const handleRemoveDish = (dishId: string) => {
+    if (!editableResult) return
+    const updatedProducts = editableResult.products.filter(p => p.id !== dishId)
+    const usedCatIds = new Set(updatedProducts.map(p => p.category_id))
+    const updatedCategories = editableResult.categories.filter(c => usedCatIds.has(c.id))
+    setEditableResult({
+      ...editableResult,
+      total_dishes: updatedProducts.length,
+      total_categories: updatedCategories.length,
+      categories: updatedCategories,
+      products: updatedProducts,
+    })
   }
 
   return (
@@ -139,13 +199,17 @@ export function AdminAiImporter({
             </span>
           </div>
 
-          {/* Tabla de Platos Detectados */}
+          {/* Tabla de Platos Detectados con Selector de Categoría Editable */}
           <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-            {aiParsedResult.categories.map((cat) => {
-              const dishes = aiParsedResult.products.filter((p) => p.category_id === cat.id)
+            {(editableResult || aiParsedResult).categories.map((cat) => {
+              const currentResult = editableResult || aiParsedResult
+              const dishes = currentResult.products.filter((p) => p.category_id === cat.id)
+              if (dishes.length === 0) return null
               return (
                 <div key={cat.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
-                  <span className="text-xs font-black text-blue-700 uppercase tracking-wider block">{cat.name}</span>
+                  <span className="text-xs font-black text-blue-700 uppercase tracking-wider block">
+                    {cat.name} ({dishes.length})
+                  </span>
                   <div className="divide-y divide-slate-200/70">
                     {dishes.map((d) => (
                       <div key={d.id} className="py-2 flex items-center justify-between text-xs gap-3">
@@ -162,9 +226,35 @@ export function AdminAiImporter({
                             </div>
                           )}
                         </div>
-                        <span className="font-black text-slate-900 tabular-nums whitespace-nowrap bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
-                          {formatCurrency(d.price)}
-                        </span>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Selector de Categoría para cambiar manualmente */}
+                          <select
+                            value={d.category_id}
+                            onChange={(e) => handleDishCategoryChange(d.id, e.target.value)}
+                            className="text-[11px] font-semibold py-1 px-2 rounded-lg bg-white border border-slate-200 text-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
+                            title="Cambiar categoría de este plato"
+                          >
+                            {availableCategories.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          <span className="font-black text-slate-900 tabular-nums whitespace-nowrap bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                            {formatCurrency(d.price)}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDish(d.id)}
+                            className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Eliminar plato del borrador"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

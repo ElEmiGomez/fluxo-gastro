@@ -400,9 +400,13 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
     }
   }
 
-  // Cargar en Carta desde IA
-  const handleApplyAiMenu = async (mode: 'append' | 'overwrite' = 'append') => {
-    if (!aiParsedResult) return
+  // Cargar en Carta desde IA (soporta customParsed con categorías y platos corregidos)
+  const handleApplyAiMenu = async (
+    mode: 'append' | 'overwrite' = 'append',
+    customParsed?: AiParsedMenuResult | null
+  ) => {
+    const targetResult = customParsed || aiParsedResult
+    if (!targetResult) return
     setIsLoading(true)
     try {
       const res = await fetch('/api/admin/ai-menu-import', {
@@ -414,6 +418,7 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
           raw_text: aiRawText,
           save_to_menu: true,
           mode,
+          custom_parsed: targetResult,
         }),
       })
       const data = await res.json()

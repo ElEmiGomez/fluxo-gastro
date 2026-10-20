@@ -1,9 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { Product, Category } from '@/types/database.types'
 import { MANDATORY_EU_ALLERGENS } from '@/lib/allergens'
+import { suggestCategoryForProduct } from '@/lib/category-matcher'
 
 interface AdminProductModalProps {
   isOpen: boolean
@@ -24,6 +25,50 @@ export function AdminProductModal({
   onClose,
   onSave,
 }: AdminProductModalProps) {
+  const [name, setName] = useState(editingProduct?.name || '')
+  const [description, setDescription] = useState(editingProduct?.description || '')
+  const [selectedCategoryId, setSelectedCategoryId] = useState(
+    editingProduct?.category_id || categories[0]?.id || ''
+  )
+  const [isManualCategory, setIsManualCategory] = useState(!!editingProduct?.category_id)
+  const [isAutoSuggested, setIsAutoSuggested] = useState(false)
+
+  useEffect(() => {
+    setName(editingProduct?.name || '')
+    setDescription(editingProduct?.description || '')
+    setSelectedCategoryId(editingProduct?.category_id || categories[0]?.id || '')
+    setIsManualCategory(!!editingProduct?.category_id)
+    setIsAutoSuggested(false)
+  }, [editingProduct, isOpen, categories])
+
+  const handleNameChange = (val: string) => {
+    setName(val)
+    if (!isManualCategory && categories.length > 0) {
+      const suggested = suggestCategoryForProduct(val, description, categories)
+      if (suggested && suggested !== selectedCategoryId) {
+        setSelectedCategoryId(suggested)
+        setIsAutoSuggested(true)
+      }
+    }
+  }
+
+  const handleDescriptionChange = (val: string) => {
+    setDescription(val)
+    if (!isManualCategory && categories.length > 0) {
+      const suggested = suggestCategoryForProduct(name, val, categories)
+      if (suggested && suggested !== selectedCategoryId) {
+        setSelectedCategoryId(suggested)
+        setIsAutoSuggested(true)
+      }
+    }
+  }
+
+  const handleCategorySelectChange = (catId: string) => {
+    setSelectedCategoryId(catId)
+    setIsManualCategory(true)
+    setIsAutoSuggested(false)
+  }
+
   if (!isOpen) return null
 
   return (
@@ -55,7 +100,7 @@ export function AdminProductModal({
               price: parseFloat(String(fd.get('price') || '0').replace(',', '.')),
               cost_price: costParsed && !isNaN(costParsed) && costParsed >= 0 ? costParsed : null,
               original_price: origParsed && !isNaN(origParsed) && origParsed > 0 ? origParsed : null,
-              category_id: String(fd.get('category_id') || categories[0]?.id || 'cat-1'),
+              category_id: selectedCategoryId || String(fd.get('category_id') || categories[0]?.id || 'cat-1'),
               description: String(fd.get('description') || ''),
               image_url: String(fd.get('image_url') || ''),
               allergens: selectedAllergens,
@@ -70,7 +115,8 @@ export function AdminProductModal({
             <input
               name="name"
               required
-              defaultValue={editingProduct?.name || ''}
+              value={name}
+              onChange={(e) => handleNameChange(e.target.value)}
               placeholder="Ej: Hamburguesa Gallega Doble"
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
             />
@@ -122,11 +168,19 @@ export function AdminProductModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-slate-700 font-bold block text-xs">Categoría *</label>
+            <div className="flex items-center justify-between">
+              <label className="text-slate-700 font-bold block text-xs">Categoría *</label>
+              {isAutoSuggested && (
+                <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 animate-in fade-in flex items-center gap-1">
+                  ✨ Categorizada automáticamente
+                </span>
+              )}
+            </div>
             <select
               name="category_id"
-              defaultValue={editingProduct?.category_id || categories[0]?.id}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+              value={selectedCategoryId}
+              onChange={(e) => handleCategorySelectChange(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors cursor-pointer"
             >
               {categories.map(c => (
                 <option key={c.id} value={c.id}>
@@ -141,7 +195,8 @@ export function AdminProductModal({
             <textarea
               name="description"
               rows={2}
-              defaultValue={editingProduct?.description || ''}
+              value={description}
+              onChange={(e) => handleDescriptionChange(e.target.value)}
               placeholder="Ej: 200g de carne madurada, queso de Arzúa y cebolla caramelizada."
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
             />
