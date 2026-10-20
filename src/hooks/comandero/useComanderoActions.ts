@@ -667,7 +667,7 @@ export function useComanderoActions({
         }
       })
 
-      await fetch('/api/orders', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -683,14 +683,17 @@ export function useComanderoActions({
         }),
       })
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.message || errData.error || 'No se pudo registrar la comanda en cocina')
+      }
+
       setOrderSentToast(true)
       setTableCarts(prev => ({ ...prev, [selectedTable.table_number]: [] }))
       setTimeout(() => setOrderSentToast(false), 3500)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al enviar comanda:', err)
-      setOrderSentToast(true)
-      setTableCarts(prev => ({ ...prev, [selectedTable.table_number]: [] }))
-      setTimeout(() => setOrderSentToast(false), 3000)
+      alert(`⚠️ No se pudo enviar la comanda a cocina: ${err?.message || 'Error de conexión'}.\nLos platos se mantienen en la mesa para reintentar.`)
     } finally {
       setIsSubmitting(false)
     }

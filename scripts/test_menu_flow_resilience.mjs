@@ -63,7 +63,11 @@ async function runTests() {
     // 4. Marchar orden a 'delivered'
     const deliverRes = await fetch(`${BASE_URL}/api/orders`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-staff-pin': '1234',
+        'x-staff-role': 'comandero',
+      },
       body: JSON.stringify({
         slug: SLUG,
         orderId,
@@ -112,7 +116,11 @@ async function runTests() {
     console.log('\n▶ PRUEBA 4: Liberación de mesa y revocación limpia de sesión');
     const freeRes = await fetch(`${BASE_URL}/api/tables`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-staff-pin': '1234',
+        'x-staff-role': 'comandero',
+      },
       body: JSON.stringify({
         slug: SLUG,
         table_number: TABLE_NUM,

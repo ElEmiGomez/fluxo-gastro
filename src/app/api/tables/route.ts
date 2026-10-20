@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTableSessions, setTableOccupied } from '@/lib/server-state'
+import { verifyStaffRequest } from '@/lib/auth/pin-security'
 import {
   createOrGetActiveSession,
   closeTableSession,
@@ -63,6 +64,16 @@ export async function POST(req: NextRequest) {
     const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
     const parsedTableNum = parseInt(String(table_number), 10)
 
+    // Blindaje de Seguridad RBAC: Acciones de gestión de mesas requieren sesión de staff
+    if (['occupy', 'free', 'close_session', 'transfer'].includes(action)) {
+      if (!verifyStaffRequest(req, slug, ['comandero', 'admin'])) {
+        return NextResponse.json(
+          { error: 'No autorizado. Se requiere sesión de personal para gestionar mesas.' },
+          { status: 401 }
+        )
+      }
+    }
+
     if (action === 'start_session') {
       const session = await createOrGetActiveSession(restaurantId, slug, parsedTableNum)
       const res = NextResponse.json({
@@ -122,6 +133,13 @@ export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
+
+    if (!verifyStaffRequest(req, slug, ['admin'])) {
+      return NextResponse.json(
+        { error: 'No autorizado. Se requiere sesión de administrador para reiniciar mesas.' },
+        { status: 401 }
+      )
+    }
     const { clearServerOrders } = await import('@/lib/server-state')
     clearServerOrders(slug)
     return NextResponse.json({ success: true, message: `Mesas reiniciadas para ${slug}` })

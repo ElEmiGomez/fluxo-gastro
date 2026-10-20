@@ -5,6 +5,7 @@ import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { getRestaurantBySlug, getTargetRestaurantId } from '@/lib/supabase/repository'
 import { getServerProducts, getServerCategories } from '@/lib/server-state'
 import { Product, Category } from '@/types/database.types'
+import { verifyStaffRequest } from '@/lib/auth/pin-security'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,6 +93,13 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
+
+    if (!verifyStaffRequest(req, slug, ['admin'])) {
+      return NextResponse.json(
+        { error: 'No autorizado. Se requiere sesión de administrador para ver el reporte ejecutivo.' },
+        { status: 401 }
+      )
+    }
     const requestedMonth = searchParams.get('month') || '2026-10'
 
     let restaurant = MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet']

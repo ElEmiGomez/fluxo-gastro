@@ -424,9 +424,7 @@ export function CartDrawer({
           } catch {
             // fallback
           }
-          alert('⚠️ La sesión de esta mesa ha finalizado o fue liberada por el personal.\nSe ha reiniciado la comanda para el siguiente servicio.')
-          onClearCart()
-          onClose()
+          alert('⚠️ La sesión de esta mesa se ha actualizado.\nTus productos se conservan en el carrito. Toca "Enviar Pedido" para abrir tu nueva comanda.')
           return
         }
         if (res.status === 429) {
@@ -460,9 +458,7 @@ export function CartDrawer({
       triggerHaptic(HAPTIC_PATTERNS.WARNING)
       console.error('Error al enviar pedido:', err)
       if (err.message && (err.message.includes('SESSION_EXPIRED') || err.message.includes('sesión'))) {
-        alert('⚠️ La sesión de esta mesa ha expirado. Por favor recarga o escanea el QR nuevamente.')
-        onClearCart()
-        onClose()
+        alert('⚠️ La sesión de esta mesa se ha actualizado. Tus platos se mantienen guardados en el carrito para que no los pierdas.')
         return
       }
       setSubmissionError(err?.message || 'Hubo un inconveniente al enviar la comanda a la base de datos. Por favor reintenta.')

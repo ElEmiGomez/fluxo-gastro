@@ -603,6 +603,17 @@ export async function PATCH(req: NextRequest) {
 
     const targetOrderId = orderId || body.id || body.order_id
 
+    // Blindaje de Seguridad RBAC (AGENTS.md):
+    // Mutaciones de personal y cocina requieren sesión válida de staff.
+    // Únicamente la elección de postre comodín (resolve_pending_dessert) está permitida al comensal.
+    const isDinerAction = body.action === 'resolve_pending_dessert'
+    if (!isDinerAction && !verifyStaffRequest(req, slug, ['comandero', 'kitchen', 'admin'])) {
+      return NextResponse.json(
+        { error: 'No autorizado. Se requiere sesión de personal para mutar comandas.' },
+        { status: 401 }
+      )
+    }
+
     // GESTIÓN DE ACCIONES DE TIEMPOS GASTRONÓMICOS (ESTACIONES DE SALA Y COCINA)
     if (body.action === 'serve_drinks') {
       if (!targetOrderId) {
