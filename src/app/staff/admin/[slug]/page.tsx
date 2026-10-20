@@ -66,11 +66,13 @@ export default function AdminMenuPage() {
   return (
     <StaffPinAuth role="admin" restaurantSlug={slug}>
       <TenantProvider restaurant={restaurant}>
-        <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+        <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 relative overflow-hidden">
+          {/* Sutil resplandor ambiental estilo landing */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-cyan-500/10 via-blue-600/5 to-transparent pointer-events-none blur-3xl -z-10" />
           {/* Toast Notification */}
           {toastMsg && (
-            <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900 text-white font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-5 border border-slate-800">
-              <Sparkles className="w-4 h-4 text-blue-400" />
+            <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-800/95 text-white font-bold text-xs sm:text-sm shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-5 border border-cyan-500/40 shadow-cyan-500/10 backdrop-blur-md">
+              <Sparkles className="w-4 h-4 text-cyan-400" />
               <span>{toastMsg}</span>
             </div>
           )}

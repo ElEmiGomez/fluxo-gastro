@@ -237,13 +237,13 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-1">
           {/* Selector de Modo */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-300 mb-1">
               Modo de Fidelización
             </label>
             <select
               value={settings.mode}
               onChange={(e) => setSettings({ ...settings, mode: e.target.value as any })}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="w-full px-3 py-2 rounded-xl border border-slate-700 text-xs font-bold bg-slate-900 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30"
             >
               <option value="stamps">⭐ Cartilla de Sellos (Recomendado)</option>
               <option value="points">💰 Puntos por Consumo (1€ = 1pt)</option>
@@ -253,7 +253,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
 
           {/* Meta de Sellos */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-300 mb-1">
               Sellos para el Premio
             </label>
             <input
@@ -262,13 +262,13 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
               max={20}
               value={settings.target_stamps}
               onChange={(e) => setSettings({ ...settings, target_stamps: Number(e.target.value) || 5 })}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="w-full px-3 py-2 rounded-xl border border-slate-700 text-xs font-bold bg-slate-900 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30"
             />
           </div>
 
           {/* Consumo Mínimo por Sello */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-300 mb-1">
               Consumo Mínimo por Sello (€)
             </label>
             <input
@@ -276,13 +276,13 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
               min={1}
               value={settings.min_spend_per_stamp}
               onChange={(e) => setSettings({ ...settings, min_spend_per_stamp: Number(e.target.value) || 50 })}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="w-full px-3 py-2 rounded-xl border border-slate-700 text-xs font-bold bg-slate-900 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30"
             />
           </div>
 
           {/* Etiqueta del Premio */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-bold text-slate-300 mb-1">
               Premio Otorgado
             </label>
             <input
@@ -290,7 +290,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
               value={settings.reward_label}
               onChange={(e) => setSettings({ ...settings, reward_label: e.target.value })}
               placeholder="Ej. Postre o Café gratis"
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+              className="w-full px-3 py-2 rounded-xl border border-slate-700 text-xs font-bold bg-slate-900 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30"
             />
           </div>
         </div>
@@ -299,43 +299,43 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
       {/* 1. TARJETAS DE MÉTRICAS EJECUTIVAS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Clientes */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
+        <div className="bg-slate-800/60 border border-slate-700/70 rounded-2xl p-4 flex flex-col justify-between shadow-xl backdrop-blur-md">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">Clientes Registrados</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200">
+            <div className="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900">{stats.total_customers}</span>
+            <span className="text-2xl sm:text-3xl font-black text-white">{stats.total_customers}</span>
             <span className="text-[11px] text-slate-500 block mt-0.5">comensales fidelizados</span>
           </div>
         </div>
 
         {/* Puntos Emitidos */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
+        <div className="bg-slate-800/60 border border-slate-700/70 rounded-2xl p-4 flex flex-col justify-between shadow-xl backdrop-blur-md">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">Puntos en Circulación</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center border border-amber-500/20">
               <Award className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900">{stats.total_points_issued}</span>
+            <span className="text-2xl sm:text-3xl font-black text-white">{stats.total_points_issued}</span>
             <span className="text-[11px] text-slate-500 block mt-0.5">puntos acumulados</span>
           </div>
         </div>
 
         {/* Clientes con Saldo Canjeable */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
+        <div className="bg-slate-800/60 border border-slate-700/70 rounded-2xl p-4 flex flex-col justify-between shadow-xl backdrop-blur-md">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">Listos para Canjear</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
               <Gift className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900">
+            <span className="text-2xl sm:text-3xl font-black text-white">
               {stats.active_members_with_rewards}
             </span>
             <span className="text-[11px] text-slate-500 block mt-0.5">saldo &gt;= 15 pts</span>
@@ -343,15 +343,15 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
         </div>
 
         {/* Reseñas Google Maps Activadas */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-xs">
+        <div className="bg-slate-800/60 border border-slate-700/70 rounded-2xl p-4 flex flex-col justify-between shadow-xl backdrop-blur-md">
           <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">Booster Google Maps</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200">
+            <div className="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center border border-cyan-500/20">
               <Star className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-slate-900">
+            <span className="text-2xl sm:text-3xl font-black text-white">
               {stats.google_reviews_awarded}
             </span>
             <span className="text-[11px] text-slate-500 block mt-0.5">bonificaciones (+50 pts)</span>
@@ -360,7 +360,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
       </div>
 
       {/* 2. BARRA DE HERRAMIENTAS: BÚSQUEDA, FILTROS Y EXPORTAR CSV */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+      <div className="bg-slate-800/60 border border-slate-700/70 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl backdrop-blur-md">
         {/* Buscador */}
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -369,17 +369,17 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por nombre o correo..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-500 transition-colors"
+            className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all"
           />
         </div>
 
         {/* Filtros de Google Maps y Botones de Acción */}
         <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+          <div className="flex items-center bg-slate-850 p-1 rounded-xl border border-slate-700 text-xs">
             <button
               onClick={() => setFilterGoogle('all')}
               className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer ${
-                filterGoogle === 'all' ? 'bg-white text-blue-700 shadow-2xs font-black' : 'text-slate-600 hover:text-slate-900'
+                filterGoogle === 'all' ? 'bg-white text-blue-700 shadow-2xs font-black' : 'text-slate-300 hover:text-slate-900'
               }`}
             >
               Todos ({profiles.length})
@@ -387,7 +387,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
             <button
               onClick={() => setFilterGoogle('awarded')}
               className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer ${
-                filterGoogle === 'awarded' ? 'bg-white text-blue-700 shadow-2xs font-black' : 'text-slate-600 hover:text-slate-900'
+                filterGoogle === 'awarded' ? 'bg-white text-blue-700 shadow-2xs font-black' : 'text-slate-300 hover:text-slate-900'
               }`}
             >
               Con Reseña
@@ -395,7 +395,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
             <button
               onClick={() => setFilterGoogle('pending')}
               className={`px-2.5 py-1 rounded-lg font-bold transition-colors cursor-pointer ${
-                filterGoogle === 'pending' ? 'bg-white text-blue-700 shadow-2xs font-black' : 'text-slate-600 hover:text-slate-900'
+                filterGoogle === 'pending' ? 'bg-white text-blue-700 shadow-2xs font-black' : 'text-slate-300 hover:text-slate-900'
               }`}
             >
               Sin Reseña
@@ -405,7 +405,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
           <button
             onClick={fetchProfiles}
             disabled={isLoading}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border border-slate-200 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-300 hover:text-slate-900 border border-slate-200 transition-colors cursor-pointer"
             title="Refrescar lista"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -413,7 +413,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
 
           <button
             onClick={handleExportCSV}
-            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-blue-600/10 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs flex items-center gap-1.5 transition-all shadow-md shadow-cyan-500/20 active:scale-95 cursor-pointer"
           >
             <Download className="w-4 h-4" />
             <span>Exportar CSV</span>
@@ -422,11 +422,11 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
       </div>
 
       {/* 3. TABLA DE CLIENTES FIDELIZADOS */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+      <div className="bg-slate-800/60 border border-slate-700/70 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-slate-700 bg-slate-900/80 text-[11px] font-black uppercase tracking-wider text-slate-400">
                 <th className="py-3 px-4">Comensal</th>
                 <th className="py-3 px-4">Contacto</th>
                 <th className="py-3 px-4 text-center">Sellos / Visitas</th>
@@ -436,11 +436,11 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
                 <th className="py-3 px-4 text-right">Fecha de Alta</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+            <tbody className="divide-y divide-slate-800 text-xs text-slate-300">
               {isLoading ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-cyan-400" />
                     <span>Cargando directorio de comensales...</span>
                   </td>
                 </tr>
@@ -461,15 +461,15 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
                     .toUpperCase()
 
                   return (
-                    <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={p.id} className="hover:bg-slate-700/40 transition-colors">
                       {/* Nombre y Avatar */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 font-black flex items-center justify-center text-xs border border-blue-200">
+                          <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-400 font-black flex items-center justify-center text-xs border border-cyan-500/20">
                             {initials}
                           </div>
                           <div>
-                            <span className="font-bold text-slate-900 text-sm block leading-tight">{p.name}</span>
+                            <span className="font-bold text-white text-sm block leading-tight">{p.name}</span>
                             <span className="text-[10px] text-slate-400 font-mono">ID: {p.id.slice(0, 14)}...</span>
                           </div>
                         </div>
@@ -478,7 +478,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
                       {/* Contacto */}
                       <td className="py-3.5 px-4">
                         <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5 text-slate-800">
+                          <div className="flex items-center gap-1.5 text-slate-200">
                             <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                             <span className="font-medium">{p.email}</span>
                           </div>
@@ -493,7 +493,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
 
                       {/* Sellos / Visitas */}
                       <td className="py-3.5 px-4 text-center">
-                        <span className="inline-block px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 font-black text-amber-900 text-xs">
+                        <span className="inline-block px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 font-black text-amber-300 text-xs">
                           {p.stamps_count || 0}/{settings.target_stamps || 5}
                         </span>
                       </td>
@@ -501,7 +501,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
                       {/* Premios Listos */}
                       <td className="py-3.5 px-4 text-center">
                         {(p.unlocked_rewards_count || 0) > 0 ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs border border-emerald-300">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-300 font-black text-xs border border-emerald-500/30">
                             🎁 {p.unlocked_rewards_count} listo(s)
                           </span>
                         ) : (
@@ -511,7 +511,7 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
 
                       {/* Puntos Totales */}
                       <td className="py-3.5 px-4 text-center">
-                        <span className="inline-block px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 font-black text-slate-900 text-xs">
+                        <span className="inline-block px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-700 font-black text-cyan-400 text-xs">
                           {p.total_points} pts
                         </span>
                       </td>
@@ -519,12 +519,12 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
                       {/* Google Maps Booster */}
                       <td className="py-3.5 px-4 text-center">
                         {p.google_review_bonus_awarded ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold">
-                            <CheckCircle2 className="w-3 h-3 text-blue-600" />
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-[11px] font-bold">
+                            <CheckCircle2 className="w-3 h-3 text-cyan-400" />
                             <span>Otorgado</span>
                           </span>
                         ) : (
-                          <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[11px]">
+                          <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-900 text-slate-400 text-[11px] border border-slate-800">
                             Pendiente
                           </span>
                         )}

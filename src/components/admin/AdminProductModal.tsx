@@ -72,15 +72,15 @@ export function AdminProductModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 select-none">
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl text-slate-900 animate-in zoom-in-95">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <h3 className="font-black text-sm sm:text-base text-slate-900">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 select-none">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl text-slate-100 animate-in zoom-in-95">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <h3 className="font-black text-sm sm:text-base text-white">
             {editingProduct ? 'Editar Plato' : 'Añadir Nuevo Plato'}
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
@@ -111,20 +111,20 @@ export function AdminProductModal({
           className="space-y-3 text-xs sm:text-sm"
         >
           <div className="space-y-1">
-            <label className="text-slate-700 font-bold block text-xs">Nombre del Plato *</label>
+            <label className="text-slate-300 font-bold block text-xs">Nombre del Plato *</label>
             <input
               name="name"
               required
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               placeholder="Ej: Hamburguesa Gallega Doble"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <label className="text-slate-700 font-bold block text-xs">Precio (€) *</label>
+              <label className="text-slate-300 font-bold block text-xs">Precio (€) *</label>
               <input
                 name="price"
                 type="number"
@@ -132,12 +132,12 @@ export function AdminProductModal({
                 required
                 defaultValue={editingProduct?.price || ''}
                 placeholder="Ej: 14.50"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors tabular-nums"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all tabular-nums"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-700 font-bold block text-xs flex items-center justify-between">
+              <label className="text-slate-300 font-bold block text-xs flex items-center justify-between">
                 <span>Coste Ingredientes (€)</span>
                 <span className="text-[10px] text-slate-400 font-normal">Materia prima</span>
               </label>
@@ -147,12 +147,12 @@ export function AdminProductModal({
                 step="0.01"
                 defaultValue={editingProduct?.cost_price != null ? editingProduct.cost_price : ''}
                 placeholder="Ej: 4.20 (Opcional)"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors tabular-nums"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all tabular-nums"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-slate-700 font-bold block text-xs flex items-center justify-between">
+              <label className="text-slate-300 font-bold block text-xs flex items-center justify-between">
                 <span>Precio Habitual (€)</span>
                 <span className="text-[10px] text-slate-400 font-normal">Tachado</span>
               </label>
@@ -162,16 +162,16 @@ export function AdminProductModal({
                 step="0.01"
                 defaultValue={editingProduct?.original_price || ''}
                 placeholder="Ej: 18.00 (Opcional)"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors tabular-nums"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all tabular-nums"
               />
             </div>
           </div>
 
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="text-slate-700 font-bold block text-xs">Categoría *</label>
+              <label className="text-slate-300 font-bold block text-xs">Categoría *</label>
               {isAutoSuggested && (
-                <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 animate-in fade-in flex items-center gap-1">
+                <span className="text-[10px] font-semibold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/20 animate-in fade-in flex items-center gap-1">
                   ✨ Categorizada automáticamente
                 </span>
               )}
@@ -180,7 +180,7 @@ export function AdminProductModal({
               name="category_id"
               value={selectedCategoryId}
               onChange={(e) => handleCategorySelectChange(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors cursor-pointer"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all cursor-pointer"
             >
               {categories.map(c => (
                 <option key={c.id} value={c.id}>
@@ -191,31 +191,31 @@ export function AdminProductModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-slate-700 font-bold block text-xs">Descripción o Ingredientes</label>
+            <label className="text-slate-300 font-bold block text-xs">Descripción o Ingredientes</label>
             <textarea
               name="description"
               rows={2}
               value={description}
               onChange={(e) => handleDescriptionChange(e.target.value)}
               placeholder="Ej: 200g de carne madurada, queso de Arzúa y cebolla caramelizada."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-slate-700 font-bold block text-xs">URL de Foto (Opcional)</label>
+            <label className="text-slate-300 font-bold block text-xs">URL de Foto (Opcional)</label>
             <input
               name="image_url"
               defaultValue={editingProduct?.image_url || ''}
               placeholder="https://images.unsplash.com/..."
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all"
             />
           </div>
 
           {/* Selector de 14 Alérgenos Obligatorios UE 1169/2011 */}
-          <div className="space-y-2 pt-1 border-t border-slate-100">
+          <div className="space-y-2 pt-1 border-t border-slate-800">
             <div className="flex items-center justify-between">
-              <label className="text-slate-700 font-bold block text-xs">
+              <label className="text-slate-300 font-bold block text-xs">
                 Alérgenos UE (Reg. 1169/2011)
               </label>
               <span className="text-[10px] text-slate-400 font-medium">
@@ -231,9 +231,7 @@ export function AdminProductModal({
                     type="button"
                     onClick={() => onAllergenToggle(al.id)}
                     className={`px-2 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all text-left border cursor-pointer select-none ${
-                      isSelected
-                        ? 'bg-amber-50 border-amber-300 text-amber-800'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                      isSelected ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-bold' : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:border-slate-600 hover:text-slate-200'
                     }`}
                   >
                     <span className="text-sm flex-shrink-0">{al.icon}</span>
@@ -250,24 +248,24 @@ export function AdminProductModal({
               id="is_weight"
               name="is_weight"
               defaultChecked={editingProduct?.price_type === 'weight'}
-              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="rounded border-slate-700 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
             />
-            <label htmlFor="is_weight" className="text-slate-700 font-bold cursor-pointer text-xs">
+            <label htmlFor="is_weight" className="text-slate-300 font-bold cursor-pointer text-xs">
               Precio al peso (ej: Chuletón o Marisco por 100g)
             </label>
           </div>
 
-          <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100">
+          <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer transition-colors"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700 font-bold cursor-pointer transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-600/20 cursor-pointer transition-colors"
+              className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black shadow-md shadow-cyan-500/25 cursor-pointer transition-colors active:scale-95"
             >
               Guardar Plato
             </button>

@@ -44,13 +44,13 @@ export function AdminProductCatalog({
             placeholder="Buscar plato por nombre o ingrediente..."
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs sm:text-sm focus:outline-none focus:border-blue-500 shadow-2xs transition-colors"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700/80 text-white placeholder:text-slate-400 text-xs sm:text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 shadow-inner transition-all"
           />
         </div>
 
         <button
           onClick={onOpenNewProductModal}
-          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+          className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span>Añadir Nuevo Plato</span>
@@ -62,9 +62,7 @@ export function AdminProductCatalog({
         <button
           onClick={() => onCategoryFilterChange('all')}
           className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-            selectedCategoryFilter === 'all'
-              ? 'bg-blue-600 text-white font-black shadow-xs'
-              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+            selectedCategoryFilter === 'all' ? 'bg-cyan-500 text-slate-950 font-black shadow-md shadow-cyan-500/20' : 'bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/80 font-bold'
           }`}
         >
           Todos ({products.length})
@@ -76,9 +74,7 @@ export function AdminProductCatalog({
               key={cat.id}
               onClick={() => onCategoryFilterChange(cat.id)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                selectedCategoryFilter === cat.id
-                  ? 'bg-blue-600 text-white font-black shadow-xs'
-                  : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                selectedCategoryFilter === cat.id ? 'bg-cyan-500 text-slate-950 font-black shadow-md shadow-cyan-500/20' : 'bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/80 font-bold'
               }`}
             >
               {cat.name} ({count})
@@ -98,13 +94,13 @@ export function AdminProductCatalog({
               key={product.id}
               className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 shadow-xs ${
                 isAvailable
-                  ? 'bg-white border-slate-200 hover:border-slate-300'
-                  : 'bg-slate-50 border-slate-200 opacity-70'
+                  ? 'bg-slate-800/60 hover:bg-slate-800/90 border-slate-700/70 hover:border-cyan-500/40 text-slate-100'
+                  : 'bg-slate-850/40 border-slate-800/80 opacity-60 text-slate-400'
               }`}
             >
               {/* Miniatura Foto */}
               {product.image_url ? (
-                <div className="relative w-14 h-14 min-w-[3.5rem] aspect-square overflow-hidden rounded-xl bg-slate-100 flex-shrink-0 border border-slate-200">
+                <div className="relative w-14 h-14 min-w-[3.5rem] aspect-square overflow-hidden rounded-xl bg-slate-900 flex-shrink-0 border border-slate-700/80">
                   <Image
                     src={product.image_url}
                     alt={product.name}
@@ -114,7 +110,7 @@ export function AdminProductCatalog({
                   />
                 </div>
               ) : (
-                <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0">
+                <div className="w-14 h-14 rounded-xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-500 flex-shrink-0">
                   <Utensils size={20} />
                 </div>
               )}
@@ -122,16 +118,16 @@ export function AdminProductCatalog({
               {/* Datos del Plato */}
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[9px] font-black uppercase text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                  <span className="text-[9px] font-black uppercase text-cyan-400 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/20 tracking-wider">
                     {catName}
                   </span>
                   {!isAvailable && (
-                    <span className="text-[9px] font-black uppercase text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                    <span className="text-[9px] font-black uppercase text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20 tracking-wider">
                       AGOTADO
                     </span>
                   )}
                 </div>
-                <h3 className="font-extrabold text-xs sm:text-sm text-slate-900 truncate">
+                <h3 className="font-extrabold text-xs sm:text-sm text-white group-hover:text-cyan-400 transition-colors truncate">
                   {product.name}
                 </h3>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -140,13 +136,13 @@ export function AdminProductCatalog({
                       {formatCurrency(product.original_price)}
                     </span>
                   )}
-                  <span className="font-black text-xs text-slate-900 tabular-nums">
+                  <span className="font-black text-xs text-cyan-400 tabular-nums">
                     {product.price_type === 'weight'
                       ? `${formatCurrency(product.price)} / ${product.price_unit || '100g'}`
                       : formatCurrency(product.price)}
                   </span>
                   {product.original_price != null && product.original_price > product.price && (
-                    <span className="text-[9px] font-black uppercase text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">
+                    <span className="text-[9px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded border border-emerald-500/20">
                       -{Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
                     </span>
                   )}
@@ -162,8 +158,8 @@ export function AdminProductCatalog({
                   title={isAvailable ? 'Marcar como agotado' : 'Marcar como disponible'}
                   className={`p-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer flex items-center gap-1 ${
                     isAvailable
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                      : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                      : 'bg-rose-500/15 text-rose-400 border-rose-500/30 hover:bg-rose-500/25'
                   }`}
                 >
                   <Power size={14} />
@@ -173,7 +169,7 @@ export function AdminProductCatalog({
                 <button
                   type="button"
                   onClick={() => onOpenEditProductModal(product)}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 transition-colors cursor-pointer"
+                  className="p-2 rounded-xl bg-slate-750 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
                   title="Editar plato"
                 >
                   <Edit2 size={14} />
@@ -183,7 +179,7 @@ export function AdminProductCatalog({
                 <button
                   type="button"
                   onClick={() => onDeleteProduct(product.id)}
-                  className="p-2 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 border border-slate-200 transition-colors cursor-pointer"
+                  className="p-2 rounded-xl bg-slate-750 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 hover:border-rose-500/30 transition-colors cursor-pointer"
                   title="Eliminar plato"
                 >
                   <Trash2 size={14} />
