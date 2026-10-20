@@ -108,9 +108,9 @@ export function useMenuOrderSync({
       isChecking = true
       try {
         const [ordersRes, callsRes, tablesRes] = await Promise.all([
-          fetch(`/api/orders?slug=${slug}&table=${tableNumber}`).then(r => r.json()).catch(() => ({ orders: [] })),
-          fetch(`/api/service-calls?slug=${slug}`).then(r => r.json()).catch(() => ({ calls: [] })),
-          fetch(`/api/tables?slug=${slug}`).then(r => r.json()).catch(() => ({ sessions: {} })),
+          fetch(`/api/orders?slug=${slug}&table=${tableNumber}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ orders: [] })),
+          fetch(`/api/service-calls?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ calls: [] })),
+          fetch(`/api/tables?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ sessions: {} })),
         ])
 
         if (ordersRes?.product_availability) {
@@ -176,7 +176,19 @@ export function useMenuOrderSync({
           if (!items || items.length === 0) {
             if (prevOrd?.order_items && prevOrd.order_items.length > 0) {
               items = prevOrd.order_items
+            } else if (typeof window !== 'undefined') {
+              try {
+                const stored = localStorage.getItem(`fluxo_order_items_${ord.id}`)
+                if (stored) {
+                  const parsed = JSON.parse(stored)
+                  if (Array.isArray(parsed) && parsed.length > 0) items = parsed
+                }
+              } catch (_) {}
             }
+          } else if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(`fluxo_order_items_${ord.id}`, JSON.stringify(items))
+            } catch (_) {}
           }
           if (prevOrd?.order_items && prevOrd.order_items.length > 0 && items && items.length > 0) {
             items = mergeOrderItemsCourseTags(items, prevOrd.order_items)
@@ -227,24 +239,15 @@ export function useMenuOrderSync({
           hasHadActiveOrderInThisSessionRef.current = true
         }
 
-        const paidOrdersForTable = serverOrdersList.filter(o => {
-          const matchesTable = (
-            o.table_number?.toString() === tableNumber?.toString() ||
-            o.table?.table_number?.toString() === tableNumber?.toString() ||
-            o.table_id === `table-${tableNumber}`
-          )
-          if (!matchesTable || o.status !== 'paid') return false
-          // Si coincide el session_token o fue pagada en los últimos 25 minutos
-          if (currentSessionId && o.session_token && o.session_token === currentSessionId) {
-            return true
-          }
-          const paidAt = new Date(o.updated_at || o.created_at || 0).getTime()
-          return Date.now() - paidAt < 25 * 60 * 1000
-        })
+        const paidOrdersForTable = allTableOrders.filter(o => o.status === 'paid')
         const hasPaidOrder = paidOrdersForTable.length > 0
 
-        // Si todas las órdenes de la mesa ya fueron cobradas (status === 'paid')
-        if (activeTableOrders.length === 0 && (hasPaidOrder || isTablePaidRef.current)) {
+        // Si todas las órdenes de la mesa ya fueron cobradas (status === 'paid') y el comensal participó en esta sesión
+        if (
+          activeTableOrders.length === 0 &&
+          hasPaidOrder &&
+          (hasHadActiveOrderInThisSessionRef.current || hasRequestedBillRef.current || userRequestedBillTimeRef.current)
+        ) {
           setTableOrderStatus(null)
           setTableOrders(paidOrdersForTable)
           const total = paidOrdersForTable.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
@@ -454,9 +457,11 @@ export function useMenuOrderSync({
           const newSession = payload?.new
           const matchesTable = newSession && newSession.table_number?.toString() === tableNumber?.toString()
           if (matchesTable && (newSession.status === 'closed' || newSession.status === 'free')) {
-            const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
-            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
+            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
               handleTableMarkedPaidRef.current()
+              return
+            } else {
+              handleLocalTableFreed({ detail: { tableNumber } })
               return
             }
           }

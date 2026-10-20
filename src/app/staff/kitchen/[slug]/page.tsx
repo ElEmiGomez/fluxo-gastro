@@ -443,7 +443,7 @@ export default function KitchenKDSPage() {
     o.status === 'pending' ||
     o.status === 'confirmed' ||
     o.status === 'preparing' ||
-    (o.status === 'ready' && orderHasMains(o) && !areOrderMainsReady(o)) ||
+    o.status === 'ready' ||
     (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
   )
   const readyOrders = orders.filter(o => o.status === 'ready')

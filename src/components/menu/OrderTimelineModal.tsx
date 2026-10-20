@@ -49,8 +49,25 @@ export function OrderTimelineModal({
 }: OrderTimelineModalProps) {
   if (!isOpen || !status) return null
 
-  // Agrupar ítems activos de todas las comandas de la mesa
-  const allTableItems = orders.flatMap(o => o.order_items || [])
+  // Agrupar ítems activos de todas las comandas de la mesa con respaldo de caché local
+  const rawItems = orders.flatMap(o => o.order_items || [])
+  let allTableItems = rawItems
+  if (allTableItems.length === 0 && typeof window !== 'undefined') {
+    const recovered: any[] = []
+    orders.forEach(o => {
+      try {
+        const stored = localStorage.getItem(`fluxo_order_items_${o.id}`)
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length > 0) recovered.push(...parsed)
+        }
+      } catch (_) {}
+    })
+    if (recovered.length > 0) {
+      allTableItems = recovered
+    }
+  }
+
   const hasDrinks = allTableItems.some(isDrinkItem)
   const hasStarters = allTableItems.some(isStarterItem)
   const hasMains = allTableItems.some(isMainItem)
@@ -197,7 +214,7 @@ export function OrderTimelineModal({
     let state: PhaseState = 'waiting'
     let desc = (hasStarters || hasMains) ? 'En espera tras terminar la comida principal.' : 'En cola de cocina.'
     let badge = 'En espera'
-    if (areDessertsServed) {
+    if (areDessertsServed || (status === 'delivered' && !hasPendingDessertChoice)) {
       state = 'delivered'
       desc = 'Postres servidos en tu mesa.'
       badge = 'Entregados'

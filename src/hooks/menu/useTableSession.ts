@@ -52,7 +52,7 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
 
   const handleRequestMicroService = useCallback(async (serviceName: string) => {
     triggerHaptic(HAPTIC_PATTERNS.SERVICE_CALL)
-    const isWaiterCall = serviceName === 'waiter' || serviceName === 'mozo'
+    const isWaiterCall = /waiter|mozo/i.test(serviceName)
     const callType = isWaiterCall ? 'waiter_attention' : `service_${serviceName}`
     try {
       const res = await fetch('/api/service-calls', {
@@ -69,8 +69,9 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
         throw new Error('Error al solicitar servicio')
       }
 
-      setPendingServiceCalls(prev => new Set(prev).add(serviceName))
-      setServiceRequestedToast(isWaiterCall ? 'mozo' : serviceName)
+      const registeredKey = isWaiterCall ? 'mozo' : serviceName
+      setPendingServiceCalls(prev => new Set(prev).add(registeredKey))
+      setServiceRequestedToast(registeredKey)
       setTimeout(() => {
         setServiceRequestedToast(null)
       }, 3000)
@@ -121,10 +122,22 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
         localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, urlSession)
         ensureServerSession()
       } else if (localStoredSession) {
-        setSessionId(localStoredSession)
-        ensureServerSession()
+        fetch(`/api/session/restore?slug=${slug}&table=${tableNumber}&token=${encodeURIComponent(localStoredSession)}&_t=${Date.now()}`, { cache: 'no-store' })
+          .then(r => r.json())
+          .then(data => {
+            if (data.restored && data.session_token) {
+              setSessionId(data.session_token)
+              localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, data.session_token)
+            } else {
+              localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
+              ensureServerSession()
+            }
+          })
+          .catch(() => {
+            ensureServerSession()
+          })
       } else {
-        fetch(`/api/session/restore?slug=${slug}&table=${tableNumber}`)
+        fetch(`/api/session/restore?slug=${slug}&table=${tableNumber}&_t=${Date.now()}`, { cache: 'no-store' })
           .then(r => r.json())
           .then(data => {
             if (data.restored && data.session_token) {

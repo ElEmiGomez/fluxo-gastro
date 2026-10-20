@@ -26,10 +26,10 @@ export async function GET(req: NextRequest) {
 
     const tableNumber = parseInt(tableParam, 10)
     const cookieName = `gastro_session_${slug}_${tableNumber}`
-    const cookieSessionToken = req.cookies.get(cookieName)?.value
+    const cookieSessionToken = req.cookies.get(cookieName)?.value || searchParams.get('token')
 
     if (!cookieSessionToken) {
-      return NextResponse.json({ restored: false, reason: 'NO_HTTP_COOKIE' })
+      return NextResponse.json({ restored: false, reason: 'NO_SESSION_TOKEN' })
     }
 
     const restaurant = await getRestaurantBySlug(slug)

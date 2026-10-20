@@ -222,12 +222,13 @@ export function useComanderoData(slug: string) {
       const serverPendingCalls = incomingCalls.filter((c: any) => c.status === 'pending' && !attendedCallIdsRef.current.has(c.id))
       const formattedPendingCalls: PendingServiceCall[] = serverPendingCalls.map((c: any) => {
         let desc = 'Solicita atención del mozo'
+        const lowerType = String(c.call_type || '').toLowerCase()
         if (c.call_type === 'order_dictate') desc = 'Comanda lista para dictar al mozo'
-        else if (c.call_type === 'waiter_attention' || c.call_type === 'call_waiter' || c.call_type === 'waiter' || c.call_type === 'mozo' || c.call_type === 'service_waiter' || c.call_type === 'service_mozo') desc = 'Llamada al mozo'
+        else if (lowerType.includes('waiter') || lowerType.includes('mozo')) desc = 'Llamada al mozo'
         else if (c.call_type.startsWith('bill_')) desc = `Pide la cuenta (${c.call_type.replace('bill_', '')})`
         else if (c.call_type.startsWith('service_')) {
           const item = c.call_type.replace('service_', '')
-          if (item === 'waiter' || item === 'mozo') {
+          if (/waiter|mozo/i.test(item)) {
             desc = 'Llamada al mozo'
           } else {
             desc = `Solicita: ${item}`
