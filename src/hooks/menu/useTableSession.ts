@@ -52,6 +52,8 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
 
   const handleRequestMicroService = useCallback(async (serviceName: string) => {
     triggerHaptic(HAPTIC_PATTERNS.SERVICE_CALL)
+    const isWaiterCall = serviceName === 'waiter' || serviceName === 'mozo'
+    const callType = isWaiterCall ? 'waiter_attention' : `service_${serviceName}`
     try {
       const res = await fetch('/api/service-calls', {
         method: 'POST',
@@ -59,7 +61,7 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
         body: JSON.stringify({
           slug,
           table_number: tableNumber,
-          call_type: `service_${serviceName}`,
+          call_type: callType,
         }),
       })
 
@@ -68,7 +70,7 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
       }
 
       setPendingServiceCalls(prev => new Set(prev).add(serviceName))
-      setServiceRequestedToast(serviceName)
+      setServiceRequestedToast(isWaiterCall ? 'mozo' : serviceName)
       setTimeout(() => {
         setServiceRequestedToast(null)
       }, 3000)

@@ -162,17 +162,15 @@ export async function attendServiceCall(
       }
     })
 
+    const targetRestaurantId = getTargetRestaurantId(attendedCall?.restaurant_id, slug)
     if (supabase && isSupabaseConfigured() && tableNum) {
       try {
-        const targetRestaurantId = attendedCall.restaurant_id
-        if (targetRestaurantId) {
-          await supabase
-            .from('orders')
-            .update({ status: 'paid' })
-            .eq('restaurant_id', targetRestaurantId)
-            .eq('table_number', tableNum)
-            .neq('status', 'cancelled')
-        }
+        await supabase
+          .from('orders')
+          .update({ status: 'paid' })
+          .eq('restaurant_id', targetRestaurantId)
+          .eq('table_number', tableNum)
+          .neq('status', 'cancelled')
       } catch (err) {
         console.warn('Error marking table orders as paid on bill attended:', err)
       }

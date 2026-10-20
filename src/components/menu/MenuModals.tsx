@@ -214,7 +214,11 @@ export function MenuModals({
         <div className="fixed top-16 inset-x-3 z-50 max-w-md mx-auto p-3 rounded-2xl bg-emerald-700 text-white font-bold shadow-2xl flex items-center justify-between animate-in slide-in-from-top duration-300 border border-emerald-600">
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-emerald-200 stroke-[3]" />
-            <span className="text-xs">¡Solicitado {serviceRequestedToast} para Mesa #{tableNumber}!</span>
+            <span className="text-xs">
+              {serviceRequestedToast === 'waiter' || serviceRequestedToast === 'mozo'
+                ? `¡Mozo avisado para Mesa #${tableNumber}!`
+                : `¡Solicitado ${serviceRequestedToast} para Mesa #${tableNumber}!`}
+            </span>
           </div>
         </div>
       )}
@@ -256,7 +260,7 @@ export function MenuModals({
         tableNumber={tableNumber}
         status={tableOrderStatus}
         orders={tableOrders}
-        onCallWaiter={() => onRequestMicroService('waiter')}
+        onCallWaiter={() => onRequestMicroService('mozo')}
         onRequestService={() => setShowServiceModal(true)}
         onRequestBill={() => setShowDirectBillModal(true)}
       />

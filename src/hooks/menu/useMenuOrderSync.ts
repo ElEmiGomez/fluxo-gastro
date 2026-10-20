@@ -136,6 +136,38 @@ export function useMenuOrderSync({
           setSessionIdRef.current(thisTableSession.session_id)
         }
 
+        // Si la mesa fue liberada por el personal (status === 'free'), limpiar inmediatamente la comanda anterior
+        if (thisTableSession?.status === 'free') {
+          hasHadActiveOrderInThisSessionRef.current = false
+          prevTableOrdersMapRef.current.clear()
+          setTableOrderStatus(null)
+          setTableOrders([])
+          setTableTotalAmount(0)
+          setCartRef.current([])
+          setIsTablePaidRef.current(false)
+          setIsTablePaid(false)
+          setHasRequestedBill(false)
+          hasRequestedBillRef.current = false
+          userRequestedBillTimeRef.current = null
+          if (thisTableSession.session_id) {
+            setSessionIdRef.current(thisTableSession.session_id)
+            setSessionId(thisTableSession.session_id)
+          }
+          if (typeof window !== 'undefined') {
+            try {
+              sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
+              localStorage.removeItem(`fluxo_cart_${slug}_${tableNumber}`)
+              if (thisTableSession.session_id) {
+                localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, thisTableSession.session_id)
+              }
+            } catch (_) {}
+          }
+          return
+        }
+
         const currentSessionId = thisTableSession?.session_id || sessionIdRef.current
         const rawOrders: any[] = ordersRes.orders || []
         const serverOrdersList: any[] = rawOrders.map((ord: any) => {
@@ -173,16 +205,14 @@ export function useMenuOrderSync({
             o.table_id === `table-${tableNumber}`
           )
           if (!matchesTable) return false
+          if (o.status === 'cancelled') return false
 
-          const isActive = ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
-          if (isActive) return true
+          // Si la orden tiene session_token y es distinta de la sesión activa de la mesa, omitirla
+          if (currentSessionId && o.session_token && o.session_token !== currentSessionId) {
+            return false
+          }
 
-          if (!currentSessionId || !o.session_token) return false
-          const isCurrentSessionOrder = 
-            o.session_token === currentSessionId || 
-            (sessionIdRef.current && o.session_token === sessionIdRef.current) || 
-            (thisTableSession?.session_id && o.session_token === thisTableSession.session_id)
-          return Boolean(isCurrentSessionOrder)
+          return true
         })
 
         allTableOrders.forEach(ord => {
@@ -213,8 +243,21 @@ export function useMenuOrderSync({
         })
         const hasPaidOrder = paidOrdersForTable.length > 0
 
-        // Si hay órdenes activas en la mesa, la mesa NO puede estar en estado cobrado/pagado
-        if (activeTableOrders.length > 0) {
+        // Si todas las órdenes de la mesa ya fueron cobradas (status === 'paid')
+        if (activeTableOrders.length === 0 && (hasPaidOrder || isTablePaidRef.current)) {
+          setTableOrderStatus(null)
+          setTableOrders(paidOrdersForTable)
+          const total = paidOrdersForTable.reduce((sum, ord) => sum + (Number(ord.total_amount) || 0), 0)
+          setTableTotalAmount(total)
+          if (!isTablePaidRef.current) {
+            setIsTablePaidRef.current(true)
+            handleTableMarkedPaidRef.current()
+          }
+          return
+        }
+
+        // Si hay órdenes activas en preparación o pendientes de cocina
+        if (activeTableOrders.some(o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status))) {
           if (isTablePaidRef.current) {
             setIsTablePaidRef.current(false)
             setIsTablePaid(false)
@@ -518,35 +561,54 @@ export function useMenuOrderSync({
 
     const handleLocalTableFreed = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
-        const prevSessionTotal = Array.from(prevTableOrdersMapRef.current.values()).reduce(
-          (sum, o) => sum + (Number(o.total_amount) || 0),
-          0
-        )
-        if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
-          hasHadActiveOrderInThisSessionRef.current = false
-          prevTableOrdersMapRef.current.clear()
-          if (prevSessionTotal > 0 && typeof window !== 'undefined') {
-            try {
-              sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(prevSessionTotal))
-            } catch (_) {}
-          }
-          setIsTablePaidRef.current(true)
-          handleTableMarkedPaidRef.current()
-          return
-        }
         hasHadActiveOrderInThisSessionRef.current = false
         prevTableOrdersMapRef.current.clear()
         setCartRef.current([])
         setTableOrderStatus(null)
+        setTableOrders([])
+        setTableTotalAmount(0)
+        setIsTablePaidRef.current(false)
+        setIsTablePaid(false)
+        setHasRequestedBill(false)
+        hasRequestedBillRef.current = false
+        userRequestedBillTimeRef.current = null
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
+            sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+            sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
+            sessionStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
+            localStorage.removeItem(`fluxo_cart_${slug}_${tableNumber}`)
+          } catch (_) {}
+        }
       }
     }
 
     const handleLocalTableBillPaid = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
-        if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
-          handleTableMarkedPaidRef.current()
+        setTableOrderStatus(null)
+        setIsTablePaidRef.current(true)
+        handleTableMarkedPaidRef.current()
+      }
+    }
+
+    // BroadcastChannel cross-tab synchronization
+    let menuBc: BroadcastChannel | null = null
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      menuBc = new BroadcastChannel('fluxo_menu_channel')
+      menuBc.onmessage = (event) => {
+        const data = event.data
+        if (!data) return
+        if (
+          data.type === 'table_freed' &&
+          (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
+        ) {
+          handleLocalTableFreed({ detail: { tableNumber } })
+        } else if (
+          data.type === 'table_bill_paid' &&
+          (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
+        ) {
+          handleLocalTableBillPaid({ detail: { tableNumber } })
         }
       }
     }
@@ -568,6 +630,9 @@ export function useMenuOrderSync({
       }
       if (sseEventSource) sseEventSource.close()
       if (pollInterval) clearInterval(pollInterval)
+      if (menuBc) {
+        menuBc.close()
+      }
       window.removeEventListener('fluxo_table_freed', handleLocalTableFreed)
       window.removeEventListener('fluxo_table_bill_paid', handleLocalTableBillPaid)
       document.removeEventListener('visibilitychange', handleVisibilityChange)

@@ -536,6 +536,18 @@ export function attendServerServiceCall(slug: string, callId: string): ServiceCa
   })
 
   if (attendedCall && attendedCall.call_type.startsWith('bill_')) {
+    const tableNumStr = attendedCall.table_number.toString()
+    const memOrders = globalStore.__GASTRO_ORDERS__?.[slug] || []
+    memOrders.forEach(o => {
+      const isThisTable =
+        o.table_number?.toString() === tableNumStr ||
+        o.table?.table_number?.toString() === tableNumStr
+      if (isThisTable && o.status !== 'cancelled') {
+        o.status = 'paid'
+        o.version = (o.version || 1) + 1
+        o.updated_at = new Date().toISOString()
+      }
+    })
     broadcastEvent({
       type: 'table_bill_paid',
       slug,

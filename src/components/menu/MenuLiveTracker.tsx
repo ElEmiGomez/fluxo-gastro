@@ -341,7 +341,7 @@ export function MenuLiveTracker({
               </div>
 
               {/* Banner destacado: Elegir postre comodín incluido */}
-              {hasPendingDessertChoice && onOpenDessertSelector ? (
+              {hasPendingDessertChoice && onOpenDessertSelector && (
                 <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border-2 border-purple-300 flex items-center justify-between gap-3 shadow-xs">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="text-xl flex-shrink-0">🍰</span>
@@ -363,49 +363,28 @@ export function MenuLiveTracker({
                     <span>Elegir Postre</span>
                   </button>
                 </div>
-              ) : hasPendingDesserts ? (
-                <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 flex items-center justify-between gap-3 shadow-2xs">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-xl flex-shrink-0">🍨</span>
-                    <div className="min-w-0">
-                      <span className="text-xs font-black text-amber-950 block leading-tight">
-                        Postres en marcha
-                      </span>
-                      <span className="text-[11px] text-amber-800 font-medium truncate block">
-                        Disfruta de tus postres antes de solicitar la cuenta
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={onOpenTimelineModal}
-                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer flex-shrink-0"
-                  >
-                    <span>Ver Fases</span>
-                    <ChevronRight size={12} />
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2 pt-0.5">
-                  <button
-                    type="button"
-                    onClick={onGoToDesserts}
-                    className="p-2 rounded-xl bg-white hover:bg-amber-100/60 text-amber-950 border border-amber-300 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                  >
-                    <span className="text-sm">☕🍰</span>
-                    <span>Café / Postres</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={onOpenDirectBillModal}
-                    className="p-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                  >
-                    <Receipt className="w-3.5 h-3.5" />
-                    <span>{t('billButton')}</span>
-                  </button>
-                </div>
               )}
+
+              {/* Botones de acción directa: Café / Postres y Cuenta */}
+              <div className="grid grid-cols-2 gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={onGoToDesserts}
+                  className="p-2 rounded-xl bg-white hover:bg-amber-100/60 text-amber-950 border border-amber-300 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                >
+                  <span className="text-sm">☕🍰</span>
+                  <span>Café / Postres</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onOpenDirectBillModal}
+                  className="p-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                >
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>{t('billButton')}</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

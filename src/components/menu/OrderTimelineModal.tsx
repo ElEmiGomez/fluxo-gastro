@@ -211,7 +211,7 @@ export function OrderTimelineModal({
       badge = 'Por definir'
     } else if (areDessertsPreparing) {
       state = 'preparing'
-      desc = 'Marchados en cocina para el pase dulce.'
+      desc = '🍨 Postres en marcha: preparándose en cocina para el pase dulce.'
       badge = 'En preparación'
     }
     dynamicPhases.push({

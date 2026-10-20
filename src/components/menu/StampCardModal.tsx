@@ -208,34 +208,7 @@ export function StampCardModal({
                 </div>
               </div>
 
-              {/* Opción de Ganar 1 Sello Gratis con Google Maps */}
-              <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 p-4 rounded-2xl border-2 border-amber-300 shadow-xs space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm shadow-xs flex-shrink-0">
-                    <Star className="w-4 h-4 fill-white" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
-                      Bonus de Bienvenida
-                    </span>
-                    <h4 className="text-xs font-black text-slate-900 leading-tight">
-                      ⭐ ¡Consigue tu 1º Sello GRATIS con Google Maps!
-                    </h4>
-                  </div>
-                </div>
-                <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Valora el restaurante en Google Maps y suma tu primer sello al instante al abrir tu cartilla digital.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleOpenGoogleReview}
-                  className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
-                >
-                  <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
-                  <span>Valorar en Google Maps (+1 Sello)</span>
-                  <ExternalLink className="w-3 h-3 ml-0.5" />
-                </button>
-              </div>
+
 
               {formError && (
                 <div className="p-3 bg-red-50 text-red-700 text-xs font-bold rounded-xl border border-red-200">

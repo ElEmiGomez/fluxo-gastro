@@ -65,6 +65,7 @@ export function useComanderoActions({
 
   // Marcar llamada como atendida (Servidor + Local con State Lock)
   const handleAttendCall = async (callId: string) => {
+    const callToAttend = pendingCalls.find(c => c.id === callId)
     attendedCallIdsRef.current.add(callId)
     seenCallIdsRef.current.add(callId)
     setPendingCalls(prev => prev.filter(c => c.id !== callId))
@@ -75,6 +76,15 @@ export function useComanderoActions({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug, callId }),
       })
+
+      if (callToAttend && (callToAttend.call_type?.startsWith('bill_') || callToAttend.text?.toLowerCase().includes('cuenta'))) {
+        window.dispatchEvent(new CustomEvent('fluxo_table_bill_paid', { detail: { tableNumber: callToAttend.table_number } }))
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('fluxo_menu_channel')
+          bc.postMessage({ type: 'table_bill_paid', slug, tableNumber: callToAttend.table_number })
+          bc.close()
+        }
+      }
     } catch (e) {
       console.error('Error attending call:', e)
     }
@@ -540,6 +550,11 @@ export function useComanderoActions({
       setSelectedTable(null)
 
       window.dispatchEvent(new CustomEvent('fluxo_table_freed', { detail: { tableNumber: tableNum } }))
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('fluxo_menu_channel')
+        bc.postMessage({ type: 'table_freed', slug, tableNumber: tableNum })
+        bc.close()
+      }
 
       const tableCalls = pendingCalls.filter(c => c.table_number.toString() === tableNum.toString())
       for (const c of tableCalls) {
