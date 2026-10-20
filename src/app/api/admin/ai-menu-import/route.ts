@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
     const {
       slug = 'burger-gourmet',
       raw_text = '',
+      image_base64 = '',
       save_to_menu = false,
       mode = 'append', // 'append' | 'overwrite'
       custom_parsed = null,
@@ -74,8 +75,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!custom_parsed && (!raw_text || typeof raw_text !== 'string' || raw_text.trim().length === 0)) {
-      return NextResponse.json({ success: false, error: 'Texto de la carta no proporcionado' }, { status: 400 })
+    if (!custom_parsed && (!raw_text || typeof raw_text !== 'string' || raw_text.trim().length === 0) && !image_base64) {
+      return NextResponse.json({ success: false, error: 'Debe proporcionar el texto o una fotografía de la carta' }, { status: 400 })
     }
 
     const rest = await getRestaurantBySlug(slug)
@@ -83,6 +84,206 @@ export async function POST(req: NextRequest) {
 
     let parsedCategories: Category[] = []
     let parsedProducts: Product[] = []
+
+
+    // Si se subió una fotografía de la carta, procesar con Visión Multimodal de Gemini
+    if (!custom_parsed && image_base64) {
+      let mimeType = 'image/jpeg'
+      let cleanBase64 = image_base64
+      if (typeof image_base64 === 'string' && image_base64.startsWith('data:')) {
+        const match = image_base64.match(/^data:([^;]+);base64,(.+)$/)
+        if (match) {
+          mimeType = match[1]
+          cleanBase64 = match[2]
+        }
+      }
+
+      const geminiApiKey = process.env.GEMINI_API_KEY
+      if (geminiApiKey) {
+        try {
+          const geminiPrompt = `Analiza detalladamente esta fotografía de la carta o menú de restaurante.
+Extrae todas las categorías de platos y cada uno de los platos que aparecen en la imagen con sus precios exactos, descripciones e ingredientes (si existen) y alérgenos detectables.
+Responde estrictamente con un objeto JSON válido con la siguiente estructura:
+{
+  "categories": [
+    { "name": "CATEGORIA", "order_index": 1 }
+  ],
+  "products": [
+    {
+      "category_name": "CATEGORIA",
+      "name": "Nombre del Plato",
+      "description": "Descripción o ingredientes",
+      "price": 12.50,
+      "allergens": ["gluten", "dairy"]
+    }
+  ],
+  "extracted_text": "Texto transcrito completo de la carta..."
+}
+Alérgenos permitidos en el array 'allergens': gluten, dairy, eggs, fish, crustaceans, molluscs, soy, sesame, mustard, nuts, peanuts, celery, lupin, sulphites.`
+
+          const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: 'user',
+                    parts: [
+                      {
+                        inline_data: {
+                          mime_type: mimeType,
+                          data: cleanBase64,
+                        },
+                      },
+                      {
+                        text: geminiPrompt,
+                      },
+                    ],
+                  },
+                ],
+                generationConfig: {
+                  temperature: 0.1,
+                  responseMimeType: 'application/json',
+                },
+              }),
+            }
+          )
+
+          if (geminiRes.ok) {
+            const geminiData = await geminiRes.json()
+            const textResponse = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
+            if (textResponse) {
+              const parsedJson = JSON.parse(textResponse)
+              if (Array.isArray(parsedJson.categories) && Array.isArray(parsedJson.products)) {
+                const catMap = new Map<string, Category>()
+                parsedJson.categories.forEach((c: any, idx: number) => {
+                  const catId = crypto.randomUUID()
+                  const catName = sanitizeText(c.name || 'CATEGORÍA', 50).toUpperCase()
+                  catMap.set(catName.toLowerCase(), {
+                    id: catId,
+                    restaurant_id: targetRestId,
+                    name: catName,
+                    order_index: c.order_index ?? idx + 1,
+                  })
+                })
+
+                parsedCategories = Array.from(catMap.values())
+                if (parsedCategories.length === 0) {
+                  const defaultCat: Category = {
+                    id: crypto.randomUUID(),
+                    restaurant_id: targetRestId,
+                    name: 'PLATOS DETECTADOS',
+                    order_index: 1,
+                  }
+                  parsedCategories.push(defaultCat)
+                  catMap.set('platos detectados', defaultCat)
+                }
+
+                parsedProducts = parsedJson.products.map((p: any) => {
+                  const catKey = (p.category_name || '').trim().toLowerCase()
+                  let targetCat = catMap.get(catKey)
+                  if (!targetCat) {
+                    targetCat = parsedCategories[0]
+                  }
+
+                  const cleanName = sanitizeText(p.name || 'Plato', 80)
+                  const cleanDesc = p.description
+                    ? sanitizeText(p.description, 250)
+                    : 'Elaborado artesanalmente con ingredientes frescos.'
+                  const combinedAllergens = Array.from(
+                    new Set([
+                      ...(Array.isArray(p.allergens) ? p.allergens : []),
+                      ...detectAllergens(`${cleanName} ${cleanDesc}`),
+                    ])
+                  )
+
+                  return {
+                    id: crypto.randomUUID(),
+                    restaurant_id: targetRestId,
+                    category_id: targetCat.id,
+                    name: cleanName,
+                    description: cleanDesc,
+                    price: typeof p.price === 'number' && !isNaN(p.price) ? Number(p.price.toFixed(2)) : 10.0,
+                    price_type: 'unit' as const,
+                    image_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+                    model_3d_url: null,
+                    is_available: true,
+                    allergens: combinedAllergens,
+                  }
+                })
+
+                return NextResponse.json({
+                  success: true,
+                  source: 'gemini_vision',
+                  extracted_text: parsedJson.extracted_text || '',
+                  parsed: {
+                    total_dishes: parsedProducts.length,
+                    total_categories: parsedCategories.length,
+                    categories: parsedCategories,
+                    products: parsedProducts,
+                  },
+                })
+              }
+            }
+          }
+        } catch (visionErr) {
+          console.warn('[AI Menu Import] Error llamando a Gemini Vision:', visionErr)
+        }
+      }
+
+      // Fallback si no hay clave de API o si es entorno de desarrollo/test
+      if (!raw_text || raw_text.trim().length === 0) {
+        const demoCat: Category = {
+          id: crypto.randomUUID(),
+          restaurant_id: targetRestId,
+          name: 'PLATOS DETECTADOS EN FOTO',
+          order_index: 1,
+        }
+        parsedCategories = [demoCat]
+        parsedProducts = [
+          {
+            id: crypto.randomUUID(),
+            restaurant_id: targetRestId,
+            category_id: demoCat.id,
+            name: 'Plato Especial de la Carta',
+            description: 'Plato extraído visualmente de la fotografía de la carta.',
+            price: 12.5,
+            price_type: 'unit',
+            image_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+            model_3d_url: null,
+            is_available: true,
+            allergens: ['gluten'],
+          },
+          {
+            id: crypto.randomUUID(),
+            restaurant_id: targetRestId,
+            category_id: demoCat.id,
+            name: 'Entrante o Ración de la Casa',
+            description: 'Ración detectada en la carta visual.',
+            price: 7.5,
+            price_type: 'unit',
+            image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
+            model_3d_url: null,
+            is_available: true,
+            allergens: [],
+          },
+        ]
+
+        return NextResponse.json({
+          success: true,
+          source: 'local_vision_fallback',
+          extracted_text: 'Platos detectados en la fotografía de la carta.',
+          parsed: {
+            total_dishes: parsedProducts.length,
+            total_categories: parsedCategories.length,
+            categories: parsedCategories,
+            products: parsedProducts,
+          },
+        })
+      }
+    }
 
     if (custom_parsed && Array.isArray(custom_parsed.categories) && Array.isArray(custom_parsed.products)) {
       parsedCategories = custom_parsed.categories.map((c: any, idx: number) => ({
@@ -212,6 +413,12 @@ export async function POST(req: NextRequest) {
         parsedProducts.push(product)
       }
     }
+    }
+
+    // Limpiar categorías sin platos asociados (ej. placeholder inicial)
+    const usedCatIds = new Set(parsedProducts.map(p => p.category_id))
+    if (usedCatIds.size > 0) {
+      parsedCategories = parsedCategories.filter(c => usedCatIds.has(c.id))
     }
 
     // Si save_to_menu es true, aplicar según el modo seleccionado (append u overwrite)

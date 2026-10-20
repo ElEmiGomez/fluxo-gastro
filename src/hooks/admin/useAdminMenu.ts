@@ -37,6 +37,7 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
 
   // Asistente IA
   const [aiRawText, setAiRawText] = useState('')
+  const [aiImageBase64, setAiImageBase64] = useState<string | null>(null)
   const [aiParsing, setAiParsing] = useState(false)
   const [aiParsedResult, setAiParsedResult] = useState<AiParsedMenuResult | null>(null)
 
@@ -374,9 +375,13 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
     })
   }
 
-  // Procesar con IA
-  const handleParseWithAI = async () => {
-    if (!aiRawText.trim()) return
+  // Procesar con IA (soporta texto plano o fotografía de la carta)
+  const handleParseWithAI = async (imageParam?: string | null) => {
+    const targetImage = imageParam !== undefined ? imageParam : aiImageBase64
+    if (!aiRawText.trim() && !targetImage) {
+      showToast('Introduce el texto o sube una fotografía de la carta')
+      return
+    }
     setAiParsing(true)
     try {
       const res = await fetch('/api/admin/ai-menu-import', {
@@ -385,13 +390,19 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
         body: JSON.stringify({
           slug,
           raw_text: aiRawText,
+          image_base64: targetImage || undefined,
           save_to_menu: false,
         }),
       })
       const data = await res.json()
       if (data.success && data.parsed) {
         setAiParsedResult(data.parsed)
+        if (data.extracted_text && !aiRawText.trim()) {
+          setAiRawText(data.extracted_text)
+        }
         showToast(`✨ IA extrajo ${data.parsed.total_dishes} platos en ${data.parsed.total_categories} categorías`)
+      } else {
+        showToast(data.error || 'Error al analizar la carta')
       }
     } catch {
       showToast('Error al parsear con IA')
@@ -474,6 +485,8 @@ export function useAdminMenu({ slug, onSwitchTab }: UseAdminMenuParams) {
     setEditingCatName,
     aiRawText,
     setAiRawText,
+    aiImageBase64,
+    setAiImageBase64,
     aiParsing,
     aiParsedResult,
     setAiParsedResult,

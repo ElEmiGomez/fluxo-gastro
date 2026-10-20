@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Sparkles, RefreshCw, CheckCircle2, Plus, AlertTriangle, X, ShieldAlert, Trash2 } from 'lucide-react'
+import { Sparkles, RefreshCw, CheckCircle2, Plus, AlertTriangle, X, ShieldAlert, Trash2, Camera, Upload, Image as ImageIcon, FileText, Check } from 'lucide-react'
 import { Category } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { AiParsedMenuResult } from '@/types/admin.types'
@@ -11,9 +11,11 @@ interface AdminAiImporterProps {
   categories?: Category[]
   aiRawText: string
   onAiRawTextChange: (val: string) => void
+  aiImageBase64?: string | null
+  onAiImageChange?: (val: string | null) => void
   aiParsing: boolean
   aiParsedResult: AiParsedMenuResult | null
-  onParseWithAI: () => void
+  onParseWithAI: (imageParam?: string | null) => void
   onApplyAiMenu: (mode: 'append' | 'overwrite', customParsed?: AiParsedMenuResult | null) => void
 }
 
@@ -45,6 +47,8 @@ export function AdminAiImporter({
   categories: existingCategories = [],
   aiRawText,
   onAiRawTextChange,
+  aiImageBase64,
+  onAiImageChange,
   aiParsing,
   aiParsedResult,
   onParseWithAI,
@@ -52,6 +56,75 @@ export function AdminAiImporter({
 }: AdminAiImporterProps) {
   const [confirmModalMode, setConfirmModalMode] = useState<'append' | 'overwrite' | null>(null)
   const [editableResult, setEditableResult] = useState<AiParsedMenuResult | null>(aiParsedResult)
+
+  const [entryMode, setEntryMode] = useState<'photo' | 'text'>('photo')
+  const [isDragging, setIsDragging] = useState(false)
+  const [imageMeta, setImageMeta] = useState<{ name: string; sizeKb: number; preview: string } | null>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  // Función para comprimir imagen en el navegador antes de enviarla
+  const processAndCompressFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const maxWidth = 1600
+        let width = img.width
+        let height = img.height
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width)
+          width = maxWidth
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height)
+          const compressed = canvas.toDataURL('image/jpeg', 0.85)
+          const sizeKb = Math.round((compressed.length * 0.75) / 1024)
+          setImageMeta({
+            name: file.name,
+            sizeKb,
+            preview: compressed,
+          })
+          if (onAiImageChange) {
+            onAiImageChange(compressed)
+          }
+        }
+      }
+      img.src = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      processAndCompressFile(file)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) {
+      processAndCompressFile(file)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setImageMeta(null)
+    if (onAiImageChange) {
+      onAiImageChange(null)
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
 
   React.useEffect(() => {
     setEditableResult(aiParsedResult)
@@ -116,7 +189,7 @@ export function AdminAiImporter({
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Tarjeta de Entrada de Menú */}
+      {/* Tarjeta de Entrada de Menú con Soporte de Foto y Texto */}
       <div className="p-6 rounded-2xl bg-slate-800/60 border border-slate-700/70 shadow-xl space-y-5 backdrop-blur-md">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center font-black shadow-xs">
@@ -125,55 +198,172 @@ export function AdminAiImporter({
           <div>
             <h2 className="font-black text-base text-white">Digitalizador Inteligente de Carta con IA</h2>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Pega el texto de tu menú, carta física transcrita o lista de platos. La IA extraerá categorías, precios y alérgenos en una previsualización interactiva.
+              Sube una fotografía de tu carta física o pega el texto. La IA extraerá categorías, nombres de platos, precios y alérgenos automáticamente.
             </p>
           </div>
         </div>
 
-        {/* Ejemplos Rápidos */}
-        <div className="flex items-center gap-2 flex-wrap text-xs pt-1">
-          <span className="text-slate-400 font-semibold text-xs">Cargar plantilla de prueba:</span>
+        {/* Selector de Modo: Foto de Carta vs Texto */}
+        <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 w-fit">
           <button
             type="button"
-            onClick={() => onAiRawTextChange(TAPERIA_PRESET)}
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 transition-colors cursor-pointer"
+            onClick={() => setEntryMode('photo')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              entryMode === 'photo'
+                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20 font-black'
+                : 'text-slate-400 hover:text-white'
+            }`}
           >
-            Ejemplo Tapería Gallega
+            <Camera className="w-3.5 h-3.5" />
+            <span>📷 Subir Foto de la Carta</span>
           </button>
           <button
             type="button"
-            onClick={() => onAiRawTextChange(BURGER_PRESET)}
-            className="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-xs font-bold border border-cyan-500/20 transition-colors cursor-pointer"
+            onClick={() => setEntryMode('text')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              entryMode === 'text'
+                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20 font-black'
+                : 'text-slate-400 hover:text-white'
+            }`}
           >
-            Ejemplo Hamburguesería
+            <FileText className="w-3.5 h-3.5" />
+            <span>📝 Pegar Texto o Lista</span>
           </button>
         </div>
 
-        {/* Textarea */}
-        <textarea
-          rows={8}
-          placeholder="Pega aquí el texto de tu carta, platos con precios (ej: Hamburguesa Clásica - 11,50€)..."
-          value={aiRawText}
-          onChange={e => onAiRawTextChange(e.target.value)}
-          className="w-full p-4 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder:text-slate-500 text-xs sm:text-sm font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all leading-relaxed shadow-inner"
-        />
+        {/* MODO 1: SUBIR FOTOGRAFÍA */}
+        {entryMode === 'photo' && (
+          <div className="space-y-4">
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {!imageMeta ? (
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setIsDragging(true)
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
+                  isDragging
+                    ? 'border-cyan-400 bg-cyan-500/10'
+                    : 'border-slate-700 hover:border-cyan-500/50 bg-slate-900/60 hover:bg-slate-900/80'
+                }`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-md">
+                  <Camera className="w-7 h-7" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white">Haz clic o arrastra una foto de la carta aquí</h4>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                    Admite fotos de móvil tomadas al menú físico, pizarras o cartas impresas (.jpg, .png, .webp).
+                  </p>
+                </div>
+                <span className="px-3.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 mt-1 hover:text-white flex items-center gap-1.5">
+                  <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Seleccionar Archivo o Tomar Foto</span>
+                </span>
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-slate-900 border border-cyan-500/30 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <img
+                    src={imageMeta.preview}
+                    alt="Previsualización de carta"
+                    className="w-16 h-16 rounded-xl object-cover border border-slate-700 flex-shrink-0"
+                  />
+                  <div className="min-w-0">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-black text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full mb-1">
+                      <Check className="w-3 h-3 text-cyan-400" />
+                      <span>Fotografía lista para análisis IA</span>
+                    </span>
+                    <h4 className="font-bold text-xs text-white truncate">{imageMeta.name}</h4>
+                    <span className="text-[11px] text-slate-400">{imageMeta.sizeKb} KB optimizada</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 transition-colors cursor-pointer"
+                  >
+                    Cambiar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors cursor-pointer"
+                    title="Eliminar foto"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MODO 2: PEGAR TEXTO */}
+        {entryMode === 'text' && (
+          <div className="space-y-3">
+            {/* Ejemplos Rápidos */}
+            <div className="flex items-center gap-2 flex-wrap text-xs pt-1">
+              <span className="text-slate-400 font-semibold text-xs">Cargar plantilla de prueba:</span>
+              <button
+                type="button"
+                onClick={() => onAiRawTextChange(TAPERIA_PRESET)}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 transition-colors cursor-pointer"
+              >
+                Ejemplo Tapería Gallega
+              </button>
+              <button
+                type="button"
+                onClick={() => onAiRawTextChange(BURGER_PRESET)}
+                className="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-xs font-bold border border-cyan-500/20 transition-colors cursor-pointer"
+              >
+                Ejemplo Hamburguesería
+              </button>
+            </div>
+
+            {/* Textarea */}
+            <textarea
+              rows={7}
+              placeholder="Pega aquí el texto de tu carta, platos con precios (ej: Hamburguesa Clásica - 11,50€)..."
+              value={aiRawText}
+              onChange={e => onAiRawTextChange(e.target.value)}
+              className="w-full p-4 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder:text-slate-500 text-xs sm:text-sm font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all leading-relaxed shadow-inner"
+            />
+          </div>
+        )}
 
         {/* Botón Extraer Previsualización */}
         <button
           type="button"
-          onClick={onParseWithAI}
-          disabled={aiParsing || !aiRawText.trim()}
+          onClick={() => onParseWithAI(imageMeta?.preview || null)}
+          disabled={aiParsing || (!imageMeta && !aiRawText.trim())}
           className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
         >
           {aiParsing ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>Analizando y extrayendo platos con IA...</span>
+              <span>
+                {imageMeta ? 'Analizando fotografía de la carta con IA...' : 'Analizando y extrayendo platos con IA...'}
+              </span>
             </>
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
-              <span>Extraer y Previsualizar Carta con IA</span>
+              <span>
+                {imageMeta ? 'Analizar Foto de la Carta con IA' : 'Extraer y Previsualizar Carta con IA'}
+              </span>
             </>
           )}
         </button>
