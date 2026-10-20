@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ChevronDown, Check, Bell, Award, Gift } from 'lucide-react'
+import { ChevronDown, Check, Bell, Award, Gift, Globe } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { CallWaiterButton } from '@/components/menu/CallWaiterButton'
 import { TOP_LANGUAGES, getTranslation } from '@/lib/i18n'
@@ -103,7 +103,7 @@ export function MenuHeader({
               className="px-1.5 py-1 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
               title="Cambiar idioma / Change language"
             >
-              <span className="text-xs">{TOP_LANGUAGES.find(l => l.code === currentLang)?.flag || '🌐'}</span>
+              <Globe className="w-3.5 h-3.5 text-slate-600 flex-shrink-0" />
               <span className="uppercase text-[10px] sm:text-[11px] font-black tracking-tight">{currentLang}</span>
               <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${showLangDropdown ? 'rotate-180' : ''}`} />
             </button>
@@ -114,7 +114,7 @@ export function MenuHeader({
                   className="fixed inset-0 z-40" 
                   onClick={() => setShowLangDropdown(false)} 
                 />
-                <div className="absolute right-0 mt-1.5 w-44 max-w-[calc(100vw-24px)] max-h-80 overflow-y-auto bg-white rounded-2xl shadow-2xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 scrollbar-thin divide-y divide-slate-100">
+                <div className="absolute right-0 mt-1.5 w-48 max-w-[calc(100vw-24px)] max-h-80 overflow-y-auto bg-white rounded-2xl shadow-2xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 scrollbar-thin divide-y divide-slate-100">
                   <div className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/80">
                     Idiomas / Languages
                   </div>
@@ -135,8 +135,16 @@ export function MenuHeader({
                               : 'text-slate-700 hover:bg-slate-50'
                           }`}
                         >
-                          <span className="flex items-center gap-2">
-                            <span className="text-sm flex-shrink-0">{langOpt.flag}</span>
+                          <span className="flex items-center gap-2.5">
+                            <span
+                              className={`w-5 h-4.5 rounded text-[10px] font-black flex items-center justify-center shrink-0 tracking-wider uppercase transition-colors ${
+                                isSelected
+                                  ? 'bg-blue-600 text-white shadow-2xs'
+                                  : 'bg-slate-100 text-slate-600 border border-slate-200/90'
+                              }`}
+                            >
+                              {langOpt.code}
+                            </span>
                             <span className="truncate">{langOpt.nativeName}</span>
                           </span>
                           {isSelected && <Check className="w-3.5 h-3.5 text-blue-900 stroke-[3] flex-shrink-0" />}

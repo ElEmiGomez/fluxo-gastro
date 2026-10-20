@@ -26,16 +26,16 @@ export interface LanguageOption {
 }
 
 export const TOP_LANGUAGES: LanguageOption[] = [
-  { code: 'gl', name: 'Gallego', nativeName: 'Galego', flag: '🔵' },
-  { code: 'es', name: 'Español', nativeName: 'Castellano', flag: '🇪🇸' },
-  { code: 'en', name: 'Inglés', nativeName: 'English', flag: '🇬🇧' },
-  { code: 'fr', name: 'Francés', nativeName: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Alemán', nativeName: 'Deutsch', flag: '🇩🇪' },
-  { code: 'pt', name: 'Portugués', nativeName: 'Português', flag: '🇵🇹' },
-  { code: 'it', name: 'Italiano', nativeName: 'Italiano', flag: '🇮🇹' },
-  { code: 'nl', name: 'Holandés', nativeName: 'Nederlands', flag: '🇳🇱' },
-  { code: 'ca', name: 'Catalán', nativeName: 'Català', flag: '🟡' },
-  { code: 'eu', name: 'Euskera', nativeName: 'Euskara', flag: '🟢' },
+  { code: 'gl', name: 'Gallego', nativeName: 'Galego', flag: 'GL' },
+  { code: 'es', name: 'Español', nativeName: 'Castellano', flag: 'ES' },
+  { code: 'en', name: 'Inglés', nativeName: 'English', flag: 'EN' },
+  { code: 'fr', name: 'Francés', nativeName: 'Français', flag: 'FR' },
+  { code: 'de', name: 'Alemán', nativeName: 'Deutsch', flag: 'DE' },
+  { code: 'pt', name: 'Portugués', nativeName: 'Português', flag: 'PT' },
+  { code: 'it', name: 'Italiano', nativeName: 'Italiano', flag: 'IT' },
+  { code: 'nl', name: 'Holandés', nativeName: 'Nederlands', flag: 'NL' },
+  { code: 'ca', name: 'Catalán', nativeName: 'Català', flag: 'CA' },
+  { code: 'eu', name: 'Euskera', nativeName: 'Euskara', flag: 'EU' },
 ]
 
 export const CATEGORY_TRANSLATIONS: Record<SupportedLanguage, Record<string, string>> = {
