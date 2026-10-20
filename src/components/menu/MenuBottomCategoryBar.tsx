@@ -44,7 +44,7 @@ export function MenuBottomCategoryBar({
     <div
       className={`fixed inset-x-3 sm:inset-x-4 max-w-xl mx-auto z-30 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
         hasCartItems
-          ? 'bottom-[72px] sm:bottom-[80px]'
+          ? 'bottom-[84px] sm:bottom-[94px]'
           : 'bottom-3 sm:bottom-4'
       } ${
         isVisible
@@ -52,7 +52,7 @@ export function MenuBottomCategoryBar({
           : 'translate-y-20 opacity-0 pointer-events-none'
       }`}
     >
-      <div className="bg-white/90 sm:bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-800 rounded-2xl sm:rounded-full p-1.5 shadow-[0_8px_30px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.04] flex items-center gap-1.5">
+      <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-800 rounded-2xl p-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.1)] ring-1 ring-black/[0.04] flex items-center gap-1.5">
         {/* Contenedor con scroll horizontal táctil suave */}
         <div
           ref={scrollRef}
@@ -66,10 +66,10 @@ export function MenuBottomCategoryBar({
               onSelectCategory('all')
               onClearSearch?.()
             }}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer active:scale-95 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer active:scale-95 ${
               selectedCategory === 'all'
-                ? 'bg-blue-600 text-white shadow-xs font-black ring-1 ring-blue-500'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-bold'
+                ? 'bg-blue-600 text-white shadow-xs ring-1 ring-blue-500'
+                : 'bg-slate-100/80 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 border border-slate-200/60 font-bold'
             }`}
           >
             <Utensils className="w-3.5 h-3.5 flex-shrink-0" />
@@ -90,15 +90,15 @@ export function MenuBottomCategoryBar({
                   onSelectCategory(cat.id)
                   onClearSearch?.()
                 }}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer active:scale-95 ${
+                className={`px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer active:scale-95 ${
                   isSelected
-                    ? 'bg-blue-600 text-white shadow-xs font-black ring-1 ring-blue-500'
+                    ? 'bg-blue-600 text-white font-black shadow-xs ring-1 ring-blue-500'
                     : isPromo
-                    ? 'text-amber-700 hover:text-amber-800 hover:bg-amber-50/80 font-black'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-bold'
+                    ? 'bg-amber-50 text-amber-800 hover:text-amber-900 hover:bg-amber-100/80 border border-amber-300/80 font-black'
+                    : 'bg-slate-100/80 text-slate-700 hover:text-slate-950 hover:bg-slate-200/80 border border-slate-200/60 font-bold'
                 }`}
               >
-                {isPromo && <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />}
+                {isPromo && <Sparkles className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />}
                 <span>{translateCategoryName(currentLang, cat.name)}</span>
               </button>
             )
