@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { Sparkles, Utensils, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Category } from '@/types/database.types'
 import { getTranslation, translateCategoryName } from '@/lib/i18n'
@@ -36,12 +36,12 @@ export function MenuBottomCategoryBar({
   const scrollLeftRef = useRef(0)
   const hasMovedRef = useRef(false)
 
-  const checkScroll = () => {
+  const checkScroll = useCallback(() => {
     if (!scrollRef.current) return
     const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current
-    setCanScrollLeft(scrollLeft > 6)
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 6)
-  }
+    setCanScrollLeft(scrollLeft > 2)
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 2)
+  }, [])
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return
@@ -53,23 +53,27 @@ export function MenuBottomCategoryBar({
   // Desplazar automáticamente la categoría activa al centro cuando cambia
   useEffect(() => {
     if (!scrollRef.current) return
-    const activeEl = scrollRef.current.querySelector<HTMLButtonElement>('[data-active="true"]')
-    if (activeEl) {
-      activeEl.scrollIntoView({
-        behavior: 'smooth',
-        inline: 'center',
-        block: 'nearest',
-      })
+    if (selectedCategory === 'all') {
+      scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' })
+    } else {
+      const activeEl = scrollRef.current.querySelector<HTMLButtonElement>('[data-active="true"]')
+      if (activeEl) {
+        activeEl.scrollIntoView({
+          behavior: 'smooth',
+          inline: 'center',
+          block: 'nearest',
+        })
+      }
     }
     setTimeout(checkScroll, 350)
-  }, [selectedCategory])
+  }, [selectedCategory, checkScroll])
 
   useEffect(() => {
     checkScroll()
     const onResize = () => checkScroll()
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [categories])
+  }, [categories, checkScroll])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!scrollRef.current) return
@@ -107,7 +111,7 @@ export function MenuBottomCategoryBar({
           : 'translate-y-20 opacity-0 pointer-events-none'
       }`}
     >
-      <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-800 rounded-2xl p-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.1)] ring-1 ring-black/[0.04] flex items-center gap-1">
+      <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 text-slate-800 rounded-2xl p-1.5 shadow-[0_8px_24px_rgba(15,23,42,0.1)] ring-1 ring-black/[0.04] flex items-center gap-1.5">
         {/* Flecha Izquierda */}
         <button
           type="button"
@@ -117,23 +121,37 @@ export function MenuBottomCategoryBar({
           className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
             canScrollLeft
               ? 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 shadow-2xs cursor-pointer active:scale-90 border border-slate-200/80'
-              : 'opacity-25 text-slate-400 cursor-not-allowed'
+              : 'opacity-20 text-slate-300 cursor-not-allowed'
           }`}
           title="Categorías anteriores"
         >
           <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
         </button>
 
-        {/* Envoltorio con efecto blur y gradientes en los cortes */}
-        <div className="relative flex-1 min-w-0 flex items-center overflow-hidden">
-          {/* Difuminado / Blur Izquierdo */}
+        {/* Contenedor padre con máscara CSS linear-gradient para difuminar en los límites visibles */}
+        <div
+          className="relative flex-1 min-w-0 flex items-center overflow-hidden py-0.5"
+          style={{
+            WebkitMaskImage: `linear-gradient(to right, ${
+              canScrollLeft ? 'transparent 0px, black 32px' : 'black 0px'
+            }, ${
+              canScrollRight ? 'black calc(100% - 32px), transparent 100%' : 'black 100%'
+            })`,
+            maskImage: `linear-gradient(to right, ${
+              canScrollLeft ? 'transparent 0px, black 32px' : 'black 0px'
+            }, ${
+              canScrollRight ? 'black calc(100% - 32px), transparent 100%' : 'black 100%'
+            })`,
+          }}
+        >
+          {/* Difuminado / Frosted Blur Izquierdo */}
           <div
-            className={`absolute left-0 inset-y-0 w-7 bg-gradient-to-r from-white via-white/80 to-transparent backdrop-blur-[2px] z-10 pointer-events-none transition-opacity duration-200 ${
+            className={`absolute left-0 inset-y-0 w-8 bg-gradient-to-r from-white via-white/80 to-transparent backdrop-blur-[3px] z-10 pointer-events-none transition-opacity duration-200 ${
               canScrollLeft ? 'opacity-100' : 'opacity-0'
             }`}
           />
 
-          {/* Contenedor con scroll horizontal táctil suave y CSS mask-image para fundido */}
+          {/* Carrusel deslizable */}
           <div
             ref={scrollRef}
             onScroll={checkScroll}
@@ -147,19 +165,7 @@ export function MenuBottomCategoryBar({
                 checkScroll()
               }
             }}
-            style={{
-              WebkitMaskImage: `linear-gradient(to right, ${
-                canScrollLeft ? 'transparent 0px, black 28px' : 'black 0px'
-              }, ${
-                canScrollRight ? 'black calc(100% - 28px), transparent 100%' : 'black 100%'
-              })`,
-              maskImage: `linear-gradient(to right, ${
-                canScrollLeft ? 'transparent 0px, black 28px' : 'black 0px'
-              }, ${
-                canScrollRight ? 'black calc(100% - 28px), transparent 100%' : 'black 100%'
-              })`,
-            }}
-            className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-1 touch-pan-x scroll-smooth overscroll-x-contain select-none cursor-grab active:cursor-grabbing"
+            className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5 touch-pan-x scroll-smooth overscroll-x-contain select-none cursor-grab active:cursor-grabbing"
           >
             {/* Opción: Todas */}
             <button
@@ -210,9 +216,9 @@ export function MenuBottomCategoryBar({
             })}
           </div>
 
-          {/* Difuminado / Blur Derecho */}
+          {/* Difuminado / Frosted Blur Derecho */}
           <div
-            className={`absolute right-0 inset-y-0 w-7 bg-gradient-to-l from-white via-white/80 to-transparent backdrop-blur-[2px] z-10 pointer-events-none transition-opacity duration-200 ${
+            className={`absolute right-0 inset-y-0 w-8 bg-gradient-to-l from-white via-white/80 to-transparent backdrop-blur-[3px] z-10 pointer-events-none transition-opacity duration-200 ${
               canScrollRight ? 'opacity-100' : 'opacity-0'
             }`}
           />
@@ -227,7 +233,7 @@ export function MenuBottomCategoryBar({
           className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
             canScrollRight
               ? 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 shadow-2xs cursor-pointer active:scale-90 border border-slate-200/80'
-              : 'opacity-25 text-slate-400 cursor-not-allowed'
+              : 'opacity-20 text-slate-300 cursor-not-allowed'
           }`}
           title="Más categorías"
         >
