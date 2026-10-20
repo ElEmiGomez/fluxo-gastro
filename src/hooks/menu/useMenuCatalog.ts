@@ -22,7 +22,7 @@ export function useMenuCatalog({ slug, isInSituAdmin }: UseMenuCatalogParams) {
   const [currentLang, setCurrentLang] = useState<string>('gl')
   const [showLangDropdown, setShowLangDropdown] = useState(false)
 
-  const [selectedCategory, setSelectedCategory] = useState<string>(() => MOCK_CATEGORIES[slug]?.[0]?.id || 'cat-1')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [dietaryFilter, setDietaryFilter] = useState<DietaryFilter>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -87,7 +87,7 @@ export function useMenuCatalog({ slug, isInSituAdmin }: UseMenuCatalogParams) {
           setSelectedCategory(prev => {
             if (prev === 'all') return 'all'
             const exists = menuRes.categories.some((c: Category) => c.id === prev)
-            return exists ? prev : menuRes.categories[0].id
+            return exists ? prev : 'all'
           })
         }
         if (Array.isArray(menuRes.products)) {
@@ -137,7 +137,7 @@ export function useMenuCatalog({ slug, isInSituAdmin }: UseMenuCatalogParams) {
               })
             }
             setCategories(normalizedCats)
-            setSelectedCategory(normalizedCats[0].id)
+            setSelectedCategory(prev => (prev === 'all' ? 'all' : (normalizedCats.some(c => c.id === prev) ? prev : 'all')))
           }
 
           const { data: prodData } = await supabase
@@ -178,7 +178,7 @@ export function useMenuCatalog({ slug, isInSituAdmin }: UseMenuCatalogParams) {
       const cats = MOCK_CATEGORIES[slug] || []
       setCategories(cats)
       if (cats.length > 0) {
-        setSelectedCategory(cats[0].id)
+        setSelectedCategory(prev => (prev === 'all' ? 'all' : (cats.some(c => c.id === prev) ? prev : 'all')))
       }
       setProducts(MOCK_PRODUCTS[slug] || [])
       setTables(MOCK_TABLES[slug] || [])
