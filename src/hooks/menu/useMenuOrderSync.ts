@@ -236,7 +236,7 @@ export function useMenuOrderSync({
             (sum, o) => sum + (Number(o.total_amount) || 0),
             0
           )
-          if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession || hasPaidOrder || isTablePaidRef.current) {
+          if ((hasRequestedBillRef.current || userRequestedBillTimeRef.current) && (hadOrdersInSession || hasPaidOrder || isTablePaidRef.current)) {
             hasHadActiveOrderInThisSessionRef.current = false
             prevTableOrdersMapRef.current.clear()
             setTableOrderStatus(null)
@@ -281,7 +281,7 @@ export function useMenuOrderSync({
         if (
           activeTableOrders.length === 0 &&
           hasPaidOrder &&
-          (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0)
+          (hasRequestedBillRef.current || userRequestedBillTimeRef.current)
         ) {
           prevTableOrdersMapRef.current.clear()
           hasHadActiveOrderInThisSessionRef.current = false
@@ -370,13 +370,16 @@ export function useMenuOrderSync({
             newOrder.table_id === `table-${tableNumber}`
           )
           if (matchesTable && newOrder.status === 'paid') {
-            if (newOrder.total_amount && typeof window !== 'undefined') {
-              try {
-                sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(newOrder.total_amount))
-              } catch (_) {}
+            const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
+            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
+              if (newOrder.total_amount && typeof window !== 'undefined') {
+                try {
+                  sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(newOrder.total_amount))
+                } catch (_) {}
+              }
+              handleTableMarkedPaidRef.current()
+              return
             }
-            handleTableMarkedPaidRef.current()
-            return
           }
           checkOrderStatus()
         })
@@ -387,8 +390,11 @@ export function useMenuOrderSync({
             newEvt.metadata?.table_number?.toString() === tableNumber?.toString()
           )
           if (matchesTable && (newEvt.event_type === 'order_paid' || newEvt.new_status === 'paid')) {
-            handleTableMarkedPaidRef.current()
-            return
+            const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
+            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
+              handleTableMarkedPaidRef.current()
+              return
+            }
           }
           checkOrderStatus()
         })
@@ -433,7 +439,7 @@ export function useMenuOrderSync({
                 (sum, o) => sum + (Number(o.total_amount) || 0),
                 0
               )
-              if (isTablePaidRef.current || hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
+              if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
                 hasHadActiveOrderInThisSessionRef.current = false
                 prevTableOrdersMapRef.current.clear()
                 if (prevSessionTotal > 0 && typeof window !== 'undefined') {
@@ -459,8 +465,11 @@ export function useMenuOrderSync({
               ((data.type === 'table_bill_paid') || (data.type === 'service_call_attended' && data.is_bill)) &&
               (data.table_number?.toString() === tableNumber?.toString() || data.tableNumber?.toString() === tableNumber?.toString())
             ) {
-              handleTableMarkedPaidRef.current()
-              return
+              const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
+              if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
+                handleTableMarkedPaidRef.current()
+                return
+              }
             }
 
             if (data.type === 'menu_updated' && (!data.slug || data.slug === slug)) {
@@ -514,7 +523,7 @@ export function useMenuOrderSync({
           (sum, o) => sum + (Number(o.total_amount) || 0),
           0
         )
-        if (isTablePaidRef.current || hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
+        if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
           hasHadActiveOrderInThisSessionRef.current = false
           prevTableOrdersMapRef.current.clear()
           if (prevSessionTotal > 0 && typeof window !== 'undefined') {
@@ -535,7 +544,10 @@ export function useMenuOrderSync({
 
     const handleLocalTableBillPaid = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        handleTableMarkedPaidRef.current()
+        const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
+        if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hadOrdersInSession) {
+          handleTableMarkedPaidRef.current()
+        }
       }
     }
 

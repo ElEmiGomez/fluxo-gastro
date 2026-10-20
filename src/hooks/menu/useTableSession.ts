@@ -12,12 +12,7 @@ interface UseTableSessionParams {
 export function useTableSession({ slug, initialTable, urlSession }: UseTableSessionParams) {
   const [tableNumber, setTableNumber] = useState<string>(initialTable)
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [isTablePaid, setIsTablePaid] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem(`fluxo_table_paid_${slug}_${initialTable}`) === 'true'
-    }
-    return false
-  })
+  const [isTablePaid, setIsTablePaid] = useState<boolean>(false)
   const [isPaidBannerDismissed, setIsPaidBannerDismissed] = useState<boolean>(false)
   const [isReviewBoosterDismissed, setIsReviewBoosterDismissed] = useState<boolean>(false)
   const [hasRequestedBill, setHasRequestedBill] = useState<boolean>(false)
@@ -36,7 +31,7 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
     userRequestedBillTimeRef.current = null
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.setItem(`fluxo_table_paid_${slug}_${tableNumber}`, 'true')
+        // No persistir en sessionStorage para no contaminar recargas
         sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
@@ -86,10 +81,10 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        // Preservar flujo_table_paid si la mesa fue cobrada recientemente
+        sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+        localStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
-        // Preservar flujo_table_paid en localStorage
       } catch {}
 
       // Registro analítico anónimo (RGPD compliant)
