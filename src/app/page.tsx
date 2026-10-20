@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   Tv2,
-  Sparkles,
   ArrowRight,
   Play,
   Check,
@@ -119,7 +118,7 @@ export default function LandingPage() {
                 {/* Badge Superior */}
                 <ScrollReveal delay={80} distance={18}>
                   <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-black uppercase tracking-widest">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
                     <span>SISTEMA OPERATIVO GASTRONÓMICO B2B</span>
                   </div>
                 </ScrollReveal>
@@ -402,7 +401,6 @@ export default function LandingPage() {
                   
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-blue-500/40 group-hover:border-emerald-400 text-blue-300 group-hover:text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20 transition-colors duration-300">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors" />
                     <span className="sm:hidden">14 DÍAS DE PRUEBA 0€</span>
                     <span className="hidden sm:inline group-hover:hidden">PLAN CARTA DIGITAL</span>
                     <span className="hidden sm:group-hover:inline">14 DÍAS DE PRUEBA 0€</span>
@@ -424,7 +422,7 @@ export default function LandingPage() {
                         <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                       </div>
                       <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 group-hover:text-emerald-300 bg-blue-500/10 group-hover:bg-emerald-500/15 border border-blue-500/20 group-hover:border-emerald-500/30 px-2.5 py-0.5 rounded-md transition-all duration-300">
-                        <Sparkles className="w-3 h-3 text-blue-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
+                        <ShieldCheck className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
                         <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                       </div>
                     </div>
@@ -438,7 +436,7 @@ export default function LandingPage() {
                           <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                         </div>
                         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
-                          <Sparkles className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
                           <span>Suscripción mensual flexible &middot; Sin permanencia</span>
                         </div>
                       </div>
@@ -450,7 +448,7 @@ export default function LandingPage() {
                           <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
                         </div>
                         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                          <Sparkles className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                           <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                         </div>
                       </div>
@@ -491,7 +489,7 @@ export default function LandingPage() {
                         bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 border border-blue-400/30
                         group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/30 group-hover:border-emerald-300"
                     >
-                      <Sparkles className="w-4 h-4 flex-shrink-0" />
+                      <ArrowRight className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
                       <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
                       <span className="hidden sm:inline group-hover:hidden">Elegir Plan Carta (39€)</span>
                       <span className="hidden sm:group-hover:inline">Probar 14 Días a 0€ &middot; Sin Coste</span>
@@ -509,7 +507,6 @@ export default function LandingPage() {
                   
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-blue-500/40 group-hover:border-emerald-400 text-blue-300 group-hover:text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20 transition-colors duration-300">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors" />
                     <span className="sm:hidden">14 DÍAS DE PRUEBA 0€</span>
                     <span className="hidden sm:inline group-hover:hidden">COMANDERO & SALA</span>
                     <span className="hidden sm:group-hover:inline">14 DÍAS DE PRUEBA 0€</span>
@@ -531,7 +528,7 @@ export default function LandingPage() {
                         <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                       </div>
                       <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 group-hover:text-emerald-300 bg-blue-500/10 group-hover:bg-emerald-500/15 border border-blue-500/20 group-hover:border-emerald-500/30 px-2.5 py-0.5 rounded-md transition-all duration-300">
-                        <Sparkles className="w-3 h-3 text-blue-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
+                        <ShieldCheck className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
                         <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                       </div>
                     </div>
@@ -545,7 +542,7 @@ export default function LandingPage() {
                           <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                         </div>
                         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
-                          <Sparkles className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
                           <span>Comandero para todos tus camareros &middot; Sin permanencia</span>
                         </div>
                       </div>
@@ -557,7 +554,7 @@ export default function LandingPage() {
                           <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
                         </div>
                         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                          <Sparkles className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                           <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                         </div>
                       </div>
@@ -598,7 +595,7 @@ export default function LandingPage() {
                         bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 border border-blue-400/30
                         group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/30 group-hover:border-emerald-300"
                     >
-                      <Sparkles className="w-4 h-4 flex-shrink-0" />
+                      <ArrowRight className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
                       <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
                       <span className="hidden sm:inline group-hover:hidden">Elegir Plan Sala (69€)</span>
                       <span className="hidden sm:group-hover:inline">Probar 14 Días a 0€ &middot; Sin Coste</span>
@@ -616,7 +613,7 @@ export default function LandingPage() {
                   
                   {/* Badge Recomendado / 14 Días */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-cyan-500 group-hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1 transition-colors duration-300">
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-pulse flex-shrink-0" />
                     <span className="sm:hidden">RECOMENDADO &middot; 14 DÍAS 0€</span>
                     <span className="hidden sm:inline group-hover:hidden">RECOMENDADO &middot; CIRCUITO COMPLETO</span>
                     <span className="hidden sm:group-hover:inline">PROBAR 14 DÍAS A 0€</span>
@@ -641,7 +638,7 @@ export default function LandingPage() {
                         <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                       </div>
                       <div className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 group-hover:text-emerald-300 bg-cyan-500/10 group-hover:bg-emerald-500/15 border border-cyan-500/20 group-hover:border-emerald-500/30 px-2.5 py-0.5 rounded-md transition-all duration-300">
-                        <Sparkles className="w-3 h-3 text-cyan-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
+                        <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
                         <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                       </div>
                     </div>
@@ -655,7 +652,7 @@ export default function LandingPage() {
                           <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
                         </div>
                         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
-                          <Sparkles className="w-3 h-3 text-cyan-400 flex-shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
                           <span>Menú QR + Comandero + Cocina KDS &middot; Todo incluido</span>
                         </div>
                       </div>
@@ -667,7 +664,7 @@ export default function LandingPage() {
                           <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
                         </div>
                         <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                          <Sparkles className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                           <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
                         </div>
                       </div>
@@ -728,7 +725,7 @@ export default function LandingPage() {
                         bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-xl shadow-cyan-500/25 border border-cyan-300/40
                         group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/35 group-hover:border-emerald-300"
                     >
-                      <Sparkles className="w-4 h-4 flex-shrink-0" />
+                      <ArrowRight className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
                       <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
                       <span className="hidden sm:inline group-hover:hidden">Elegir Plan Full (Recomendado)</span>
                       <span className="hidden sm:group-hover:inline">Probar 14 Días a 0€ &middot; Sin Coste</span>
