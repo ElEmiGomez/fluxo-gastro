@@ -89,9 +89,16 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
-    const slug = searchParams.get('slug') || 'burger-gourmet'
-    const email = searchParams.get('email')
-    const all = searchParams.get('all') === 'true'
+    let body: any = {}
+    try {
+      body = await req.json()
+    } catch (_) {}
+
+    const slug = searchParams.get('slug') || body.slug || 'burger-gourmet'
+    const email = searchParams.get('email') || body.email
+    const id = searchParams.get('id') || body.id
+    const all = searchParams.get('all') === 'true' || body.all === true
+    const action = searchParams.get('action') || body.action || 'reset_points'
 
     if (all) {
       const { clearAllLoyaltyProfiles } = await import('@/lib/supabase/repositories/loyalty.repository')
@@ -102,18 +109,28 @@ export async function DELETE(req: NextRequest) {
       })
     }
 
-    if (!email) {
+    if (!email && !id) {
       return NextResponse.json(
-        { success: false, error: 'Email requerido para resetear fidelización o ?all=true para reset general' },
+        { success: false, error: 'Email o ID requerido para resetear fidelización o ?all=true para reset general' },
         { status: 400 }
       )
     }
 
-    const profile = await resetOrDeleteLoyaltyProfile(slug, email)
+    if (action === 'delete' || action === 'delete_profile') {
+      const { deleteLoyaltyProfile } = await import('@/lib/supabase/repositories/loyalty.repository')
+      await deleteLoyaltyProfile(slug, { email: email || undefined, id: id || undefined })
+      return NextResponse.json({
+        success: true,
+        message: `Perfil eliminado permanentemente para ${email || id}`,
+      })
+    }
+
+    const { resetOrDeleteLoyaltyProfile } = await import('@/lib/supabase/repositories/loyalty.repository')
+    const profile = await resetOrDeleteLoyaltyProfile(slug, email!)
 
     return NextResponse.json({
       success: true,
-      message: `Puntos reseteados a 0 para ${email}`,
+      message: `Puntos y sellos reseteados a 0 para ${email}`,
       profile,
     })
   } catch (error: any) {

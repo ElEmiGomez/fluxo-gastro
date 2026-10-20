@@ -43,3 +43,68 @@ export async function GET(req: NextRequest) {
     )
   }
 }
+
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url)
+    let body: any = {}
+    try {
+      body = await req.json()
+    } catch (_) {}
+
+    const slug = searchParams.get('slug') || body.slug || 'burger-gourmet'
+    const action = searchParams.get('action') || body.action || 'reset_points' // 'reset_points' | 'delete_profile' | 'clear_all'
+    const email = searchParams.get('email') || body.email
+    const id = searchParams.get('id') || body.id
+    const all = searchParams.get('all') === 'true' || body.all === true
+
+    // Verificación estricta de autenticación de personal administrativo
+    if (!verifyStaffRequest(req, slug, ['admin'])) {
+      return NextResponse.json(
+        { success: false, error: 'Acceso no autorizado al panel de administración' },
+        { status: 401 }
+      )
+    }
+
+    if (all || action === 'clear_all') {
+      const { clearAllLoyaltyProfiles } = await import('@/lib/supabase/repositories/loyalty.repository')
+      await clearAllLoyaltyProfiles(slug)
+      return NextResponse.json({
+        success: true,
+        message: `Todos los perfiles de fidelización han sido eliminados para ${slug}`,
+      })
+    }
+
+    if (!email && !id) {
+      return NextResponse.json(
+        { success: false, error: 'Se requiere el email o ID del comensal' },
+        { status: 400 }
+      )
+    }
+
+    if (action === 'delete_profile' || action === 'delete') {
+      const { deleteLoyaltyProfile } = await import('@/lib/supabase/repositories/loyalty.repository')
+      await deleteLoyaltyProfile(slug, { email, id })
+      return NextResponse.json({
+        success: true,
+        message: 'Perfil de comensal eliminado permanentemente',
+      })
+    }
+
+    // Por defecto: resetear puntos y sellos a 0
+    const { resetOrDeleteLoyaltyProfile } = await import('@/lib/supabase/repositories/loyalty.repository')
+    const updated = await resetOrDeleteLoyaltyProfile(slug, email)
+    return NextResponse.json({
+      success: true,
+      message: `Puntos y sellos reseteados a 0 para ${email}`,
+      profile: updated,
+    })
+  } catch (error: any) {
+    console.error('[DELETE /api/loyalty/profiles] Error:', error)
+    return NextResponse.json(
+      { success: false, error: error.message || 'Error interno al procesar la solicitud' },
+      { status: 500 }
+    )
+  }
+}

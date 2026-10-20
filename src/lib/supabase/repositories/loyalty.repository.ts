@@ -1480,6 +1480,90 @@ export async function resetOrDeleteLoyaltyProfile(
   return getLoyaltyProfile(slug, normEmail)
 }
 
+
+/**
+ * 9. ELIMINAR PERMANENTEMENTE UN PERFIL DE FIDELIZACIÓN
+ */
+export async function deleteLoyaltyProfile(
+  slug: string,
+  identifier: { email?: string; id?: string }
+): Promise<boolean> {
+  const normEmail = identifier.email ? normalizeEmail(identifier.email) : ''
+  const targetId = identifier.id || ''
+  const memKey = normEmail ? getMemoryKey(slug, normEmail) : ''
+
+  const targetProfileIds = new Set<string>()
+  if (targetId) targetProfileIds.add(targetId)
+
+  // 1. Limpiar en memoria
+  if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
+    Object.keys(globalStore.__GASTRO_LOYALTY_PROFILES__).forEach(k => {
+      const prof = globalStore.__GASTRO_LOYALTY_PROFILES__![k]
+      if (
+        (normEmail && (k.endsWith(`:${normEmail}`) || k === memKey || prof?.email?.toLowerCase() === normEmail)) ||
+        (targetId && prof?.id === targetId)
+      ) {
+        if (prof?.id) targetProfileIds.add(prof.id)
+        delete globalStore.__GASTRO_LOYALTY_PROFILES__![k]
+      }
+    })
+  }
+
+  // 2. Eliminar holds activos en escrow
+  if (globalStore.__GASTRO_LOYALTY_ESCROW__) {
+    Object.entries(globalStore.__GASTRO_LOYALTY_ESCROW__).forEach(([k, h]) => {
+      if (targetProfileIds.has(h.profile_id)) {
+        delete globalStore.__GASTRO_LOYALTY_ESCROW__![k]
+      }
+    })
+  }
+
+  // 3. Eliminar de miembros de mesa en memoria si estuviera activo
+  if (globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__ && globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__[slug]) {
+    Object.keys(globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__[slug]).forEach(tableKey => {
+      const member = globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__![slug][tableKey]
+      if (
+        member &&
+        ((targetId && member.profile_id === targetId) ||
+         (normEmail && member.email?.toLowerCase() === normEmail))
+      ) {
+        delete globalStore.__GASTRO_TABLE_LOYALTY_MEMBERS__![slug][tableKey]
+      }
+    })
+  }
+
+  // 4. Supabase si existe (PostgreSQL SSOT)
+  const supabase = createServerClient()
+  if (supabase && isSupabaseConfigured()) {
+    try {
+      if (targetId) {
+        await supabase.from('loyalty_escrow_holds').delete().eq('profile_id', targetId)
+        await supabase.from('loyalty_profiles').delete().eq('id', targetId)
+      } else if (normEmail) {
+        const { data: prof } = await supabase
+          .from('loyalty_profiles')
+          .select('id')
+          .eq('restaurant_slug', slug)
+          .eq('email', normEmail)
+          .maybeSingle()
+
+        if (prof?.id) {
+          await supabase.from('loyalty_escrow_holds').delete().eq('profile_id', prof.id)
+        }
+        await supabase
+          .from('loyalty_profiles')
+          .delete()
+          .eq('restaurant_slug', slug)
+          .eq('email', normEmail)
+      }
+    } catch (err) {
+      console.error('[deleteLoyaltyProfile] Supabase error:', err)
+    }
+  }
+
+  return true
+}
+
 /**
  * Purga todas las cuentas de fidelización y sellos en memoria y en base de datos.
  */

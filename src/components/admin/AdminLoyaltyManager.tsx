@@ -18,6 +18,9 @@ import {
   Settings2,
   Save,
   Loader2,
+  RotateCcw,
+  Trash2,
+  X,
 } from 'lucide-react'
 import { LoyaltyProfile, LoyaltySettings } from '@/types/loyalty.types'
 
@@ -52,6 +55,51 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterGoogle, setFilterGoogle] = useState<'all' | 'awarded' | 'pending'>('all')
+  // Modal de confirmación para resetear puntos/sellos o eliminar perfil
+  const [actionModal, setActionModal] = useState<{
+    isOpen: boolean
+    type: 'reset_points' | 'delete_profile'
+    profile: LoyaltyProfile | null
+    isProcessing: boolean
+  }>({
+    isOpen: false,
+    type: 'reset_points',
+    profile: null,
+    isProcessing: false,
+  })
+
+  const handleConfirmAction = async () => {
+    if (!actionModal.profile) return
+    setActionModal(prev => ({ ...prev, isProcessing: true }))
+    try {
+      const res = await fetch(`/api/loyalty/profiles?slug=${encodeURIComponent(slug)}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          slug,
+          action: actionModal.type,
+          email: actionModal.profile.email,
+          id: actionModal.profile.id,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo completar la operación')
+      }
+      onToast(
+        actionModal.type === 'delete_profile'
+          ? `Perfil de ${actionModal.profile.name} eliminado permanentemente`
+          : `Puntos y sellos de ${actionModal.profile.name} restablecidos a 0`
+      )
+      setActionModal({ isOpen: false, type: 'reset_points', profile: null, isProcessing: false })
+      await fetchProfiles()
+    } catch (err: any) {
+      console.error('[AdminLoyaltyManager] Error executing action:', err)
+      onToast(err.message || 'Error al procesar la acción')
+      setActionModal(prev => ({ ...prev, isProcessing: false }))
+    }
+  }
+
 
   // Obtener credenciales de sesión del personal administrativo
   const getAuthHeaders = useCallback((): HeadersInit => {
@@ -434,19 +482,20 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
                 <th className="py-3 px-4 text-center">Puntos Totales</th>
                 <th className="py-3 px-4 text-center">Google Maps (+50)</th>
                 <th className="py-3 px-4 text-right">Fecha de Alta</th>
+                <th className="py-3 px-4 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-xs text-slate-300">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-500">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-cyan-400" />
                     <span>Cargando directorio de comensales...</span>
                   </td>
                 </tr>
               ) : filteredProfiles.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-500">
                     <AlertCircle className="w-6 h-6 mx-auto mb-2 text-slate-400" />
                     <span>No se encontraron comensales fidelizados con los filtros aplicados.</span>
                   </td>
@@ -538,6 +587,26 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
                           year: 'numeric',
                         })}
                       </td>
+
+                      {/* Acciones */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => setActionModal({ isOpen: true, type: 'reset_points', profile: p, isProcessing: false })}
+                            className="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 border border-amber-500/20 transition-all cursor-pointer shadow-xs active:scale-95"
+                            title="Resetear puntos y sellos a 0"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setActionModal({ isOpen: true, type: 'delete_profile', profile: p, isProcessing: false })}
+                            className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/20 transition-all cursor-pointer shadow-xs active:scale-95"
+                            title="Eliminar perfil registrado permanentemente"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   )
                 })
@@ -546,6 +615,94 @@ export function AdminLoyaltyManager({ slug, onToast }: AdminLoyaltyManagerProps)
           </table>
         </div>
       </div>
+    
+      {/* 4. MODAL DE CONFIRMACIÓN: RESETEAR O ELIMINAR */}
+      {actionModal.isOpen && actionModal.profile && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-in fade-in zoom-in-95">
+            <div className="flex items-start gap-4">
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border ${
+                  actionModal.type === 'delete_profile'
+                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                }`}
+              >
+                {actionModal.type === 'delete_profile' ? (
+                  <Trash2 className="w-6 h-6" />
+                ) : (
+                  <RotateCcw className="w-6 h-6" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-black text-white">
+                  {actionModal.type === 'delete_profile'
+                    ? '¿Eliminar perfil de comensal?'
+                    : '¿Resetear puntos y sellos?'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  {actionModal.type === 'delete_profile'
+                    ? `Se eliminará permanentemente la cuenta de ${actionModal.profile.name} (${actionModal.profile.email}) del sistema. Esta acción no se puede deshacer.`
+                    : `Se restablecerán a 0 todos los puntos acumulados (${actionModal.profile.total_points} pts) y sellos (${actionModal.profile.stamps_count || 0}) de ${actionModal.profile.name}.`}
+                </p>
+              </div>
+            </div>
+
+            {/* Ficha resumida del comensal */}
+            <div className="mt-4 p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between text-xs">
+              <div className="min-w-0">
+                <span className="font-bold text-slate-200 block truncate">{actionModal.profile.name}</span>
+                <span className="text-slate-400 text-[11px] truncate">{actionModal.profile.email}</span>
+              </div>
+              <div className="text-right flex-shrink-0 pl-3">
+                <span className="font-black text-cyan-400 block">{actionModal.profile.total_points} pts</span>
+                <span className="text-amber-400 text-[11px] font-bold">
+                  {actionModal.profile.stamps_count || 0}/{settings.target_stamps || 5} sellos
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                type="button"
+                disabled={actionModal.isProcessing}
+                onClick={() => setActionModal({ isOpen: false, type: 'reset_points', profile: null, isProcessing: false })}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={actionModal.isProcessing}
+                onClick={handleConfirmAction}
+                className={`px-4 py-2 rounded-xl font-black text-xs transition-all flex items-center gap-2 cursor-pointer shadow-md ${
+                  actionModal.type === 'delete_profile'
+                    ? 'bg-rose-500 hover:bg-rose-400 text-white shadow-rose-500/20'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
+                }`}
+              >
+                {actionModal.isProcessing ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Procesando...</span>
+                  </>
+                ) : actionModal.type === 'delete_profile' ? (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Eliminar Definitivamente</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Resetear a 0</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
