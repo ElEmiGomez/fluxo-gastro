@@ -162,6 +162,54 @@ export function isDessertPendingChoice(item: OrderItem): boolean {
 /**
  * Obtiene el tiempo gastronómico efectivo (course) de un ítem.
  */
+// Jerarquía formal y monotónica de estados de comanda
+export const ORDER_STATUS_HIERARCHY: Record<string, number> = {
+  pending_validation: 0,
+  pending: 1,
+  confirmed: 2,
+  preparing: 3,
+  ready: 4,
+  delivered: 5,
+  paid: 6,
+  cancelled: -1,
+}
+
+export function isStatusAtLeast(status: string | null | undefined, targetStatus: string): boolean {
+  if (!status) return false
+  const sRank = ORDER_STATUS_HIERARCHY[status] ?? 0
+  const tRank = ORDER_STATUS_HIERARCHY[targetStatus] ?? 0
+  if (sRank === -1 || tRank === -1) return false
+  return sRank >= tRank
+}
+
+export function hasItemProgressionTag(notes?: string | null): boolean {
+  if (!notes) return false
+  return (
+    notes.includes(TAG_DRINK_SERVED) ||
+    notes.includes('[BARRA: SERVIDA]') ||
+    notes.includes('[BARRA:SERVIDA]') ||
+    notes.includes(TAG_FOOD_READY) ||
+    notes.includes('[COCINA: LISTA]') ||
+    notes.includes('[COCINA:LISTA]') ||
+    notes.includes(TAG_STARTER_READY) ||
+    notes.includes(TAG_STARTER_SERVED) ||
+    notes.includes(TAG_MAIN_FIRED) ||
+    notes.includes(TAG_MAIN_COOKING) ||
+    notes.includes(TAG_MAIN_READY) ||
+    notes.includes(TAG_MAIN_SERVED) ||
+    notes.includes(TAG_DESSERT_READY) ||
+    notes.includes(TAG_DESSERT_SERVED) ||
+    notes.includes(TAG_DESSERT_FIRED) ||
+    notes.includes(TAG_DESSERT_COOKING)
+  )
+}
+
+export function orderHasProgressionTags(order?: Order | null): boolean {
+  if (!order) return false
+  if (hasItemProgressionTag(order.notes)) return true
+  return (order.order_items || []).some(it => hasItemProgressionTag(it.notes))
+}
+
 export function getItemCourse(item: OrderItem | any): CourseType {
   if (item?.course && ['first', 'second', 'dessert', 'drink'].includes(item.course)) {
     return item.course
@@ -171,7 +219,50 @@ export function getItemCourse(item: OrderItem | any): CourseType {
   if (notes.includes('[COURSE:second]')) return 'second'
   if (notes.includes('[COURSE:dessert]') || notes.includes(TAG_DESSERT_PENDING)) return 'dessert'
   if (notes.includes('[COURSE:drink]')) return 'drink'
-  return inferCourseType(item?.product || item?.products)
+  const prod = item?.product || item?.products
+  if (prod) {
+    return inferCourseType(prod)
+  }
+
+  // Fallback por identificador de producto cuando la relación product no fue hidratada en Supabase
+  const rawPid = String(item?.product_id || item?.id || '').toLowerCase()
+  if (
+    rawPid.startsWith('p-beb') ||
+    rawPid.startsWith('drk-') ||
+    rawPid.startsWith('p-caf') ||
+    rawPid === 'b0000000-0000-0000-0000-000000000003' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000008' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000009' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000019' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000020' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000021'
+  ) {
+    return 'drink'
+  }
+  if (
+    rawPid.startsWith('p-pos') ||
+    rawPid.startsWith('p-dessert') ||
+    rawPid === 'b0000000-0000-0000-0000-000000000006' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000007' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000018' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000099'
+  ) {
+    return 'dessert'
+  }
+  if (
+    rawPid.startsWith('p-ent') ||
+    rawPid.startsWith('side-opt') ||
+    rawPid.startsWith('p-tab') ||
+    rawPid.startsWith('p-ens') ||
+    rawPid === 'b0000000-0000-0000-0000-000000000011' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000012' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000013' ||
+    rawPid === 'b0000000-0000-0000-0000-000000000022'
+  ) {
+    return 'first'
+  }
+
+  return inferCourseType(prod)
 }
 
 export function isDrinkItem(item: OrderItem): boolean {

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Order, OrderStatus, Product, CartItem } from '@/types/database.types'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
-import { mergeOrderItemsCourseTags } from '@/lib/course-utils'
+import { mergeOrderItemsCourseTags, hasItemProgressionTag } from '@/lib/course-utils'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 
@@ -94,6 +94,7 @@ export function useMenuOrderSync({
     let sseEventSource: EventSource | null = null
     let pollInterval: any = null
     let isChecking = false
+    let hasQueuedCheck = false
     let debounceTimer: any = null
 
     const triggerDebouncedCheck = () => {
@@ -104,7 +105,10 @@ export function useMenuOrderSync({
     }
 
     const checkOrderStatus = async () => {
-      if (isChecking || isFixedMenu) return
+      if (isChecking || isFixedMenu) {
+        if (!isFixedMenu) hasQueuedCheck = true
+        return
+      }
       isChecking = true
       try {
         const [ordersRes, callsRes, tablesRes] = await Promise.all([
@@ -195,7 +199,10 @@ export function useMenuOrderSync({
           }
 
           let effectiveStatus = ord.status
-          if (prevOrd?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
+          const hasProgression = (items || []).some((it: any) => hasItemProgressionTag(it.notes))
+          if (hasProgression && ord.status === 'pending_validation') {
+            effectiveStatus = (prevOrd?.status && prevOrd.status !== 'pending_validation') ? prevOrd.status : 'pending'
+          } else if (prevOrd?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
             effectiveStatus = 'delivered'
           } else if (prevOrd?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
@@ -210,6 +217,8 @@ export function useMenuOrderSync({
           return { ...ord, status: effectiveStatus, order_items: items }
         })
 
+        const isTableFreeOrClosed = !thisTableSession || thisTableSession.status === 'free' || thisTableSession.status === 'closed'
+
         const allTableOrders = serverOrdersList.filter(o => {
           const matchesTable = (
             o.table_number?.toString() === tableNumber?.toString() ||
@@ -218,6 +227,11 @@ export function useMenuOrderSync({
           )
           if (!matchesTable) return false
           if (o.status === 'cancelled') return false
+
+          // Si la mesa no tiene sesión activa (fue liberada), ignorar comandas residuales de sesiones previas
+          if (isTableFreeOrClosed && !isTablePaidRef.current && !hasRequestedBillRef.current && !userRequestedBillTimeRef.current) {
+            return false
+          }
 
           // Si la orden tiene session_token y es distinta de la sesión activa de la mesa, omitirla
           if (currentSessionId && o.session_token && o.session_token !== currentSessionId) {
@@ -231,6 +245,9 @@ export function useMenuOrderSync({
           prevTableOrdersMapRef.current.set(ord.id, ord)
         })
 
+        const activeKitchenOrders = allTableOrders.filter(
+          o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
+        )
         const activeTableOrders = allTableOrders.filter(
           o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
         )
@@ -242,11 +259,11 @@ export function useMenuOrderSync({
         const paidOrdersForTable = allTableOrders.filter(o => o.status === 'paid')
         const hasPaidOrder = paidOrdersForTable.length > 0
 
-        // Si todas las órdenes de la mesa ya fueron cobradas (status === 'paid') y el comensal participó en esta sesión
+        // Si la mesa ya fue cobrada y no quedan platos pendientes en cocina
         if (
-          activeTableOrders.length === 0 &&
+          activeKitchenOrders.length === 0 &&
           hasPaidOrder &&
-          (hasHadActiveOrderInThisSessionRef.current || hasRequestedBillRef.current || userRequestedBillTimeRef.current)
+          (hasHadActiveOrderInThisSessionRef.current || hasRequestedBillRef.current || userRequestedBillTimeRef.current || isTablePaidRef.current)
         ) {
           setTableOrderStatus(null)
           setTableOrders(paidOrdersForTable)
@@ -275,7 +292,6 @@ export function useMenuOrderSync({
           return
         }
 
-        const isTableFreeOrClosed = !thisTableSession || thisTableSession.status === 'free' || thisTableSession.status === 'closed'
         if (isTableFreeOrClosed && activeTableOrders.length === 0) {
           const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
           const prevSessionTotal = Array.from(prevTableOrdersMapRef.current.values()).reduce(
@@ -377,7 +393,7 @@ export function useMenuOrderSync({
             setTableOrderStatus('preparing')
           } else if (activeOrders.some(o => o.status === 'confirmed' || o.status === 'pending')) {
             setTableOrderStatus('pending')
-          } else if (activeOrders.length > 0) {
+          } else if (activeOrders.some(o => o.status === 'pending_validation')) {
             setTableOrderStatus('pending_validation')
           } else if (sortedOrders.some(o => o.status === 'delivered')) {
             setTableOrderStatus('delivered')
@@ -397,6 +413,10 @@ export function useMenuOrderSync({
         console.log('Error checking order status for diner:', e)
       } finally {
         isChecking = false
+        if (hasQueuedCheck) {
+          hasQueuedCheck = false
+          triggerDebouncedCheck()
+        }
       }
     }
 

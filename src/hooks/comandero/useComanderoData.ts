@@ -7,7 +7,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
-import { mergeOrderItemsCourseTags } from '@/lib/course-utils'
+import { mergeOrderItemsCourseTags, hasItemProgressionTag } from '@/lib/course-utils'
 import { PendingServiceCall } from '@/types/comandero.types'
 
 export function useComanderoData(slug: string) {
@@ -41,6 +41,18 @@ export function useComanderoData(slug: string) {
   const tableStatusesFingerRef = useRef<string>('')
   const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
   const attendedValidationOrderIdsRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem(`fluxo_attended_validations_${slug}`)
+        if (stored) {
+          const list = JSON.parse(stored)
+          if (Array.isArray(list)) list.forEach(id => attendedValidationOrderIdsRef.current.add(id))
+        }
+      } catch (_) {}
+    }
+  }, [slug])
   const pendingOrdersWithoutItemsRef = useRef<Map<string, Order>>(new Map())
   const recentTogglesRef = useRef<Map<string, { status: boolean; until: number }>>(new Map())
   const recentMutationsRef = useRef<Map<string, { status?: OrderStatus; order?: Order; until: number }>>(new Map())
@@ -148,7 +160,7 @@ export function useComanderoData(slug: string) {
 
       incomingOrders.forEach(ord => {
         if (ord.status === 'cancelled') return
-        const existing = prevMap.get(ord.id)
+        const existing = prevMap.get(ord.id) || prevOrdersMapRef.current.get(ord.id)
         const recentMut = recentMutationsRef.current.get(ord.id)
         const isMutActive = Boolean(recentMut && Date.now() < recentMut.until)
 
@@ -168,16 +180,23 @@ export function useComanderoData(slug: string) {
         if (isMutActive && recentMut?.status) {
           effectiveStatus = recentMut.status
         } else {
-          if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
+          const isAttendedOrValidated = attendedValidationOrderIdsRef.current.has(ord.id)
+          const hasProgression = (effectiveItems || []).some(it => hasItemProgressionTag(it.notes))
+
+          if ((isAttendedOrValidated || hasProgression) && ord.status === 'pending_validation') {
+            effectiveStatus = (existing?.status && existing.status !== 'pending_validation')
+              ? existing.status
+              : 'pending'
+          } else if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
             effectiveStatus = 'delivered'
           } else if (existing?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
           } else if (existing?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || ord.status === 'preparing')) {
             effectiveStatus = 'ready'
-          } else if (existing?.status === 'pending' && ord.status === 'pending_validation') {
-            effectiveStatus = 'pending'
           } else if (existing?.status === 'preparing' && (ord.status === 'pending_validation' || ord.status === 'pending')) {
             effectiveStatus = 'preparing'
+          } else if (existing?.status === 'pending' && ord.status === 'pending_validation') {
+            effectiveStatus = 'pending'
           }
         }
 

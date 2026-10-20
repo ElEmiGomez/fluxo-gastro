@@ -20,6 +20,9 @@ import {
   orderHasMains,
   areOrderMainsReady,
   mergeOrderItemsCourseTags,
+  isDrinkItem,
+  hasItemProgressionTag,
+  orderHasProgressionTags,
 } from '@/lib/course-utils'
 
 type StationFilterType = 'all' | 'kitchen' | 'bar'
@@ -141,10 +144,21 @@ export default function KitchenKDSPage() {
             const isEligibleStatus =
               ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) ||
               (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
-            return (
-              isEligibleStatus &&
-              (orderHasFood(o) || orderHasActiveDesserts(o) || (!orderHasFood(o) && orderHasDesserts(o) && !isOrderDessertsReady(o)))
-            )
+
+            // Patrón Zero-Flicker (AGENTS.md):
+            // Si la orden está en estado elegible de cocina, NUNCA se descarta si sus order_items
+            // están vacíos temporalmente (race condition de red). Solo se descarta si tenemos
+            // la certeza de que contiene ÚNICAMENTE bebidas.
+            const hasKnownItems = Boolean(o.order_items && o.order_items.length > 0)
+            const isDrinksOnly = hasKnownItems && Boolean(o.order_items && o.order_items.every(isDrinkItem))
+            if (isDrinksOnly) return false
+
+            const hasFoodOrActiveDessert =
+              orderHasFood(o) ||
+              orderHasActiveDesserts(o) ||
+              (!orderHasFood(o) && orderHasDesserts(o) && !isOrderDessertsReady(o))
+
+            return isEligibleStatus && (!hasKnownItems || hasFoodOrActiveDessert)
           })
 
           // Detectar nueva orden entrante o marcha de postres para sonar campana
@@ -417,8 +431,16 @@ export default function KitchenKDSPage() {
       const data = await res.json().catch(() => null)
       if (res.ok) {
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, status: data.order.status || expectedNextStatus, until: Date.now() + 4500 })
-          setOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
+          setOrders(prev => prev.map(o => {
+            if (o.id !== orderId) return o
+            const effectiveItems = (data.order?.order_items && data.order.order_items.length > 0)
+              ? data.order.order_items
+              : (o.order_items || [])
+            const merged = mergeOrderItemsCourseTags(effectiveItems, o.order_items || [])
+            const updated = { ...data.order, status: data.order.status || expectedNextStatus, order_items: merged }
+            recentMutationsRef.current.set(orderId, { order: updated, status: updated.status, until: Date.now() + 4500 })
+            return updated
+          }))
         }
       } else {
         console.error('[KDS] Error en acción de cocina:', action, data?.error)

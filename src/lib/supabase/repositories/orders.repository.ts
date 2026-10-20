@@ -19,7 +19,7 @@ import {
 export { getCachedOrderItems }
 import { getTargetRestaurantId } from './restaurants.repository'
 import { inferCourseType, resolveCanonicalProductId } from '@/lib/category-matcher'
-import { getItemCourse, mergeOrderItemsCourseTags, TAG_MAIN_FIRED, TAG_DESSERT_FIRED } from '@/lib/course-utils'
+import { ORDER_STATUS_HIERARCHY, getItemCourse, mergeOrderItemsCourseTags, TAG_MAIN_FIRED, TAG_DESSERT_FIRED } from '@/lib/course-utils'
 
 const isUuid = (val?: string | null): boolean =>
   Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val))
@@ -321,7 +321,19 @@ export async function getRestaurantOrders(
             const supaTime = o.updated_at ? new Date(o.updated_at).getTime() : 0
             const isRecentMemTransition = memTime > 0 && (Date.now() - memTime < 6000)
 
-            if (memVersion > supaVersion) {
+            if (mem.status === 'delivered' && o.status !== 'delivered' && o.status !== 'paid') {
+              resolvedStatus = 'delivered'
+            } else if (mem.status === 'paid' && o.status !== 'paid') {
+              resolvedStatus = 'paid'
+            } else if (mem.status === 'ready' && (o.status === 'pending_validation' || o.status === 'pending' || o.status === 'preparing')) {
+              resolvedStatus = 'ready'
+            } else if (mem.status === 'preparing' && (o.status === 'pending_validation' || o.status === 'pending')) {
+              resolvedStatus = 'preparing'
+            } else if (mem.status === 'pending' && o.status === 'pending_validation') {
+              resolvedStatus = 'pending'
+            } else if (ORDER_STATUS_HIERARCHY[mem.status as string] > (ORDER_STATUS_HIERARCHY[o.status as string] ?? 0) && !(mem.status === 'delivered' && o.status === 'preparing')) {
+              resolvedStatus = mem.status
+            } else if (memVersion > supaVersion) {
               resolvedStatus = mem.status
             } else if (isRecentMemTransition && mem.status) {
               resolvedStatus = mem.status
@@ -329,14 +341,6 @@ export async function getRestaurantOrders(
               resolvedStatus = mem.status
             } else if (!o.status && mem.status) {
               resolvedStatus = mem.status
-            } else if (mem.status === 'delivered' && o.status !== 'delivered' && o.status !== 'paid') {
-              resolvedStatus = 'delivered'
-            } else if (mem.status === 'paid' && o.status !== 'paid') {
-              resolvedStatus = 'paid'
-            } else if (mem.status === 'preparing' && (o.status === 'pending_validation' || o.status === 'pending')) {
-              resolvedStatus = 'preparing'
-            } else if (mem.status === 'pending' && o.status === 'pending_validation') {
-              resolvedStatus = 'pending'
             }
           }
 
@@ -600,6 +604,8 @@ export async function transitionOrderStatus(
 
           // Sincronizar en memoria local con items hidratados antes del broadcast
           if (parsedOrder) {
+            saveCachedOrderItems(orderId, resolvedItems)
+            addServerOrder(slug, parsedOrder, true)
             updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, undefined, forceAllowReactivation)
           }
 

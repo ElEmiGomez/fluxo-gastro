@@ -189,6 +189,14 @@ export function useComanderoActions({
 
     setValidatingOrderIds(prev => new Set(prev).add(orderId))
     attendedValidationOrderIdsRef.current.add(orderId)
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(
+          `fluxo_attended_validations_${slug}`,
+          JSON.stringify(Array.from(attendedValidationOrderIdsRef.current))
+        )
+      } catch (_) {}
+    }
 
     // Bloqueo de mutación reciente contra regresiones en soft-polling
     recentMutationsRef.current.set(orderId, { status: 'pending', until: Date.now() + 4500 })

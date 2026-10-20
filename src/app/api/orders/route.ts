@@ -798,7 +798,11 @@ export async function PATCH(req: NextRequest) {
             nextStatus: 'delivered',
             actorType: 'waiter',
           })
-          finalOrder = transRes.order || (currentOrder ? { ...currentOrder, status: 'delivered' } : currentOrder)
+          const transOrd = transRes.order || (currentOrder ? { ...currentOrder, status: 'delivered' } : currentOrder)
+          const effItems = (transOrd.order_items && transOrd.order_items.length > 0)
+            ? transOrd.order_items
+            : (currentOrder.order_items || [])
+          finalOrder = { ...transOrd, status: 'delivered', order_items: effItems }
         }
       }
       return NextResponse.json({ success: true, order: finalOrder, message: 'Principales entregados en mesa' })
