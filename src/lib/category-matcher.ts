@@ -9,6 +9,148 @@ export type CategoryGroup =
   | 'postres'
   | 'other'
 
+export interface ProductKindClassification {
+  kind: 'drink' | 'coffee' | 'dessert' | 'meat' | 'starter' | 'main' | 'generic'
+  isDrink: boolean
+  isCoffee: boolean
+  isDessert: boolean
+  isMeatOrBurger: boolean
+  isStarter: boolean
+  isMain: boolean
+  hasCookingPoint: boolean
+  hasSideOptions: boolean
+  defaultCourse: CourseType
+}
+
+/**
+ * Detector universal de categoría y tipo gastronómico para cualquier producto,
+ * previniendo anomalías o desconfiguraciones cuando se añade un plato nuevo en sala o administración.
+ */
+export function classifyProductKind(
+  product?: { name?: string; category_id?: string; description?: string | null; category?: any } | null,
+  categories: Category[] = [],
+  explicitCategoryName?: string
+): ProductKindClassification {
+  if (!product) {
+    return {
+      kind: 'generic',
+      isDrink: false,
+      isCoffee: false,
+      isDessert: false,
+      isMeatOrBurger: false,
+      isStarter: false,
+      isMain: false,
+      hasCookingPoint: false,
+      hasSideOptions: false,
+      defaultCourse: 'second',
+    }
+  }
+
+  const normalize = (str?: string | null) =>
+    (str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+
+  const pName = normalize(product.name)
+  const pDesc = normalize(product.description)
+  const pCatId = normalize(product.category_id)
+
+  const catObj = categories.find(c => normalize(c.id) === pCatId)
+  const catNameFromObj = normalize(product.category?.name)
+  const catNameFromList = normalize(catObj?.name)
+  const explicitCat = normalize(explicitCategoryName)
+  const combinedCat = `${pCatId} ${catNameFromObj} ${catNameFromList} ${explicitCat}`
+
+  // 1. Cafés e Infusiones
+  const coffeeKeywords = [
+    'cafe', 'cortado', 'espresso', 'cappuccino', 'capuchino', 'latte', 'macchiato',
+    'infusion', 'te ', 'te verde', 'te negro', 'manzanilla', 'poleo', 'menta', 'tila',
+    'rooibos', 'descafeinado', 'carajillo', 'bombon', 'cafeteria'
+  ]
+  const isCoffee = coffeeKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+
+  // 2. Bebidas / Cócteles / Vinos / Cervezas
+  const drinkKeywords = [
+    'bebida', 'trago', 'cocktail', 'coctel', 'cocteleria', 'copa', 'cerveza', 'birra',
+    'caña', 'pinta', 'vino', 'tinto', 'blanco', 'rosado', 'cava', 'champagne', 'sidra',
+    'licor', 'gin', 'tonic', 'tonica', 'vodka', 'ron', 'whisky', 'bourbon', 'tequila',
+    'mezcal', 'vermut', 'vermouth', 'aperitivo', 'refresco', 'soda', 'gaseosa', 'cola',
+    'coca', 'fanta', 'sprite', 'agua', 'zumo', 'jugo', 'mojito', 'caipiri', 'fernet', 'sangria'
+  ]
+  const isDrink = !isCoffee && drinkKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+
+  // 3. Postres / Dulces / Helados
+  const dessertKeywords = [
+    'postre', 'reposteria', 'dulce', 'sobremesa', 'tarta', 'torta', 'pastel', 'helado',
+    'sorbete', 'volcan', 'coulant', 'flan', 'pudding', 'panna cotta', 'tiramisu',
+    'cheesecake', 'brownie', 'crepe', 'gofre', 'mousse', 'churros', 'filloas', 'santiago'
+  ]
+  const isDessert = !isCoffee && !isDrink && dessertKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+
+  // 4. Carnes / Hamburguesas / Parrilla (requieren punto y guarnición)
+  const meatKeywords = [
+    'burger', 'hamburguesa', 'carne', 'parrilla', 'brasa', 'asado', 'bife', 'entrecot',
+    'solomillo', 'chuleton', 'chuleta', 'costilla', 'costillar', 'ribs', 'milanesa',
+    'entraña', 'vacio', 'matambre', 'picaña', 'lomo', 't-bone', 'tomahawk', 'churrasco',
+    'secreto', 'presa', 'pluma', 'cochinillo', 'cordero', 'lechal', 'ternera', 'buey',
+    'vaca', 'angus', 'wagyu'
+  ]
+  const isMeatOrBurger = !isCoffee && !isDrink && !isDessert && meatKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+
+  // 5. Entrantes / Tapas / Picoteo / Ensaladas
+  const starterKeywords = [
+    'entrada', 'entrante', 'aperitivo', 'tapa', 'picoteo', 'tabla', 'ensalada', 'nachos',
+    'croquetas', 'bastones', 'mozzarella', 'rabas', 'calamares', 'zamburiñas', 'pulpo',
+    'mejillones', 'padron', 'bravas', 'empanada', 'provoleta'
+  ]
+  const isStarter = !isCoffee && !isDrink && !isDessert && !isMeatOrBurger && starterKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+
+  // 6. Platos Principales Generales (pastas, pizzas, arroces, guisos, pescados)
+  const mainKeywords = [
+    'principal', 'segundo', 'pasta', 'pizza', 'arroz', 'paella', 'risotto', 'pescado',
+    'marisco', 'guiso', 'sandwich', 'bocadillo', 'wrap', 'lasaña', 'ravioli', 'gnocchi'
+  ]
+  const isMain = !isCoffee && !isDrink && !isDessert && !isMeatOrBurger && !isStarter && mainKeywords.some(kw => pName.includes(kw) || combinedCat.includes(kw))
+
+  let kind: 'drink' | 'coffee' | 'dessert' | 'meat' | 'starter' | 'main' | 'generic' = 'generic'
+  let defaultCourse: CourseType = 'second'
+
+  if (isCoffee) {
+    kind = 'coffee'
+    defaultCourse = 'drink'
+  } else if (isDrink) {
+    kind = 'drink'
+    defaultCourse = 'drink'
+  } else if (isDessert) {
+    kind = 'dessert'
+    defaultCourse = 'dessert'
+  } else if (isMeatOrBurger) {
+    kind = 'meat'
+    defaultCourse = 'second'
+  } else if (isStarter) {
+    kind = 'starter'
+    defaultCourse = 'first'
+  } else if (isMain) {
+    kind = 'main'
+    defaultCourse = 'second'
+  }
+
+  return {
+    kind,
+    isDrink,
+    isCoffee,
+    isDessert,
+    isMeatOrBurger,
+    isStarter,
+    isMain,
+    hasCookingPoint: isMeatOrBurger,
+    hasSideOptions: isMeatOrBurger,
+    defaultCourse,
+  }
+}
+
 /**
  * Determina el grupo canónico de una categoría por su ID o su nombre.
  */

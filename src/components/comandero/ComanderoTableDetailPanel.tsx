@@ -770,10 +770,10 @@ export function ComanderoTableDetailPanel({
                           type="button"
                           onClick={() => onDeliverDessertsDirect(selectedTable.table_number)}
                           className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 cursor-pointer uppercase tracking-wider"
-                          title="El mozo busca el postre de la heladera o freezer y lo sirve directamente"
+                          title="Servir el postre directamente en mesa"
                         >
                           <CheckCircle2 size={15} className="stroke-[2.5]" />
-                          <span>🍦 Entregar Directo (Heladera / Freezer)</span>
+                          <span>Entregar Directo</span>
                         </button>
                       )}
                       <button

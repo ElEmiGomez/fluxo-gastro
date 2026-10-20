@@ -37,6 +37,13 @@ export function GoogleReviewBooster({
     }
     return false
   })
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dismissed = sessionStorage.getItem(storageKey) === 'true'
+      setIsDismissed(dismissed)
+    }
+  }, [storageKey])
+
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
   const [feedbackSent, setFeedbackSent] = useState(false)
 

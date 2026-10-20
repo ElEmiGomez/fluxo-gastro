@@ -7,6 +7,7 @@ import { Product, CourseType } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { getTranslation, translateProductName, translateProductDescription } from '@/lib/i18n'
 import { getAllergen, getAllergenName } from '@/lib/allergens'
+import { classifyProductKind } from '@/lib/category-matcher'
 
 interface ProductModifierModalProps {
   product: Product | null
@@ -42,6 +43,14 @@ export function ProductModifierModal({
   const [weightGrams, setWeightGrams] = useState(300)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Clasificación canónica inteligente del producto para adaptar opciones
+  const classification = classifyProductKind(product)
+  const isDrink = classification.isDrink
+  const isCoffee = classification.isCoffee
+  const isDessert = classification.isDessert
+  const isMeatOrBurger = classification.isMeatOrBurger
+  const hasSideOptions = classification.hasSideOptions
+
   // Resetear estados al abrir un producto nuevo
   useEffect(() => {
     if (product) {
@@ -51,26 +60,10 @@ export function ProductModifierModal({
       setIsComplimentary(false)
       setWeightGrams(300)
 
-      // Determinar pase de cocina inicial inteligente
-      const cat = (product.category_id || '').toLowerCase()
-      const pName = product.name.toLowerCase()
-      if (cat.includes('bebida') || cat.includes('trago') || pName.includes('cerveza') || pName.includes('gin') || pName.includes('vino')) {
-        setCourse('drink')
-      } else if (cat.includes('postre') || pName.includes('helado') || pName.includes('tarta')) {
-        setCourse('dessert')
-      } else if (pName.includes('burger') || pName.includes('bife') || pName.includes('chuletón') || pName.includes('milanesa')) {
-        setCourse('second')
-      } else {
-        setCourse('first')
-      }
+      const kindData = classifyProductKind(product)
+      setCourse(kindData.defaultCourse)
 
-      // Valores por defecto inteligentes
-      const isMeat =
-        (cat.includes('burger') || cat.includes('carne') || cat.includes('parrilla') ||
-         pName.includes('burger') || pName.includes('bife') || pName.includes('ojo') || pName.includes('milanesa')) &&
-        !cat.includes('bebida') && !pName.includes('gin') && !pName.includes('cerveza') && !pName.includes('trago') && !pName.includes('vino')
-
-      if (isMeat) {
+      if (kindData.hasCookingPoint) {
         setSelectedCookingPoint('A Punto')
         setSelectedSide('Papas Fritas')
       } else {
@@ -81,74 +74,6 @@ export function ProductModifierModal({
   }, [product])
 
   if (!product) return null
-
-  const prodCat = (product.category_id || '').toLowerCase()
-  const prodName = product.name.toLowerCase()
-
-  const isDrink =
-    prodCat.includes('bebida') ||
-    prodCat.includes('trago') ||
-    prodCat.includes('gin') ||
-    prodCat.includes('cocktail') ||
-    prodCat.includes('cerveza') ||
-    prodCat.includes('vino') ||
-    prodName.includes('gin') ||
-    prodName.includes('tonic') ||
-    prodName.includes('cerveza') ||
-    prodName.includes('pinta') ||
-    prodName.includes('trago') ||
-    prodName.includes('mojito') ||
-    prodName.includes('vino') ||
-    prodName.includes('agua') ||
-    prodName.includes('refresco') ||
-    prodName.includes('coca')
-
-  const isCoffee =
-    !isDrink && (
-      prodCat.includes('cafe') ||
-      prodCat.includes('café') ||
-      prodCat.includes('infusion') ||
-      prodCat.includes('infusión') ||
-      prodName.includes('café') ||
-      prodName.includes('cafe') ||
-      prodName.includes('cortado') ||
-      prodName.includes('espresso') ||
-      prodName.includes('capuchino') ||
-      prodName.includes('cappuccino') ||
-      prodName.includes('té ') ||
-      prodName.includes('infusión')
-    )
-
-  const isDessert =
-    !isDrink && !isCoffee && (
-      prodCat.includes('postre') ||
-      prodCat.includes('dulce') ||
-      prodCat.includes('helado') ||
-      prodName.includes('tarta') ||
-      prodName.includes('volcán') ||
-      prodName.includes('volcan') ||
-      prodName.includes('helado') ||
-      prodName.includes('flan') ||
-      prodName.includes('postre')
-    )
-
-  const isMeatOrBurger =
-    !isDrink && !isCoffee && !isDessert && (
-      prodCat.includes('burger') ||
-      prodCat.includes('carne') ||
-      prodCat.includes('parrilla') ||
-      prodName.includes('burger') ||
-      prodName.includes('bife') ||
-      prodName.includes('ojo') ||
-      prodName.includes('chuletón') ||
-      prodName.includes('chuleton') ||
-      prodName.includes('milanesa') ||
-      prodName.includes('entraña') ||
-      prodName.includes('vacío') ||
-      prodName.includes('vacio')
-    )
-
-  const hasSideOptions = isMeatOrBurger
 
   // Opciones de Puntos de Cocción
   const cookingPoints = ['Jugoso', 'A Punto', 'Bien Cocido']
