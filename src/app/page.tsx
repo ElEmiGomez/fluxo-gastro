@@ -18,7 +18,8 @@ import {
   Clock,
   Smartphone,
   ChefHat,
-  Printer
+  Printer,
+  Eye
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
@@ -404,7 +405,7 @@ export default function LandingPage() {
                     <Sparkles className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors" />
                     <span className="sm:hidden">14 DÍAS DE PRUEBA 0€</span>
                     <span className="hidden sm:inline group-hover:hidden">PLAN CARTA DIGITAL</span>
-                    <span className="hidden sm:group-hover:inline">✨ 14 DÍAS DE PRUEBA 0€</span>
+                    <span className="hidden sm:group-hover:inline">14 DÍAS DE PRUEBA 0€</span>
                   </div>
 
                   <div className="space-y-6">
@@ -493,7 +494,7 @@ export default function LandingPage() {
                       <Sparkles className="w-4 h-4 flex-shrink-0" />
                       <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
                       <span className="hidden sm:inline group-hover:hidden">Elegir Plan Carta (39€)</span>
-                      <span className="hidden sm:group-hover:inline">✨ Probar 14 Días a 0€ · Sin Coste</span>
+                      <span className="hidden sm:group-hover:inline">Probar 14 Días a 0€ &middot; Sin Coste</span>
                     </button>
                   </div>
                 </div>
@@ -511,7 +512,7 @@ export default function LandingPage() {
                     <Sparkles className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors" />
                     <span className="sm:hidden">14 DÍAS DE PRUEBA 0€</span>
                     <span className="hidden sm:inline group-hover:hidden">COMANDERO & SALA</span>
-                    <span className="hidden sm:group-hover:inline">✨ 14 DÍAS DE PRUEBA 0€</span>
+                    <span className="hidden sm:group-hover:inline">14 DÍAS DE PRUEBA 0€</span>
                   </div>
 
                   <div className="space-y-6">
@@ -600,7 +601,7 @@ export default function LandingPage() {
                       <Sparkles className="w-4 h-4 flex-shrink-0" />
                       <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
                       <span className="hidden sm:inline group-hover:hidden">Elegir Plan Sala (69€)</span>
-                      <span className="hidden sm:group-hover:inline">✨ Probar 14 Días a 0€ · Sin Coste</span>
+                      <span className="hidden sm:group-hover:inline">Probar 14 Días a 0€ &middot; Sin Coste</span>
                     </button>
                   </div>
                 </div>
@@ -618,7 +619,7 @@ export default function LandingPage() {
                     <Sparkles className="w-3.5 h-3.5" />
                     <span className="sm:hidden">RECOMENDADO &middot; 14 DÍAS 0€</span>
                     <span className="hidden sm:inline group-hover:hidden">RECOMENDADO &middot; CIRCUITO COMPLETO</span>
-                    <span className="hidden sm:group-hover:inline">✨ PROBAR 14 DÍAS A 0€</span>
+                    <span className="hidden sm:group-hover:inline">PROBAR 14 DÍAS A 0€</span>
                   </div>
 
                   <div className="space-y-6">
@@ -690,8 +691,9 @@ export default function LandingPage() {
                               }}
                               className="inline-flex items-center gap-1 text-[11px] font-black text-cyan-400 group-hover:text-emerald-300 underline hover:text-white transition-colors cursor-pointer"
                             >
-                              <span>👁️ Ver muestra del reporte ejecutivo</span>
-                              <ExternalLink size={11} />
+                              <Eye className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Ver muestra del reporte ejecutivo</span>
+                              <ExternalLink size={11} className="flex-shrink-0" />
                             </button>
                           </div>
                         </div>
@@ -729,7 +731,7 @@ export default function LandingPage() {
                       <Sparkles className="w-4 h-4 flex-shrink-0" />
                       <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
                       <span className="hidden sm:inline group-hover:hidden">Elegir Plan Full (Recomendado)</span>
-                      <span className="hidden sm:group-hover:inline">✨ Probar 14 Días a 0€ · Sin Coste</span>
+                      <span className="hidden sm:group-hover:inline">Probar 14 Días a 0€ &middot; Sin Coste</span>
                     </button>
                   </div>
                 </div>
