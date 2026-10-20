@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Search, X, ChevronLeft, ChevronRight, Utensils, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Utensils, Plus } from 'lucide-react'
 import { Category } from '@/types/database.types'
 import { getTranslation, translateCategoryName } from '@/lib/i18n'
 import { DietaryFilter, ViewMode } from '@/types/menu.types'
@@ -54,62 +54,40 @@ export function MenuCategoryBar({
   const t = (key: string) => getTranslation(currentLang, key)
 
   return (
-    <div className="space-y-2.5">
-      {/* Buscador de Platos en la Carta */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Buscar platos o ingredientes..."
-            className="w-full pl-9 pr-8 py-2 rounded-xl bg-white border border-slate-200/90 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs transition-all"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={onClearSearch}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-full hover:bg-slate-100 cursor-pointer"
-              title="Borrar búsqueda"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+    <div className="space-y-2">
+      {/* Píldoras Dietéticas y Opciones Rápidas */}
+      <div className="flex items-center justify-between gap-2 px-0.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Filtros:</span>
+          <button
+            type="button"
+            onClick={() => onDietaryFilterChange(dietaryFilter === 'sintacc' ? 'all' : 'sintacc')}
+            aria-label={dietaryFilter === 'sintacc' ? 'Quitar filtro Sin TACC' : 'Filtrar platos aptos Sin TACC'}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
+              dietaryFilter === 'sintacc'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200/90 hover:text-slate-900 shadow-2xs'
+            }`}
+            title="Filtrar platos aptos Sin TACC"
+          >
+            <span>🌾 {t('sinTacc')}</span>
+            {dietaryFilter === 'sintacc' && <span className="font-black">&times;</span>}
+          </button>
+          <button
+            type="button"
+            onClick={() => onDietaryFilterChange(dietaryFilter === 'veggie' ? 'all' : 'veggie')}
+            aria-label={dietaryFilter === 'veggie' ? 'Quitar filtro Vegetariano' : 'Filtrar platos vegetarianos'}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer active:scale-95 ${
+              dietaryFilter === 'veggie'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-white text-slate-600 border border-slate-200/90 hover:text-slate-900 shadow-2xs'
+            }`}
+            title="Filtrar platos vegetarianos"
+          >
+            <span>🌱 {t('veggie')}</span>
+            {dietaryFilter === 'veggie' && <span className="font-black">&times;</span>}
+          </button>
         </div>
-      </div>
-
-      {/* Píldoras Dietéticas */}
-      <div className="flex items-center gap-1.5 px-0.5 flex-wrap">
-        <span className="text-[10px] text-slate-400 font-semibold">Filtros:</span>
-        <button
-          type="button"
-          onClick={() => onDietaryFilterChange(dietaryFilter === 'sintacc' ? 'all' : 'sintacc')}
-          aria-label={dietaryFilter === 'sintacc' ? 'Quitar filtro Sin TACC' : 'Filtrar platos aptos Sin TACC'}
-          className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
-            dietaryFilter === 'sintacc'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'bg-white text-slate-500 border border-slate-200 hover:text-slate-800 shadow-2xs'
-          }`}
-          title="Filtrar platos aptos Sin TACC"
-        >
-          <span>🌾 {t('sinTacc')}</span>
-          {dietaryFilter === 'sintacc' && <span className="font-black">&times;</span>}
-        </button>
-        <button
-          type="button"
-          onClick={() => onDietaryFilterChange(dietaryFilter === 'veggie' ? 'all' : 'veggie')}
-          aria-label={dietaryFilter === 'veggie' ? 'Quitar filtro Vegetariano' : 'Filtrar platos vegetarianos'}
-          className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 cursor-pointer ${
-            dietaryFilter === 'veggie'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'bg-white text-slate-500 border border-slate-200 hover:text-slate-800 shadow-2xs'
-          }`}
-          title="Filtrar platos vegetarianos"
-        >
-          <span>🌱 {t('veggie')}</span>
-          {dietaryFilter === 'veggie' && <span className="font-black">&times;</span>}
-        </button>
       </div>
 
       {/* Botón Discreto Añadir Plato en la Categoría (Modo In-Situ) */}
