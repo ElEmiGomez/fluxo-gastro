@@ -1,10 +1,30 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Sparkles, RefreshCw, CheckCircle2, Plus, AlertTriangle, X, ShieldAlert, Trash2, Camera, Upload, Image as ImageIcon, FileText, Check } from 'lucide-react'
+import {
+  Sparkles,
+  RefreshCw,
+  CheckCircle2,
+  Plus,
+  AlertTriangle,
+  X,
+  ShieldAlert,
+  Trash2,
+  Camera,
+  Upload,
+  FileText,
+  Check,
+  TrendingUp,
+  PauseCircle,
+  PlayCircle,
+  UtensilsCrossed,
+  Wine,
+  ChefHat,
+  CalendarDays,
+} from 'lucide-react'
 import { Category } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
-import { AiParsedMenuResult } from '@/types/admin.types'
+import { AiParsedMenuResult, AiParsedDish } from '@/types/admin.types'
 
 interface AdminAiImporterProps {
   slug?: string
@@ -125,7 +145,6 @@ export function AdminAiImporter({
     }
   }
 
-
   React.useEffect(() => {
     setEditableResult(aiParsedResult)
   }, [aiParsedResult])
@@ -135,6 +154,33 @@ export function AdminAiImporter({
       onApplyAiMenu(confirmModalMode, editableResult || undefined)
       setConfirmModalMode(null)
     }
+  }
+
+  // Comprobar si hay platos con alerta de precio sin resolver
+  const hasPendingPriceReviews = React.useMemo(() => {
+    if (!editableResult) return false
+    return editableResult.products.some(p => p.requires_price_review && (!p.price || p.price <= 0))
+  }, [editableResult])
+
+  // Modificación reactiva del precio en el staging preview
+  const handleDishPriceChange = (dishId: string, newPriceStr: string) => {
+    if (!editableResult) return
+    const val = parseFloat(newPriceStr.replace(',', '.'))
+    const isInvalid = isNaN(val) || val <= 0
+    const finalPrice = isNaN(val) ? 0 : Math.max(0, Number(val.toFixed(2)))
+
+    setEditableResult({
+      ...editableResult,
+      products: editableResult.products.map(p =>
+        p.id === dishId
+          ? {
+              ...p,
+              price: finalPrice,
+              requires_price_review: isInvalid,
+            }
+          : p
+      ),
+    })
   }
 
   // Lista unificada de categorías disponibles para el selector
@@ -187,23 +233,25 @@ export function AdminAiImporter({
     })
   }
 
+  const isCommandAction = editableResult?.staging_diff?.action === 'command'
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Tarjeta de Entrada de Menú con Soporte de Foto y Texto */}
+      {/* Tarjeta de Entrada de Menú con Soporte de Foto, Texto y Comandos */}
       <div className="p-6 rounded-2xl bg-slate-800/60 border border-slate-700/70 shadow-xl space-y-5 backdrop-blur-md">
         <div className="flex items-center gap-3.5">
           <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center font-black shadow-xs">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="font-black text-base text-white">Digitalizador Inteligente de Carta con IA</h2>
+            <h2 className="font-black text-base text-white">Bot Inteligente de Cartas & Escáner con IA</h2>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Sube una fotografía de tu carta física o pega el texto. La IA extraerá categorías, nombres de platos, precios y alérgenos automáticamente.
+              Sube una fotografía de tu carta o da órdenes en lenguaje natural (&quot;Sube 0,50€ las cervezas&quot;, &quot;Pausa el cachopo&quot;, &quot;Pon de menú del día hoy lentejas y merluza a 14,50€&quot;).
             </p>
           </div>
         </div>
 
-        {/* Selector de Modo: Foto de Carta vs Texto */}
+        {/* Selector de Modo: Foto de Carta vs Texto / Comandos */}
         <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 w-fit">
           <button
             type="button"
@@ -227,7 +275,7 @@ export function AdminAiImporter({
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>📝 Pegar Texto o Lista</span>
+            <span>📝 Texto / Comandos de Voz</span>
           </button>
         </div>
 
@@ -311,32 +359,60 @@ export function AdminAiImporter({
           </div>
         )}
 
-        {/* MODO 2: PEGAR TEXTO */}
+        {/* MODO 2: PEGAR TEXTO O COMANDOS EN LENGUAJE NATURAL */}
         {entryMode === 'text' && (
           <div className="space-y-3">
-            {/* Ejemplos Rápidos */}
+            {/* Comandos Rápidos Sugeridos */}
+            <div className="space-y-1.5">
+              <span className="text-slate-400 font-semibold text-xs block">Órdenes rápidas en lenguaje natural:</span>
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <button
+                  type="button"
+                  onClick={() => onAiRawTextChange('Sube 0,50 € todas las cervezas')}
+                  className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  ⚡ &quot;Sube 0,50 € las cervezas&quot;
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAiRawTextChange('Pausa el cachopo que se agotó')}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  ⏸️ &quot;Pausa el cachopo que se agotó&quot;
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAiRawTextChange('Pon de menú del día hoy lentejas y merluza a 14,50 €')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  🍽️ &quot;Menú del día a 14,50 €&quot;
+                </button>
+              </div>
+            </div>
+
+            {/* Plantillas de Carta Completa */}
             <div className="flex items-center gap-2 flex-wrap text-xs pt-1">
-              <span className="text-slate-400 font-semibold text-xs">Cargar plantilla de prueba:</span>
+              <span className="text-slate-400 font-semibold text-xs">Plantillas completas:</span>
               <button
                 type="button"
                 onClick={() => onAiRawTextChange(TAPERIA_PRESET)}
                 className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-bold border border-slate-700 transition-colors cursor-pointer"
               >
-                Ejemplo Tapería Gallega
+                Tapería Gallega
               </button>
               <button
                 type="button"
                 onClick={() => onAiRawTextChange(BURGER_PRESET)}
                 className="px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-xs font-bold border border-cyan-500/20 transition-colors cursor-pointer"
               >
-                Ejemplo Hamburguesería
+                Hamburguesería
               </button>
             </div>
 
             {/* Textarea */}
             <textarea
-              rows={7}
-              placeholder="Pega aquí el texto de tu carta, platos con precios (ej: Hamburguesa Clásica - 11,50€)..."
+              rows={6}
+              placeholder="Escribe una orden (&quot;Sube 1€ los postres&quot;, &quot;Pausa la Doble Bacon&quot;) o pega la lista de platos con sus precios..."
               value={aiRawText}
               onChange={e => onAiRawTextChange(e.target.value)}
               className="w-full p-4 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder:text-slate-500 text-xs sm:text-sm font-mono focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/30 transition-all leading-relaxed shadow-inner"
@@ -344,7 +420,7 @@ export function AdminAiImporter({
           </div>
         )}
 
-        {/* Botón Extraer Previsualización */}
+        {/* Botón Analizar / Ejecutar Orden */}
         <button
           type="button"
           onClick={() => onParseWithAI(imageMeta?.preview || null)}
@@ -355,133 +431,270 @@ export function AdminAiImporter({
             <>
               <RefreshCw className="w-4 h-4 animate-spin" />
               <span>
-                {imageMeta ? 'Analizando fotografía de la carta con IA...' : 'Analizando y extrayendo platos con IA...'}
+                {imageMeta ? 'Analizando fotografía de la carta con IA...' : 'Procesando orden o carta con IA...'}
               </span>
             </>
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
               <span>
-                {imageMeta ? 'Analizar Foto de la Carta con IA' : 'Extraer y Previsualizar Carta con IA'}
+                {imageMeta ? 'Analizar Foto de la Carta con IA' : 'Procesar Orden o Extraer Carta con IA'}
               </span>
             </>
           )}
         </button>
       </div>
 
-      {/* Previsualización del Resultado de IA */}
+      {/* ========================================================================= */}
+      {/* PREVISUALIZACIÓN OBLIGATORIA (STAGING PREVIEW & DIFF)                     */}
+      {/* ========================================================================= */}
       {aiParsedResult && (
         <div className="p-6 rounded-2xl bg-slate-800/70 border border-slate-700/70 shadow-2xl space-y-5 animate-in fade-in">
+          {/* Encabezado del Staging Diff */}
           <div className="flex items-center justify-between pb-3 border-b border-slate-700">
             <div className="flex items-center gap-2.5">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
               <div>
                 <h3 className="font-black text-sm sm:text-base text-white">
-                  Previsualización de Carta
+                  Staging Preview: Vista Previa de Cambios Propuestos
                 </h3>
                 <p className="text-xs text-slate-400 font-medium">
-                  {aiParsedResult.total_dishes} platos detectados en {aiParsedResult.total_categories} categorías
+                  {aiParsedResult.staging_diff?.summary || `${aiParsedResult.total_dishes} platos en ${aiParsedResult.total_categories} categorías`}
                 </p>
               </div>
             </div>
-            <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 rounded-full">
+            <span className="text-xs font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-1 rounded-full whitespace-nowrap">
               Borrador (Sin Guardar)
             </span>
           </div>
 
-          {/* Tabla de Platos Detectados con Selector de Categoría Editable */}
-          <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-            {(editableResult || aiParsedResult).categories.map((cat) => {
-              const currentResult = editableResult || aiParsedResult
-              const dishes = currentResult.products.filter((p) => p.category_id === cat.id)
-              if (dishes.length === 0) return null
-              return (
-                <div key={cat.id} className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2.5">
-                  <span className="text-xs font-black text-cyan-400 uppercase tracking-wider block">
-                    {cat.name} ({dishes.length})
-                  </span>
-                  <div className="divide-y divide-slate-800">
-                    {dishes.map((d) => (
-                      <div key={d.id} className="py-2 flex items-center justify-between text-xs gap-3">
-                        <div className="truncate pr-2 flex-1">
-                          <span className="font-bold text-white block truncate">{d.name}</span>
-                          {d.description && <span className="text-slate-400 text-[11px] block truncate">{d.description}</span>}
-                          {d.allergens && d.allergens.length > 0 && (
-                            <div className="flex items-center gap-1 mt-0.5">
-                              {d.allergens.map((a: string) => (
-                                <span key={a} className="text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1 py-0.2 rounded">
-                                  {a}
-                                </span>
-                              ))}
-                            </div>
+          {/* Alerta de Revisión de Precios Obligatoria (Anti-Alucinación) */}
+          {hasPendingPriceReviews && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 text-amber-300 animate-pulse">
+              <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <p className="font-black text-white">
+                  ⚠️ Atención: Hay platos sin precio asignado o marcados como &quot;Según Mercado (S/M)&quot;.
+                </p>
+                <p className="text-amber-200/90 leading-relaxed">
+                  Fluxo no inventa precios por seguridad. Debes escribir el precio exacto en los campos marcados en amarillo antes de poder confirmar y guardar en el catálogo.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Si el comando configuró Menú del Día, mostrar tarjeta especial */}
+          {editableResult?.staging_diff?.daily_menu && (
+            <div className="p-4 rounded-xl bg-slate-900 border border-emerald-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-emerald-400">
+                  <CalendarDays className="w-4 h-4" />
+                  <span className="font-black text-xs uppercase tracking-wider">Menú del Día Configurado</span>
+                </div>
+                <span className="font-black text-sm text-emerald-400 tabular-nums">
+                  {formatCurrency(editableResult.staging_diff.daily_menu.fixed_price)}
+                </span>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                {editableResult.staging_diff.daily_menu.sections?.map((sec, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-slate-300">
+                    <span className="font-bold text-slate-400 min-w-28">{sec.name}:</span>
+                    <span className="text-white font-medium">{sec.dish_names.join(', ')}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Lista de Platos con Badges de Staging Diff */}
+          {(editableResult?.products || []).length > 0 && (
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+              {(editableResult || aiParsedResult).products.map((d: AiParsedDish) => {
+                const isPriceReviewRequired = d.requires_price_review && (!d.price || d.price <= 0)
+
+                return (
+                  <div
+                    key={d.id}
+                    className={`p-3.5 rounded-xl border transition-all ${
+                      isPriceReviewRequired
+                        ? 'bg-amber-950/20 border-amber-500/50'
+                        : 'bg-slate-900 border-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3 text-xs flex-wrap sm:flex-nowrap">
+                      {/* Información del Plato */}
+                      <div className="truncate flex-1 min-w-44">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-black text-white text-sm">{d.name}</span>
+
+                          {/* Badge de Acción Staging */}
+                          {d.action_type === 'create' && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              [NUEVO]
+                            </span>
+                          )}
+                          {d.action_type === 'update_price' && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1">
+                              <TrendingUp className="w-3 h-3" />
+                              <span>[PRECIO: {d.old_price !== undefined ? formatCurrency(d.old_price) : ''} → {formatCurrency(d.price)}]</span>
+                            </span>
+                          )}
+                          {d.action_type === 'update_stock' && !d.is_available && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                              <PauseCircle className="w-3 h-3" />
+                              <span>[STOCK PAUSADO]</span>
+                            </span>
+                          )}
+                          {d.action_type === 'update_stock' && d.is_available && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                              <PlayCircle className="w-3 h-3" />
+                              <span>[STOCK ACTIVADO]</span>
+                            </span>
+                          )}
+
+                          {/* Badge de Estación Operativa */}
+                          {d.station === 'bar' ? (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-1">
+                              <Wine className="w-2.5 h-2.5" />
+                              <span>Barra</span>
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 flex items-center gap-1">
+                              <ChefHat className="w-2.5 h-2.5" />
+                              <span>Cocina</span>
+                            </span>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {/* Selector de Categoría para cambiar manualmente */}
-                          <select
-                            value={d.category_id}
-                            onChange={(e) => handleDishCategoryChange(d.id, e.target.value)}
-                            className="text-[11px] font-semibold py-1 px-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer shadow-2xs"
-                            title="Cambiar categoría de este plato"
-                          >
-                            {availableCategories.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
+                        {d.description && (
+                          <span className="text-slate-400 text-[11px] block truncate mt-0.5">
+                            {d.description}
+                          </span>
+                        )}
 
-                          <span className="font-black text-cyan-400 tabular-nums whitespace-nowrap bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 shadow-2xs">
+                        {d.allergens && d.allergens.length > 0 && (
+                          <div className="flex items-center gap-1 mt-1 flex-wrap">
+                            {d.allergens.map((a: string) => (
+                              <span
+                                key={a}
+                                className="text-[10px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1 py-0.2 rounded"
+                              >
+                                {a}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Controles de Precio, Categoría y Borrado */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Selector de Categoría */}
+                        <select
+                          value={d.category_id}
+                          onChange={(e) => handleDishCategoryChange(d.id, e.target.value)}
+                          className="text-[11px] font-semibold py-1 px-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                          title="Cambiar categoría de este plato"
+                        >
+                          {availableCategories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* Input de Precio Editable con Resaltado si requiere revisión */}
+                        {isPriceReviewRequired ? (
+                          <div className="flex items-center gap-1 bg-amber-500/20 border border-amber-500 rounded-lg p-1">
+                            <input
+                              type="number"
+                              step="0.5"
+                              placeholder="Fijar €"
+                              value={d.price > 0 ? d.price : ''}
+                              onChange={(e) => handleDishPriceChange(d.id, e.target.value)}
+                              className="w-16 px-1.5 py-0.5 text-xs font-black text-amber-300 bg-slate-900 rounded border border-amber-500/40 text-right focus:outline-none focus:ring-1 focus:ring-amber-400"
+                            />
+                            <span className="text-xs font-bold text-amber-400">€</span>
+                          </div>
+                        ) : (
+                          <span className="font-black text-cyan-400 tabular-nums whitespace-nowrap bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
                             {formatCurrency(d.price)}
                           </span>
+                        )}
 
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveDish(d.id)}
-                            className="p-1 text-slate-400 hover:text-rose-400 rounded hover:bg-rose-500/20 transition-colors cursor-pointer"
-                            title="Eliminar plato del borrador"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDish(d.id)}
+                          className="p-1 text-slate-400 hover:text-rose-400 rounded hover:bg-rose-500/20 transition-colors cursor-pointer"
+                          title="Eliminar plato del borrador"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Opciones de Publicación */}
-          <div className="pt-2 border-t border-slate-700 space-y-3">
-            <p className="text-xs text-slate-300 font-medium text-center">
-              ¿Qué deseas hacer con estos platos detectados?
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setConfirmModalMode('append')}
-                className="py-3.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
-              >
-                <Plus className="w-4 h-4 stroke-[3]" />
-                <span>Añadir a Platos Existentes</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setConfirmModalMode('overwrite')}
-                className="py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 font-black text-xs sm:text-sm border border-rose-500/40 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <AlertTriangle className="w-4 h-4 text-rose-600" />
-                <span>Sobrescribir Toda la Carta</span>
-              </button>
+                )
+              })}
             </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* BOTONES DE CONFIRMACIÓN SEGÚN TIPO DE ACCIÓN                              */}
+          {/* ========================================================================= */}
+          <div className="pt-3 border-t border-slate-700 space-y-3">
+            {isCommandAction ? (
+              // Si fue una orden NL rápida -> Confirmación en 1 Clic
+              <div className="space-y-2">
+                <p className="text-xs text-slate-300 font-medium text-center">
+                  ¿Confirmar y aplicar estos cambios directamente en el catálogo activo?
+                </p>
+                <button
+                  type="button"
+                  disabled={hasPendingPriceReviews}
+                  onClick={() => onApplyAiMenu('append', editableResult || undefined)}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+                >
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>
+                    {hasPendingPriceReviews
+                      ? 'Fija los precios pendientes antes de guardar'
+                      : 'Confirmar y Aplicar Cambios al Catálogo (1 Clic)'}
+                  </span>
+                </button>
+              </div>
+            ) : (
+              // Si fue importación de carta -> Modal de Confirmación Append vs Overwrite
+              <div className="space-y-3">
+                <p className="text-xs text-slate-300 font-medium text-center">
+                  ¿Qué deseas hacer con estos platos detectados?
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    disabled={hasPendingPriceReviews}
+                    onClick={() => setConfirmModalMode('append')}
+                    className="py-3.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-xs sm:text-sm shadow-md shadow-cyan-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>Añadir a Platos Existentes</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={hasPendingPriceReviews}
+                    onClick={() => setConfirmModalMode('overwrite')}
+                    className="py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-rose-500/20 disabled:opacity-40 disabled:cursor-not-allowed text-rose-400 hover:text-rose-300 font-black text-xs sm:text-sm border border-rose-500/40 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-rose-600" />
+                    <span>Sobrescribir Toda la Carta</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Modal de Confirmación de Seguridad */}
+      {/* Modal de Confirmación de Sobrescritura o Adición */}
       {confirmModalMode && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl animate-in zoom-in-95 text-slate-100">
@@ -514,13 +727,13 @@ export function AdminAiImporter({
             <div className="text-xs text-slate-300 leading-relaxed space-y-2">
               {confirmModalMode === 'append' ? (
                 <p>
-                  Se añadirán los <strong>{aiParsedResult?.total_dishes} nuevos platos</strong> y sus categorías a la carta actual.
-                  Los platos y categorías que ya tienes configurados se <strong>mantendrán intactos</strong>.
+                  Se añadirán los <strong>{editableResult?.total_dishes || aiParsedResult?.total_dishes} platos</strong> y sus categorías a la carta actual.
+                  Los platos ya existentes conservarán su identificador canónico.
                 </p>
               ) : (
                 <div className="space-y-2">
                   <p className="text-rose-400 font-bold bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl">
-                    ⚠️ Advertencia: Esta acción reemplazará toda tu carta actual. Todos los platos y categorías actuales serán eliminados y sustituidos por los {aiParsedResult?.total_dishes} nuevos platos.
+                    ⚠️ Advertencia: Esta acción reemplazará toda tu carta actual. Todos los platos y categorías actuales serán eliminados y sustituidos por los nuevos platos.
                   </p>
                   <p>
                     ¿Estás seguro de que deseas proceder con la sobrescritura total?

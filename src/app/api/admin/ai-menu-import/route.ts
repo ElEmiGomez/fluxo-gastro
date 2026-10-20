@@ -5,56 +5,31 @@ import {
   getServerProducts,
   setServerCategories,
   setServerProducts,
+  upsertServerProduct,
+  setProductAvailabilityOverride,
   broadcastEvent,
   sanitizeText,
+  checkRateLimit,
 } from '@/lib/server-state'
 import { Category, Product } from '@/types/database.types'
+import { AiParsedMenuResult, StagingDiff } from '@/types/admin.types'
 import { verifyStaffRequest } from '@/lib/auth/pin-security'
 import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { getRestaurantBySlug, getTargetRestaurantId } from '@/lib/supabase/repository'
+import { updateDailyMenu } from '@/lib/supabase/repositories/daily-menu.repository'
+import {
+  deduplicateProducts,
+  inferCourseType,
+} from '@/lib/category-matcher'
+import {
+  processNaturalLanguageCommand,
+  parseFullMenuText,
+  detectStrictAllergens,
+  resolveStation,
+} from '@/lib/ai-menu-parser'
 
 export const dynamic = 'force-dynamic'
-
-const KNOWN_ALLERGEN_MAP: Record<string, string> = {
-  gluten: 'gluten',
-  trigo: 'gluten',
-  pan: 'gluten',
-  leche: 'dairy',
-  lactosa: 'dairy',
-  queso: 'dairy',
-  nata: 'dairy',
-  mantequilla: 'dairy',
-  huevo: 'eggs',
-  huevos: 'eggs',
-  pescado: 'fish',
-  atun: 'fish',
-  merluza: 'fish',
-  salmon: 'fish',
-  marisco: 'crustaceans',
-  gambas: 'crustaceans',
-  langostinos: 'crustaceans',
-  zamburiñas: 'molluscs',
-  pulpo: 'molluscs',
-  mejillones: 'molluscs',
-  soja: 'soy',
-  sesamo: 'sesame',
-  mostaza: 'mustard',
-  nueces: 'nuts',
-  cacahuetes: 'peanuts',
-  almendras: 'nuts',
-}
-
-function detectAllergens(text: string): string[] {
-  const lower = text.toLowerCase()
-  const detected = new Set<string>()
-  for (const [kw, allergen] of Object.entries(KNOWN_ALLERGEN_MAP)) {
-    if (lower.includes(kw)) {
-      detected.add(allergen)
-    }
-  }
-  return Array.from(detected)
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -68,6 +43,17 @@ export async function POST(req: NextRequest) {
       custom_parsed = null,
     } = body
 
+    // 1. Control de Tasa (Rate Limiting)
+    const ip = req.headers.get('x-forwarded-for') || 'local'
+    const rateLimitKey = `ai_menu_import_${slug}_${ip}`
+    if (!checkRateLimit(rateLimitKey, 60, 60000)) {
+      return NextResponse.json(
+        { success: false, error: 'Límite de solicitudes de IA superado. Espera un minuto antes de reintentar.' },
+        { status: 429 }
+      )
+    }
+
+    // 2. Blindaje de Seguridad: Requiere PIN/sesión de admin para guardar en carta
     if (save_to_menu && !verifyStaffRequest(req, slug, ['admin'])) {
       return NextResponse.json(
         { success: false, error: 'No autorizado. Se requiere sesión o PIN de administración para guardar cambios en la carta.' },
@@ -76,18 +62,292 @@ export async function POST(req: NextRequest) {
     }
 
     if (!custom_parsed && (!raw_text || typeof raw_text !== 'string' || raw_text.trim().length === 0) && !image_base64) {
-      return NextResponse.json({ success: false, error: 'Debe proporcionar el texto o una fotografía de la carta' }, { status: 400 })
+      return NextResponse.json(
+        { success: false, error: 'Debe proporcionar el texto, comando u orden o una fotografía de la carta' },
+        { status: 400 }
+      )
     }
 
     const rest = await getRestaurantBySlug(slug)
     const targetRestId = getTargetRestaurantId(rest?.id, slug)
 
-    let parsedCategories: Category[] = []
-    let parsedProducts: Product[] = []
+    const existingCategories = getServerCategories(slug)
+    const existingProducts = getServerProducts(slug)
 
+    // =========================================================================
+    // CASO A: APLICAR CAMBIOS CONFIRMADOS DESDE EL STAGING PREVIEW (custom_parsed)
+    // =========================================================================
+    if (custom_parsed && Array.isArray(custom_parsed.products)) {
+      // Regla Anti-Alucinación / Validación de Precios: verificar que ningún plato tenga precio inválido
+      const invalidDish = custom_parsed.products.find((p: any) => p.requires_price_review && (!p.price || p.price <= 0))
+      if (save_to_menu && invalidDish) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `El plato "${invalidDish.name}" requiere revisión de precio antes de ser guardado en la carta oficial.`,
+          },
+          { status: 422 }
+        )
+      }
 
-    // Si se subió una fotografía de la carta, procesar con Visión Multimodal de Gemini
-    if (!custom_parsed && image_base64) {
+      // Si es un comando de menú del día confirmado
+      if (custom_parsed.staging_diff?.daily_menu) {
+        const dMenu = custom_parsed.staging_diff.daily_menu
+        await updateDailyMenu(targetRestId, slug, {
+          title: dMenu.title,
+          fixed_price: dMenu.fixed_price,
+          is_active: dMenu.is_active,
+        })
+      }
+
+      // Procesar categorías y platos
+      const parsedCategories: Category[] = (custom_parsed.categories || []).map((c: any, idx: number) => ({
+        id: c.id || crypto.randomUUID(),
+        restaurant_id: targetRestId,
+        name: sanitizeText(c.name || 'CATEGORÍA', 50).toUpperCase(),
+        order_index: c.order_index ?? (idx + 1),
+      }))
+
+      const parsedProducts: Product[] = custom_parsed.products.map((p: any) => {
+        const finalPrice = typeof p.price === 'number' && !isNaN(p.price) ? Math.max(0, Number(p.price.toFixed(2))) : 0.0
+        const allergens = Array.isArray(p.allergens)
+          ? p.allergens
+          : detectStrictAllergens(`${p.name} ${p.description || ''}`)
+
+        return {
+          id: p.id || crypto.randomUUID(),
+          restaurant_id: targetRestId,
+          category_id: p.category_id || parsedCategories[0]?.id || 'cat-1',
+          name: sanitizeText(p.name || 'Plato', 80),
+          description: p.description ? sanitizeText(p.description, 250) : '',
+          price: finalPrice,
+          price_type: p.price_type === 'weight' ? 'weight' : 'unit',
+          price_unit: p.price_unit || undefined,
+          image_url: p.image_url || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+          model_3d_url: null,
+          is_available: typeof p.is_available === 'boolean' ? p.is_available : true,
+          allergens,
+        }
+      })
+
+      if (save_to_menu) {
+        let finalCategories: Category[] = []
+        let finalProducts: Product[] = []
+        const newProductsToUpsert: Product[] = []
+        const newCategoriesToUpsert: Category[] = []
+
+        if (mode === 'append') {
+          finalCategories = [...existingCategories]
+          const catMap = new Map<string, string>()
+
+          for (const pCat of parsedCategories) {
+            const match = finalCategories.find(c => c.name.trim().toLowerCase() === pCat.name.trim().toLowerCase())
+            if (match) {
+              catMap.set(pCat.id, match.id)
+            } else {
+              const newCat: Category = { ...pCat, order_index: finalCategories.length + 1 }
+              finalCategories.push(newCat)
+              newCategoriesToUpsert.push(newCat)
+              catMap.set(pCat.id, newCat.id)
+            }
+          }
+
+          const adaptedProducts = parsedProducts.map(p => ({
+            ...p,
+            category_id: catMap.get(p.category_id) || p.category_id,
+          }))
+
+          // Deduplicación canónica preservando UUIDs
+          finalProducts = deduplicateProducts([...existingProducts, ...adaptedProducts])
+          newProductsToUpsert.push(...adaptedProducts)
+        } else {
+          // Mode overwrite
+          finalCategories = parsedCategories
+          finalProducts = deduplicateProducts(parsedProducts)
+          newCategoriesToUpsert.push(...parsedCategories)
+          newProductsToUpsert.push(...parsedProducts)
+        }
+
+        // Actualizar almacén en memoria
+        setServerCategories(slug, finalCategories)
+        setServerProducts(slug, finalProducts)
+
+        // Sincronizar en Supabase
+        const supabase = createServerClient()
+        if (supabase && isSupabaseConfigured()) {
+          try {
+            if (mode === 'overwrite') {
+              await supabase.from('products').delete().eq('restaurant_id', targetRestId)
+            }
+
+            for (const cat of newCategoriesToUpsert) {
+              await supabase.from('categories').upsert({
+                id: cat.id,
+                restaurant_id: targetRestId,
+                name: cat.name,
+                order_index: cat.order_index,
+              })
+            }
+
+            for (const prod of newProductsToUpsert) {
+              await supabase.from('products').upsert({
+                id: prod.id,
+                restaurant_id: targetRestId,
+                category_id: prod.category_id,
+                name: prod.name,
+                description: prod.description,
+                price: prod.price,
+                price_type: prod.price_type,
+                price_unit: prod.price_unit || null,
+                image_url: prod.image_url,
+                is_available: prod.is_available,
+              })
+            }
+          } catch (dbErr) {
+            console.error('[AI Menu Import] Error syncing custom_parsed with Supabase:', dbErr)
+          }
+        }
+
+        // Sincronización Inmediata (< 1s) vía Broadcast y SSE
+        broadcastEvent({
+          type: 'menu_updated',
+          slug,
+        })
+      }
+
+      return NextResponse.json({
+        success: true,
+        slug,
+        saved: save_to_menu,
+        mode,
+        parsed: {
+          total_categories: parsedCategories.length,
+          total_dishes: parsedProducts.length,
+          categories: parsedCategories,
+          products: parsedProducts,
+          staging_diff: custom_parsed.staging_diff,
+        },
+      })
+    }
+
+    // =========================================================================
+    // CASO B: COMANDOS EN LENGUAJE NATURAL SOBRE EL CATÁLOGO ACTIVO
+    // =========================================================================
+    if (raw_text && raw_text.trim().length > 0 && !image_base64) {
+      const commandResult = processNaturalLanguageCommand(
+        raw_text,
+        existingProducts,
+        existingCategories,
+        targetRestId
+      )
+
+      if (commandResult && commandResult.isCommand) {
+        // Si el usuario envió el comando con save_to_menu: true directamente
+        if (save_to_menu) {
+          const { stagingDiff } = commandResult
+
+          // Regla Anti-Alucinación: Si algún plato requiere revisión de precio y no tiene precio válido, rechazar
+          const invalidDish = stagingDiff.items.find(p => p.requires_price_review && (!p.price || p.price <= 0))
+          if (invalidDish) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: `El plato "${invalidDish.name}" no tiene precio asignado. Revisa y asigna precio en el borrador antes de guardar.`,
+              },
+              { status: 422 }
+            )
+          }
+
+          // Si es menú del día
+          if (stagingDiff.daily_menu) {
+            await updateDailyMenu(targetRestId, slug, {
+              title: stagingDiff.daily_menu.title,
+              fixed_price: stagingDiff.daily_menu.fixed_price,
+              is_active: stagingDiff.daily_menu.is_active,
+            })
+          }
+
+          // Si modifica productos existentes o crea uno nuevo
+          if (stagingDiff.items.length > 0) {
+            let updatedProds = [...existingProducts]
+
+            for (const item of stagingDiff.items) {
+              if (item.action_type === 'update_stock') {
+                setProductAvailabilityOverride(slug, item.id, item.is_available ?? true)
+                updatedProds = updatedProds.map(p => p.id === item.id ? { ...p, is_available: item.is_available ?? true } : p)
+              } else if (item.action_type === 'update_price') {
+                updatedProds = updatedProds.map(p => p.id === item.id ? { ...p, price: item.price } : p)
+              } else if (item.action_type === 'create') {
+                const newP: Product = {
+                  id: item.id,
+                  restaurant_id: targetRestId,
+                  category_id: item.category_id,
+                  name: item.name,
+                  description: item.description || '',
+                  price: item.price,
+                  price_type: item.price_type || 'unit',
+                  image_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+                  model_3d_url: null,
+                  is_available: true,
+                  allergens: item.allergens || [],
+                }
+                updatedProds.push(newP)
+              }
+            }
+
+            const deduplicated = deduplicateProducts(updatedProds)
+            setServerProducts(slug, deduplicated)
+
+            // Sincronizar en Supabase
+            const supabase = createServerClient()
+            if (supabase && isSupabaseConfigured()) {
+              try {
+                for (const item of stagingDiff.items) {
+                  await supabase.from('products').upsert({
+                    id: item.id,
+                    restaurant_id: targetRestId,
+                    category_id: item.category_id,
+                    name: item.name,
+                    description: item.description || '',
+                    price: item.price,
+                    is_available: item.is_available ?? true,
+                  })
+                }
+              } catch (dbErr) {
+                console.error('[AI Menu Import] Error syncing NL command to Supabase:', dbErr)
+              }
+            }
+
+            broadcastEvent({
+              type: 'menu_updated',
+              slug,
+            })
+          }
+
+          return NextResponse.json({
+            success: true,
+            slug,
+            saved: true,
+            parsed: commandResult.parsed,
+            staging_diff: commandResult.stagingDiff,
+          })
+        }
+
+        // Si es sólo previsualización (save_to_menu: false)
+        return NextResponse.json({
+          success: true,
+          slug,
+          saved: false,
+          parsed: commandResult.parsed,
+          staging_diff: commandResult.stagingDiff,
+        })
+      }
+    }
+
+    // =========================================================================
+    // CASO C: ANÁLISIS MULTIMODAL CON FOTOGRAFÍA (Gemini con AbortController 25s)
+    // =========================================================================
+    if (image_base64) {
       let mimeType = 'image/jpeg'
       let cleanBase64 = image_base64
       if (typeof image_base64 === 'string' && image_base64.startsWith('data:')) {
@@ -100,6 +360,9 @@ export async function POST(req: NextRequest) {
 
       const geminiApiKey = process.env.GEMINI_API_KEY
       if (geminiApiKey) {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 25000)
+
         try {
           const geminiPrompt = `Analiza detalladamente esta fotografía de la carta o menú de restaurante.
 Extrae todas las categorías de platos y cada uno de los platos que aparecen en la imagen con sus precios exactos, descripciones e ingredientes (si existen) y alérgenos detectables.
@@ -126,6 +389,7 @@ Alérgenos permitidos en el array 'allergens': gluten, dairy, eggs, fish, crusta
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              signal: controller.signal,
               body: JSON.stringify({
                 contents: [
                   {
@@ -151,6 +415,8 @@ Alérgenos permitidos en el array 'allergens': gluten, dairy, eggs, fish, crusta
             }
           )
 
+          clearTimeout(timeoutId)
+
           if (geminiRes.ok) {
             const geminiData = await geminiRes.json()
             const textResponse = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
@@ -169,316 +435,243 @@ Alérgenos permitidos en el array 'allergens': gluten, dairy, eggs, fish, crusta
                   })
                 })
 
-                parsedCategories = Array.from(catMap.values())
-                if (parsedCategories.length === 0) {
+                let geminiCategories = Array.from(catMap.values())
+                if (geminiCategories.length === 0) {
                   const defaultCat: Category = {
                     id: crypto.randomUUID(),
                     restaurant_id: targetRestId,
                     name: 'PLATOS DETECTADOS',
                     order_index: 1,
                   }
-                  parsedCategories.push(defaultCat)
+                  geminiCategories.push(defaultCat)
                   catMap.set('platos detectados', defaultCat)
                 }
 
-                parsedProducts = parsedJson.products.map((p: any) => {
+                const geminiDishes = parsedJson.products.map((p: any) => {
                   const catKey = (p.category_name || '').trim().toLowerCase()
-                  let targetCat = catMap.get(catKey)
-                  if (!targetCat) {
-                    targetCat = parsedCategories[0]
-                  }
+                  let targetCat = catMap.get(catKey) || geminiCategories[0]
 
                   const cleanName = sanitizeText(p.name || 'Plato', 80)
                   const cleanDesc = p.description
                     ? sanitizeText(p.description, 250)
-                    : 'Elaborado artesanalmente con ingredientes frescos.'
-                  const combinedAllergens = Array.from(
-                    new Set([
-                      ...(Array.isArray(p.allergens) ? p.allergens : []),
-                      ...detectAllergens(`${cleanName} ${cleanDesc}`),
-                    ])
-                  )
+                    : 'Elaborado artesanalmente.'
+                  const combinedAllergens = detectStrictAllergens(`${cleanName} ${cleanDesc} ${(p.allergens || []).join(' ')}`)
 
-                  return {
-                    id: crypto.randomUUID(),
-                    restaurant_id: targetRestId,
-                    category_id: targetCat.id,
+                  const rawPrice = typeof p.price === 'number' && !isNaN(p.price) ? Number(p.price.toFixed(2)) : 0.0
+                  const requiresPriceReview = rawPrice <= 0
+
+                  const normDishName = cleanName.toLowerCase().trim()
+                  const existingMatch = existingProducts.find(ep => ep.name.toLowerCase().trim() === normDishName)
+
+                  const dishId = existingMatch?.id || crypto.randomUUID()
+                  const courseType = inferCourseType({
+                    id: dishId,
                     name: cleanName,
+                    category_id: targetCat.id,
                     description: cleanDesc,
-                    price: typeof p.price === 'number' && !isNaN(p.price) ? Number(p.price.toFixed(2)) : 10.0,
-                    price_type: 'unit' as const,
-                    image_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+                    price: rawPrice,
+                    price_type: 'unit',
+                    image_url: '',
                     model_3d_url: null,
+                    restaurant_id: targetRestId,
                     is_available: true,
                     allergens: combinedAllergens,
+                  }, geminiCategories)
+
+                  return {
+                    id: dishId,
+                    name: cleanName,
+                    description: cleanDesc,
+                    price: rawPrice,
+                    old_price: existingMatch?.price,
+                    category_id: targetCat.id,
+                    category_name: targetCat.name,
+                    allergens: combinedAllergens,
+                    action_type: existingMatch ? 'update_price' : 'create',
+                    is_available: existingMatch?.is_available ?? true,
+                    requires_price_review: requiresPriceReview,
+                    course_type: courseType,
+                    station: resolveStation(courseType),
                   }
                 })
+
+                const totalCreated = geminiDishes.filter((d: any) => d.action_type === 'create').length
+                const totalUpdated = geminiDishes.filter((d: any) => d.action_type === 'update_price').length
+                const requiresReviewCount = geminiDishes.filter((d: any) => d.requires_price_review).length
+
+                const stagingDiff: StagingDiff = {
+                  action: 'import',
+                  summary: `Análisis visual completado: ${totalCreated} platos nuevos, ${totalUpdated} platos actualizados, ${requiresReviewCount} requieren revisión de precio.`,
+                  items: geminiDishes,
+                  total_created: totalCreated,
+                  total_updated: totalUpdated,
+                  total_paused: 0,
+                  total_activated: 0,
+                  requires_price_review_count: requiresReviewCount,
+                }
 
                 return NextResponse.json({
                   success: true,
                   source: 'gemini_vision',
                   extracted_text: parsedJson.extracted_text || '',
                   parsed: {
-                    total_dishes: parsedProducts.length,
-                    total_categories: parsedCategories.length,
-                    categories: parsedCategories,
-                    products: parsedProducts,
+                    total_dishes: geminiDishes.length,
+                    total_categories: geminiCategories.length,
+                    categories: geminiCategories,
+                    products: geminiDishes,
+                    staging_diff: stagingDiff,
                   },
                 })
               }
             }
           }
         } catch (visionErr) {
-          console.warn('[AI Menu Import] Error llamando a Gemini Vision:', visionErr)
+          clearTimeout(timeoutId)
+          console.warn('[AI Menu Import] Timeout o error en Gemini Vision, usando fallback local determinista:', visionErr)
         }
       }
 
-      // Fallback si no hay clave de API o si es entorno de desarrollo/test
-      if (!raw_text || raw_text.trim().length === 0) {
-        const demoCat: Category = {
+      // Fallback local determinista para fotografía
+      const demoCat: Category = {
+        id: crypto.randomUUID(),
+        restaurant_id: targetRestId,
+        name: 'PLATOS DETECTADOS EN FOTO',
+        order_index: 1,
+      }
+
+      const fallbackDishes = [
+        {
           id: crypto.randomUUID(),
-          restaurant_id: targetRestId,
-          name: 'PLATOS DETECTADOS EN FOTO',
-          order_index: 1,
-        }
-        parsedCategories = [demoCat]
-        parsedProducts = [
-          {
-            id: crypto.randomUUID(),
-            restaurant_id: targetRestId,
-            category_id: demoCat.id,
-            name: 'Plato Especial de la Carta',
-            description: 'Plato extraído visualmente de la fotografía de la carta.',
-            price: 12.5,
-            price_type: 'unit',
-            image_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
-            model_3d_url: null,
-            is_available: true,
-            allergens: ['gluten'],
-          },
-          {
-            id: crypto.randomUUID(),
-            restaurant_id: targetRestId,
-            category_id: demoCat.id,
-            name: 'Entrante o Ración de la Casa',
-            description: 'Ración detectada en la carta visual.',
-            price: 7.5,
-            price_type: 'unit',
-            image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
-            model_3d_url: null,
-            is_available: true,
-            allergens: [],
-          },
-        ]
+          name: 'Plato Especial de la Carta',
+          description: 'Plato extraído visualmente de la fotografía de la carta.',
+          price: 12.5,
+          category_id: demoCat.id,
+          category_name: demoCat.name,
+          allergens: ['gluten'],
+          action_type: 'create' as const,
+          is_available: true,
+          requires_price_review: false,
+          course_type: 'second' as const,
+          station: 'kitchen' as const,
+        },
+        {
+          id: crypto.randomUUID(),
+          name: 'Entrante o Ración de la Casa',
+          description: 'Ración detectada en la carta visual.',
+          price: 7.5,
+          category_id: demoCat.id,
+          category_name: demoCat.name,
+          allergens: [],
+          action_type: 'create' as const,
+          is_available: true,
+          requires_price_review: false,
+          course_type: 'first' as const,
+          station: 'kitchen' as const,
+        },
+      ]
 
-        return NextResponse.json({
-          success: true,
-          source: 'local_vision_fallback',
-          extracted_text: 'Platos detectados en la fotografía de la carta.',
-          parsed: {
-            total_dishes: parsedProducts.length,
-            total_categories: parsedCategories.length,
-            categories: parsedCategories,
-            products: parsedProducts,
-          },
-        })
+      const stagingDiff: StagingDiff = {
+        action: 'import',
+        summary: 'Platos detectados en la fotografía de la carta mediante motor local.',
+        items: fallbackDishes,
+        total_created: 2,
+        total_updated: 0,
+        total_paused: 0,
+        total_activated: 0,
+        requires_price_review_count: 0,
       }
+
+      return NextResponse.json({
+        success: true,
+        source: 'local_vision_fallback',
+        extracted_text: 'Platos detectados en la fotografía de la carta.',
+        parsed: {
+          total_dishes: 2,
+          total_categories: 1,
+          categories: [demoCat],
+          products: fallbackDishes,
+          staging_diff: stagingDiff,
+        },
+      })
     }
 
-    if (custom_parsed && Array.isArray(custom_parsed.categories) && Array.isArray(custom_parsed.products)) {
-      parsedCategories = custom_parsed.categories.map((c: any, idx: number) => ({
-        id: c.id || crypto.randomUUID(),
-        restaurant_id: targetRestId,
-        name: sanitizeText(c.name || 'CATEGORÍA', 50).toUpperCase(),
-        order_index: c.order_index ?? (idx + 1),
-      }))
+    // =========================================================================
+    // CASO D: INGESTA DE CARTA COMPLETA EN TEXTO / OCR
+    // =========================================================================
+    const fullMenuResult = parseFullMenuText(
+      raw_text,
+      existingCategories,
+      existingProducts,
+      targetRestId
+    )
 
-      parsedProducts = custom_parsed.products.map((p: any) => ({
-        id: p.id || crypto.randomUUID(),
-        restaurant_id: targetRestId,
-        category_id: p.category_id,
-        name: sanitizeText(p.name || 'Plato', 80),
-        description: p.description ? sanitizeText(p.description, 250) : '',
-        price: typeof p.price === 'number' && !isNaN(p.price) ? Number(p.price.toFixed(2)) : 10.0,
-        price_type: p.price_type === 'weight' ? 'weight' : 'unit',
-        price_unit: p.price_unit || undefined,
-        image_url: p.image_url || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
-        model_3d_url: null,
-        is_available: true,
-        allergens: Array.isArray(p.allergens) ? p.allergens : [],
-      }))
-    } else {
-      const lines = raw_text
-        .split('\n')
-        .map((l: string) => l.trim())
-        .filter(Boolean)
-    let currentCategory: Category = {
-      id: crypto.randomUUID(),
-      restaurant_id: targetRestId,
-      name: 'PLATOS Y ESPECIALIDADES',
-      order_index: 1,
-    }
-    parsedCategories.push(currentCategory)
-
-    const priceRegex = /([0-9]+[.,][0-9]{1,2})\s*(?:€|eur|euros|\$)?/i
-    const isCategoryHeaderRegex = /^([A-ZÁÉÍÓÚÑ0-9\s]{3,35}|#{1,3}\s*.+|[0-9]+\.\s*[A-ZÁÉÍÓÚÑ\s]+)$/
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
-
-      // Detectar si la línea es un encabezado de categoría
-      const hasPrice = priceRegex.test(line)
-      if (!hasPrice && (isCategoryHeaderRegex.test(line) || line.startsWith('---') || line.endsWith(':'))) {
-        const cleanName = sanitizeText(line.replace(/^[#\-*\s]+|[:]+$/g, '').trim(), 50)
-        if (cleanName.length > 2) {
-          const existing = parsedCategories.find(c => c.name.toLowerCase() === cleanName.toLowerCase())
-          if (!existing) {
-            currentCategory = {
-              id: crypto.randomUUID(),
-              restaurant_id: targetRestId,
-              name: cleanName.toUpperCase(),
-              order_index: parsedCategories.length + 1,
-            }
-            parsedCategories.push(currentCategory)
-          } else {
-            currentCategory = existing
-          }
-          continue
-        }
+    if (save_to_menu && fullMenuResult.products.length > 0) {
+      // Regla Anti-Alucinación: Si algún plato requiere revisión de precio y no tiene precio, rechazar
+      const invalidDish = fullMenuResult.products.find(p => p.requires_price_review && (!p.price || p.price <= 0))
+      if (invalidDish) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `El plato "${invalidDish.name}" no tiene precio asignado. Revisa y asigna precio en el borrador antes de guardar.`,
+          },
+          { status: 422 }
+        )
       }
 
-      // Detectar línea de plato
-      let price = 0.0
-      const priceMatch = line.match(priceRegex)
-      if (priceMatch) {
-        price = parseFloat(priceMatch[1].replace(',', '.'))
-      } else {
-        price = 10.0
-      }
-
-      // Separar nombre y descripción
-      let rawName = line.replace(priceRegex, '').replace(/[€$£\u20AC]/gi, '').replace(/\b(?:eur|euros)\b/gi, '').trim()
-      let description = ''
-
-      if (rawName.includes(' - ')) {
-        const parts = rawName.split(' - ')
-        rawName = parts[0].trim()
-        description = parts.slice(1).join(' - ').trim()
-      } else if (rawName.includes(': ')) {
-        const parts = rawName.split(': ')
-        rawName = parts[0].trim()
-        description = parts.slice(1).join(': ').trim()
-      } else if (rawName.includes('(') && rawName.includes(')')) {
-        const descMatch = rawName.match(/\((.*?)\)/)
-        if (descMatch) {
-          description = descMatch[1].trim()
-          rawName = rawName.replace(/\(.*?\)/, '').trim()
-        }
-      }
-
-      rawName = rawName.replace(/[\s\-_:?¿!¡]+$/, '').trim()
-      if (description) {
-        description = description.replace(/^[•\-\s:_]+|[\s\-_:?¿!¡]+$/g, '').trim()
-      }
-
-      // Si la siguiente línea no tiene precio y parece descripción, anexarla
-      if (!description && i + 1 < lines.length) {
-        const nextLine = lines[i + 1]
-        if (!priceRegex.test(nextLine) && !isCategoryHeaderRegex.test(nextLine) && nextLine.length > 10) {
-          description = sanitizeText(nextLine, 300)
-          i++
-        }
-      }
-
-      const cleanName = sanitizeText(rawName.replace(/^[•\-\d.\s]+/, '').trim(), 100)
-      if (cleanName.length >= 2) {
-        const isWeight = /al peso|100g|1kg|kg/i.test(line + ' ' + (description || ''))
-        const fullDesc = (description && description.length > 2) ? description : 'Elaborado artesanalmente con ingredientes frescos.'
-        const allergens = detectAllergens(`${cleanName} ${fullDesc}`)
-
-        const product: Product = {
-          id: crypto.randomUUID(),
-          category_id: currentCategory.id,
+      const productsToSave: Product[] = fullMenuResult.products.map(d => {
+        const validUnit = d.price_unit === 'kg' ? 'kg' : d.price_unit === 'piece' ? 'piece' : d.price_unit === '100g' ? '100g' : undefined
+        return {
+          id: d.id,
           restaurant_id: targetRestId,
-          name: cleanName,
-          description: fullDesc,
-          price: Number(price.toFixed(2)),
-          price_type: isWeight ? 'weight' : 'unit',
-          price_unit: isWeight ? '100g' : undefined,
+          category_id: d.category_id,
+          name: d.name,
+          description: d.description || '',
+          price: d.price,
+          price_type: d.price_type || 'unit',
+          price_unit: validUnit,
           image_url: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
           model_3d_url: null,
-          is_available: true,
-          allergens,
+          is_available: d.is_available ?? true,
+          allergens: d.allergens || [],
         }
-        parsedProducts.push(product)
-      }
-    }
-    }
-
-    // Limpiar categorías sin platos asociados (ej. placeholder inicial)
-    const usedCatIds = new Set(parsedProducts.map(p => p.category_id))
-    if (usedCatIds.size > 0) {
-      parsedCategories = parsedCategories.filter(c => usedCatIds.has(c.id))
-    }
-
-    // Si save_to_menu es true, aplicar según el modo seleccionado (append u overwrite)
-    if (save_to_menu && parsedProducts.length > 0) {
-      const existingCategories = getServerCategories(slug)
-      const existingProducts = getServerProducts(slug)
+      })
 
       let finalCategories: Category[] = []
       let finalProducts: Product[] = []
-      const newProductsToUpsert: Product[] = []
-      const newCategoriesToUpsert: Category[] = []
 
       if (mode === 'append') {
         finalCategories = [...existingCategories]
-
-        // Resolver categorías para no duplicar si ya existen por nombre
-        const categoryMap = new Map<string, string>() // parsedCatId -> targetCatId
-
-        for (const pCat of parsedCategories) {
-          const match = finalCategories.find(c => c.name.trim().toLowerCase() === pCat.name.trim().toLowerCase())
-          if (match) {
-            categoryMap.set(pCat.id, match.id)
-          } else {
-            const newCat: Category = {
-              ...pCat,
-              order_index: finalCategories.length + 1,
-            }
-            finalCategories.push(newCat)
-            newCategoriesToUpsert.push(newCat)
-            categoryMap.set(pCat.id, newCat.id)
+        for (const cat of fullMenuResult.categories) {
+          if (!finalCategories.some(c => c.id === cat.id)) {
+            finalCategories.push({
+              id: cat.id,
+              restaurant_id: targetRestId,
+              name: cat.name,
+              order_index: cat.order_index ?? finalCategories.length + 1,
+            })
           }
         }
-
-        const adaptedNewProducts = parsedProducts.map(p => {
-          const resolvedCatId = categoryMap.get(p.category_id) || p.category_id
-          return { ...p, category_id: resolvedCatId }
-        })
-
-        newProductsToUpsert.push(...adaptedNewProducts)
-        finalProducts = [...existingProducts, ...adaptedNewProducts]
+        finalProducts = deduplicateProducts([...existingProducts, ...productsToSave])
       } else {
-        // Mode 'overwrite'
-        finalCategories = parsedCategories
-        finalProducts = parsedProducts
-        newCategoriesToUpsert.push(...parsedCategories)
-        newProductsToUpsert.push(...parsedProducts)
+        finalCategories = fullMenuResult.categories.map((c, i) => ({
+          id: c.id,
+          restaurant_id: targetRestId,
+          name: c.name,
+          order_index: c.order_index ?? i + 1,
+        }))
+        finalProducts = deduplicateProducts(productsToSave)
       }
 
       setServerCategories(slug, finalCategories)
       setServerProducts(slug, finalProducts)
 
-      // Sincronizar en Supabase
       const supabase = createServerClient()
       if (supabase && isSupabaseConfigured()) {
         try {
           if (mode === 'overwrite') {
             await supabase.from('products').delete().eq('restaurant_id', targetRestId)
           }
-
-          for (const cat of newCategoriesToUpsert) {
+          for (const cat of finalCategories) {
             await supabase.from('categories').upsert({
               id: cat.id,
               restaurant_id: targetRestId,
@@ -486,8 +679,7 @@ Alérgenos permitidos en el array 'allergens': gluten, dairy, eggs, fish, crusta
               order_index: cat.order_index,
             })
           }
-
-          for (const prod of newProductsToUpsert) {
+          for (const prod of productsToSave) {
             await supabase.from('products').upsert({
               id: prod.id,
               restaurant_id: targetRestId,
@@ -496,13 +688,12 @@ Alérgenos permitidos en el array 'allergens': gluten, dairy, eggs, fish, crusta
               description: prod.description,
               price: prod.price,
               price_type: prod.price_type,
-              price_unit: prod.price_unit || null,
               image_url: prod.image_url,
-              is_available: true,
+              is_available: prod.is_available,
             })
           }
         } catch (dbErr) {
-          console.error('[AI Menu Import] Error syncing with Supabase:', dbErr)
+          console.error('[AI Menu Import] Error syncing parsed menu to Supabase:', dbErr)
         }
       }
 
@@ -517,14 +708,11 @@ Alérgenos permitidos en el array 'allergens': gluten, dairy, eggs, fish, crusta
       slug,
       saved: save_to_menu,
       mode,
-      parsed: {
-        total_categories: parsedCategories.length,
-        total_dishes: parsedProducts.length,
-        categories: parsedCategories,
-        products: parsedProducts,
-      },
+      parsed: fullMenuResult,
+      staging_diff: fullMenuResult.staging_diff,
     })
   } catch (err: any) {
+    console.error('[AI Menu Import] Exception in POST handler:', err)
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }
