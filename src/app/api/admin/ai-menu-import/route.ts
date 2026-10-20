@@ -114,6 +114,17 @@ export async function POST(req: NextRequest) {
           ? p.allergens
           : detectStrictAllergens(`${p.name} ${p.description || ''}`)
 
+        // Plato existente editado por comando: conservar foto, modelo 3D, tipo de precio y coste.
+        // Solo se modifica el campo que cambia la orden (precio o disponibilidad).
+        const existing = p.id ? existingProducts.find(e => e.id === p.id) : undefined
+        if (existing && (p.action_type === 'update_price' || p.action_type === 'update_stock' || p.action_type === 'unchanged')) {
+          return {
+            ...existing,
+            price: p.action_type === 'update_price' ? finalPrice : existing.price,
+            is_available: p.action_type === 'update_stock' ? p.is_available !== false : existing.is_available,
+          }
+        }
+
         return {
           id: p.id || crypto.randomUUID(),
           restaurant_id: targetRestId,
@@ -123,14 +134,22 @@ export async function POST(req: NextRequest) {
           price: finalPrice,
           price_type: p.price_type === 'weight' ? 'weight' : 'unit',
           price_unit: p.price_unit || undefined,
-          image_url: p.image_url || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
-          model_3d_url: null,
+          image_url: p.image_url || existing?.image_url || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80',
+          model_3d_url: existing?.model_3d_url ?? null,
           is_available: typeof p.is_available === 'boolean' ? p.is_available : true,
           allergens,
         }
       })
 
       if (save_to_menu) {
+        // Disponibilidad: registrar override persistente para que GET /api/admin/menu
+        // no reaplique un estado antiguo (mismo mecanismo que el PATCH de stock).
+        for (const p of custom_parsed.products) {
+          if (p?.action_type === 'update_stock' && p.id) {
+            setProductAvailabilityOverride(slug, p.id, p.is_available !== false)
+          }
+        }
+
         let finalCategories: Category[] = []
         let finalProducts: Product[] = []
         const newProductsToUpsert: Product[] = []

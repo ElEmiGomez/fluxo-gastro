@@ -304,7 +304,9 @@ export function processNaturalLanguageCommand(
     // Buscar coincidencias difusas o exactas en los productos existentes
     const matchedProducts = existingProducts.filter(p => {
       const pNorm = normalizeKey(p.name)
-      return pNorm === targetNorm || pNorm.includes(targetNorm) || targetNorm.includes(pNorm)
+      if (pNorm === targetNorm) return true
+      if (targetNorm.length < 4) return false
+      return pNorm.includes(targetNorm) || (pNorm.length >= 4 && targetNorm.includes(pNorm))
     })
 
     if (matchedProducts.length > 0) {
@@ -442,7 +444,9 @@ export function processNaturalLanguageCommand(
 
     const matchedProducts = existingProducts.filter(p => {
       const pNorm = normalizeKey(p.name)
-      return pNorm === targetNorm || pNorm.includes(targetNorm) || targetNorm.includes(pNorm)
+      if (pNorm === targetNorm) return true
+      if (targetNorm.length < 4) return false
+      return pNorm.includes(targetNorm) || (pNorm.length >= 4 && targetNorm.includes(pNorm))
     })
 
     if (matchedProducts.length > 0) {
