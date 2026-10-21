@@ -329,6 +329,7 @@ export function isStarterReady(item: OrderItem): boolean {
 }
 
 export function isStarterServed(item: OrderItem, parentOrder?: any): boolean {
+  if (item.notes && item.notes.includes(TAG_STARTER_SERVED)) return true
   if (parentOrder && typeof parentOrder === 'object') {
     if (parentOrder.status === 'delivered' || parentOrder.status === 'paid') return true
     if (
@@ -337,12 +338,13 @@ export function isStarterServed(item: OrderItem, parentOrder?: any): boolean {
       areOrderMainsServed(parentOrder) ||
       parentOrder.notes?.includes(TAG_MAIN_FIRED) ||
       parentOrder.notes?.includes(TAG_DESSERT_FIRED) ||
-      orderHasActiveDesserts(parentOrder)
+      orderHasActiveDesserts(parentOrder) ||
+      (orderHasDesserts(parentOrder) && (isOrderDessertsReady(parentOrder) || areOrderDessertsServed(parentOrder) || areOrderDessertsCooking(parentOrder)))
     ) {
       return true
     }
   }
-  return Boolean(item.notes && item.notes.includes(TAG_STARTER_SERVED))
+  return false
 }
 
 export function isMainCooking(item: OrderItem): boolean {
@@ -361,16 +363,18 @@ export function isMainReady(item: OrderItem): boolean {
 }
 
 export function isMainServed(item: OrderItem, parentOrder?: any): boolean {
+  if (item.notes && item.notes.includes(TAG_MAIN_SERVED)) return true
   if (parentOrder && typeof parentOrder === 'object') {
     if (parentOrder.status === 'delivered' || parentOrder.status === 'paid') return true
     if (
       parentOrder.notes?.includes(TAG_DESSERT_FIRED) ||
-      orderHasActiveDesserts(parentOrder)
+      orderHasActiveDesserts(parentOrder) ||
+      (orderHasDesserts(parentOrder) && (isOrderDessertsReady(parentOrder) || areOrderDessertsServed(parentOrder) || areOrderDessertsCooking(parentOrder)))
     ) {
       return true
     }
   }
-  return Boolean(item.notes && item.notes.includes(TAG_MAIN_SERVED))
+  return false
 }
 
 export function isDessertServed(item: OrderItem, parentOrder?: any): boolean {
@@ -471,7 +475,7 @@ export function areOrderMainsFired(order: Order): boolean {
   if ((order as any).notes?.includes(TAG_MAIN_FIRED) || (order as any).kitchen_notes?.includes(TAG_MAIN_FIRED)) return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
-  if (mains.every(isMainServed)) return true
+  if (mains.every(m => isMainServed(m, order))) return true
   // Si la comanda no tiene entrantes, los principales se consideran marchados de inicio
   if (!orderHasStarters(order)) return true
   return mains.some(isMainFired)

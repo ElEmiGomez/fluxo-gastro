@@ -19,7 +19,7 @@ import {
 export { getCachedOrderItems }
 import { getTargetRestaurantId } from './restaurants.repository'
 import { inferCourseType, resolveCanonicalProductId } from '@/lib/category-matcher'
-import { ORDER_STATUS_HIERARCHY, getItemCourse, mergeOrderItemsCourseTags, TAG_MAIN_FIRED, TAG_DESSERT_FIRED } from '@/lib/course-utils'
+import { ORDER_STATUS_HIERARCHY, getItemCourse, mergeOrderItemsCourseTags, TAG_MAIN_FIRED, TAG_DESSERT_FIRED, orderHasActiveDesserts } from '@/lib/course-utils'
 
 const isUuid = (val?: string | null): boolean =>
   Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val))
@@ -312,35 +312,32 @@ export async function getRestaurantOrders(
             ? o.version
             : (mem?.version ?? 1)
 
-          // PostgreSQL SSOT: preferir el estado de Supabase salvo que la memoria tenga una versión o timestamp estrictamente más reciente
+          // PostgreSQL SSOT: preferir el estado de Supabase (SSOT) evitando regresiones por memoria obsoleta
           let resolvedStatus = o.status
           if (mem) {
             const memVersion = Number(mem.version || 0)
             const supaVersion = Number(o.version || 0)
             const memTime = mem.updated_at ? new Date(mem.updated_at).getTime() : 0
             const supaTime = o.updated_at ? new Date(o.updated_at).getTime() : 0
-            const isRecentMemTransition = memTime > 0 && (Date.now() - memTime < 6000)
 
-            if (mem.status === 'delivered' && o.status !== 'delivered' && o.status !== 'paid') {
-              resolvedStatus = 'delivered'
-            } else if (mem.status === 'paid' && o.status !== 'paid') {
-              resolvedStatus = 'paid'
-            } else if (mem.status === 'ready' && (o.status === 'pending_validation' || o.status === 'pending' || o.status === 'preparing')) {
-              resolvedStatus = 'ready'
-            } else if (mem.status === 'preparing' && (o.status === 'pending_validation' || o.status === 'pending')) {
-              resolvedStatus = 'preparing'
-            } else if (mem.status === 'pending' && o.status === 'pending_validation') {
-              resolvedStatus = 'pending'
-            } else if (ORDER_STATUS_HIERARCHY[mem.status as string] > (ORDER_STATUS_HIERARCHY[o.status as string] ?? 0) && !(mem.status === 'delivered' && o.status === 'preparing')) {
-              resolvedStatus = mem.status
+            if (supaVersion > memVersion) {
+              resolvedStatus = o.status
             } else if (memVersion > supaVersion) {
-              resolvedStatus = mem.status
-            } else if (isRecentMemTransition && mem.status) {
-              resolvedStatus = mem.status
-            } else if (memTime > 0 && supaTime > 0 && memTime > supaTime) {
-              resolvedStatus = mem.status
+              if (mem.status === 'delivered' && (o.status === 'preparing' || o.status === 'ready') && orderHasActiveDesserts(o)) {
+                resolvedStatus = o.status
+              } else {
+                resolvedStatus = mem.status
+              }
+            } else if (memTime > supaTime && mem.status) {
+              if (mem.status === 'delivered' && (o.status === 'preparing' || o.status === 'ready') && orderHasActiveDesserts(o)) {
+                resolvedStatus = o.status
+              } else {
+                resolvedStatus = mem.status
+              }
             } else if (!o.status && mem.status) {
               resolvedStatus = mem.status
+            } else {
+              resolvedStatus = o.status
             }
           }
 
@@ -788,7 +785,8 @@ export async function updateOrderCourseTags(
   slug: string,
   orderId: string,
   tag: string,
-  itemFilter: (item: OrderItem) => boolean
+  itemFilter: (item: OrderItem) => boolean,
+  options?: { skipBroadcast?: boolean }
 ): Promise<{ success: boolean; order?: Order; error?: string }> {
   const supabase = createServerClient()
   const hasSupabase = supabase && isSupabaseConfigured()
@@ -924,14 +922,16 @@ export async function updateOrderCourseTags(
   saveCachedOrderItems(orderId, updatedItems)
   addServerOrder(slug, updatedOrder, true)
 
-  broadcastEvent({
-    type: 'order_updated',
-    slug,
-    orderId,
-    status: updatedOrder.status,
-    tableNumber: updatedOrder.table_number,
-    order: updatedOrder,
-  })
+  if (!options?.skipBroadcast) {
+    broadcastEvent({
+      type: 'order_updated',
+      slug,
+      orderId,
+      status: updatedOrder.status,
+      tableNumber: updatedOrder.table_number,
+      order: updatedOrder,
+    })
+  }
 
   return { success: true, order: updatedOrder }
 }
@@ -1063,14 +1063,14 @@ export async function resolvePendingDessertInOrder(
   saveCachedOrderItems(orderId, updatedItems)
   addServerOrder(slug, updatedOrder, true)
 
-  broadcastEvent({
-    type: 'order_updated',
-    slug,
-    orderId,
-    status: updatedOrder.status,
-    tableNumber: updatedOrder.table_number,
-    order: updatedOrder,
-  })
+    broadcastEvent({
+      type: 'order_updated',
+      slug,
+      orderId,
+      status: updatedOrder.status,
+      tableNumber: updatedOrder.table_number,
+      order: updatedOrder,
+    })
 
   return { success: true, order: updatedOrder }
 }

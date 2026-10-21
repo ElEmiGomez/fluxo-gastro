@@ -215,7 +215,7 @@ export function MenuModals({
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-emerald-200 stroke-[3]" />
             <span className="text-xs">
-              {serviceRequestedToast === 'waiter' || serviceRequestedToast === 'mozo'
+              {/waiter|mozo/i.test(serviceRequestedToast || '')
                 ? `¡Mozo avisado para Mesa #${tableNumber}!`
                 : `¡Solicitado ${serviceRequestedToast} para Mesa #${tableNumber}!`}
             </span>

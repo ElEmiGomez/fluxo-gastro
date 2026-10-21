@@ -16,7 +16,7 @@ import {
   Receipt,
   UserCheck,
 } from 'lucide-react'
-import { Table, Order } from '@/types/database.types'
+import { Table, Order, OrderItem } from '@/types/database.types'
 import { PendingServiceCall } from '@/types/comandero.types'
 import {
   isDrinkItem,
@@ -85,6 +85,11 @@ function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
   const approvedItems = approvedOrders.flatMap(o => o.order_items || [])
   const unapprovedItems = unapprovedOrders.flatMap(o => o.order_items || [])
 
+  // Helper para resolver la comanda padre de un ítem
+  const getParentOrder = (item: OrderItem) =>
+    approvedOrders.find(o => (o.order_items || []).some(it => it === item || it.id === item.id)) ||
+    activeOrders.find(o => (o.order_items || []).some(it => it === item || it.id === item.id))
+
   // 1. Bebidas (Barra)
   const drinks = allItems.filter(isDrinkItem)
   const hasDrinks = drinks.length > 0
@@ -99,8 +104,8 @@ function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
   const hasStarters = starters.length > 0
   const approvedStarters = approvedItems.filter(isStarterItem)
   const unapprovedStarters = unapprovedItems.filter(isStarterItem)
-  const startersReady = approvedStarters.some(s => isStarterReady(s) && !isStarterServed(s))
-  const startersServed = approvedStarters.length > 0 && approvedStarters.every(isStarterServed)
+  const startersReady = approvedStarters.some(s => isStarterReady(s) && !isStarterServed(s, getParentOrder(s)))
+  const startersServed = approvedStarters.length > 0 && approvedStarters.every(s => isStarterServed(s, getParentOrder(s)))
   const startersCooking = approvedStarters.length > 0 && !startersReady && !startersServed
   const startersPendingValidation = unapprovedStarters.length > 0 && !startersReady && !startersCooking
 
@@ -109,8 +114,8 @@ function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
   const hasMains = mains.length > 0
   const approvedMains = approvedItems.filter(isMainItem)
   const unapprovedMains = unapprovedItems.filter(isMainItem)
-  const mainsReady = approvedMains.some(m => isMainReady(m) && !isMainServed(m))
-  const mainsServed = approvedMains.length > 0 && approvedMains.every(isMainServed)
+  const mainsReady = approvedMains.some(m => isMainReady(m) && !isMainServed(m, getParentOrder(m)))
+  const mainsServed = approvedMains.length > 0 && approvedMains.every(m => isMainServed(m, getParentOrder(m)))
   const orderLevelMainsFired = approvedOrders.some(
     o => (o as any).notes?.includes(TAG_MAIN_FIRED) || (o as any).kitchen_notes?.includes(TAG_MAIN_FIRED)
   )
@@ -127,8 +132,8 @@ function computeTableCourseBadges(tableOrders: Order[]): TableCourseBadges {
   const hasDesserts = desserts.length > 0
   const approvedDesserts = approvedItems.filter(isDessertItem)
   const unapprovedDesserts = unapprovedItems.filter(isDessertItem)
-  const dessertsReady = approvedDesserts.some(d => isDessertReady(d) && !isDessertServed(d))
-  const dessertsServed = approvedDesserts.length > 0 && approvedDesserts.every(isDessertServed)
+  const dessertsReady = approvedDesserts.some(d => isDessertReady(d) && !isDessertServed(d, getParentOrder(d)))
+  const dessertsServed = approvedDesserts.length > 0 && approvedDesserts.every(d => isDessertServed(d, getParentOrder(d)))
   const orderLevelDessertsFired = approvedOrders.some(
     o => (o as any).notes?.includes(TAG_DESSERT_FIRED) || (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)
   )

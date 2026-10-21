@@ -181,7 +181,7 @@ export function ComanderoTableDetailPanel({
 
   const allMainsServed = React.useMemo(() => {
     if (tableMains.length === 0) return false
-    return tableMains.every(it => isMainServed(it.item)) || tableActiveOrders.every(o => areOrderMainsServed(o))
+    return tableActiveOrders.every(o => areOrderMainsServed(o))
   }, [tableMains, tableActiveOrders])
 
   const areMainsFired = React.useMemo(() => {
@@ -222,7 +222,7 @@ export function ComanderoTableDetailPanel({
 
   const hasDessertsReadyToPick = React.useMemo(() => {
     return tableActiveOrders.some(
-      o => (o.order_items || []).filter(isDessertItem).some(d => isDessertReady(d) && !isDessertServed(d))
+      o => (o.order_items || []).filter(isDessertItem).some(d => isDessertReady(d) && !isDessertServed(d, o))
     )
   }, [tableActiveOrders])
 

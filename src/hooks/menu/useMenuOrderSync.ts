@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Order, OrderStatus, Product, CartItem } from '@/types/database.types'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
-import { mergeOrderItemsCourseTags, hasItemProgressionTag, orderHasActiveDesserts } from '@/lib/course-utils'
+import { mergeOrderItemsCourseTags, hasItemProgressionTag, orderHasActiveDesserts, areOrderStartersServed, TAG_DESSERT_FIRED } from '@/lib/course-utils'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 
@@ -203,10 +203,14 @@ export function useMenuOrderSync({
           if (hasProgression && ord.status === 'pending_validation') {
             effectiveStatus = (prevOrd?.status && prevOrd.status !== 'pending_validation') ? prevOrd.status : 'pending'
           } else if (prevOrd?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
-            effectiveStatus = 'delivered'
+            if ((ord.status === 'preparing' || ord.status === 'ready') && (orderHasActiveDesserts(ord) || (ord as any).notes?.includes(TAG_DESSERT_FIRED))) {
+              effectiveStatus = ord.status
+            } else {
+              effectiveStatus = 'delivered'
+            }
           } else if (prevOrd?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
-          } else if (prevOrd?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || ord.status === 'preparing')) {
+          } else if (prevOrd?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed(ord) && !orderHasActiveDesserts(ord)))) {
             effectiveStatus = 'ready'
           } else if (prevOrd?.status === 'preparing' && (ord.status === 'pending' || ord.status === 'pending_validation')) {
             effectiveStatus = 'preparing'
@@ -292,13 +296,13 @@ export function useMenuOrderSync({
           return
         }
 
-        if (isTableFreeOrClosed && activeTableOrders.length === 0) {
+        if (isTableFreeOrClosed) {
           const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
           const prevSessionTotal = Array.from(prevTableOrdersMapRef.current.values()).reduce(
             (sum, o) => sum + (Number(o.total_amount) || 0),
             0
           )
-          if ((hasRequestedBillRef.current || userRequestedBillTimeRef.current) && (hadOrdersInSession || hasPaidOrder || isTablePaidRef.current)) {
+          if ((hasRequestedBillRef.current || userRequestedBillTimeRef.current || isTablePaidRef.current) && (hadOrdersInSession || hasPaidOrder || activeTableOrders.length > 0)) {
             hasHadActiveOrderInThisSessionRef.current = false
             prevTableOrdersMapRef.current.clear()
             setTableOrderStatus(null)
@@ -311,10 +315,14 @@ export function useMenuOrderSync({
             handleTableMarkedPaidRef.current()
             return
           }
-          hasHadActiveOrderInThisSessionRef.current = false
-          prevTableOrdersMapRef.current.clear()
-          setTableOrderStatus(null)
-          return
+          if (activeKitchenOrders.length === 0) {
+            hasHadActiveOrderInThisSessionRef.current = false
+            prevTableOrdersMapRef.current.clear()
+            setTableOrderStatus(null)
+            setTableOrders([])
+            setTableTotalAmount(0)
+            return
+          }
         }
 
         const calls: any[] = callsRes.calls || []
@@ -586,6 +594,29 @@ export function useMenuOrderSync({
 
     const handleLocalTableFreed = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
+        const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
+        const prevSessionTotal = Array.from(prevTableOrdersMapRef.current.values()).reduce(
+          (sum, o) => sum + (Number(o.total_amount) || 0),
+          0
+        )
+        if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || isTablePaidRef.current) {
+          hasHadActiveOrderInThisSessionRef.current = false
+          prevTableOrdersMapRef.current.clear()
+          if (prevSessionTotal > 0 && typeof window !== 'undefined') {
+            try {
+              sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(prevSessionTotal))
+            } catch (_) {}
+          }
+          setIsTablePaidRef.current(true)
+          setIsTablePaid(true)
+          setHasRequestedBill(false)
+          hasRequestedBillRef.current = false
+          userRequestedBillTimeRef.current = null
+          setTableOrderStatus(null)
+          handleTableMarkedPaidRef.current()
+          return
+        }
+
         hasHadActiveOrderInThisSessionRef.current = false
         prevTableOrdersMapRef.current.clear()
         setCartRef.current([])

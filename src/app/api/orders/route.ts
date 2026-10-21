@@ -760,9 +760,9 @@ export async function PATCH(req: NextRequest) {
       let finalOrder = currentOrder
       if (currentOrder) {
         const hasMains = orderHasMains(currentOrder)
-        const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(isMainServed)
+        const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(m => isMainServed(m, currentOrder))
         const hasDesserts = orderHasDesserts(currentOrder)
-        const dessertsDone = (currentOrder.order_items || []).filter(isDessertItem).every(isDessertServed)
+        const dessertsDone = (currentOrder.order_items || []).filter(isDessertItem).every(d => isDessertServed(d, currentOrder))
 
         if ((hasMains && !mainsDone) || (hasDesserts && !dessertsDone)) {
           const transRes = await transitionOrderStatus({
@@ -798,8 +798,8 @@ export async function PATCH(req: NextRequest) {
       const currentOrder = tagRes.order
       let finalOrder = currentOrder
       if (currentOrder) {
-        const startersDone = (currentOrder.order_items || []).filter(isStarterItem).every(isStarterServed)
-        const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(isMainServed)
+        const startersDone = (currentOrder.order_items || []).filter(isStarterItem).every(s => isStarterServed(s, currentOrder))
+        const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(m => isMainServed(m, currentOrder))
         // Al entregar los platos principales (o si no había principales), la comanda pasa a 'delivered'
         // permitiendo que los postres en espera se activen en la cola de tareas del mozo para el 2º pase dulce.
         if (startersDone && mainsDone) {
@@ -859,9 +859,9 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
       // Asegurar que entradas y principales queden permanentemente sellados como servidos en base de datos al marchar postres
-      await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem)
-      await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem)
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_FIRED, isDessertItem)
+      await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem, { skipBroadcast: true })
+      await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem, { skipBroadcast: true })
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_FIRED, isDessertItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marchar postres' }, { status: 404 })
       }
@@ -891,10 +891,10 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
       // 1. Asegurar primero que entradas y principales queden permanentemente sellados como servidos en base de datos
-      await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem)
-      await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem)
+      await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem, { skipBroadcast: true })
+      await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem, { skipBroadcast: true })
       // 2. Ahora actualizar postres a listos y servidos
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`, isDessertItem)
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`, isDessertItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al entregar postres directamente' }, { status: 404 })
       }

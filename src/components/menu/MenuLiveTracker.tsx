@@ -275,141 +275,50 @@ export function MenuLiveTracker({
 
   return (
     <>
-      {/* 1. Tracker de Fases de Cocina Activo */}
+      {/* 1. Tracker de Fases de Cocina Activo (Pastilla Compacta de 1 Línea) */}
       {!isTablePaid && !hasRequestedBill && tableOrderStatus && (
-        <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full">
-          {tableOrderStatus === 'preparing' && (
-            <div
+        <div className="max-w-2xl mx-auto px-3.5 pt-2 w-full animate-in fade-in duration-200">
+          {tableOrderStatus !== 'delivered' ? (
+            <button
+              type="button"
               onClick={onOpenTimelineModal}
-              className={`p-3.5 rounded-2xl ${
-                hasMains && areStartersServed && !areMainsFired
-                  ? 'bg-sky-500/10 border border-sky-400/40 text-sky-950 hover:bg-sky-500/15'
-                  : 'bg-amber-500/10 border border-amber-400/40 text-amber-950 hover:bg-amber-500/15'
-              } shadow-xs space-y-2 animate-in fade-in cursor-pointer transition-all`}
+              className={`w-full py-2.5 px-3.5 rounded-xl border text-xs font-black shadow-xs flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-[0.99] ${
+                tableOrderStatus === 'ready'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 ring-1 ring-emerald-300'
+                  : tableOrderStatus === 'preparing'
+                  ? 'bg-amber-50 border-amber-300 text-amber-950 hover:bg-amber-100/70'
+                  : tableOrderStatus === 'pending_validation'
+                  ? 'bg-orange-50 border-orange-300 text-orange-950 hover:bg-orange-100/70'
+                  : 'bg-blue-50 border-blue-300 text-blue-950 hover:bg-blue-100/70'
+              }`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-8 h-8 rounded-xl ${
-                    hasMains && areStartersServed && !areMainsFired
-                      ? 'bg-sky-600 text-white'
-                      : 'bg-amber-500 text-slate-950'
-                  } flex items-center justify-center flex-shrink-0 font-black shadow-xs`}>
-                    {hasMains && areStartersServed && !areMainsFired ? (
-                      <UtensilsCrossed className="w-4 h-4" />
-                    ) : (
-                      <Flame className="w-4 h-4 animate-pulse" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[10px] font-black uppercase tracking-wider ${
-                        hasMains && areStartersServed && !areMainsFired ? 'text-sky-700' : 'text-amber-700'
-                      }`}>
-                        {t('tableNumberLabel')} #{tableNumber}
-                      </span>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        hasMains && areStartersServed && !areMainsFired ? 'bg-sky-500' : 'bg-amber-500 animate-ping'
-                      }`} />
-                    </div>
-                    <h4 className="font-extrabold text-xs text-slate-900 leading-tight truncate">
-                      {dynamicTitle}
-                    </h4>
-                    <p className="text-[10px] text-slate-600 mt-0.5 leading-snug">
-                      {dynamicSubtitle}
-                    </p>
-                  </div>
-                </div>
-                <div className={`px-2.5 py-1 rounded-xl bg-white border ${
-                  hasMains && areStartersServed && !areMainsFired
-                    ? 'border-sky-300 text-sky-950'
-                    : 'border-amber-300 text-amber-950'
-                } text-[11px] font-black flex items-center gap-1 flex-shrink-0 shadow-xs`}>
-                  <span>{t('viewPhases') || 'Ver fases'}</span>
-                  <ChevronRight size={12} />
-                </div>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="flex-shrink-0 text-sm">
+                  {tableOrderStatus === 'ready'
+                    ? '✨'
+                    : tableOrderStatus === 'preparing'
+                    ? '🔥'
+                    : tableOrderStatus === 'pending_validation'
+                    ? '⏳'
+                    : '👨‍🍳'}
+                </span>
+                <span className="truncate">
+                  {tableOrderStatus === 'ready'
+                    ? '¡Comanda lista para servir!'
+                    : tableOrderStatus === 'preparing'
+                    ? 'Comanda en preparación en cocina'
+                    : tableOrderStatus === 'pending_validation'
+                    ? 'Comanda enviada · Pendiente de validación'
+                    : 'Comanda validada · En cola de cocina'}
+                </span>
               </div>
-              {renderCourseProgressPills()}
-            </div>
-          )}
-
-          {tableOrderStatus === 'ready' && (
-            <div
-              onClick={onOpenTimelineModal}
-              className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-400/40 text-emerald-950 shadow-xs space-y-2 animate-glow-emerald ring-1 ring-emerald-400/60 cursor-pointer hover:bg-emerald-500/15 transition-all"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
-                        {t('tableNumberLabel')} #{tableNumber}
-                      </span>
-                    </div>
-                    <h4 className="font-extrabold text-xs text-emerald-950 leading-tight truncate">
-                      {dynamicTitle}
-                    </h4>
-                    <p className="text-[10px] text-emerald-800 mt-0.5 leading-snug">
-                      {dynamicSubtitle}
-                    </p>
-                  </div>
-                </div>
-                <div className="px-2.5 py-1 rounded-xl bg-white border border-emerald-300 text-[11px] font-black text-emerald-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
-                  <span>{t('viewPhases') || 'Ver fases'}</span>
-                  <ChevronRight size={12} />
-                </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0 text-[11px] font-bold text-slate-700 bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                <span>{t('viewPhases') || 'Ver fases'}</span>
+                <ChevronRight size={12} />
               </div>
-              {renderCourseProgressPills()}
-            </div>
-          )}
-
-          {tableOrderStatus === 'pending_validation' && (
-            <div
-              onClick={onOpenTimelineModal}
-              className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 shadow-xs cursor-pointer hover:bg-amber-100/70 transition-all animate-in fade-in space-y-2"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
-                  <span className="text-xs font-black text-amber-950">Comanda enviada &middot; Pendiente de validación en mesa</span>
-                </div>
-                <div className="flex items-center gap-0.5 text-[10px] font-bold text-amber-800">
-                  <span>{t('viewPhases') || 'Ver fases'}</span>
-                  <ChevronRight size={12} />
-                </div>
-              </div>
-              <p className="text-[10px] text-amber-800 leading-snug">
-                El mozo confirmará los platos y bebidas contigo en la Mesa #{tableNumber} antes de enviarlos a cocina.
-              </p>
-              {renderCourseProgressPills()}
-            </div>
-          )}
-
-          {tableOrderStatus === 'pending' && (
-            <div
-              onClick={onOpenTimelineModal}
-              className="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-blue-950 shadow-xs cursor-pointer hover:bg-blue-100/70 transition-all space-y-2"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse flex-shrink-0" />
-                  <span className="text-xs font-black text-blue-950">Comanda validada &middot; En cola de cocina</span>
-                </div>
-                <div className="flex items-center gap-0.5 text-[10px] font-bold text-blue-800">
-                  <span>{t('viewPhases') || 'Ver fases'}</span>
-                  <ChevronRight size={12} />
-                </div>
-              </div>
-              <p className="text-[10px] text-blue-800 leading-snug">
-                Tus platos han entrado en cola en la pantalla de cocina KDS.
-              </p>
-              {renderCourseProgressPills()}
-            </div>
-          )}
-
-          {tableOrderStatus === 'delivered' && (
+            </button>
+          ) : (
+            
             <div className="space-y-3 animate-in fade-in duration-300">
               <div className="p-3.5 bg-amber-50/70 text-slate-900 rounded-2xl border border-amber-200/90 shadow-xs space-y-2.5">
                 <div className="flex items-center justify-between gap-3">
@@ -587,7 +496,7 @@ export function MenuLiveTracker({
               </button>
             </div>
           )}
-          {!isReviewBoosterDismissed && (!loyaltyProfile || !loyaltyProfile.google_review_bonus_awarded) && (
+          {!isReviewBoosterDismissed && Boolean(loyaltyProfile && !loyaltyProfile.google_review_bonus_awarded) && (
             <GoogleReviewBooster
               restaurantName={restaurant.name}
               restaurantSlug={restaurant.slug}
