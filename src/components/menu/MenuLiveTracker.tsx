@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Flame, Sparkles, ChevronRight, UtensilsCrossed, Receipt, X, Award, Clock } from 'lucide-react'
+import { Flame, Sparkles, ChevronRight, UtensilsCrossed, Receipt, X, Award } from 'lucide-react'
 import { Order, OrderStatus, Restaurant } from '@/types/database.types'
 import { LoyaltyProfile } from '@/types/loyalty.types'
 import { getTranslation } from '@/lib/i18n'
@@ -23,7 +23,13 @@ import {
   isDessertReady,
   isDessertServed,
   isDessertPendingChoice,
+  areOrderStartersReady,
+  areOrderStartersServed,
   areOrderMainsFired,
+  areOrderMainsReady,
+  areOrderMainsServed,
+  isOrderDessertsReady,
+  areOrderDessertsServed,
   TAG_MAIN_FIRED,
   TAG_DESSERT_FIRED,
 } from '@/lib/course-utils'
@@ -93,32 +99,83 @@ export function MenuLiveTracker({
   const hasMains = mains.length > 0
   const hasDesserts = desserts.length > 0
 
-  const areDrinksServed = hasDrinks && drinks.every(isDrinkServed)
-  const areStartersServed = hasStarters && starters.every(isStarterServed)
-  const areStartersReady = hasStarters && starters.every(isStarterReady)
-  const areStartersCooking = hasStarters && !areStartersReady && !areStartersServed && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))
+  const getParentOrder = (item: any) =>
+    (tableOrders || []).find(o => (o.order_items || []).some(it => it === item || (it.id && it.id === item.id))) ||
+    (tableOrders || [])[0]
 
-  const areMainsServed = hasMains && mains.every(isMainServed)
-  const areMainsReady = hasMains && mains.every(isMainReady)
+  const isPreparingAny = tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing')
+
+  const areDrinksServed =
+    hasDrinks &&
+    (drinks.every(isDrinkServed) ||
+      tableOrderStatus === 'delivered' ||
+      ((tableOrders || []).length > 0 && (tableOrders || []).every(o => o.status === 'delivered' || o.status === 'paid')))
+
+  const areStartersServed =
+    hasStarters &&
+    (((tableOrders || []).length > 0 && (tableOrders || []).every(areOrderStartersServed)) ||
+      starters.every(it => isStarterServed(it, getParentOrder(it))))
+
+  const areStartersReady =
+    hasStarters &&
+    !areStartersServed &&
+    (((tableOrders || []).length > 0 && (tableOrders || []).some(areOrderStartersReady)) ||
+      starters.every(isStarterReady))
+
+  const areStartersCooking =
+    hasStarters &&
+    !areStartersReady &&
+    !areStartersServed &&
+    isPreparingAny
+
+  const areMainsServed =
+    hasMains &&
+    (((tableOrders || []).length > 0 && (tableOrders || []).every(areOrderMainsServed)) ||
+      mains.every(it => isMainServed(it, getParentOrder(it))))
+
+  const areMainsReady =
+    hasMains &&
+    !areMainsServed &&
+    (((tableOrders || []).length > 0 && (tableOrders || []).some(areOrderMainsReady)) ||
+      mains.every(isMainReady))
+
   const areMainsFired =
     (tableOrders || []).some(areOrderMainsFired) ||
     mains.some(isMainFired) ||
     (tableOrders || []).some(
       o => (o as any).notes?.includes(TAG_MAIN_FIRED) || (o as any).kitchen_notes?.includes(TAG_MAIN_FIRED)
     )
-  const areMainsCooking =
-    mains.some(isMainCooking) ||
-    (hasMains && areMainsFired && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))) ||
-    (hasMains && !hasStarters && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing'))) ||
-    (hasMains && areStartersServed && areMainsFired && (tableOrderStatus === 'preparing' || (tableOrders || []).some(o => o.status === 'preparing')))
 
-  const areDessertsServed = hasDesserts && desserts.every(isDessertServed)
-  const areDessertsReady = hasDesserts && desserts.every(isDessertReady)
+  const areMainsCooking =
+    hasMains &&
+    !areMainsReady &&
+    !areMainsServed &&
+    (mains.some(isMainCooking) ||
+      (areMainsFired && isPreparingAny) ||
+      (!hasStarters && isPreparingAny) ||
+      (areStartersServed && areMainsFired && isPreparingAny))
+
+  const areDessertsServed =
+    hasDesserts &&
+    (((tableOrders || []).length > 0 && (tableOrders || []).every(areOrderDessertsServed)) ||
+      desserts.every(it => isDessertServed(it, getParentOrder(it))))
+
+  const areDessertsReady =
+    hasDesserts &&
+    !areDessertsServed &&
+    (((tableOrders || []).length > 0 && (tableOrders || []).some(isOrderDessertsReady)) ||
+      desserts.every(isDessertReady))
+
   const areDessertsCooking =
-    desserts.some(d => isDessertCooking(d) || isDessertFired(d)) ||
-    (tableOrders || []).some(
-      o => (o as any).notes?.includes(TAG_DESSERT_FIRED) || (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)
-    )
+    hasDesserts &&
+    !areDessertsReady &&
+    !areDessertsServed &&
+    (desserts.some(d => isDessertCooking(d) || isDessertFired(d)) ||
+      (tableOrders || []).some(
+        o => (o as any).notes?.includes(TAG_DESSERT_FIRED) || (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)
+      ) ||
+      (!hasStarters && !hasMains && isPreparingAny))
+
   const hasChoicePending = hasPendingDessertChoice || desserts.some(isDessertPendingChoice)
 
   // Título y subtítulo contextual según qué plato está en marcha en este instante
@@ -129,7 +186,7 @@ export function MenuLiveTracker({
     if (areStartersCooking) {
       dynamicTitle = '🥗 1º Entrantes en preparación en cocina'
       dynamicSubtitle = 'Cocina está elaborando tus entrantes. Los platos principales se marcharán después.'
-    } else if (hasMains && areStartersServed && !areMainsFired) {
+    } else if (hasMains && areStartersServed && !areMainsFired && !areMainsServed) {
       dynamicTitle = '🥗 ¡A disfrutar de las entradas! · Principales en espera'
       dynamicSubtitle = 'Tus entrantes ya están en la mesa. Cuando terminéis, el mozo marchará los platos principales a cocina.'
     } else if (areMainsCooking) {
@@ -275,50 +332,141 @@ export function MenuLiveTracker({
 
   return (
     <>
-      {/* 1. Tracker de Fases de Cocina Activo (Pastilla Compacta de 1 Línea) */}
+      {/* 1. Tracker de Fases de Cocina Activo */}
       {!isTablePaid && !hasRequestedBill && tableOrderStatus && (
-        <div className="max-w-2xl mx-auto px-3.5 pt-2 w-full animate-in fade-in duration-200">
-          {tableOrderStatus !== 'delivered' ? (
-            <button
-              type="button"
+        <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full">
+          {tableOrderStatus === 'preparing' && (
+            <div
               onClick={onOpenTimelineModal}
-              className={`w-full py-2.5 px-3.5 rounded-xl border text-xs font-black shadow-xs flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-[0.99] ${
-                tableOrderStatus === 'ready'
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 ring-1 ring-emerald-300'
-                  : tableOrderStatus === 'preparing'
-                  ? 'bg-amber-50 border-amber-300 text-amber-950 hover:bg-amber-100/70'
-                  : tableOrderStatus === 'pending_validation'
-                  ? 'bg-orange-50 border-orange-300 text-orange-950 hover:bg-orange-100/70'
-                  : 'bg-blue-50 border-blue-300 text-blue-950 hover:bg-blue-100/70'
-              }`}
+              className={`p-3.5 rounded-2xl ${
+                hasMains && areStartersServed && !areMainsFired && !areMainsServed
+                  ? 'bg-sky-500/10 border border-sky-400/40 text-sky-950 hover:bg-sky-500/15'
+                  : 'bg-amber-500/10 border border-amber-400/40 text-amber-950 hover:bg-amber-500/15'
+              } shadow-xs space-y-2 animate-in fade-in cursor-pointer transition-all`}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="flex-shrink-0 text-sm">
-                  {tableOrderStatus === 'ready'
-                    ? '✨'
-                    : tableOrderStatus === 'preparing'
-                    ? '🔥'
-                    : tableOrderStatus === 'pending_validation'
-                    ? '⏳'
-                    : '👨‍🍳'}
-                </span>
-                <span className="truncate">
-                  {tableOrderStatus === 'ready'
-                    ? '¡Comanda lista para servir!'
-                    : tableOrderStatus === 'preparing'
-                    ? 'Comanda en preparación en cocina'
-                    : tableOrderStatus === 'pending_validation'
-                    ? 'Comanda enviada · Pendiente de validación'
-                    : 'Comanda validada · En cola de cocina'}
-                </span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-8 h-8 rounded-xl ${
+                    hasMains && areStartersServed && !areMainsFired && !areMainsServed
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-amber-500 text-slate-950'
+                  } flex items-center justify-center flex-shrink-0 font-black shadow-xs`}>
+                    {hasMains && areStartersServed && !areMainsFired && !areMainsServed ? (
+                      <UtensilsCrossed className="w-4 h-4" />
+                    ) : (
+                      <Flame className="w-4 h-4 animate-pulse" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] font-black uppercase tracking-wider ${
+                        hasMains && areStartersServed && !areMainsFired && !areMainsServed ? 'text-sky-700' : 'text-amber-700'
+                      }`}>
+                        {t('tableNumberLabel')} #{tableNumber}
+                      </span>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        hasMains && areStartersServed && !areMainsFired && !areMainsServed ? 'bg-sky-500' : 'bg-amber-500 animate-ping'
+                      }`} />
+                    </div>
+                    <h4 className="font-extrabold text-xs text-slate-900 leading-tight truncate">
+                      {dynamicTitle}
+                    </h4>
+                    <p className="text-[10px] text-slate-600 mt-0.5 leading-snug">
+                      {dynamicSubtitle}
+                    </p>
+                  </div>
+                </div>
+                <div className={`px-2.5 py-1 rounded-xl bg-white border ${
+                  hasMains && areStartersServed && !areMainsFired && !areMainsServed
+                    ? 'border-sky-300 text-sky-950'
+                    : 'border-amber-300 text-amber-950'
+                } text-[11px] font-black flex items-center gap-1 flex-shrink-0 shadow-xs`}>
+                  <span>{t('viewPhases') || 'Ver fases'}</span>
+                  <ChevronRight size={12} />
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0 text-[11px] font-bold text-slate-700 bg-white/80 px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs">
-                <span>{t('viewPhases') || 'Ver fases'}</span>
-                <ChevronRight size={12} />
+              {renderCourseProgressPills()}
+            </div>
+          )}
+
+          {tableOrderStatus === 'ready' && (
+            <div
+              onClick={onOpenTimelineModal}
+              className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-400/40 text-emerald-950 shadow-xs space-y-2 animate-glow-emerald ring-1 ring-emerald-400/60 cursor-pointer hover:bg-emerald-500/15 transition-all"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                        {t('tableNumberLabel')} #{tableNumber}
+                      </span>
+                    </div>
+                    <h4 className="font-extrabold text-xs text-emerald-950 leading-tight truncate">
+                      {dynamicTitle}
+                    </h4>
+                    <p className="text-[10px] text-emerald-800 mt-0.5 leading-snug">
+                      {dynamicSubtitle}
+                    </p>
+                  </div>
+                </div>
+                <div className="px-2.5 py-1 rounded-xl bg-white border border-emerald-300 text-[11px] font-black text-emerald-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
+                  <span>{t('viewPhases') || 'Ver fases'}</span>
+                  <ChevronRight size={12} />
+                </div>
               </div>
-            </button>
-          ) : (
-            
+              {renderCourseProgressPills()}
+            </div>
+          )}
+
+          {tableOrderStatus === 'pending_validation' && (
+            <div
+              onClick={onOpenTimelineModal}
+              className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 shadow-xs cursor-pointer hover:bg-amber-100/70 transition-all animate-in fade-in space-y-2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                  <span className="text-xs font-black text-amber-950">Comanda enviada &middot; Pendiente de validación en mesa</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-[10px] font-bold text-amber-800">
+                  <span>{t('viewPhases') || 'Ver fases'}</span>
+                  <ChevronRight size={12} />
+                </div>
+              </div>
+              <p className="text-[10px] text-amber-800 leading-snug">
+                El mozo confirmará los platos y bebidas contigo en la Mesa #{tableNumber} antes de enviarlos a cocina.
+              </p>
+              {renderCourseProgressPills()}
+            </div>
+          )}
+
+          {tableOrderStatus === 'pending' && (
+            <div
+              onClick={onOpenTimelineModal}
+              className="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-blue-950 shadow-xs cursor-pointer hover:bg-blue-100/70 transition-all space-y-2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse flex-shrink-0" />
+                  <span className="text-xs font-black text-blue-950">Comanda validada &middot; En cola de cocina</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-[10px] font-bold text-blue-800">
+                  <span>{t('viewPhases') || 'Ver fases'}</span>
+                  <ChevronRight size={12} />
+                </div>
+              </div>
+              <p className="text-[10px] text-blue-800 leading-snug">
+                Tus platos han entrado en cola en la pantalla de cocina KDS.
+              </p>
+              {renderCourseProgressPills()}
+            </div>
+          )}
+
+          {tableOrderStatus === 'delivered' && (
             <div className="space-y-3 animate-in fade-in duration-300">
               <div className="p-3.5 bg-amber-50/70 text-slate-900 rounded-2xl border border-amber-200/90 shadow-xs space-y-2.5">
                 <div className="flex items-center justify-between gap-3">
@@ -387,7 +535,6 @@ export function MenuLiveTracker({
                       </span>
                     </div>
                   </div>
-                  {/* Sin botón duplicado 'Ver fases' según requerimiento */}
                 </div>
               ) : (
                 <>
@@ -420,6 +567,7 @@ export function MenuLiveTracker({
           )}
         </div>
       )}
+
       {/* 2. Vista tras pedir la cuenta */}
       {!isTablePaid && hasRequestedBill && (
         <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">

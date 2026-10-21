@@ -11,6 +11,7 @@ import {
   isDessertReady,
   isDessertServed,
   isDessertFired,
+  isDessertCooking,
   isDessertPendingChoice,
   isFoodReady,
   isStarterItem,
@@ -29,6 +30,7 @@ import {
   areOrderDessertsServed,
   areOrderMainsFired,
   ordersHavePendingDesserts,
+  TAG_DESSERT_FIRED,
 } from '@/lib/course-utils'
 
 interface OrderTimelineModalProps {
@@ -89,22 +91,30 @@ export function OrderTimelineModal({
   // 3. Estado Entradas
   const starters = allTableItems.filter(isStarterItem)
   const areStartersServed = starters.length > 0 && orders.every(areOrderStartersServed)
-  const areStartersReady = starters.length > 0 && orders.some(areOrderStartersReady)
+  const areStartersReady = starters.length > 0 && !areStartersServed && orders.some(areOrderStartersReady)
   const areStartersPreparing = starters.length > 0 && !areStartersReady && !areStartersServed && orders.some(o => o.status === 'preparing')
 
   // 4. Estado Principales
   const mains = allTableItems.filter(isMainItem)
   const areMainsServed = mains.length > 0 && orders.every(areOrderMainsServed)
-  const areMainsReady = mains.length > 0 && orders.some(areOrderMainsReady)
+  const areMainsReady = mains.length > 0 && !areMainsServed && orders.some(areOrderMainsReady)
   const areMainsFired = orders.some(areOrderMainsFired)
-  const areMainsCooking = mains.some(isMainCooking) || (mains.length > 0 && starters.length === 0 && orders.some(o => o.status === 'preparing')) || (mains.length > 0 && areStartersServed && areMainsFired)
+  const areMainsCooking =
+    !areMainsServed &&
+    !areMainsReady &&
+    (mains.some(isMainCooking) ||
+      (mains.length > 0 && starters.length === 0 && orders.some(o => o.status === 'preparing')) ||
+      (mains.length > 0 && areStartersServed && areMainsFired))
   const areMainsPreparing = mains.length > 0 && !areMainsReady && !areMainsServed && areMainsCooking
 
   // 5. Estado Postres
   const desserts = allTableItems.filter(isDessertItem)
   const areDessertsServed = desserts.length > 0 && orders.every(areOrderDessertsServed)
-  const areDessertsReady = desserts.length > 0 && desserts.some(isDessertReady)
-  const areDessertsFired = desserts.some(isDessertFired)
+  const areDessertsReady = desserts.length > 0 && !areDessertsServed && desserts.some(isDessertReady)
+  const areDessertsFired =
+    desserts.some(d => isDessertFired(d) || isDessertCooking(d)) ||
+    orders.some(o => (o as any).notes?.includes(TAG_DESSERT_FIRED) || (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)) ||
+    (!hasStarters && !hasMains && orders.some(o => o.status === 'preparing'))
   const areDessertsPreparing = desserts.length > 0 && !areDessertsReady && !areDessertsServed && areDessertsFired
   const hasPendingDessertChoice = desserts.some(isDessertPendingChoice)
   const hasPendingDesserts = ordersHavePendingDesserts(orders)
