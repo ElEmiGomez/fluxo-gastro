@@ -407,14 +407,18 @@ export function useComanderoActions({
       prev.map(o => {
         if (o.id !== orderId) return o
         const updatedItems = (o.order_items || []).map(it => {
-          if (isDessertItem(it)) {
-            const currentNotes = it.notes || ''
-            const tags = `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
-            if (!currentNotes.includes(TAG_DESSERT_SERVED)) {
-              return { ...it, notes: currentNotes ? `${currentNotes} ${tags}` : tags }
-            }
+          let currentNotes = it.notes || ''
+          if (isStarterItem(it) && !currentNotes.includes(TAG_STARTER_SERVED)) {
+            currentNotes = currentNotes ? `${currentNotes} ${TAG_STARTER_SERVED}` : TAG_STARTER_SERVED
           }
-          return it
+          if (isMainItem(it) && !currentNotes.includes(TAG_MAIN_SERVED)) {
+            currentNotes = currentNotes ? `${currentNotes} ${TAG_MAIN_SERVED}` : TAG_MAIN_SERVED
+          }
+          if (isDessertItem(it) && !currentNotes.includes(TAG_DESSERT_SERVED)) {
+            const tags = `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
+            currentNotes = currentNotes ? `${currentNotes} ${tags}` : tags
+          }
+          return { ...it, notes: currentNotes }
         })
         const updated: Order = { ...o, status: 'delivered' as OrderStatus, order_items: updatedItems }
         updatedOrderForRef = updated
@@ -503,14 +507,18 @@ export function useComanderoActions({
       prev.map(o => {
         if (!dessertOrderIds.has(o.id)) return o
         const updatedItems = (o.order_items || []).map(it => {
-          if (isDessertItem(it)) {
-            const currentNotes = it.notes || ''
-            const tags = `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
-            if (!currentNotes.includes(TAG_DESSERT_SERVED)) {
-              return { ...it, notes: currentNotes ? `${currentNotes} ${tags}` : tags }
-            }
+          let currentNotes = it.notes || ''
+          if (isStarterItem(it) && !currentNotes.includes(TAG_STARTER_SERVED)) {
+            currentNotes = currentNotes ? `${currentNotes} ${TAG_STARTER_SERVED}` : TAG_STARTER_SERVED
           }
-          return it
+          if (isMainItem(it) && !currentNotes.includes(TAG_MAIN_SERVED)) {
+            currentNotes = currentNotes ? `${currentNotes} ${TAG_MAIN_SERVED}` : TAG_MAIN_SERVED
+          }
+          if (isDessertItem(it) && !currentNotes.includes(TAG_DESSERT_SERVED)) {
+            const tags = `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
+            currentNotes = currentNotes ? `${currentNotes} ${tags}` : tags
+          }
+          return { ...it, notes: currentNotes }
         })
         const updated: Order = { ...o, status: 'delivered' as OrderStatus, order_items: updatedItems }
         recentMutationsRef.current.set(o.id, { order: updated, status: 'delivered', until: Date.now() + 4500 })
@@ -870,13 +878,17 @@ export function useComanderoActions({
       prev.map(o => {
         if (o.id !== orderId) return o
         const updatedItems = (o.order_items || []).map(it => {
-          if (isDessertItem(it)) {
-            const currentNotes = it.notes || ''
-            if (!currentNotes.includes(TAG_DESSERT_SERVED)) {
-              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_DESSERT_SERVED}` : TAG_DESSERT_SERVED }
-            }
+          let currentNotes = it.notes || ''
+          if (isStarterItem(it) && !currentNotes.includes(TAG_STARTER_SERVED)) {
+            currentNotes = currentNotes ? `${currentNotes} ${TAG_STARTER_SERVED}` : TAG_STARTER_SERVED
           }
-          return it
+          if (isMainItem(it) && !currentNotes.includes(TAG_MAIN_SERVED)) {
+            currentNotes = currentNotes ? `${currentNotes} ${TAG_MAIN_SERVED}` : TAG_MAIN_SERVED
+          }
+          if (isDessertItem(it) && !currentNotes.includes(TAG_DESSERT_SERVED)) {
+            currentNotes = currentNotes ? `${currentNotes} ${TAG_DESSERT_SERVED}` : TAG_DESSERT_SERVED
+          }
+          return { ...it, notes: currentNotes }
         })
         const updated: Order = { ...o, status: 'delivered' as OrderStatus, order_items: updatedItems }
         updatedOrderForRef = updated

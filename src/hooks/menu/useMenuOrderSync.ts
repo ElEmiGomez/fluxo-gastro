@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Order, OrderStatus, Product, CartItem } from '@/types/database.types'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
-import { mergeOrderItemsCourseTags, hasItemProgressionTag } from '@/lib/course-utils'
+import { mergeOrderItemsCourseTags, hasItemProgressionTag, orderHasActiveDesserts } from '@/lib/course-utils'
 
 const STORAGE_CART_PREFIX = 'gastro_cart_'
 

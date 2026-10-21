@@ -858,6 +858,9 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
+      // Asegurar que entradas y principales queden permanentemente sellados como servidos en base de datos al marchar postres
+      await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem)
+      await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem)
       const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_FIRED, isDessertItem)
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marchar postres' }, { status: 404 })
@@ -872,9 +875,13 @@ export async function PATCH(req: NextRequest) {
         actorType: 'waiter',
         forceAllowReactivation: true,
       })
+      const finalOrd = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
+      if (finalOrd && tagRes.order?.order_items && (!finalOrd.order_items || finalOrd.order_items.length === 0)) {
+        finalOrd.order_items = tagRes.order.order_items
+      }
       return NextResponse.json({
         success: true,
-        order: transRes.order || tagRes.order,
+        order: finalOrd,
         message: 'Postres marchados a cocina',
       })
     }
@@ -883,6 +890,10 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
+      // 1. Asegurar primero que entradas y principales queden permanentemente sellados como servidos en base de datos
+      await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem)
+      await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem)
+      // 2. Ahora actualizar postres a listos y servidos
       const tagRes = await updateOrderCourseTags(slug, targetOrderId, `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`, isDessertItem)
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al entregar postres directamente' }, { status: 404 })
@@ -897,9 +908,13 @@ export async function PATCH(req: NextRequest) {
           nextStatus: 'delivered',
           actorType: 'waiter',
         })
+        const finalOrd = transRes.order || { ...tagRes.order, status: 'delivered' }
+        if (tagRes.order?.order_items && (!finalOrd.order_items || finalOrd.order_items.length === 0)) {
+          finalOrd.order_items = tagRes.order.order_items
+        }
         return NextResponse.json({
           success: true,
-          order: transRes.order || tagRes.order,
+          order: finalOrd,
           message: 'Postres entregados directamente por el mozo',
         })
       }

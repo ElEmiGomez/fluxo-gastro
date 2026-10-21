@@ -16,6 +16,7 @@ import {
   orderHasDesserts,
   isOrderDessertsReady,
   orderHasActiveDesserts,
+  areOrderStartersServed,
   getItemCourse,
   orderHasMains,
   areOrderMainsReady,
@@ -218,8 +219,12 @@ export default function KitchenKDSPage() {
                 effectiveStatus = mut.status
               } else {
                 if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
-                  effectiveStatus = 'delivered'
-                } else if (existing?.status === 'ready' && (ord.status === 'pending' || ord.status === 'preparing')) {
+                  if (orderHasActiveDesserts(ord) && (ord.status === 'preparing' || ord.status === 'ready')) {
+                    effectiveStatus = ord.status
+                  } else {
+                    effectiveStatus = 'delivered'
+                  }
+                } else if (existing?.status === 'ready' && (ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed(ord) && !orderHasActiveDesserts(ord)))) {
                   effectiveStatus = 'ready'
                 } else if (existing?.status === 'preparing' && ord.status === 'pending') {
                   effectiveStatus = 'preparing'

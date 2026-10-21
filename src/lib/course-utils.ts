@@ -328,7 +328,20 @@ export function isStarterReady(item: OrderItem): boolean {
   )
 }
 
-export function isStarterServed(item: OrderItem): boolean {
+export function isStarterServed(item: OrderItem, parentOrder?: any): boolean {
+  if (parentOrder && typeof parentOrder === 'object') {
+    if (parentOrder.status === 'delivered' || parentOrder.status === 'paid') return true
+    if (
+      areOrderMainsFired(parentOrder) ||
+      areOrderMainsReady(parentOrder) ||
+      areOrderMainsServed(parentOrder) ||
+      parentOrder.notes?.includes(TAG_MAIN_FIRED) ||
+      parentOrder.notes?.includes(TAG_DESSERT_FIRED) ||
+      orderHasActiveDesserts(parentOrder)
+    ) {
+      return true
+    }
+  }
   return Boolean(item.notes && item.notes.includes(TAG_STARTER_SERVED))
 }
 
@@ -347,11 +360,32 @@ export function isMainReady(item: OrderItem): boolean {
   )
 }
 
-export function isMainServed(item: OrderItem): boolean {
+export function isMainServed(item: OrderItem, parentOrder?: any): boolean {
+  if (parentOrder && typeof parentOrder === 'object') {
+    if (parentOrder.status === 'delivered' || parentOrder.status === 'paid') return true
+    if (
+      parentOrder.notes?.includes(TAG_DESSERT_FIRED) ||
+      orderHasActiveDesserts(parentOrder)
+    ) {
+      return true
+    }
+  }
   return Boolean(item.notes && item.notes.includes(TAG_MAIN_SERVED))
 }
 
-export function isDessertServed(item: OrderItem): boolean {
+export function isDessertServed(item: OrderItem, parentOrder?: any): boolean {
+  if (parentOrder && typeof parentOrder === 'object' && parentOrder.status === 'paid') return true
+  if (
+    parentOrder &&
+    typeof parentOrder === 'object' &&
+    parentOrder.status === 'delivered' &&
+    !item.notes?.includes(TAG_DESSERT_FIRED) &&
+    !item.notes?.includes(TAG_DESSERT_COOKING) &&
+    !item.notes?.includes(TAG_DESSERT_READY) &&
+    !item.notes?.includes(TAG_DESSERT_PENDING)
+  ) {
+    return true
+  }
   return Boolean(
     item.notes &&
       (item.notes.includes(TAG_DESSERT_SERVED) ||
@@ -418,7 +452,7 @@ export function areOrderStartersServed(order: Order): boolean {
   if (order.status === 'delivered' || order.status === 'paid') return true
   const starters = (order.order_items || []).filter(isStarterItem)
   if (starters.length === 0) return true
-  return starters.every(isStarterServed)
+  return starters.every(it => isStarterServed(it, order))
 }
 
 export function isMainFired(item: OrderItem): boolean {
@@ -453,7 +487,15 @@ export function areOrderMainsServed(order: Order): boolean {
   if (order.status === 'delivered' || order.status === 'paid') return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
-  return mains.every(isMainServed)
+  return mains.every(it => isMainServed(it, order))
+}
+
+export function areOrderDessertsServed(order: Order): boolean {
+  if (order.status === 'paid') return true
+  const desserts = (order.order_items || []).filter(isDessertItem)
+  if (desserts.length === 0) return true
+  if (order.status === 'delivered' && !orderHasPendingDesserts(order)) return true
+  return desserts.every(it => isDessertServed(it, order))
 }
 
 export function orderHasDesserts(order: Order): boolean {
@@ -469,7 +511,7 @@ export function orderHasPendingDesserts(order: Order): boolean {
   if (['cancelled', 'paid'].includes(order.status)) return false
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
-  return desserts.some(d => !isDessertServed(d))
+  return desserts.some(d => !isDessertServed(d, order))
 }
 
 export function ordersHavePendingDesserts(orders: Order[]): boolean {

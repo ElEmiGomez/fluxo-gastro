@@ -22,6 +22,11 @@ import {
   isMainServed,
   isDrinkItem,
   isDessertItem,
+  areOrderStartersReady,
+  areOrderStartersServed,
+  areOrderMainsReady,
+  areOrderMainsServed,
+  areOrderDessertsServed,
   areOrderMainsFired,
   ordersHavePendingDesserts,
 } from '@/lib/course-utils'
@@ -83,22 +88,22 @@ export function OrderTimelineModal({
 
   // 3. Estado Entradas
   const starters = allTableItems.filter(isStarterItem)
-  const areStartersServed = starters.length > 0 && starters.every(isStarterServed)
-  const areStartersReady = starters.length > 0 && starters.every(isStarterReady)
+  const areStartersServed = starters.length > 0 && orders.every(areOrderStartersServed)
+  const areStartersReady = starters.length > 0 && orders.some(areOrderStartersReady)
   const areStartersPreparing = starters.length > 0 && !areStartersReady && !areStartersServed && orders.some(o => o.status === 'preparing')
 
   // 4. Estado Principales
   const mains = allTableItems.filter(isMainItem)
-  const areMainsServed = mains.length > 0 && mains.every(isMainServed)
-  const areMainsReady = mains.length > 0 && mains.every(isMainReady)
+  const areMainsServed = mains.length > 0 && orders.every(areOrderMainsServed)
+  const areMainsReady = mains.length > 0 && orders.some(areOrderMainsReady)
   const areMainsFired = orders.some(areOrderMainsFired)
   const areMainsCooking = mains.some(isMainCooking) || (mains.length > 0 && starters.length === 0 && orders.some(o => o.status === 'preparing')) || (mains.length > 0 && areStartersServed && areMainsFired)
   const areMainsPreparing = mains.length > 0 && !areMainsReady && !areMainsServed && areMainsCooking
 
   // 5. Estado Postres
   const desserts = allTableItems.filter(isDessertItem)
-  const areDessertsServed = desserts.length > 0 && desserts.every(isDessertServed)
-  const areDessertsReady = desserts.length > 0 && desserts.every(isDessertReady)
+  const areDessertsServed = desserts.length > 0 && orders.every(areOrderDessertsServed)
+  const areDessertsReady = desserts.length > 0 && desserts.some(isDessertReady)
   const areDessertsFired = desserts.some(isDessertFired)
   const areDessertsPreparing = desserts.length > 0 && !areDessertsReady && !areDessertsServed && areDessertsFired
   const hasPendingDessertChoice = desserts.some(isDessertPendingChoice)
@@ -214,7 +219,7 @@ export function OrderTimelineModal({
     let state: PhaseState = 'waiting'
     let desc = (hasStarters || hasMains) ? 'En espera tras terminar la comida principal.' : 'En cola de cocina.'
     let badge = 'En espera'
-    if (areDessertsServed || (status === 'delivered' && !hasPendingDessertChoice)) {
+    if (areDessertsServed || (status === 'delivered' && !hasPendingDesserts && !hasPendingDessertChoice)) {
       state = 'delivered'
       desc = 'Postres servidos en tu mesa.'
       badge = 'Entregados'

@@ -7,7 +7,7 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
-import { mergeOrderItemsCourseTags, hasItemProgressionTag } from '@/lib/course-utils'
+import { mergeOrderItemsCourseTags, hasItemProgressionTag, orderHasActiveDesserts, areOrderStartersServed } from '@/lib/course-utils'
 import { PendingServiceCall } from '@/types/comandero.types'
 
 export function useComanderoData(slug: string) {
@@ -188,10 +188,14 @@ export function useComanderoData(slug: string) {
               ? existing.status
               : 'pending'
           } else if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
-            effectiveStatus = 'delivered'
+            if (orderHasActiveDesserts(ord) && (ord.status === 'preparing' || ord.status === 'ready')) {
+              effectiveStatus = ord.status
+            } else {
+              effectiveStatus = 'delivered'
+            }
           } else if (existing?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
-          } else if (existing?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || ord.status === 'preparing')) {
+          } else if (existing?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed(ord) && !orderHasActiveDesserts(ord)))) {
             effectiveStatus = 'ready'
           } else if (existing?.status === 'preparing' && (ord.status === 'pending_validation' || ord.status === 'pending')) {
             effectiveStatus = 'preparing'

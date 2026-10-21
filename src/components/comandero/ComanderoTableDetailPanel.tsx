@@ -50,6 +50,7 @@ import {
   areOrderMainsReady,
   areOrderMainsServed,
   areOrderMainsFired,
+  areOrderDessertsServed,
 } from '@/lib/course-utils'
 
 interface ComanderoTableDetailPanelProps {
@@ -203,6 +204,11 @@ export function ComanderoTableDetailPanel({
       (ord.order_items || []).filter(isDessertItem).map(it => ({ orderId: ord.id, item: it }))
     )
   }, [tableActiveOrders])
+
+  const allDessertsServed = React.useMemo(() => {
+    if (tableDesserts.length === 0) return true
+    return tableActiveOrders.every(o => areOrderDessertsServed(o))
+  }, [tableDesserts, tableActiveOrders])
 
   const areFoodCoursesServed = React.useMemo(() => {
     if (tableMains.length > 0) {
@@ -554,11 +560,11 @@ export function ComanderoTableDetailPanel({
                   <span className={`text-xs sm:text-sm font-black px-3 py-1 rounded-lg shadow-xs ${
                     hasStartersReadyToPick
                       ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
-                      : tableStarters.every(it => isStarterServed(it.item))
+                      : hasStartersDone
                       ? 'bg-slate-100 text-emerald-700 border border-emerald-200'
                       : 'bg-amber-50 text-amber-800 border border-amber-200'
                   }`}>
-                    {hasStartersReadyToPick ? '✨ Listo en Cocina' : tableStarters.every(it => isStarterServed(it.item)) ? '✅ Entregado' : '⏳ En Cocina'}
+                    {hasStartersReadyToPick ? '✨ Listo en Cocina' : hasStartersDone ? '✅ Entregado' : '⏳ En Cocina'}
                   </span>
                 </div>
                 <div className="space-y-1 text-xs text-slate-700">
@@ -603,17 +609,17 @@ export function ComanderoTableDetailPanel({
                   <span className={`text-xs sm:text-sm font-black px-3 py-1 rounded-lg shadow-xs ${
                     hasMainsReadyToPick
                       ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
-                      : tableMains.every(it => isMainServed(it.item))
+                      : allMainsServed
                       ? 'bg-slate-100 text-emerald-700 border border-emerald-200'
                       : !areMainsFired
                       ? (tableStarters.length > 0 && !hasStartersDone
-                          ? 'bg-slate-100 text-slate-500 border border-slate-200'
-                          : 'bg-sky-50 text-sky-800 border border-sky-200')
-                      : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          ? '⏸️ Esperando 1º'
+                          : '⏳ En Espera del Mozo')
+                      : '🔥 En Cocina'}
                   }`}>
                     {hasMainsReadyToPick
                       ? '✨ Listo en Cocina'
-                      : tableMains.every(it => isMainServed(it.item))
+                      : allMainsServed
                       ? '✅ Entregado'
                       : !areMainsFired
                       ? (tableStarters.length > 0 && !hasStartersDone
@@ -685,7 +691,7 @@ export function ComanderoTableDetailPanel({
                   <span className={`text-xs sm:text-sm font-black px-3 py-1 rounded-lg shadow-xs ${
                     hasDessertsReadyToPick
                       ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
-                      : tableDesserts.every(it => isDessertServed(it.item))
+                      : allDessertsServed
                       ? 'bg-slate-100 text-emerald-700 border border-emerald-200'
                       : isTableDessertFired
                       ? 'bg-amber-50 text-amber-800 border border-amber-200'
@@ -697,7 +703,7 @@ export function ComanderoTableDetailPanel({
                   }`}>
                     {hasDessertsReadyToPick
                       ? '✨ Listo en Cocina'
-                      : tableDesserts.every(it => isDessertServed(it.item))
+                      : allDessertsServed
                       ? '✅ Entregado'
                       : isTableDessertFired
                       ? '🔥 En Cocina'

@@ -275,73 +275,175 @@ export function MenuLiveTracker({
 
   return (
     <>
-      {/* 1. Tracker de Fases de Cocina Activo (Pastilla Compacta de 1 Línea) */}
+      {/* 1. Tracker de Fases de Cocina Activo */}
       {!isTablePaid && !hasRequestedBill && tableOrderStatus && (
-        <div className="max-w-2xl mx-auto px-3.5 pt-2 w-full animate-in fade-in duration-200">
-          {tableOrderStatus !== 'delivered' ? (
-            <button
-              type="button"
+        <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full">
+          {tableOrderStatus === 'preparing' && (
+            <div
               onClick={onOpenTimelineModal}
-              className={`w-full py-2 px-3 rounded-xl border text-xs font-black shadow-xs flex items-center justify-between gap-2 transition-all cursor-pointer active:scale-[0.99] ${
-                tableOrderStatus === 'ready'
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-950 ring-1 ring-emerald-300'
-                  : tableOrderStatus === 'preparing'
-                  ? 'bg-amber-50 border-amber-300 text-amber-950 hover:bg-amber-100/70'
-                  : tableOrderStatus === 'pending_validation'
-                  ? 'bg-orange-50 border-orange-300 text-orange-950 hover:bg-orange-100/70'
-                  : 'bg-blue-50 border-blue-300 text-blue-950 hover:bg-blue-100/70'
-              }`}
+              className={`p-3.5 rounded-2xl ${
+                hasMains && areStartersServed && !areMainsFired
+                  ? 'bg-sky-500/10 border border-sky-400/40 text-sky-950 hover:bg-sky-500/15'
+                  : 'bg-amber-500/10 border border-amber-400/40 text-amber-950 hover:bg-amber-500/15'
+              } shadow-xs space-y-2 animate-in fade-in cursor-pointer transition-all`}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="flex-shrink-0 text-sm">
-                  {tableOrderStatus === 'ready'
-                    ? '✨'
-                    : tableOrderStatus === 'preparing'
-                    ? '🔥'
-                    : tableOrderStatus === 'pending_validation'
-                    ? '⏳'
-                    : '👨‍🍳'}
-                </span>
-                <span className="truncate">
-                  {tableOrderStatus === 'ready'
-                    ? '¡Comanda lista para servir!'
-                    : tableOrderStatus === 'preparing'
-                    ? 'Comanda en preparación en cocina'
-                    : tableOrderStatus === 'pending_validation'
-                    ? 'Comanda enviada · Pendiente de validación'
-                    : 'Comanda validada · En cola de cocina'}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1 text-[11px] font-extrabold flex-shrink-0 opacity-80">
-                <span>{t('viewPhases') || 'Ver fases'}</span>
-                <ChevronRight size={13} className="stroke-[2.5]" />
-              </div>
-            </button>
-          ) : (
-            <div className="space-y-2.5 animate-in fade-in duration-300">
-              <div className="p-2.5 px-3 bg-amber-50/80 text-slate-900 rounded-xl border border-amber-200/90 shadow-xs flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-900 flex items-center justify-center flex-shrink-0 font-black shadow-2xs">
-                    <UtensilsCrossed className="w-3.5 h-3.5" />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-8 h-8 rounded-xl ${
+                    hasMains && areStartersServed && !areMainsFired
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-amber-500 text-slate-950'
+                  } flex items-center justify-center flex-shrink-0 font-black shadow-xs`}>
+                    {hasMains && areStartersServed && !areMainsFired ? (
+                      <UtensilsCrossed className="w-4 h-4" />
+                    ) : (
+                      <Flame className="w-4 h-4 animate-pulse" />
+                    )}
                   </div>
-                  <h4 className="font-extrabold text-xs text-slate-900 leading-tight truncate">
-                    {t('orderDeliveredTitle') || 'Comanda entregada'} · ¡Buen provecho!
-                  </h4>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] font-black uppercase tracking-wider ${
+                        hasMains && areStartersServed && !areMainsFired ? 'text-sky-700' : 'text-amber-700'
+                      }`}>
+                        {t('tableNumberLabel')} #{tableNumber}
+                      </span>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        hasMains && areStartersServed && !areMainsFired ? 'bg-sky-500' : 'bg-amber-500 animate-ping'
+                      }`} />
+                    </div>
+                    <h4 className="font-extrabold text-xs text-slate-900 leading-tight truncate">
+                      {dynamicTitle}
+                    </h4>
+                    <p className="text-[10px] text-slate-600 mt-0.5 leading-snug">
+                      {dynamicSubtitle}
+                    </p>
+                  </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={onOpenTimelineModal}
-                  className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-extrabold border border-slate-200 shadow-2xs transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
-                >
+                <div className={`px-2.5 py-1 rounded-xl bg-white border ${
+                  hasMains && areStartersServed && !areMainsFired
+                    ? 'border-sky-300 text-sky-950'
+                    : 'border-amber-300 text-amber-950'
+                } text-[11px] font-black flex items-center gap-1 flex-shrink-0 shadow-xs`}>
                   <span>{t('viewPhases') || 'Ver fases'}</span>
-                  <ChevronRight size={11} />
-                </button>
+                  <ChevronRight size={12} />
+                </div>
+              </div>
+              {renderCourseProgressPills()}
+            </div>
+          )}
+
+          {tableOrderStatus === 'ready' && (
+            <div
+              onClick={onOpenTimelineModal}
+              className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-400/40 text-emerald-950 shadow-xs space-y-2 animate-glow-emerald ring-1 ring-emerald-400/60 cursor-pointer hover:bg-emerald-500/15 transition-all"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                        {t('tableNumberLabel')} #{tableNumber}
+                      </span>
+                    </div>
+                    <h4 className="font-extrabold text-xs text-emerald-950 leading-tight truncate">
+                      {dynamicTitle}
+                    </h4>
+                    <p className="text-[10px] text-emerald-800 mt-0.5 leading-snug">
+                      {dynamicSubtitle}
+                    </p>
+                  </div>
+                </div>
+                <div className="px-2.5 py-1 rounded-xl bg-white border border-emerald-300 text-[11px] font-black text-emerald-950 flex items-center gap-1 flex-shrink-0 shadow-xs">
+                  <span>{t('viewPhases') || 'Ver fases'}</span>
+                  <ChevronRight size={12} />
+                </div>
+              </div>
+              {renderCourseProgressPills()}
+            </div>
+          )}
+
+          {tableOrderStatus === 'pending_validation' && (
+            <div
+              onClick={onOpenTimelineModal}
+              className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 shadow-xs cursor-pointer hover:bg-amber-100/70 transition-all animate-in fade-in space-y-2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                  <span className="text-xs font-black text-amber-950">Comanda enviada &middot; Pendiente de validación en mesa</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-[10px] font-bold text-amber-800">
+                  <span>{t('viewPhases') || 'Ver fases'}</span>
+                  <ChevronRight size={12} />
+                </div>
+              </div>
+              <p className="text-[10px] text-amber-800 leading-snug">
+                El mozo confirmará los platos y bebidas contigo en la Mesa #{tableNumber} antes de enviarlos a cocina.
+              </p>
+              {renderCourseProgressPills()}
+            </div>
+          )}
+
+          {tableOrderStatus === 'pending' && (
+            <div
+              onClick={onOpenTimelineModal}
+              className="p-3 rounded-2xl bg-blue-50 border border-blue-200 text-blue-950 shadow-xs cursor-pointer hover:bg-blue-100/70 transition-all space-y-2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse flex-shrink-0" />
+                  <span className="text-xs font-black text-blue-950">Comanda validada &middot; En cola de cocina</span>
+                </div>
+                <div className="flex items-center gap-0.5 text-[10px] font-bold text-blue-800">
+                  <span>{t('viewPhases') || 'Ver fases'}</span>
+                  <ChevronRight size={12} />
+                </div>
+              </div>
+              <p className="text-[10px] text-blue-800 leading-snug">
+                Tus platos han entrado en cola en la pantalla de cocina KDS.
+              </p>
+              {renderCourseProgressPills()}
+            </div>
+          )}
+
+          {tableOrderStatus === 'delivered' && (
+            <div className="space-y-3 animate-in fade-in duration-300">
+              <div className="p-3.5 bg-amber-50/70 text-slate-900 rounded-2xl border border-amber-200/90 shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center flex-shrink-0 font-black shadow-2xs">
+                      <UtensilsCrossed className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
+                          {t('tableNumberLabel')} #{tableNumber}
+                        </span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      </div>
+                      <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 leading-tight truncate">
+                        {t('orderDeliveredTitle')} · ¡Buen provecho!
+                      </h4>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={onOpenTimelineModal}
+                    className="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold border border-slate-200 shadow-2xs transition-colors flex items-center gap-1 flex-shrink-0 cursor-pointer"
+                  >
+                    <span>{t('viewPhases') || 'Ver fases'}</span>
+                    <ChevronRight size={11} />
+                  </button>
+                </div>
+                {renderCourseProgressPills()}
               </div>
 
               {/* Banner destacado: Elegir postre comodín incluido */}
-              {hasPendingDessertChoice && onOpenDessertSelector && (
+              {hasPendingDessertChoice && onOpenDessertSelector ? (
                 <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border-2 border-purple-300 flex items-center justify-between gap-3 shadow-xs">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="text-xl flex-shrink-0">🍰</span>
@@ -363,33 +465,52 @@ export function MenuLiveTracker({
                     <span>Elegir Postre</span>
                   </button>
                 </div>
+              ) : hasPendingDesserts ? (
+                <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-xl flex-shrink-0">🍨</span>
+                    <div className="min-w-0">
+                      <span className="text-xs font-black text-amber-950 block leading-tight">
+                        Postres en marcha
+                      </span>
+                      <span className="text-[11px] text-amber-800 font-medium truncate block">
+                        Disfruta de tus postres antes de solicitar la cuenta
+                      </span>
+                    </div>
+                  </div>
+                  {/* Sin botón duplicado 'Ver fases' según requerimiento */}
+                </div>
+              ) : (
+                <>
+                  <p className="text-[11px] text-slate-600 font-medium leading-snug">
+                    ¿Deseas sumar café o postre para la sobremesa, o pedir la cuenta?
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={onGoToDesserts}
+                      className="p-2.5 rounded-xl bg-white hover:bg-amber-100/60 text-amber-950 border border-amber-300 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                    >
+                      <span className="text-sm">☕🍰</span>
+                      <span>Café / Postres</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={onOpenDirectBillModal}
+                      className="p-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+                    >
+                      <Receipt className="w-3.5 h-3.5" />
+                      <span>{t('billButton')}</span>
+                    </button>
+                  </div>
+                </>
               )}
-
-              {/* Botones de acción directa: Café / Postres y Cuenta */}
-              <div className="grid grid-cols-2 gap-2 pt-0.5">
-                <button
-                  type="button"
-                  onClick={onGoToDesserts}
-                  className="p-2 rounded-xl bg-white hover:bg-amber-100/60 text-amber-950 border border-amber-300 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                >
-                  <span className="text-sm">☕🍰</span>
-                  <span>Café / Postres</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onOpenDirectBillModal}
-                  className="p-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
-                >
-                  <Receipt className="w-3.5 h-3.5" />
-                  <span>{t('billButton')}</span>
-                </button>
-              </div>
             </div>
           )}
         </div>
       )}
-
       {/* 2. Vista tras pedir la cuenta */}
       {!isTablePaid && hasRequestedBill && (
         <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
