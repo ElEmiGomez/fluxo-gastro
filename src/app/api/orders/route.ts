@@ -13,6 +13,7 @@ import {
   resolveCanonicalProductId,
   getProductAvailabilityOverrides,
   getServerOrders,
+  findServerOrderById,
   getCachedOrderItems,
   saveCachedOrderItems,
   addServerOrder,
@@ -29,7 +30,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { inferCourseType, deduplicateProducts } from '@/lib/category-matcher'
-import { updateOrderCourseTags, resolvePendingDessertInOrder } from '@/lib/supabase/repositories/orders.repository'
+import { updateOrderCourseTags, resolvePendingDessertInOrder, sweepTableOrdersToPaid } from '@/lib/supabase/repositories/orders.repository'
 import {
   TAG_DRINK_SERVED,
   TAG_FOOD_READY,
@@ -83,7 +84,7 @@ function ensureHydratedOrder(order: Order | undefined, slug: string): Order | un
     ...(getServerProducts(slug) || []),
     ...(MOCK_PRODUCTS[slug] || []),
   ])
-  const memOrder = getServerOrders(slug).find(o => o.id === order.id)
+  const memOrder = findServerOrderById(order.id) || getServerOrders(slug, true).find(o => o.id === order.id)
   const cachedItems = getCachedOrderItems(order.id)
   const referenceItems =
     memOrder?.order_items && memOrder.order_items.length > 0
@@ -136,6 +137,60 @@ export async function GET(req: NextRequest) {
         (ord as any).notes
       ),
     }))
+
+    // Protección Anti-Zombis Post-Pago en GET /api/orders:
+    // Si una mesa tiene órdenes recién pagadas ('paid') en la sesión actual y NO existe un nuevo pedido
+    // creado posteriormente, ninguna orden previa de esa mesa puede quedar colgada en 'ready'/'preparing'/'pending'/'delivered'.
+    const allServedNotes = `${TAG_DRINK_SERVED} ${TAG_STARTER_READY} ${TAG_STARTER_SERVED} ${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED} ${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
+    const tablesWithRecentPaid = new Map<number, number>()
+    returnedOrders.forEach(o => {
+      const tNum = Number(o.table_number || o.table?.table_number)
+      if (!isNaN(tNum) && o.status === 'paid') {
+        const paidTs = new Date(o.updated_at || o.created_at || 0).getTime() || Date.now()
+        const prevMax = tablesWithRecentPaid.get(tNum) || 0
+        if (paidTs > prevMax) tablesWithRecentPaid.set(tNum, paidTs)
+      }
+    })
+
+    const tablesToSweep = new Set<number>()
+    returnedOrders = returnedOrders.map(o => {
+      const tNum = Number(o.table_number || o.table?.table_number)
+      const latestPaidTs = tablesWithRecentPaid.get(tNum)
+      if (
+        latestPaidTs &&
+        o.status !== 'paid' &&
+        o.status !== 'cancelled' &&
+        o.status !== 'pending_validation'
+      ) {
+        const ordCreatedTs = new Date(o.created_at || 0).getTime()
+        const hasNewerOrderAfterPaid = returnedOrders.some(other => {
+          const otherT = Number(other.table_number || other.table?.table_number)
+          const otherCreated = new Date(other.created_at || 0).getTime()
+          return otherT === tNum && other.status !== 'paid' && other.status !== 'cancelled' && otherCreated > latestPaidTs + 2000
+        })
+        if (!hasNewerOrderAfterPaid && (isNaN(ordCreatedTs) || ordCreatedTs <= latestPaidTs + 2000)) {
+          tablesToSweep.add(tNum)
+          return {
+            ...o,
+            status: 'paid' as OrderStatus,
+            notes: `${(o as any).notes || ''} ${allServedNotes}`.trim(),
+            order_items: hydrateOrderItemsWithCatalog(
+              o.order_items || [],
+              catalogProducts,
+              getCachedOrderItems(o.id),
+              `${(o as any).notes || ''} ${allServedNotes}`.trim()
+            ),
+          }
+        }
+      }
+      return o
+    })
+
+    if (tablesToSweep.size > 0) {
+      tablesToSweep.forEach(tNum => {
+        sweepTableOrdersToPaid(restaurantId, slug, tNum).catch(() => {})
+      })
+    }
 
     const overrides = getProductAvailabilityOverrides(slug)
 
@@ -668,7 +723,7 @@ export async function PATCH(req: NextRequest) {
       }
 
       const currentOrder = ensureHydratedOrder(tagRes.order, slug)
-      if (currentOrder && currentOrder.status !== 'paid') {
+      if (currentOrder && currentOrder.status !== 'paid' && currentOrder.status !== 'cancelled') {
         const isDrinkOnly = isDrinkOnlyOrder(currentOrder)
         const allCoursesDone = areAllOrderCoursesDelivered(currentOrder)
 
@@ -822,7 +877,7 @@ export async function PATCH(req: NextRequest) {
 
       const currentOrder = ensureHydratedOrder(tagRes.order, slug)
       let finalOrder = currentOrder
-      if (currentOrder) {
+      if (currentOrder && currentOrder.status !== 'paid' && currentOrder.status !== 'cancelled') {
         const hasMains = orderHasMains(currentOrder)
         const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(m => isMainServed(m, currentOrder))
         const hasDesserts = orderHasDesserts(currentOrder)
@@ -880,7 +935,7 @@ export async function PATCH(req: NextRequest) {
       }
       const currentOrder = ensureHydratedOrder(tagRes.order, slug)
       let finalOrder = currentOrder
-      if (currentOrder) {
+      if (currentOrder && currentOrder.status !== 'paid' && currentOrder.status !== 'cancelled') {
         const hasDesserts = orderHasDesserts(currentOrder)
         const dessertsDone = areOrderDessertsServed(currentOrder)
         const allCoursesDone = areAllOrderCoursesDelivered(currentOrder)
@@ -1005,19 +1060,23 @@ export async function PATCH(req: NextRequest) {
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al entregar postres directamente' }, { status: 404 })
       }
-      const restaurant = await getRestaurantBySlug(slug)
-      const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
-      const transRes = await transitionOrderStatus({
-        orderId: targetOrderId,
-        restaurantId,
-        slug,
-        nextStatus: 'delivered',
-        actorType: 'waiter',
-      })
-      const finalOrd = ensureHydratedOrder(
-        transRes.order || (tagRes.order ? { ...tagRes.order, status: 'delivered' } : tagRes.order),
-        slug
-      )
+      const currentOrder = ensureHydratedOrder(tagRes.order, slug)
+      let finalOrd = currentOrder
+      if (currentOrder && currentOrder.status !== 'paid' && currentOrder.status !== 'cancelled') {
+        const restaurant = await getRestaurantBySlug(slug)
+        const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
+        const transRes = await transitionOrderStatus({
+          orderId: targetOrderId,
+          restaurantId,
+          slug,
+          nextStatus: 'delivered',
+          actorType: 'waiter',
+        })
+        finalOrd = ensureHydratedOrder(
+          transRes.order || (tagRes.order ? { ...tagRes.order, status: 'delivered' } : tagRes.order),
+          slug
+        )
+      }
       return NextResponse.json({
         success: true,
         order: finalOrd,
@@ -1047,6 +1106,25 @@ export async function PATCH(req: NextRequest) {
         success: true,
         order: ensureHydratedOrder(transRes.order || resolveRes.order, slug),
         message: 'Postre elegido y marchado a cocina',
+      })
+    }
+
+    if (body.action === 'pay_table' || body.action === 'close_table') {
+      const restaurant = await getRestaurantBySlug(slug)
+      const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
+      const existingOrd = targetOrderId ? (findServerOrderById(targetOrderId) || getServerOrders(slug, true).find(o => o.id === targetOrderId)) : undefined
+      const resolvedTbl = table_number ?? tableNumber ?? existingOrd?.table_number
+      if (resolvedTbl === undefined || resolvedTbl === null) {
+        return NextResponse.json({ error: 'Falta table_number o orderId para cobrar la mesa' }, { status: 400 })
+      }
+      const swept = await sweepTableOrdersToPaid(restaurantId, slug, resolvedTbl)
+      const primaryOrd = (targetOrderId ? swept.find(o => o.id === targetOrderId) : undefined) || swept[0] || existingOrd
+      return NextResponse.json({
+        success: true,
+        status: 'paid',
+        order: ensureHydratedOrder(primaryOrd ? { ...primaryOrd, status: 'paid' } : undefined, slug),
+        orders: swept,
+        message: `Todas las comandas de la Mesa #${resolvedTbl} fueron marcadas como pagadas`,
       })
     }
 
@@ -1080,6 +1158,51 @@ export async function PATCH(req: NextRequest) {
     const effectiveTableNum = table_number ?? tableNumber
 
     let targetStatus: OrderStatus = status
+
+    // Blindaje estricto: Si la orden ya está pagada ('paid'), es terminal e irreversible
+    const existingTargetOrd = findServerOrderById(targetOrderId) || getServerOrders(slug, true).find(o => o.id === targetOrderId)
+    if (existingTargetOrd?.status === 'paid' && targetStatus !== 'paid') {
+      return NextResponse.json(
+        {
+          error: 'TRANSITION_INVALID',
+          code: 'TRANSITION_INVALID',
+          message: `La comanda ${targetOrderId} ya está PAGADA ('paid'). Estado terminal irreversible; no se permite cambiar a ${targetStatus}`,
+          current_status: 'paid',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Si se solicita pagar una orden en mesa multi-ronda (o con sweep_table explícito desde Comandero)
+    // donde otra ronda ya está entregada/pagada o todos sus pases están servidos, barrer toda la mesa a 'paid'
+    if (targetStatus === 'paid' && existingTargetOrd && existingTargetOrd.status !== 'pending_validation') {
+      const tblToCheck = existingTargetOrd.table_number ?? effectiveTableNum
+      const hasDeliveredOrPaidSibling = tblToCheck !== undefined && tblToCheck !== null &&
+        getServerOrders(slug, true).some(
+          o => o.id !== targetOrderId &&
+            String(o.table_number) === String(tblToCheck) &&
+            (o.status === 'delivered' || o.status === 'paid')
+        )
+      if (
+        body.sweep_table === true ||
+        hasDeliveredOrPaidSibling ||
+        (existingTargetOrd.status !== 'delivered' && areAllOrderCoursesDelivered(existingTargetOrd))
+      ) {
+        if (tblToCheck !== undefined && tblToCheck !== null) {
+          const swept = await sweepTableOrdersToPaid(restaurantId, slug, tblToCheck)
+          const matchedSwept = swept.find(o => o.id === targetOrderId) || { ...existingTargetOrd, status: 'paid' as OrderStatus }
+          const hydratedSwept = ensureHydratedOrder(matchedSwept, slug)
+          return NextResponse.json({
+            success: true,
+            message: `Mesa #${tblToCheck} cobrada y todas sus rondas marcadas como pagadas`,
+            order: hydratedSwept,
+            version: hydratedSwept?.version,
+            code: 'TRANSITION_APPLIED',
+          })
+        }
+      }
+    }
+
     // Enrutamiento automático de órdenes 100% bebidas al validar: van directo a ready en Comandero
     if (status === 'pending') {
       const memOrders = getServerOrders(slug)
@@ -1162,6 +1285,14 @@ export async function PATCH(req: NextRequest) {
         if (drinkTagRes.order) {
           result.order = drinkTagRes.order
         }
+      }
+    }
+
+    // Barrido Total Anti-Zombis cuando una orden pasa a 'paid': asegurar que todas las rondas de la mesa pasen a 'paid'
+    if (targetStatus === 'paid') {
+      const tblForSweep = result.order?.table_number ?? existingTargetOrd?.table_number ?? effectiveTableNum
+      if (tblForSweep !== undefined && tblForSweep !== null) {
+        await sweepTableOrdersToPaid(restaurantId, slug, tblForSweep)
       }
     }
 

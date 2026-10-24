@@ -47,6 +47,24 @@ interface UseComanderoActionsParams {
 
 const MUTATION_LOCK_MS = 4500
 
+const getStaffHeaders = (slug?: string): Record<string, string> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-staff-pin': '1234',
+  }
+  if (typeof window !== 'undefined') {
+    const sessionToken =
+      localStorage.getItem('fluxo_staff_session') ||
+      sessionStorage.getItem('fluxo_staff_session') ||
+      (slug ? sessionStorage.getItem(`fluxo_staff_session_${slug}`) : null)
+    if (sessionToken) {
+      headers['Authorization'] = `Bearer ${sessionToken}`
+    }
+  }
+  return headers
+}
+
+
 export function useComanderoActions({
   slug,
   restaurant,
@@ -95,7 +113,8 @@ export function useComanderoActions({
     try {
       await fetch('/api/service-calls', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({ slug, callId }),
       })
 
@@ -132,7 +151,8 @@ export function useComanderoActions({
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           orderId,
@@ -221,7 +241,8 @@ export function useComanderoActions({
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           orderId,
@@ -277,7 +298,8 @@ export function useComanderoActions({
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           orderId,
@@ -302,8 +324,9 @@ export function useComanderoActions({
   const handleCancelSingleOrder = async (orderId: string, reason: string) => {
     try {
       await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+          method: 'PATCH',
+          credentials: 'include',
+          headers: getStaffHeaders(slug),
         body: JSON.stringify({ slug, orderId, status: 'delivered', notes: `[ANULADO: ${reason}]` }),
       })
       setServerOrders(prev => prev.filter(o => o.id !== orderId))
@@ -345,8 +368,9 @@ export function useComanderoActions({
     for (const ord of fireableOrders) {
       try {
         const res = await fetch('/api/orders', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
           body: JSON.stringify({ slug, orderId: ord.id, action: 'fire_mains' }),
         })
         if (res.ok) {
@@ -392,7 +416,8 @@ export function useComanderoActions({
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({ slug, orderId, action: 'fire_desserts' }),
       })
       if (res.ok) {
@@ -452,7 +477,8 @@ export function useComanderoActions({
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({ slug, orderId, action: 'deliver_desserts_direct' }),
       })
       if (res.ok) {
@@ -504,8 +530,9 @@ export function useComanderoActions({
     for (const ord of dessertOrders) {
       try {
         const res = await fetch('/api/orders', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
           body: JSON.stringify({ slug, orderId: ord.id, action: 'fire_desserts' }),
         })
         if (res.ok) {
@@ -569,8 +596,9 @@ export function useComanderoActions({
     for (const ord of dessertOrders) {
       try {
         const res = await fetch('/api/orders', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
           body: JSON.stringify({ slug, orderId: ord.id, action: 'deliver_desserts_direct' }),
         })
         if (res.ok) {
@@ -586,6 +614,108 @@ export function useComanderoActions({
     }
   }
 
+  // Cobrar cuenta de la mesa (Paso 1: Cobro y paso a Sobremesa / Encuesta / Fidelización)
+  const handleChargeTable = async (
+    tableNum: number | string,
+    paymentMethod: 'card' | 'cash' = 'card',
+    finalAmount?: number
+  ) => {
+    try {
+      // 1. Obtener órdenes activas de la mesa
+      const tableOrdersToPay = serverOrders.filter(
+        o =>
+          (o.table_number?.toString() === tableNum.toString() ||
+            o.table?.table_number?.toString() === tableNum.toString()) &&
+          !['cancelled', 'paid'].includes(o.status)
+      )
+
+      // 2. Transición de estado a 'paid' en backend y barrido anti-zombis de todas las rondas de la mesa
+      if (tableOrdersToPay.length > 0) {
+        for (const ord of tableOrdersToPay) {
+          lockOrderMutation(ord.id, { status: 'paid' })
+          try {
+            await fetch('/api/orders', {
+              method: 'PATCH',
+              credentials: 'include',
+              headers: getStaffHeaders(slug),
+              body: JSON.stringify({ slug, orderId: ord.id, table_number: tableNum, status: 'paid', sweep_table: true }),
+            })
+          } catch (err) {
+            console.error('[handleChargeTable] Error transitioning order to paid:', ord.id, err)
+          }
+        }
+      } else {
+        try {
+          await fetch('/api/orders', {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: getStaffHeaders(slug),
+            body: JSON.stringify({ slug, table_number: tableNum, action: 'pay_table', status: 'paid' }),
+          })
+        } catch (err) {
+          console.error('[handleChargeTable] Error sweeping table to paid:', tableNum, err)
+        }
+      }
+
+      // 3. Actualizar estado local reactivo preservando las órdenes como paid en serverOrders
+      setServerOrders(prev =>
+        prev.map(o => {
+          const isThisTable =
+            o.table_number?.toString() === tableNum.toString() ||
+            o.table?.table_number?.toString() === tableNum.toString()
+          if (isThisTable && !['cancelled', 'paid'].includes(o.status)) {
+            const updated: Order = { ...o, status: 'paid' }
+            lockOrderMutation(o.id, { order: updated, status: 'paid' })
+            return updated
+          }
+          return o
+        })
+      )
+
+      // 4. Limpiar llamadas de cuenta de esta mesa
+      const tableCalls = pendingCalls.filter(
+        c => c.table_number.toString() === tableNum.toString()
+      )
+      for (const c of tableCalls) {
+        await handleAttendCall(c.id)
+      }
+
+      // 5. Emitir eventos de cobro para comensal y sala
+      window.dispatchEvent(
+        new CustomEvent('table_bill_paid', {
+          detail: { tableNumber: tableNum, total: finalAmount, paymentMethod },
+        })
+      )
+      window.dispatchEvent(
+        new CustomEvent('fluxo_table_bill_paid', {
+          detail: { tableNumber: tableNum, total: finalAmount, paymentMethod },
+        })
+      )
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('fluxo_menu_channel')
+        bc.postMessage({
+          type: 'table_bill_paid',
+          slug,
+          tableNumber: tableNum,
+          total: finalAmount,
+          paymentMethod,
+        })
+        bc.postMessage({
+          type: 'order_updated',
+          slug,
+          tableNumber: tableNum,
+          status: 'paid',
+        })
+        bc.close()
+      }
+
+      setOrderSentToast(true)
+      setTimeout(() => setOrderSentToast(false), 2500)
+    } catch (e) {
+      console.error('Error charging table:', e)
+    }
+  }
+
   // Marcar mesa como cobrada y liberarla
   const executeCloseAndFreeTable = async (
     tableNum: number | string,
@@ -596,7 +726,8 @@ export function useComanderoActions({
     try {
       await fetch('/api/tables', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           table_number: tableNum,
@@ -641,7 +772,8 @@ export function useComanderoActions({
     try {
       await fetch('/api/tables', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           table_number: fromNum,
@@ -788,7 +920,8 @@ export function useComanderoActions({
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           orderId,
@@ -847,7 +980,8 @@ export function useComanderoActions({
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           orderId,
@@ -902,7 +1036,8 @@ export function useComanderoActions({
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           orderId,
@@ -967,7 +1102,8 @@ export function useComanderoActions({
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           orderId,
@@ -1016,6 +1152,7 @@ export function useComanderoActions({
     handleDeliverOrderDessertsDirect,
     handleFireDesserts,
     handleDeliverTableDessertsDirect,
+    handleChargeTable,
     executeCloseAndFreeTable,
     handleTransferTable,
     handleSendOrderToKitchen,

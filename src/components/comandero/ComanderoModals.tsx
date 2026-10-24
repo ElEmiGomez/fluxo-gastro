@@ -74,6 +74,12 @@ interface ComanderoModalsProps {
     finalAmount?: number,
     ordersCount?: number
   ) => void
+  onExecuteChargeTable?: (
+    tblNum: number | string,
+    paymentMethod?: 'card' | 'cash',
+    finalAmount?: number,
+    ordersCount?: number
+  ) => void
   onTransferTable: (toTableNum: string | number) => void
 }
 
@@ -122,6 +128,7 @@ export function ComanderoModals({
   onRemoveCartItem,
   onClearCurrentCart,
   onExecuteCloseAndFreeTable,
+  onExecuteChargeTable,
   onTransferTable,
 }: ComanderoModalsProps) {
   return (
@@ -178,7 +185,11 @@ export function ComanderoModals({
         serverOrders={serverOrders}
         discountPercentage={tableDiscount}
         onConfirm={(tblNum, paymentMethod, finalAmount, ordersCount) => {
-          onExecuteCloseAndFreeTable(tblNum, paymentMethod, finalAmount, ordersCount)
+          if (onExecuteChargeTable) {
+            onExecuteChargeTable(tblNum, paymentMethod, finalAmount, ordersCount)
+          } else {
+            onExecuteCloseAndFreeTable(tblNum, paymentMethod, finalAmount, ordersCount)
+          }
           setShowFreeConfirmTable(null)
         }}
       />

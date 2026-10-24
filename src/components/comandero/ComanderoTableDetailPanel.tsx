@@ -139,6 +139,15 @@ export function ComanderoTableDetailPanel({
     )
   }, [serverOrders, selectedTable])
 
+  const tablePaidOrders = React.useMemo(() => {
+    return serverOrders.filter(
+      o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
+           o.status === 'paid'
+    )
+  }, [serverOrders, selectedTable])
+
+  const isPaidSobremesa = tableActiveOrders.length === 0 && validationOrders.length === 0 && tablePaidOrders.length > 0
+
   // 1. Todas las bebidas de esta mesa (para visibilidad completa permanente en sala)
   const tableAllDrinks = React.useMemo(() => {
     return tableActiveOrders.flatMap(ord =>
@@ -280,6 +289,23 @@ export function ComanderoTableDetailPanel({
 
   return (
     <div className="max-w-7xl mx-auto w-full px-3 pt-3 space-y-2.5">
+      {/* Aviso de Mesa Cobrada / En Sobremesa */}
+      {isPaidSobremesa && (
+        <div className="bg-teal-50 border-2 border-teal-500/40 rounded-2xl p-3.5 space-y-1 shadow-sm animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span className="p-1 rounded-lg bg-teal-600 text-white flex-shrink-0">
+              <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+            </span>
+            <h4 className="font-black text-xs sm:text-sm text-teal-950 uppercase tracking-wider">
+              ✅ Cuenta cobrada · Mesa #{selectedTable.table_number} en Sobremesa
+            </h4>
+          </div>
+          <p className="text-xs text-teal-800 font-medium leading-relaxed pl-7">
+            El cliente ya recibió el enlace de Google Maps y sus puntos. Cuando se retiren de la mesa, libérala para el siguiente turno.
+          </p>
+        </div>
+      )}
+
       {/* A. Avisos Pendientes Específicos de esta Mesa */}
       {tableCalls.length > 0 && (
         <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-3.5 space-y-2 shadow-sm">
@@ -824,44 +850,61 @@ export function ComanderoTableDetailPanel({
           </div>
         )}
 
-        {/* Fila 2: Grid de Acciones Operativas */}
-        <div className="grid grid-cols-3 gap-2">
-          <button
-            type="button"
-            onClick={onOpenPreBill}
-            className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-900 border border-slate-200 hover:border-blue-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-            title="Ver pre-cuenta digital desglosada"
-          >
-            <Receipt className="w-4 h-4 text-blue-700 flex-shrink-0" />
-            <span className="truncate">Pre-Cuenta</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onOpenTransferModal}
-            className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-800 hover:text-amber-900 border border-slate-200 hover:border-amber-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-            title="Cambiar comanda a otra mesa"
-          >
-            <RefreshCw className="w-4 h-4 text-amber-700 flex-shrink-0" />
-            <span className="truncate">Transferir</span>
-          </button>
-
+        {/* Fila 2: Grid de Acciones Operativas o Botón de Liberación */}
+        {isPaidSobremesa ? (
           <button
             type="button"
             onClick={() => {
-              if (tablePendingAmount > 0) {
-                onOpenFreeTableModal(selectedTable.table_number)
+              if (onExecuteFreeTableDirect) {
+                onExecuteFreeTableDirect(selectedTable.table_number)
               } else {
-                setShowZeroBalanceConfirm(true)
+                onOpenFreeTableModal(selectedTable.table_number)
               }
             }}
-            className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-800 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-            title={tablePendingAmount > 0 ? `Cobrar ${tablePendingAmount.toFixed(2)} € y liberar mesa` : 'Liberar mesa sin consumo'}
+            className="w-full h-12 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+            title="Liberar mesa para el siguiente cliente"
           >
-            <CreditCard className="w-4 h-4 text-emerald-700 flex-shrink-0" />
-            <span className="truncate">{tablePendingAmount > 0 ? 'Cobrar y Liberar' : 'Liberar Mesa'}</span>
+            <span>🧹 MESA LEVANTADA · LIBERAR PARA SIGUIENTE CLIENTE</span>
           </button>
-        </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={onOpenPreBill}
+              className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-900 border border-slate-200 hover:border-blue-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
+              title="Ver pre-cuenta digital desglosada"
+            >
+              <Receipt className="w-4 h-4 text-blue-700 flex-shrink-0" />
+              <span className="truncate">Pre-Cuenta</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenTransferModal}
+              className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-800 hover:text-amber-900 border border-slate-200 hover:border-amber-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
+              title="Cambiar comanda a otra mesa"
+            >
+              <RefreshCw className="w-4 h-4 text-amber-700 flex-shrink-0" />
+              <span className="truncate">Transferir</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (tablePendingAmount > 0) {
+                  onOpenFreeTableModal(selectedTable.table_number)
+                } else {
+                  setShowZeroBalanceConfirm(true)
+                }
+              }}
+              className="h-11 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
+              title={tablePendingAmount > 0 ? `Cobrar ${tablePendingAmount.toFixed(2)} €` : 'Liberar mesa sin consumo'}
+            >
+              <CreditCard className="w-4 h-4 text-white flex-shrink-0" />
+              <span className="truncate">{tablePendingAmount > 0 ? 'Cobrar Cuenta' : 'Liberar Mesa'}</span>
+            </button>
+          </div>
+        )}
 
         {/* Modal de Confirmación en 2 Toques para Liberar Mesa Sin Cobro Pendiente (0 €) */}
         {showZeroBalanceConfirm && (

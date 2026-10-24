@@ -166,6 +166,7 @@ export function MenuGridCatalog({
                         onUpdateQuantity(product, 1, e)
                       }}
                       aria-label={`Añadir ${product.name} a la comanda`}
+                      title="Añadir a la comanda"
                       className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs cursor-pointer active:scale-95"
                     >
                       <Plus size={16} />

@@ -6,6 +6,7 @@ import { Order, OrderStatus, Restaurant } from '@/types/database.types'
 import { LoyaltyProfile } from '@/types/loyalty.types'
 import { getTranslation } from '@/lib/i18n'
 import { GoogleReviewBooster } from '@/components/menu/GoogleReviewBooster'
+import { PostPaymentView } from '@/components/menu/PostPaymentView'
 import {
   isDrinkItem,
   isDrinkServed,
@@ -38,6 +39,9 @@ import {
 interface MenuLiveTrackerProps {
   isFixedMenu: boolean
   isTablePaid: boolean
+  isOrderPaid?: boolean
+  paidTotal?: number
+  onResetTableSession?: () => void
   hasRequestedBill: boolean
   tableOrderStatus: OrderStatus | null
   tableOrders?: Order[]
@@ -63,6 +67,9 @@ interface MenuLiveTrackerProps {
 export function MenuLiveTracker({
   isFixedMenu,
   isTablePaid,
+  isOrderPaid = false,
+  paidTotal,
+  onResetTableSession,
   hasRequestedBill,
   tableOrderStatus,
   tableOrders = [],
@@ -110,6 +117,7 @@ export function MenuLiveTracker({
     hasDrinks &&
     (drinks.every(it => isDrinkServed(it, getParentOrder(it))) ||
       tableOrderStatus === 'delivered' ||
+  
       ((tableOrders || []).length > 0 && (tableOrders || []).every(o => o.status === 'delivered' || o.status === 'paid')))
 
   const areStartersServed =
@@ -180,11 +188,16 @@ export function MenuLiveTracker({
   const hasChoicePending = hasPendingDessertChoice || desserts.some(isDessertPendingChoice)
 
   // Determinar estados globales según Bloque 4.2:
+  const isPaidActive = Boolean(isTablePaid || isOrderPaid)
   const isAllDelivered =
-    tableOrderStatus === 'delivered' ||
-    (tableOrders.length > 0 &&
-      tableOrders.every(o => o.status !== 'pending_validation') &&
-      tableOrders.every(o => o.status === 'delivered' || areAllOrderCoursesDelivered(o)))
+    !isPaidActive &&
+    Boolean(tableOrders && tableOrders.length > 0) &&
+    (tableOrderStatus === 'delivered' || (tableOrders.length > 0 && tableOrders.every(o => o.status !== 'pending_validation' && o.status !== 'paid') && tableOrders.every(o => o.status === 'delivered' || areAllOrderCoursesDelivered(o))))
+
+
+
+
+
 
   const hasAnyPhaseReadyToServe =
     !isAllDelivered &&
@@ -315,7 +328,7 @@ export function MenuLiveTracker({
   return (
     <>
       {/* 1. Tracker de Fases de Cocina Activo (Bloque 4.2) */}
-      {!isTablePaid && !hasRequestedBill && tableOrderStatus && (
+      {!isPaidActive && !hasRequestedBill && tableOrderStatus && tableOrders.length > 0 && (
         <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full">
           {/* Estado A: Pendiente de Validación del Mozo */}
           {isPendingValidation && (
@@ -528,7 +541,7 @@ export function MenuLiveTracker({
       )}
 
       {/* 2. Vista tras pedir la cuenta */}
-      {!isTablePaid && hasRequestedBill && (
+      {!isPaidActive && hasRequestedBill && (
         <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
           <div className="p-3.5 bg-emerald-950/95 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
@@ -560,62 +573,72 @@ export function MenuLiveTracker({
         </div>
       )}
 
-      {/* 3. Vista cuando la mesa ya ha sido cobrada */}
-      {isTablePaid && (
-        <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full space-y-3 animate-in fade-in duration-300">
-          {!isPaidBannerDismissed && (
-            <div className="p-3.5 bg-emerald-950 text-white rounded-2xl border border-emerald-600/50 shadow-md flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
-                  <Receipt className="w-5 h-5 text-slate-950" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                    Mesa #{tableNumber} &middot; Pago Confirmado
-                  </span>
-                  <h4 className="font-extrabold text-xs text-white leading-tight mt-0.5">
-                    ¡Pago confirmado! Gracias por tu visita
-                  </h4>
-                  <p className="text-[10px] text-emerald-300/90 mt-0.5 leading-snug">
-                    {loyaltyProfile
-                      ? `Has acumulado puntos en tu tarjeta digital con esta consumición.`
-                      : `Puedes consultar y acumular tus puntos de fidelización con esta compra.`}
-                  </p>
-                  {onOpenLoyaltyModal && (
-                    <button
-                      type="button"
-                      onClick={onOpenLoyaltyModal}
-                      className="mt-2 px-3.5 py-1.5 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-emerald-950 border border-emerald-300/80 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-sm shadow-emerald-900/40 cursor-pointer"
-                    >
-                      <Award className="w-3.5 h-3.5 text-emerald-900" />
-                      <span>{loyaltyProfile ? `🎁 Premios y Puntos (${loyaltyProfile.available_points} pts)` : 'Unirme al Club de Puntos'}</span>
-                    </button>
-                  )}
-                </div>
+      {/* 3. Vista cuando la mesa ya ha sido cobrada (Post-Payment / Fidelización / Google Maps) */}
+      {isPaidActive && (
+        <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300 space-y-3">
+          {/* Banner Esmeralda Principal: MESA #X · PAGO CONFIRMADO con Doble Botón */}
+          <div className="p-4 bg-emerald-950 text-white rounded-3xl border border-emerald-600/50 shadow-lg space-y-3.5">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-md">
+                <CheckCircle2 className="w-6 h-6 text-slate-950 stroke-[2.5]" />
               </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                    MESA #{tableNumber} &middot; PAGO CONFIRMADO
+                  </span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                </div>
+                <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight mt-0.5">
+                  ✅ ¡Cuenta pagada! Muchas gracias por tu visita
+                </h3>
+                <p className="text-[11px] text-emerald-300/90 mt-0.5 leading-snug">
+                  Esperamos que hayas disfrutado de tu experiencia. ¡Tu opinión y fidelidad tienen premio!
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
               <button
                 type="button"
-                onClick={onDismissPaidBanner}
-                className="p-1 rounded-full text-emerald-400 hover:text-white hover:bg-emerald-900/50 transition-colors flex-shrink-0 cursor-pointer"
-                title="Cerrar aviso"
+                onClick={() => {
+                  const googleReviewUrl =
+                    restaurant?.google_review_url ||
+                    (restaurant?.google_place_id
+                      ? `https://search.google.com/local/writereview?placeid=${restaurant.google_place_id}`
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((restaurant?.name || 'Burger Gourmet') + ' Noia')}`)
+                  if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
+                    try {
+                      onClaimLoyaltyBonus()
+                    } catch {}
+                  }
+                  window.open(googleReviewUrl, '_blank', 'noopener,noreferrer')
+                }}
+                className="w-full py-2.5 px-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md shadow-amber-400/20 cursor-pointer"
               >
-                <X size={16} />
+                <span>⭐ Valorar en Google Maps</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenLoyaltyModal}
+                className="w-full py-2.5 px-3.5 rounded-2xl bg-white hover:bg-emerald-50 text-emerald-950 font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md cursor-pointer"
+              >
+                <span>🎁 Unirme al Club de Premios</span>
               </button>
             </div>
-          )}
-          {!isReviewBoosterDismissed && Boolean(loyaltyProfile && !loyaltyProfile.google_review_bonus_awarded) && (
-            <GoogleReviewBooster
-              restaurantName={restaurant.name}
-              restaurantSlug={restaurant.slug}
-              googleReviewUrl={restaurant.google_review_url}
-              googlePlaceId={restaurant.google_place_id}
-              variant="card"
-              loyaltyMode={loyaltyMode}
-              onDismiss={onDismissReviewBooster}
-              loyaltyProfile={loyaltyProfile}
-              onClaimLoyaltyBonus={onClaimLoyaltyBonus}
-            />
-          )}
+          </div>
+
+          <PostPaymentView
+            restaurant={restaurant}
+            tableNumber={tableNumber}
+            paidTotal={paidTotal}
+            loyaltyProfile={loyaltyProfile}
+            loyaltyMode={loyaltyMode}
+            onOpenLoyaltyModal={onOpenLoyaltyModal}
+            onClaimLoyaltyBonus={onClaimLoyaltyBonus}
+            onResetTableSession={onResetTableSession}
+          />
         </div>
       )}
     </>

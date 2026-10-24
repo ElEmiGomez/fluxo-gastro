@@ -265,6 +265,7 @@ export default function WaiterComanderoPage() {
     handleDeliverOrderDessertsDirect,
     handleFireDesserts,
     handleDeliverTableDessertsDirect,
+    handleChargeTable,
     executeCloseAndFreeTable,
     handleTransferTable,
     handleSendOrderToKitchen,
@@ -630,6 +631,7 @@ export default function WaiterComanderoPage() {
               setTableCarts(prev => ({ ...prev, [currentTableNum]: [] }))
             }}
             onExecuteCloseAndFreeTable={executeCloseAndFreeTable}
+            onExecuteChargeTable={handleChargeTable}
             onTransferTable={(target) => {
               if (selectedTable) {
                 handleTransferTable(selectedTable.table_number, target)

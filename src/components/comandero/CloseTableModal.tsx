@@ -141,7 +141,7 @@ export function CloseTableModal({
             </div>
             <div>
               <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400 block leading-none">
-                Cobro y Cierre de Mesa
+                Cobro de Cuenta
               </span>
               <h3 className="text-base font-black text-white leading-tight">
                 Mesa #{tableNumber}
@@ -246,6 +246,7 @@ export function CloseTableModal({
           <div className="pt-2 space-y-2 border-t border-slate-100">
             <button
               type="button"
+              data-testid="confirm-charge-button"
               disabled={isSubmitting}
               onClick={handleConfirm}
               className={`w-full py-3.5 px-4 rounded-2xl text-xs font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer disabled:opacity-50 ${
@@ -257,8 +258,8 @@ export function CloseTableModal({
               <ShieldCheck className="w-4 h-4" />
               <span>
                 {isSubmitting
-                  ? 'Liberando mesa...'
-                  : `Cobrar ${finalAmount.toFixed(2)} € (${selectedMethod === 'card' ? 'Tarjeta' : 'Efectivo'}) y Liberar`}
+                  ? 'Cobrando cuenta...'
+                  : `Cobrar ${finalAmount.toFixed(2)} € (${selectedMethod === 'card' ? 'Tarjeta' : 'Efectivo'})`}
               </span>
             </button>
 

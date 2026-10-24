@@ -100,6 +100,8 @@ function DinerMenuContent() {
     setSessionId,
     isTablePaid,
     setIsTablePaid,
+    isOrderPaid,
+    resetPaidOrderSession,
     isPaidBannerDismissed,
     setIsPaidBannerDismissed,
     isReviewBoosterDismissed,
@@ -519,6 +521,7 @@ function DinerMenuContent() {
 
   const handleOrderSubmitted = (newOrder: any) => {
     if (newOrder) {
+      resetPaidOrderSession()
       setIsTablePaid(false)
       setIsPaidBannerDismissed(false)
       setIsReviewBoosterDismissed(false)
@@ -527,6 +530,9 @@ function DinerMenuContent() {
       userRequestedBillTimeRef.current = null
       if (typeof window !== 'undefined') {
         try {
+          sessionStorage.removeItem(`fluxo_paid_lock_${slug}_${tableNumber}`)
+          sessionStorage.removeItem(`fluxo_table_paid_lock_${slug}_${tableNumber}`)
+          sessionStorage.removeItem(`fluxo_paid_order_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
@@ -618,6 +624,9 @@ function DinerMenuContent() {
         <MenuLiveTracker
           isFixedMenu={isFixedMenu}
           isTablePaid={isTablePaid}
+          isOrderPaid={isOrderPaid}
+          paidTotal={tableTotalAmount}
+          onResetTableSession={resetPaidOrderSession}
           hasRequestedBill={hasRequestedBill}
           tableOrderStatus={tableOrderStatus}
           tableOrders={tableOrders}

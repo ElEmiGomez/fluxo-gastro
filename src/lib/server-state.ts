@@ -293,6 +293,10 @@ export function isValidOrderTransition(
   allowReactivation: boolean = false
 ): boolean {
   if (currentStatus === nextStatus) return true
+  // Invariante de blindaje: 'paid' es un estado terminal e irreversible. Nunca puede transicionar a otro estado.
+  if (currentStatus === 'paid' && nextStatus !== 'paid') {
+    return false
+  }
   if (allowReactivation && (currentStatus === 'delivered' || currentStatus === 'ready') && nextStatus === 'preparing') {
     return true
   }
@@ -301,7 +305,7 @@ export function isValidOrderTransition(
 }
 
 // Helpers de Órdenes
-export function getServerOrders(slug: string): Order[] {
+export function getServerOrders(slug: string, includePaid: boolean = false): Order[] {
   const list = globalStore.__GASTRO_ORDERS__?.[slug] || []
   return list
     .map(o => {
@@ -313,7 +317,21 @@ export function getServerOrders(slug: string): Order[] {
       }
       return o
     })
-    .filter(o => o.status !== 'cancelled' && o.status !== 'paid')
+    .filter(o => o.status !== 'cancelled' && (includePaid ? true : o.status !== 'paid'))
+}
+
+export function getAllServerOrders(slug: string): Order[] {
+  return getServerOrders(slug, true)
+}
+
+export function findServerOrderById(orderId: string): Order | undefined {
+  if (!globalStore.__GASTRO_ORDERS__) return undefined
+  for (const s of Object.keys(globalStore.__GASTRO_ORDERS__)) {
+    const list = globalStore.__GASTRO_ORDERS__[s] || []
+    const match = list.find(o => o.id === orderId)
+    if (match) return match
+  }
+  return undefined
 }
 
 export function addServerOrder(slug: string, order: Order, silent: boolean = false): Order {
@@ -536,18 +554,7 @@ export function attendServerServiceCall(slug: string, callId: string): ServiceCa
   })
 
   if (attendedCall && attendedCall.call_type.startsWith('bill_')) {
-    const tableNumStr = attendedCall.table_number.toString()
-    const memOrders = globalStore.__GASTRO_ORDERS__?.[slug] || []
-    memOrders.forEach(o => {
-      const isThisTable =
-        o.table_number?.toString() === tableNumStr ||
-        o.table?.table_number?.toString() === tableNumStr
-      if (isThisTable && o.status !== 'cancelled') {
-        o.status = 'paid'
-        o.version = (o.version || 1) + 1
-        o.updated_at = new Date().toISOString()
-      }
-    })
+    sweepServerTableOrdersToPaid(slug, attendedCall.table_number)
     broadcastEvent({
       type: 'table_bill_paid',
       slug,
@@ -557,6 +564,87 @@ export function attendServerServiceCall(slug: string, callId: string): ServiceCa
   }
 
   return updated
+}
+
+export function sweepServerTableOrdersToPaid(slug: string, tableNumber: string | number): Order[] {
+  const tableNumStr = String(tableNumber)
+  if (!globalStore.__GASTRO_ORDERS__?.[slug]) {
+    return []
+  }
+
+  const allServedTags = [
+    '[BARRA_SERVIDA]',
+    '[ENTRADA_LISTA]',
+    '[ENTRADA_SERVIDA]',
+    '[MARCHAR_PRINCIPAL]',
+    '[PRINCIPAL_LISTO]',
+    '[PRINCIPAL_SERVIDO]',
+    '[MARCHAR_POSTRE]',
+    '[POSTRE_LISTO]',
+    '[POSTRE_SERVIDO]',
+  ]
+
+  const appendTags = (notes?: string | null): string => {
+    let current = notes || ''
+    for (const tag of allServedTags) {
+      if (!current.includes(tag)) {
+        current = current ? `${current} ${tag}` : tag
+      }
+    }
+    return current.trim()
+  }
+
+  const nowIso = new Date().toISOString()
+  const sweptOrders: Order[] = []
+
+  globalStore.__GASTRO_ORDERS__[slug] = globalStore.__GASTRO_ORDERS__[slug].map(o => {
+    const isThisTable =
+      o.table_number?.toString() === tableNumStr ||
+      o.table?.table_number?.toString() === tableNumStr ||
+      o.table_id === `table-${tableNumStr}`
+    if (!isThisTable || o.status === 'cancelled') {
+      return o
+    }
+
+    const baseItems =
+      o.order_items && o.order_items.length > 0
+        ? o.order_items
+        : getCachedOrderItems(o.id) || []
+
+    const updatedItems = baseItems.map((it: any) => ({
+      ...it,
+      status: 'delivered',
+      notes: appendTags(it.notes),
+    }))
+
+    if (updatedItems.length > 0) {
+      saveCachedOrderItems(o.id, updatedItems)
+    }
+
+    const updatedOrder: Order = {
+      ...o,
+      status: 'paid',
+      version: (o.version || 1) + 1,
+      updated_at: nowIso,
+      notes: appendTags((o as any).notes),
+      order_items: updatedItems,
+    }
+    sweptOrders.push(updatedOrder)
+    return updatedOrder
+  })
+
+  sweptOrders.forEach(ord => {
+    broadcastEvent({
+      type: 'order_updated',
+      slug,
+      orderId: ord.id,
+      status: 'paid',
+      tableNumber: ord.table_number || tableNumber,
+      order: ord,
+    })
+  })
+
+  return sweptOrders
 }
 
 export function clearServerServiceCalls(slug: string): void {
@@ -711,20 +799,8 @@ export function setTableOccupied(
 export function freeTableSession(slug: string, tableNumber: string | number): void {
   const tableNumStr = tableNumber.toString()
 
-  // 1. Marcar órdenes activas/entregadas como 'paid' en lugar de eliminarlas para preservar historial
-  const orders = globalStore.__GASTRO_ORDERS__?.[slug] || []
-  orders.forEach(o => {
-    const isThisTable =
-      o.table_number?.toString() === tableNumStr ||
-      o.table?.table_number?.toString() === tableNumStr
-    if (isThisTable) {
-      if (o.status !== 'cancelled') {
-        o.status = 'paid'
-        o.version = (o.version || 1) + 1
-        o.updated_at = new Date().toISOString()
-      }
-    }
-  })
+  // 1. Barrido total de órdenes activas/huérfanas de esta mesa a 'paid' con todos sus ítems entregados
+  sweepServerTableOrdersToPaid(slug, tableNumber)
 
   // 2. Eliminar llamadas de esta mesa específica
   const calls = globalStore.__GASTRO_SERVICE_CALLS__?.[slug] || []

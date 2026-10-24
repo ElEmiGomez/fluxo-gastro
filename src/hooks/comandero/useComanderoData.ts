@@ -277,12 +277,12 @@ export function useComanderoData(slug: string) {
         map.set(ord.id, candidateOrd)
       })
 
-      // Preservar órdenes no terminales pendientes
+      // Preservar órdenes no canceladas (incluyendo 'paid' en sobremesa hasta que la mesa se libere físicamente)
       currentOrders.forEach(prevOrd => {
         if (!map.has(prevOrd.id)) {
-          const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || prevOrd.status === 'delivered'
+          const isCancelled = prevOrd.status === 'cancelled'
           const isHandledLocally = attendedValidationOrderIdsRef.current.has(prevOrd.id)
-          if (!isTerminal && !isHandledLocally) {
+          if (!isCancelled && !isHandledLocally) {
             map.set(prevOrd.id, prevOrd)
           }
         }

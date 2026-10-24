@@ -268,6 +268,9 @@ export function TableSelector({
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-blue-600" /> Ocupada
             </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-teal-600" /> Pagada (Por Levantar)
+            </span>
             <span className="flex items-center gap-1 text-cyan-600">
               <Wine className="w-2.5 h-2.5" /> Bebida
             </span>
@@ -361,12 +364,34 @@ export function TableSelector({
             </button>
           )}
 
-          {selectedTable && (
+          {selectedTable && (() => {
+              const activeForSelected = (serverOrders || []).filter(
+                o =>
+                  (o.table_number?.toString() === selectedTable.toString() ||
+                    o.table?.table_number?.toString() === selectedTable.toString()) &&
+                  o.status !== 'cancelled' &&
+                  o.status !== 'paid'
+              )
+              const paidForSelected = (serverOrders || []).filter(
+                o =>
+                  (o.table_number?.toString() === selectedTable.toString() ||
+                    o.table?.table_number?.toString() === selectedTable.toString()) &&
+                  o.status === 'paid'
+              )
+              const isSelectedSobremesa = activeForSelected.length === 0 && paidForSelected.length > 0
+
+              return (
             <div className="flex items-center gap-1.5">
+              {isSelectedSobremesa && (
+                <span className="px-2 py-0.5 rounded-full bg-teal-600 text-white text-[10px] font-black flex items-center gap-1 shadow-xs">
+                  <Receipt className="w-3 h-3 text-white" />
+                  POR LEVANTAR · EN SOBREMESA
+                </span>
+              )}
               <span className="text-xs font-semibold text-slate-600">
                 Comanda: <strong className="font-black text-sm text-slate-900">Mesa #{selectedTable}</strong>
               </span>
-              {currentStatus === 'ready' && (
+              {isSelectedSobremesa ? null : currentStatus === 'ready' && (
                 <span className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center gap-1 shadow-xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-white" />
                   ¡LISTO!
@@ -379,7 +404,8 @@ export function TableSelector({
                 </span>
               )}
             </div>
-          )}
+            )
+          })()}
         </div>
       </div>
 
@@ -431,6 +457,15 @@ export function TableSelector({
                   o.status !== 'paid'
               )
 
+              // Órdenes pagadas de esta mesa
+              const paidTableOrders = (serverOrders || []).filter(
+                o =>
+                  (o.table_number?.toString() === table.table_number.toString() ||
+                    o.table?.table_number?.toString() === table.table_number.toString()) &&
+                  o.status === 'paid'
+              )
+              const isPaidSobremesa = activeTableOrders.length === 0 && paidTableOrders.length > 0
+
               // Llamadas activas de esta mesa
               const tableCall = (pendingCalls || []).find(
                 c => c.table_number?.toString() === table.table_number.toString()
@@ -448,7 +483,12 @@ export function TableSelector({
               let cubitoStyle = 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
               let dotColor = 'bg-slate-300'
 
-              if (status === 'ready' || badges.startersReady || badges.mainsReady || badges.dessertsReady) {
+              if (isPaidSobremesa) {
+                cubitoStyle = isSelected
+                  ? 'border-teal-600 bg-teal-100 ring-2 ring-teal-500 shadow-md text-teal-950'
+                  : 'border-teal-500 bg-teal-50 text-teal-950 shadow-xs'
+                dotColor = 'bg-teal-600'
+              } else if (status === 'ready' || badges.startersReady || badges.mainsReady || badges.dessertsReady) {
                 cubitoStyle = isSelected
                   ? 'border-emerald-600 bg-emerald-100 ring-2 ring-emerald-500 shadow-md text-emerald-950'
                   : 'border-emerald-500 bg-emerald-50/90 hover:bg-emerald-100/80 shadow-xs text-emerald-950 ring-1 ring-emerald-400/80'
@@ -500,9 +540,14 @@ export function TableSelector({
                     )}
                   </div>
 
-                  {/* Fila 2: Badge de Aviso Urgente (Llamada, Cuenta, Listo, Validar) */}
+                  {/* Fila 2: Badge de Aviso Urgente (Llamada, Cuenta, Listo, Validar, Sobremesa) */}
                   <div className="w-full flex items-center justify-center my-0.5">
-                    {isBill ? (
+                    {isPaidSobremesa ? (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-teal-600 text-white font-black uppercase shadow-xs flex items-center gap-0.5">
+                        <Receipt className="w-2.5 h-2.5 stroke-[2.5]" />
+                        <span>💸 PAGADA · En Sobremesa (Por Levantar)</span>
+                      </span>
+                    ) : isBill ? (
                       <span className="text-[9px] px-1.5 py-0.2 rounded-md bg-emerald-600 text-white font-black uppercase shadow-xs flex items-center gap-0.5">
                         <Receipt className="w-2.5 h-2.5 stroke-[2.5]" />
                         <span>CUENTA</span>
@@ -528,7 +573,11 @@ export function TableSelector({
                   </div>
 
                   {/* Fila 3: Iconos de Fases Gastronómicas con Códigos de Color Coherentes */}
-                  {hasOrderedItems ? (
+                  {isPaidSobremesa ? (
+                    <div className="flex items-center gap-1 justify-center w-full pt-0.5 border-t border-teal-200/60 text-[9px] text-teal-800 font-bold">
+                      <span>Por Levantar · Sobremesa</span>
+                    </div>
+                  ) : hasOrderedItems ? (
                     <div className="flex items-center gap-1 justify-center w-full pt-0.5 border-t border-slate-200/60">
                       {/* 1. Bebidas (Barra) */}
                       {badges.hasDrinks && (

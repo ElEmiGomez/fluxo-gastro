@@ -9,12 +9,14 @@ import {
 import {
   broadcastEvent,
   getServerOrders,
+  findServerOrderById,
   addServerOrder,
   updateServerOrderStatus,
   isValidOrderTransition,
   saveCachedOrderItems,
   getCachedOrderItems,
   getServerProducts,
+  sweepServerTableOrdersToPaid,
 } from '@/lib/server-state'
 
 export { getCachedOrderItems }
@@ -321,7 +323,7 @@ export async function getRestaurantOrders(
       const { data, error } = await query
 
       if (!error && data) {
-        const memOrders = getServerOrders(slug)
+        const memOrders = getServerOrders(slug, true)
         const mappedOrders = (data as unknown as any[]).map(o => {
           const tableNum = o.table_number || (o.table ? o.table.table_number : (parsedTableNum ?? 1))
           const token = o.session_token || o.table_session_id
@@ -339,7 +341,11 @@ export async function getRestaurantOrders(
 
           // PostgreSQL SSOT: preferir el estado de Supabase (SSOT) evitando regresiones por memoria obsoleta
           let resolvedStatus = o.status
-          if (mem) {
+          if (o.status === 'paid' || o.status === 'cancelled') {
+            resolvedStatus = o.status
+          } else if (mem?.status === 'paid' || mem?.status === 'cancelled') {
+            resolvedStatus = mem.status
+          } else if (mem) {
             const memVersion = Number(mem.version || 0)
             const supaVersion = Number(o.version || 0)
             const memTime = mem.updated_at ? new Date(mem.updated_at).getTime() : 0
@@ -410,7 +416,7 @@ export async function getRestaurantOrders(
         const seenIds = new Set(mappedOrders.map(o => o.id))
         const unindexedMemOrders = memOrders
           .filter(
-            m => !seenIds.has(m.id) && m.status !== 'cancelled' && m.status !== 'paid' &&
+            m => !seenIds.has(m.id) && m.status !== 'cancelled' &&
               (parsedTableNum !== null && !isNaN(parsedTableNum)
                 ? (Number(m.table_number) === parsedTableNum || Number(m.table?.table_number) === parsedTableNum)
                 : true)
@@ -431,7 +437,7 @@ export async function getRestaurantOrders(
     }
   }
 
-  const allMem = getServerOrders(slug).map(m => ({
+  const allMem = getServerOrders(slug, true).map(m => ({
     ...m,
     order_items: hydrateOrderItemsWithCatalog(
       m.order_items || [],
@@ -548,8 +554,8 @@ export async function transitionOrderStatus(
   const hasSupabase = supabase && isSupabaseConfigured()
 
   // 1. Obtener la comanda previa (memoria o Supabase) para validar idempotencia y transiciones
-  const memOrders = getServerOrders(slug)
-  let currentOrder = memOrders.find(o => o.id === orderId)
+  const memOrders = getServerOrders(slug, true)
+  let currentOrder = findServerOrderById(orderId) || memOrders.find(o => o.id === orderId)
   if (!currentOrder && hasSupabase) {
     try {
       const { data: supaOrder } = await supabase
@@ -583,6 +589,18 @@ export async function transitionOrderStatus(
       }
     } catch {
       // ignore
+    }
+  }
+
+  // Blindaje estricto de estado 'paid': Es terminal e irreversible. Nunca puede transicionar a otro estado.
+  if (currentOrder && currentOrder.status === 'paid' && nextStatus !== 'paid') {
+    return {
+      success: false,
+      code: 'TRANSITION_INVALID',
+      message: `La orden ${orderId} ya se encuentra PAGADA ('paid'). Estado terminal irreversible; no se permite cambiar a ${nextStatus}`,
+      error: `La orden ${orderId} ya se encuentra PAGADA ('paid'). Estado terminal irreversible; no se permite cambiar a ${nextStatus}`,
+      current_version: currentOrder.version,
+      current_status: 'paid',
     }
   }
 
@@ -697,6 +715,13 @@ export async function transitionOrderStatus(
             saveCachedOrderItems(orderId, resolvedItems)
             addServerOrder(slug, parsedOrder, true)
             updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, undefined, forceAllowReactivation)
+          }
+
+          if (nextStatus === 'paid') {
+            const resolvedTbl = parsedOrder?.table_number || tableNumber || currentOrder?.table_number
+            if (resolvedTbl !== undefined && resolvedTbl !== null) {
+              await sweepTableOrdersToPaid(restaurantId || '', slug, resolvedTbl)
+            }
           }
 
           broadcastEvent({
@@ -830,6 +855,13 @@ export async function transitionOrderStatus(
       }
     } catch (syncErr) {
       console.warn('[transitionOrderStatus] Error persisting fallback transition to Supabase:', syncErr)
+    }
+  }
+
+  if (nextStatus === 'paid') {
+    const resolvedTbl = memResult.order?.table_number || tableNumber || currentOrder?.table_number
+    if (resolvedTbl !== undefined && resolvedTbl !== null) {
+      await sweepTableOrdersToPaid(restaurantId || '', slug, resolvedTbl)
     }
   }
 
@@ -1216,3 +1248,87 @@ export async function resolvePendingDessertInOrder(
 
   return { success: true, order: updatedOrder }
 }
+
+/**
+ * 6.4 Barrido Total Anti-Zombis al Cobrar la Mesa (Batch Update a 'paid')
+ * Actualiza todas las órdenes de un restaurant_id y table_number cuyo estado sea
+ * 'pending_validation', 'pending', 'confirmed', 'preparing', 'ready' o 'delivered'
+ * a status = 'paid' y marca todos sus ítems internos como entregados/servidos.
+ */
+export async function sweepTableOrdersToPaid(
+  restaurantId: string,
+  slug: string,
+  tableNumber: number | string
+): Promise<Order[]> {
+  const parsedTableNum = parseInt(String(tableNumber), 10)
+  if (isNaN(parsedTableNum)) return []
+
+  const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
+  const sweptMemOrders = sweepServerTableOrdersToPaid(slug, parsedTableNum)
+
+  const allServedTagsStr =
+    '[BARRA_SERVIDA] [ENTRADA_LISTA] [ENTRADA_SERVIDA] [MARCHAR_PRINCIPAL] [PRINCIPAL_LISTO] [PRINCIPAL_SERVIDO] [MARCHAR_POSTRE] [POSTRE_LISTO] [POSTRE_SERVIDO]'
+
+  const supabase = createServerClient()
+  if (supabase && isSupabaseConfigured()) {
+    try {
+      const { data: openOrders } = await supabase
+        .from('orders')
+        .select('id, status, notes, order_items(id, notes)')
+        .eq('restaurant_id', targetRestaurantId)
+        .eq('table_number', parsedTableNum)
+        .neq('status', 'cancelled')
+        .neq('status', 'paid')
+
+      // Batch update de todas las órdenes abiertas/zombis de esta mesa a 'paid'
+      await supabase
+        .from('orders')
+        .update({ status: 'paid' })
+        .eq('restaurant_id', targetRestaurantId)
+        .eq('table_number', parsedTableNum)
+        .in('status', ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'])
+
+      if (openOrders && openOrders.length > 0) {
+        await Promise.all(
+          openOrders.map(async (ord: any) => {
+            const mergedOrdNotes = mergeItemNotes(ord.notes, allServedTagsStr)
+            try {
+              await supabase
+                .from('orders')
+                .update({ status: 'paid', notes: mergedOrdNotes })
+                .eq('id', ord.id)
+            } catch {
+              // ignore if notes column absent
+            }
+            const items = ord.order_items || []
+            for (const it of items) {
+              if (it.id && isUuid(it.id)) {
+                const mergedItNotes = mergeItemNotes(it.notes, allServedTagsStr)
+                try {
+                  await supabase
+                    .from('order_items')
+                    .update({ notes: mergedItNotes })
+                    .eq('id', it.id)
+                } catch {
+                  // ignore
+                }
+              }
+            }
+          })
+        )
+      }
+    } catch (err) {
+      console.warn('[sweepTableOrdersToPaid] Error sweeping table orders in Supabase:', err)
+    }
+  }
+
+  broadcastEvent({
+    type: 'table_bill_paid',
+    slug,
+    table_number: parsedTableNum,
+    tableNumber: parsedTableNum,
+  })
+
+  return sweptMemOrders
+}
+

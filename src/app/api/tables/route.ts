@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTableSessions, setTableOccupied } from '@/lib/server-state'
+import { getTableSessions, setTableOccupied, freeTableSession } from '@/lib/server-state'
 import { verifyStaffRequest } from '@/lib/auth/pin-security'
 import {
   createOrGetActiveSession,
@@ -29,8 +29,10 @@ export async function GET(req: NextRequest) {
           .eq('restaurant_id', restaurantId)
           .eq('status', 'active')
 
+        const activeTableNumbers = new Set<string>()
         if (dbSessions) {
           for (const s of dbSessions) {
+            activeTableNumbers.add(s.table_number.toString())
             sessions[s.table_number] = {
               table_number: s.table_number,
               status: 'busy',
@@ -38,6 +40,28 @@ export async function GET(req: NextRequest) {
               last_updated_at: s.created_at || new Date().toISOString(),
             }
             setTableOccupied(slug, s.table_number, s.session_token, true)
+          }
+        }
+
+        // Si la mesa no tiene sesión activa en Supabase (SSOT), marcarla explícitamente como 'free'
+        Object.keys(sessions).forEach(tblKey => {
+          if (!activeTableNumbers.has(tblKey.toString())) {
+            sessions[tblKey] = {
+              table_number: tblKey,
+              status: 'free',
+              session_id: '',
+              last_updated_at: new Date().toISOString(),
+            }
+          }
+        })
+
+        const tableQuery = searchParams.get('table') || searchParams.get('table_number')
+        if (tableQuery && !activeTableNumbers.has(tableQuery.toString())) {
+          sessions[tableQuery] = {
+            table_number: tableQuery,
+            status: 'free',
+            session_id: '',
+            last_updated_at: new Date().toISOString(),
           }
         }
       } catch {
@@ -100,6 +124,9 @@ export async function POST(req: NextRequest) {
         typeof final_amount === 'number' ? final_amount : undefined,
         typeof orders_count === 'number' ? orders_count : undefined
       )
+      // Liberar en memoria y emitir evento SSE en tiempo real a todos los comensales
+      freeTableSession(slug, parsedTableNum)
+
       const res = NextResponse.json({
         success: true,
         message: `Mesa #${table_number} liberada y token UUID revocado`,

@@ -112,7 +112,14 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
 
       let effectiveLastPaid = lastPaidSessionTotal
       if (!effectiveLastPaid && typeof window !== 'undefined' && tableNumber) {
-        const isPaidSession = sessionStorage.getItem(`fluxo_table_paid_${slug}_${tableNumber}`) === 'true'
+        const paidOrderData = sessionStorage.getItem(`fluxo_paid_order_${slug}_${tableNumber}`)
+        if (paidOrderData) {
+          try {
+            const parsed = JSON.parse(paidOrderData)
+            if (parsed.total) effectiveLastPaid = Number(parsed.total)
+          } catch {}
+        }
+        const isPaidSession = sessionStorage.getItem(`fluxo_table_paid_${slug}_${tableNumber}`) === 'true' || Boolean(paidOrderData)
         if (isPaidSession) {
           const stored = sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) || localStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
           if (stored) effectiveLastPaid = Number(stored)

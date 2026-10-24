@@ -12,7 +12,26 @@ interface UseTableSessionParams {
 export function useTableSession({ slug, initialTable, urlSession }: UseTableSessionParams) {
   const [tableNumber, setTableNumber] = useState<string>(initialTable)
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [isTablePaid, setIsTablePaid] = useState<boolean>(false)
+  const readPaidLockFromStorage = (s: string, t: string): boolean => {
+    if (typeof window === 'undefined') return false
+    try {
+      if (
+        sessionStorage.getItem(`fluxo_paid_lock_${s}_${t}`) === 'true' ||
+        sessionStorage.getItem(`fluxo_table_paid_lock_${s}_${t}`) === 'true'
+      ) {
+        return true
+      }
+      const stored = sessionStorage.getItem(`fluxo_paid_order_${s}_${t}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        return Boolean(parsed?.isOrderPaid)
+      }
+    } catch {}
+    return false
+  }
+
+  const [isOrderPaid, setIsOrderPaid] = useState<boolean>(() => readPaidLockFromStorage(slug, tableNumber))
+  const [isTablePaid, setIsTablePaid] = useState<boolean>(() => readPaidLockFromStorage(slug, tableNumber))
   const [isPaidBannerDismissed, setIsPaidBannerDismissed] = useState<boolean>(false)
   const [isReviewBoosterDismissed, setIsReviewBoosterDismissed] = useState<boolean>(false)
   const [hasRequestedBill, setHasRequestedBill] = useState<boolean>(false)
@@ -22,8 +41,9 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
   const [pendingServiceCalls, setPendingServiceCalls] = useState<Set<string>>(new Set())
   const [serviceRequestedToast, setServiceRequestedToast] = useState<string | null>(null)
 
-  const handleTableMarkedPaid = useCallback(() => {
+  const handleTableMarkedPaid = useCallback((paidSnapshot?: { total?: number; points?: number }) => {
     setIsTablePaid(true)
+    setIsOrderPaid(true)
     setIsPaidBannerDismissed(false)
     setIsReviewBoosterDismissed(false)
     setHasRequestedBill(false)
@@ -31,10 +51,41 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
     userRequestedBillTimeRef.current = null
     if (typeof window !== 'undefined') {
       try {
-        // No persistir en sessionStorage para no contaminar recargas
         sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
+        sessionStorage.setItem(`fluxo_paid_lock_${slug}_${tableNumber}`, 'true')
+        sessionStorage.setItem(`fluxo_table_paid_lock_${slug}_${tableNumber}`, 'true')
+        const currentData = sessionStorage.getItem(`fluxo_paid_order_${slug}_${tableNumber}`)
+        const prevParsed = currentData ? JSON.parse(currentData) : {}
+        const lastPaidStored = typeof window !== 'undefined' ? sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) : null
+        const totalAmount = paidSnapshot?.total ?? (lastPaidStored ? Number(lastPaidStored) : (prevParsed.total ?? 0))
+        const pointsEarned = paidSnapshot?.points ?? prevParsed.points ?? (totalAmount > 0 ? Math.round(totalAmount * 10) : 50)
+        sessionStorage.setItem(
+          `fluxo_paid_order_${slug}_${tableNumber}`,
+          JSON.stringify({
+            isOrderPaid: true,
+            total: totalAmount,
+            points: pointsEarned,
+            paidAt: Date.now(),
+          })
+        )
+      } catch {}
+    }
+  }, [slug, tableNumber])
+
+  const resetPaidOrderSession = useCallback(() => {
+    setIsOrderPaid(false)
+    setIsTablePaid(false)
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now()))
+        sessionStorage.removeItem(`fluxo_paid_lock_${slug}_${tableNumber}`)
+        sessionStorage.removeItem(`fluxo_table_paid_lock_${slug}_${tableNumber}`)
+        sessionStorage.removeItem(`fluxo_paid_order_${slug}_${tableNumber}`)
+        sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+        sessionStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
+        localStorage.removeItem(`fluxo_cart_${slug}_${tableNumber}`)
       } catch {}
     }
   }, [slug, tableNumber])
@@ -84,8 +135,16 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-        localStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+        const hasLockedPaid = readPaidLockFromStorage(slug, tableNumber)
+        if (hasLockedPaid) {
+          setIsOrderPaid(true)
+          setIsTablePaid(true)
+        } else {
+          setIsOrderPaid(false)
+          setIsTablePaid(false)
+          sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+          localStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+        }
         sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
       } catch {}
@@ -159,6 +218,9 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
     setTableNumber,
     sessionId,
     setSessionId,
+    isOrderPaid,
+    setIsOrderPaid,
+    resetPaidOrderSession,
     isTablePaid,
     setIsTablePaid,
     isPaidBannerDismissed,
