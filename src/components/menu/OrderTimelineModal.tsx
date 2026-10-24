@@ -5,6 +5,7 @@ import { X, CheckCircle2, Clock, Flame, Sparkles, UtensilsCrossed, Bell, Receipt
 import { Order, OrderStatus } from '@/types/database.types'
 import { formatCurrency, getWaitingMinutes } from '@/lib/utils'
 import {
+  cleanItemNotes,
   stripInternalStationTags,
   getItemCourse,
   isDrinkServed,
@@ -12,7 +13,6 @@ import {
   isDessertServed,
   isDessertFired,
   isDessertCooking,
-  isDessertPendingChoice,
   isFoodReady,
   isStarterItem,
   isStarterReady,
@@ -23,14 +23,17 @@ import {
   isMainServed,
   isDrinkItem,
   isDessertItem,
+  orderHasStarters,
   areOrderStartersReady,
   areOrderStartersServed,
   areOrderMainsReady,
   areOrderMainsServed,
   areOrderDessertsServed,
   areOrderMainsFired,
+  orderHasActiveDesserts,
   ordersHavePendingDesserts,
-  TAG_DESSERT_FIRED,
+  resolveCatalogProductForItem,
+  isGenericProductName,
 } from '@/lib/course-utils'
 
 interface OrderTimelineModalProps {
@@ -42,6 +45,19 @@ interface OrderTimelineModalProps {
   onCallWaiter?: () => void
   onRequestService?: () => void
   onRequestBill?: () => void
+}
+
+function getItemRealName(item: any, fallback: string): string {
+  const prod = item?.product || item?.products
+  const rawName = prod?.name || item?.name
+  if (rawName && !isGenericProductName(rawName)) {
+    return rawName
+  }
+  const catalogProd = resolveCatalogProductForItem(item)
+  if (catalogProd?.name) {
+    return catalogProd.name
+  }
+  return rawName || fallback
 }
 
 export function OrderTimelineModal({
@@ -56,205 +72,87 @@ export function OrderTimelineModal({
 }: OrderTimelineModalProps) {
   if (!isOpen || !status) return null
 
-  // Agrupar ítems activos de todas las comandas de la mesa con respaldo de caché local
-  const rawItems = orders.flatMap(o => o.order_items || [])
-  let allTableItems = rawItems
-  if (allTableItems.length === 0 && typeof window !== 'undefined') {
-    const recovered: any[] = []
-    orders.forEach(o => {
+  // Agrupar ítems activos de todas las comandas de la mesa con su orden padre y respaldo de caché local
+  const entriesWithOrder: { order: Order; item: any }[] = []
+  orders.forEach(o => {
+    let items = o.order_items || []
+    if (items.length === 0 && typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(`fluxo_order_items_${o.id}`)
         if (stored) {
           const parsed = JSON.parse(stored)
-          if (Array.isArray(parsed) && parsed.length > 0) recovered.push(...parsed)
+          if (Array.isArray(parsed) && parsed.length > 0) items = parsed
         }
       } catch (_) {}
-    })
-    if (recovered.length > 0) {
-      allTableItems = recovered
     }
-  }
-
-  const hasDrinks = allTableItems.some(isDrinkItem)
-  const hasStarters = allTableItems.some(isStarterItem)
-  const hasMains = allTableItems.some(isMainItem)
-  const hasDesserts = allTableItems.some(isDessertItem)
-
-  // 1. Estado Validación
-  const isValidating = orders.some(o => o.status === 'pending_validation')
-  const isAllValidated = !isValidating && orders.length > 0
-
-  // 2. Estado Bebidas
-  const drinks = allTableItems.filter(isDrinkItem)
-  const areDrinksServed = drinks.length > 0 && drinks.every(isDrinkServed)
-
-  // 3. Estado Entradas
-  const starters = allTableItems.filter(isStarterItem)
-  const areStartersServed = starters.length > 0 && orders.every(areOrderStartersServed)
-  const areStartersReady = starters.length > 0 && !areStartersServed && orders.some(areOrderStartersReady)
-  const areStartersPreparing = starters.length > 0 && !areStartersReady && !areStartersServed && orders.some(o => o.status === 'preparing')
-
-  // 4. Estado Principales
-  const mains = allTableItems.filter(isMainItem)
-  const areMainsServed = mains.length > 0 && orders.every(areOrderMainsServed)
-  const areMainsReady = mains.length > 0 && !areMainsServed && orders.some(areOrderMainsReady)
-  const areMainsFired = orders.some(areOrderMainsFired)
-  const areMainsCooking =
-    !areMainsServed &&
-    !areMainsReady &&
-    (mains.some(isMainCooking) ||
-      (mains.length > 0 && starters.length === 0 && orders.some(o => o.status === 'preparing')) ||
-      (mains.length > 0 && areStartersServed && areMainsFired))
-  const areMainsPreparing = mains.length > 0 && !areMainsReady && !areMainsServed && areMainsCooking
-
-  // 5. Estado Postres
-  const desserts = allTableItems.filter(isDessertItem)
-  const areDessertsServed = desserts.length > 0 && orders.every(areOrderDessertsServed)
-  const areDessertsReady = desserts.length > 0 && !areDessertsServed && desserts.some(isDessertReady)
-  const areDessertsFired =
-    desserts.some(d => isDessertFired(d) || isDessertCooking(d)) ||
-    orders.some(o => (o as any).notes?.includes(TAG_DESSERT_FIRED) || (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)) ||
-    (!hasStarters && !hasMains && orders.some(o => o.status === 'preparing'))
-  const areDessertsPreparing = desserts.length > 0 && !areDessertsReady && !areDessertsServed && areDessertsFired
-  const hasPendingDessertChoice = desserts.some(isDessertPendingChoice)
-  const hasPendingDesserts = ordersHavePendingDesserts(orders)
-
-  type PhaseState = 'waiting' | 'preparing' | 'ready' | 'delivered'
-
-  interface CoursePhase {
-    key: string
-    title: string
-    desc: string
-    state: PhaseState
-    badge: string
-    icon: any
-  }
-
-  const dynamicPhases: CoursePhase[] = []
-
-  // Fase 1: Validación del Mozo
-  dynamicPhases.push({
-    key: 'validation',
-    title: 'Validación del Mozo',
-    desc: isValidating
-      ? 'El mozo confirmará tu comanda en tu mesa.'
-      : 'Comanda validada por el personal de sala.',
-    state: isValidating ? 'preparing' : 'delivered',
-    badge: isValidating ? 'En revisión' : 'Validada',
-    icon: isValidating ? Clock : CheckCircle2,
+    items.forEach(it => {
+      entriesWithOrder.push({ order: o, item: it })
+    })
   })
 
-  // Fase 2: Bebidas (si hay)
-  if (hasDrinks) {
-    let state: PhaseState = 'waiting'
-    let desc = 'En espera de validación de comanda.'
-    let badge = 'En espera'
-    if (areDrinksServed || status === 'delivered') {
-      state = 'delivered'
-      desc = 'Bebidas servidas en tu mesa.'
-      badge = 'Entregadas'
-    } else if (isAllValidated) {
-      state = 'preparing'
-      desc = 'Preparando bebidas en barra.'
-      badge = 'En barra'
-    }
-    dynamicPhases.push({
-      key: 'drinks',
-      title: 'Bebidas',
-      desc,
-      state,
-      badge,
-      icon: state === 'delivered' ? CheckCircle2 : Sparkles,
-    })
-  }
+  const drinkEntries = entriesWithOrder.filter(e => isDrinkItem(e.item))
+  const starterEntries = entriesWithOrder.filter(e => isStarterItem(e.item))
+  const mainEntries = entriesWithOrder.filter(e => isMainItem(e.item))
+  const dessertEntries = entriesWithOrder.filter(e => isDessertItem(e.item))
 
-  // Fase 3: Entradas (si hay)
-  if (hasStarters) {
-    let state: PhaseState = 'waiting'
-    let desc = 'En cola de preparación de cocina.'
-    let badge = 'En espera'
-    if (areStartersServed || status === 'delivered') {
-      state = 'delivered'
-      desc = 'Entradas servidas en tu mesa.'
-      badge = 'Entregadas'
-    } else if (areStartersReady) {
-      state = 'ready'
-      desc = '¡Listas en cocina! El mozo las lleva a tu mesa.'
-      badge = 'Listas'
-    } else if (areStartersPreparing) {
-      state = 'preparing'
-      desc = 'Cocineros preparando tus entradas en cocina.'
-      badge = 'En preparación'
-    }
-    dynamicPhases.push({
-      key: 'starters',
-      title: '1º Entradas',
-      desc,
-      state,
-      badge,
-      icon: state === 'delivered' ? CheckCircle2 : Flame,
-    })
-  }
+  const hasDrinks = drinkEntries.length > 0
+  const hasStarters = starterEntries.length > 0
+  const hasMains = mainEntries.length > 0
+  const hasDesserts = dessertEntries.length > 0
 
-  // Fase 4: Principales (si hay)
-  if (hasMains) {
-    let state: PhaseState = 'waiting'
-    let desc = hasStarters ? 'En espera del momento oportuno tras el 1º plato.' : 'En cola de cocina.'
-    let badge = 'En espera'
-    if (areMainsServed || (status === 'delivered' && !areDessertsPreparing && !areDessertsReady)) {
-      state = 'delivered'
-      desc = 'Platos principales servidos en tu mesa.'
-      badge = 'Entregados'
-    } else if (areMainsReady) {
-      state = 'ready'
-      desc = '¡Listos en cocina! El mozo los lleva a tu mesa.'
-      badge = 'Listos'
-    } else if (areMainsPreparing) {
-      state = 'preparing'
-      desc = 'Cocinando platos principales en cocina.'
-      badge = 'En preparación'
-    }
-    dynamicPhases.push({
-      key: 'mains',
-      title: '2º Platos Principales',
-      desc,
-      state,
-      badge,
-      icon: state === 'delivered' ? CheckCircle2 : Flame,
-    })
-  }
+  // 1. Estado Validación del Mozo
+  const isValidating = orders.some(o => o.status === 'pending_validation')
 
-  // Fase 5: Postres (si hay)
-  if (hasDesserts) {
-    let state: PhaseState = 'waiting'
-    let desc = (hasStarters || hasMains) ? 'En espera tras terminar la comida principal.' : 'En cola de cocina.'
-    let badge = 'En espera'
-    if (areDessertsServed || (status === 'delivered' && !hasPendingDesserts && !hasPendingDessertChoice)) {
-      state = 'delivered'
-      desc = 'Postres servidos en tu mesa.'
-      badge = 'Entregados'
-    } else if (areDessertsReady) {
-      state = 'ready'
-      desc = '¡Listos en cocina! El mozo los lleva a tu mesa.'
-      badge = 'Listos'
-    } else if (hasPendingDessertChoice) {
-      state = 'waiting'
-      desc = 'Postre incluido pendiente de tu elección.'
-      badge = 'Por definir'
-    } else if (areDessertsPreparing) {
-      state = 'preparing'
-      desc = '🍨 Postres en marcha: preparándose en cocina para el pase dulce.'
-      badge = 'En preparación'
-    }
-    dynamicPhases.push({
-      key: 'desserts',
-      title: 'Postres',
-      desc,
-      state,
-      badge,
-      icon: state === 'delivered' ? CheckCircle2 : Sparkles,
-    })
-  }
+  // 2. Estado Bebidas de Barra
+  const areAllDrinksServed =
+    hasDrinks &&
+    drinkEntries.every(e => isDrinkServed(e.item, e.order) || e.order.status === 'delivered')
+
+  // 3. Estado 1° Entradas
+  const areAllStartersServed =
+    hasStarters &&
+    starterEntries.every(e => isStarterServed(e.item, e.order) || areOrderStartersServed(e.order))
+  const areAnyStartersReady =
+    hasStarters &&
+    !areAllStartersServed &&
+    starterEntries.some(e => isStarterReady(e.item, e.order) || areOrderStartersReady(e.order))
+
+  // 4. Estado 2° Platos Principales
+  const areAllMainsServed =
+    hasMains &&
+    mainEntries.every(e => isMainServed(e.item, e.order) || areOrderMainsServed(e.order))
+  const areAnyMainsReady =
+    hasMains &&
+    !areAllMainsServed &&
+    mainEntries.some(e => isMainReady(e.item, e.order) || areOrderMainsReady(e.order))
+  const areAnyMainsCookingOrFired =
+    hasMains &&
+    !areAllMainsServed &&
+    !areAnyMainsReady &&
+    mainEntries.some(
+      e =>
+        isMainCooking(e.item, e.order) ||
+        areOrderMainsFired(e.order) ||
+        (!orderHasStarters(e.order) && e.order.status !== 'pending_validation')
+    )
+
+  // 5. Estado 3° Postres y Café
+  const areAllDessertsServed =
+    hasDesserts &&
+    dessertEntries.every(e => isDessertServed(e.item, e.order) || areOrderDessertsServed(e.order))
+  const areAnyDessertsActiveOrReady =
+    hasDesserts &&
+    !areAllDessertsServed &&
+    dessertEntries.some(
+      e =>
+        isDessertReady(e.item, e.order) ||
+        isDessertCooking(e.item, e.order) ||
+        isDessertFired(e.item, e.order) ||
+        orderHasActiveDesserts(e.order) ||
+        (!hasStarters && !hasMains && e.order.status === 'preparing')
+    )
+
+  const hasPendingDesserts = ordersHavePendingDesserts(orders)
 
   // Ordenar comandas activas cronológicamente (Ronda 1 la primera, Ronda 2 posterior)
   const chronologicalOrders = [...orders].sort(
@@ -307,73 +205,337 @@ export function OrderTimelineModal({
         </div>
 
         {/* Contenido con Scroll Fluido */}
-        <div className="p-5 overflow-y-auto space-y-6 flex-1">
+        <div className="p-5 overflow-y-auto space-y-5 flex-1">
           
-          {/* Fases del Servicio por Tiempos Gastronómicos */}
+          {/* BLOQUE 4.3: Desglose Completo de Fases en Tiempo Real por Estación */}
           <div className="space-y-3">
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Fases de tu Servicio
+              Fases de tu Servicio en Tiempo Real
             </h4>
-            <div className="relative space-y-4 before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-              {dynamicPhases.map((phase) => {
-                const isDelivered = phase.state === 'delivered'
-                const isReady = phase.state === 'ready'
-                const isPreparing = phase.state === 'preparing'
-                const Icon = phase.icon
 
-                return (
-                  <div key={phase.key} className="relative flex items-start gap-3.5">
-                    {/* Icono de Etapa */}
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 z-10 transition-all ${
-                        isDelivered
-                          ? 'bg-emerald-600 text-white ring-4 ring-emerald-100 shadow-xs'
-                          : isReady
-                          ? 'bg-[#4d7c67] text-white ring-4 ring-slate-200 shadow-xs border border-[#3b6352] animate-pulse'
-                          : isPreparing
-                          ? 'bg-amber-500 text-slate-950 ring-4 ring-amber-200 animate-pulse shadow-xs'
-                          : 'bg-slate-100 text-slate-400 border border-slate-300'
-                      }`}
-                    >
-                      {isDelivered ? <CheckCircle2 size={16} /> : isReady ? <Sparkles size={16} /> : <Icon size={16} />}
-                    </div>
+            {/* 1. VALIDACIÓN DEL MOZO */}
+            <div className={`p-3.5 rounded-2xl border-2 transition-all ${
+              isValidating
+                ? 'bg-amber-50/90 border-amber-300'
+                : 'bg-emerald-50/70 border-emerald-200'
+            }`}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                    isValidating ? 'bg-amber-500 text-slate-950 animate-pulse' : 'bg-emerald-600 text-white'
+                  }`}>
+                    {isValidating ? <Clock size={14} /> : <CheckCircle2 size={14} />}
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-black uppercase tracking-wide text-slate-900">
+                      1. Validación del Mozo
+                    </h5>
+                    <p className="text-[11px] text-slate-600 leading-snug">
+                      {isValidating
+                        ? 'El mozo confirmará tu comanda en tu mesa.'
+                        : 'Comanda validada por el personal de sala.'}
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border flex-shrink-0 ${
+                  isValidating
+                    ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
+                    : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                }`}>
+                  {isValidating ? 'Esperando validación' : '✓ Validada'}
+                </span>
+              </div>
+            </div>
 
-                    {/* Detalle de Etapa */}
-                    <div className="flex-1 min-w-0 pt-0.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <h5
-                          className={`text-xs font-black uppercase tracking-wide ${
-                            isDelivered
-                              ? 'text-emerald-950'
-                              : isReady
-                              ? 'text-[#234839]'
-                              : isPreparing
-                              ? 'text-amber-950 font-black'
-                              : 'text-slate-400'
-                          }`}
-                        >
-                          {phase.title}
-                        </h5>
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
-                          isDelivered
-                            ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                            : isReady
-                            ? 'bg-[#e2ede7] text-[#284c3d] border-[#9dbcb0] animate-pulse'
-                            : isPreparing
-                            ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
-                            : 'bg-slate-100 text-slate-500 border-slate-200'
+            {/* 🍺 BEBIDAS DE BARRA */}
+            {hasDrinks && (
+              <div className={`p-3.5 rounded-2xl border-2 space-y-2.5 transition-all ${
+                areAllDrinksServed
+                  ? 'bg-emerald-50/60 border-emerald-200'
+                  : isValidating
+                  ? 'bg-slate-50 border-slate-200'
+                  : 'bg-cyan-50/70 border-cyan-200'
+              }`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-900 flex items-center gap-1.5">
+                    <span>🍺 Bebidas de Barra</span>
+                    <span className="text-[10px] text-slate-500 font-bold">
+                      ({drinkEntries.reduce((s, e) => s + (e.item.quantity || 1), 0)})
+                    </span>
+                  </span>
+                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                    areAllDrinksServed
+                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                      : isValidating
+                      ? 'bg-slate-100 text-slate-600 border-slate-300'
+                      : 'bg-cyan-100 text-cyan-950 border-cyan-300 animate-pulse'
+                  }`}>
+                    {areAllDrinksServed
+                      ? '✓ Servido en mesa'
+                      : isValidating
+                      ? 'Esperando validación'
+                      : 'Preparando en barra'}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 pt-1 border-t border-slate-200/60">
+                  {drinkEntries.map((entry, idx) => {
+                    const served = isDrinkServed(entry.item, entry.order) || entry.order.status === 'delivered'
+                    const ordValidating = entry.order.status === 'pending_validation'
+                    const itemStateLabel = served
+                      ? '✓ Servido en mesa'
+                      : ordValidating
+                      ? 'Esperando validación'
+                      : 'Preparando en barra'
+                    const cleanNote = cleanItemNotes(entry.item.notes)
+
+                    return (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-xs bg-white/90 px-2.5 py-1.5 rounded-xl border border-slate-200/80">
+                        <div className="min-w-0">
+                          <span className="font-black text-cyan-700 mr-1.5">{entry.item.quantity}x</span>
+                          <span className="font-extrabold text-slate-800">{getItemRealName(entry.item, 'Bebida')}</span>
+                          {cleanNote && (
+                            <span className="block text-[10px] text-slate-500 italic pl-3">&bull; {cleanNote}</span>
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 ${
+                          served
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : ordValidating
+                            ? 'bg-slate-100 text-slate-600'
+                            : 'bg-cyan-50 text-cyan-900 border border-cyan-200'
                         }`}>
-                          {phase.badge}
+                          {itemStateLabel}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                        {phase.desc}
-                      </p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 🥗 1° ENTRADAS */}
+            {hasStarters && (
+              <div className={`p-3.5 rounded-2xl border-2 space-y-2.5 transition-all ${
+                areAllStartersServed
+                  ? 'bg-emerald-50/60 border-emerald-200'
+                  : areAnyStartersReady
+                  ? 'bg-emerald-50 border-emerald-400 ring-1 ring-emerald-300'
+                  : 'bg-amber-50/70 border-amber-200'
+              }`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-900 flex items-center gap-1.5">
+                    <span>🥗 1° Entradas</span>
+                    <span className="text-[10px] text-slate-500 font-bold">
+                      ({starterEntries.reduce((s, e) => s + (e.item.quantity || 1), 0)})
+                    </span>
+                  </span>
+                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                    areAllStartersServed
+                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                      : areAnyStartersReady
+                      ? 'bg-emerald-500 text-white border-emerald-600 animate-pulse'
+                      : 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
+                  }`}>
+                    {areAllStartersServed
+                      ? '✓ Entregado en mesa'
+                      : areAnyStartersReady
+                      ? 'Listo para servir'
+                      : 'En preparación en cocina'}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 pt-1 border-t border-slate-200/60">
+                  {starterEntries.map((entry, idx) => {
+                    const served = isStarterServed(entry.item, entry.order) || areOrderStartersServed(entry.order)
+                    const ready = !served && (isStarterReady(entry.item, entry.order) || areOrderStartersReady(entry.order))
+                    const itemStateLabel = served
+                      ? '✓ Entregado en mesa'
+                      : ready
+                      ? 'Listo para servir'
+                      : 'En preparación en cocina'
+                    const cleanNote = cleanItemNotes(entry.item.notes)
+
+                    return (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-xs bg-white/90 px-2.5 py-1.5 rounded-xl border border-slate-200/80">
+                        <div className="min-w-0">
+                          <span className="font-black text-amber-700 mr-1.5">{entry.item.quantity}x</span>
+                          <span className="font-extrabold text-slate-800">{getItemRealName(entry.item, 'Entrada')}</span>
+                          {cleanNote && (
+                            <span className="block text-[10px] text-slate-500 italic pl-3">&bull; {cleanNote}</span>
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 ${
+                          served
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : ready
+                            ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 font-black'
+                            : 'bg-amber-50 text-amber-900 border border-amber-200'
+                        }`}>
+                          {itemStateLabel}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 🍔 2° PLATOS PRINCIPALES */}
+            {hasMains && (
+              <div className={`p-3.5 rounded-2xl border-2 space-y-2.5 transition-all ${
+                areAllMainsServed
+                  ? 'bg-emerald-50/60 border-emerald-200'
+                  : areAnyMainsReady
+                  ? 'bg-emerald-50 border-emerald-400 ring-1 ring-emerald-300'
+                  : areAnyMainsCookingOrFired
+                  ? 'bg-amber-50/70 border-amber-200'
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-900 flex items-center gap-1.5">
+                    <span>🍔 2° Platos Principales</span>
+                    <span className="text-[10px] text-slate-500 font-bold">
+                      ({mainEntries.reduce((s, e) => s + (e.item.quantity || 1), 0)})
+                    </span>
+                  </span>
+                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                    areAllMainsServed
+                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                      : areAnyMainsReady
+                      ? 'bg-emerald-500 text-white border-emerald-600 animate-pulse'
+                      : areAnyMainsCookingOrFired
+                      ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
+                      : 'bg-slate-100 text-slate-600 border-slate-300'
+                  }`}>
+                    {areAllMainsServed
+                      ? '✓ Entregado en mesa'
+                      : areAnyMainsReady
+                      ? 'Listo para servir'
+                      : areAnyMainsCookingOrFired
+                      ? 'En preparación en cocina'
+                      : 'En espera del 1° plato'}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 pt-1 border-t border-slate-200/60">
+                  {mainEntries.map((entry, idx) => {
+                    const served = isMainServed(entry.item, entry.order) || areOrderMainsServed(entry.order)
+                    const ready = !served && (isMainReady(entry.item, entry.order) || areOrderMainsReady(entry.order))
+                    const waitingFirstCourse =
+                      !served &&
+                      !ready &&
+                      orderHasStarters(entry.order) &&
+                      !areOrderMainsFired(entry.order) &&
+                      !isMainCooking(entry.item, entry.order)
+                    const itemStateLabel = served
+                      ? '✓ Entregado en mesa'
+                      : ready
+                      ? 'Listo para servir'
+                      : waitingFirstCourse
+                      ? 'En espera del 1° plato'
+                      : 'En preparación en cocina'
+                    const cleanNote = cleanItemNotes(entry.item.notes)
+
+                    return (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-xs bg-white/90 px-2.5 py-1.5 rounded-xl border border-slate-200/80">
+                        <div className="min-w-0">
+                          <span className="font-black text-blue-700 mr-1.5">{entry.item.quantity}x</span>
+                          <span className="font-extrabold text-slate-800">{getItemRealName(entry.item, 'Principal')}</span>
+                          {cleanNote && (
+                            <span className="block text-[10px] text-slate-500 italic pl-3">&bull; {cleanNote}</span>
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 ${
+                          served
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : ready
+                            ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 font-black'
+                            : waitingFirstCourse
+                            ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                            : 'bg-amber-50 text-amber-900 border border-amber-200'
+                        }`}>
+                          {itemStateLabel}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 🍰 3° POSTRES Y CAFÉ */}
+            {hasDesserts && (
+              <div className={`p-3.5 rounded-2xl border-2 space-y-2.5 transition-all ${
+                areAllDessertsServed
+                  ? 'bg-emerald-50/60 border-emerald-200'
+                  : areAnyDessertsActiveOrReady
+                  ? 'bg-purple-50/80 border-purple-300'
+                  : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-900 flex items-center gap-1.5">
+                    <span>🍰 3° Postres y Café</span>
+                    <span className="text-[10px] text-slate-500 font-bold">
+                      ({dessertEntries.reduce((s, e) => s + (e.item.quantity || 1), 0)})
+                    </span>
+                  </span>
+                  <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                    areAllDessertsServed
+                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                      : areAnyDessertsActiveOrReady
+                      ? 'bg-purple-100 text-purple-950 border-purple-300 animate-pulse'
+                      : 'bg-slate-100 text-slate-600 border-slate-300'
+                  }`}>
+                    {areAllDessertsServed
+                      ? '✓ Entregado en mesa'
+                      : areAnyDessertsActiveOrReady
+                      ? 'Preparando postre'
+                      : 'Guardado para el final de la comida'}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 pt-1 border-t border-slate-200/60">
+                  {dessertEntries.map((entry, idx) => {
+                    const served = isDessertServed(entry.item, entry.order) || areOrderDessertsServed(entry.order)
+                    const activeOrReady =
+                      !served &&
+                      (isDessertReady(entry.item, entry.order) ||
+                        isDessertCooking(entry.item, entry.order) ||
+                        isDessertFired(entry.item, entry.order) ||
+                        orderHasActiveDesserts(entry.order) ||
+                        (!hasStarters && !hasMains && entry.order.status === 'preparing'))
+                    const itemStateLabel = served
+                      ? '✓ Entregado en mesa'
+                      : activeOrReady
+                      ? 'Preparando postre'
+                      : 'Guardado para el final de la comida'
+                    const cleanNote = cleanItemNotes(entry.item.notes)
+
+                    return (
+                      <div key={idx} className="flex items-center justify-between gap-2 text-xs bg-white/90 px-2.5 py-1.5 rounded-xl border border-slate-200/80">
+                        <div className="min-w-0">
+                          <span className="font-black text-purple-700 mr-1.5">{entry.item.quantity}x</span>
+                          <span className="font-extrabold text-slate-800">{getItemRealName(entry.item, 'Postre')}</span>
+                          {cleanNote && (
+                            <span className="block text-[10px] text-slate-500 italic pl-3">&bull; {cleanNote}</span>
+                          )}
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 ${
+                          served
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : activeOrReady
+                            ? 'bg-purple-100 text-purple-950 border border-purple-300'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}>
+                          {itemStateLabel}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* HISTORIAL DETALLADO DE COMANDAS POR RONDAS */}
@@ -382,7 +544,7 @@ export function OrderTimelineModal({
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
                   <Layers size={14} className="text-blue-600" />
-                  <span>Platos Pedidos en Mesa #{tableNumber}</span>
+                  <span>Resumen Económico en Mesa #{tableNumber}</span>
                 </h4>
                 <span className="text-[10px] text-slate-500 font-bold">
                   {chronologicalOrders.length} {chronologicalOrders.length === 1 ? 'ronda' : 'rondas'}
@@ -419,12 +581,10 @@ export function OrderTimelineModal({
                       <div className="space-y-1.5">
                         {items.length > 0 ? (
                           items.map((item, itemIdx) => {
-                            const prod = item.product || (item as any).products
-                            const name = prod?.name || `Plato #${itemIdx + 1}`
+                            const prod = item.product || (item as any).products || resolveCatalogProductForItem(item)
+                            const name = getItemRealName(item, `Plato #${itemIdx + 1}`)
                             const itemPrice = Number((item as any).unit_price ?? (item as any).price ?? prod?.price ?? 0)
                             const cleanNote = stripInternalStationTags(item.notes)
-                            const course = getItemCourse(item)
-                            const isDeliveredOrPaid = ord.status === 'delivered' || ord.status === 'paid'
 
                             return (
                               <div
@@ -444,52 +604,8 @@ export function OrderTimelineModal({
                                         🎁 Cortesía
                                       </span>
                                     )}
-
-                                    {/* Badges de estado limpios por tiempo / estación (solo en curso) */}
-                                    {!isDeliveredOrPaid && (
-                                      <>
-                                        {course === 'drink' && (
-                                          isDrinkServed(item) ? (
-                                            <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] font-bold">
-                                              ✓ Servida en mesa
-                                            </span>
-                                          ) : (
-                                            <span className="px-1.5 py-0.2 rounded-md bg-cyan-50 text-cyan-800 border border-cyan-200 text-[9px] font-bold">
-                                              🥤 En barra
-                                            </span>
-                                          )
-                                        )}
-                                        {course === 'dessert' && (
-                                          isDessertReady(item) ? (
-                                            <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] font-bold">
-                                              ✓ Postre listo
-                                            </span>
-                                          ) : isDessertFired(item) ? (
-                                            <span className="px-1.5 py-0.2 rounded-md bg-purple-100 text-purple-900 border border-purple-300 text-[9px] font-bold">
-                                              🔥 Marchando en cocina
-                                            </span>
-                                          ) : (
-                                            <span className="px-1.5 py-0.2 rounded-md bg-slate-100 text-slate-600 border border-slate-200 text-[9px] font-semibold">
-                                              ⏳ En espera para después
-                                            </span>
-                                          )
-                                        )}
-                                        {(course === 'first' || course === 'second') && (
-                                          (isFoodReady(item) || ord.status === 'ready') ? (
-                                            <span className="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[9px] font-bold">
-                                              ✓ Listo para llevar a mesa
-                                            </span>
-                                          ) : ord.status === 'preparing' ? (
-                                            <span className="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-semibold">
-                                              👨‍🍳 En preparación
-                                            </span>
-                                          ) : null
-                                        )}
-                                      </>
-                                    )}
                                   </div>
 
-                                  {/* Aclaración del cliente sanitizada (sin códigos técnicos) */}
                                   {cleanNote !== '' && (
                                     <div className="text-[10px] text-slate-500 font-medium italic mt-0.5 pl-1">
                                       Nota: {cleanNote}
@@ -542,10 +658,11 @@ export function OrderTimelineModal({
           )}
         </div>
 
-        {/* Acciones Rápidas */}
+        {/* Acciones Rápidas (Sin botones de automarcha por parte del comensal) */}
         <div className="p-4 bg-white border-t border-slate-200 flex items-center gap-2 flex-shrink-0">
           {onCallWaiter && (
             <button
+              type="button"
               onClick={() => {
                 onCallWaiter()
                 onClose()
@@ -558,6 +675,7 @@ export function OrderTimelineModal({
           )}
           {onRequestService && (
             <button
+              type="button"
               onClick={() => {
                 onRequestService()
                 onClose()
@@ -568,8 +686,9 @@ export function OrderTimelineModal({
               <span>Pedir Servicio</span>
             </button>
           )}
-          {onRequestBill && !hasPendingDesserts && (status === 'delivered' || areDessertsServed || (areMainsServed && desserts.length === 0)) && (
+          {onRequestBill && !hasPendingDesserts && (status === 'delivered' || areAllDessertsServed || (areAllMainsServed && !hasDesserts)) && (
             <button
+              type="button"
               onClick={() => {
                 onRequestBill()
                 onClose()

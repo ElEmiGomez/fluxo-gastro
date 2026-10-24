@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import { useParams, useSearchParams, usePathname } from 'next/navigation'
 import { Check, Loader2 } from 'lucide-react'
-import { CartItem, Product, DailyMenu } from '@/types/database.types'
+import { CartItem, Product, DailyMenu, Order } from '@/types/database.types'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
 import { MenuHeader } from '@/components/menu/MenuHeader'
@@ -14,9 +14,8 @@ import { DailyMenuCard } from '@/components/menu/DailyMenuCard'
 import { PromoConfiguratorModal, PromoConfiguredPayload } from '@/components/menu/PromoConfiguratorModal'
 import { QuickDessertSelectorModal } from '@/components/comandero/QuickDessertSelectorModal'
 import { QuickSobremesaModal } from '@/components/menu/QuickSobremesaModal'
-import { orderHasPendingChoiceDesserts, ordersHavePendingDesserts } from '@/lib/course-utils'
+import { orderHasPendingChoiceDesserts, ordersHavePendingDesserts, hydrateOrderItemsWithCatalog } from '@/lib/course-utils'
 import { isDailyMenuActive } from '@/lib/daily-menu-utils'
-import { MenuListCatalog } from '@/components/menu/MenuListCatalog'
 import { MenuGridCatalog } from '@/components/menu/MenuGridCatalog'
 import { MenuFloatingCartBar } from '@/components/menu/MenuFloatingCartBar'
 import { MenuBottomCategoryBar } from '@/components/menu/MenuBottomCategoryBar'
@@ -121,7 +120,6 @@ function DinerMenuContent() {
   const loyalty = useLoyalty({ slug, tableNumber })
 
   // 3. Catálogo de productos y filtros
-  // Inicializamos temporalmente el hook in-situ placeholder
   const [isInSituAdminState, setIsInSituAdminState] = useState(false)
   const {
     restaurant,
@@ -140,8 +138,6 @@ function DinerMenuContent() {
     setDietaryFilter,
     viewMode,
     setViewMode,
-    expandedProductIds,
-    toggleExpand,
     filteredProducts,
     loadData,
     categoryTabsRef,
@@ -196,6 +192,7 @@ function DinerMenuContent() {
     tableOrderStatus,
     setTableOrderStatus,
     tableOrders,
+    setTableOrders,
     tableTotalAmount,
     setTableTotalAmount,
     prevTableOrdersMapRef,
@@ -213,6 +210,7 @@ function DinerMenuContent() {
     hasRequestedBillRef,
     userRequestedBillTimeRef,
     setPendingServiceCalls,
+    products,
     setProducts,
     loadData,
     setCart,
@@ -300,7 +298,6 @@ function DinerMenuContent() {
     if (e) e.stopPropagation()
     if (isInSituAdmin) return
 
-    // Si es un combo/promo y se quiere agregar, abrir modal de configuración paso a paso
     if (delta > 0 && isPromoProduct(product)) {
       setCustomizingPromoProduct(product)
       return
@@ -309,12 +306,10 @@ function DinerMenuContent() {
     triggerHaptic(delta > 0 ? HAPTIC_PATTERNS.QUANTITY : HAPTIC_PATTERNS.TAP)
 
     setCart(prev => {
-      // Buscar primero un ítem sin modificaciones específicas (estándar)
       let targetIdx = prev.findIndex(
         item => item.product?.id === product.id && (!item.selectedPills || item.selectedPills.length === 0) && (!item.notes || item.notes === '')
       )
 
-      // Si no existe ítem estándar, buscar el último ítem de este producto
       if (targetIdx === -1) {
         for (let i = prev.length - 1; i >= 0; i--) {
           if (prev[i].product?.id === product.id) {
@@ -491,7 +486,6 @@ function DinerMenuContent() {
       },
     ])
 
-    // Retener los puntos inmediatamente en el servidor
     if (loyalty.profile?.email) {
       try {
         await fetch('/api/loyalty/escrow', {
@@ -513,7 +507,6 @@ function DinerMenuContent() {
       }
     }
 
-    // Cerrar modal de puntos y abrir comanda para que el comensal lo vea reflejado al instante
     loyalty.setIsModalOpen(false)
     setIsCartOpen(true)
     setAddedToast(`¡${reward.product.name} canjeado gratis en tu comanda!`)
@@ -539,10 +532,21 @@ function DinerMenuContent() {
           sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
         } catch {}
       }
-      prevTableOrdersMapRef.current.set(newOrder.id, newOrder)
-      setTableOrderStatus(newOrder.status || 'pending_validation')
-      if (newOrder.total_amount) {
-        setTableTotalAmount(prev => Math.max(prev, Number(newOrder.total_amount) || 0))
+      const hydratedItems = hydrateOrderItemsWithCatalog(
+        newOrder.order_items || [],
+        products,
+        undefined,
+        newOrder.notes
+      )
+      const hydratedOrder: Order = {
+        ...newOrder,
+        order_items: hydratedItems,
+      }
+      prevTableOrdersMapRef.current.set(hydratedOrder.id, hydratedOrder)
+      setTableOrders(prev => [hydratedOrder, ...prev.filter(o => o.id !== hydratedOrder.id)])
+      setTableOrderStatus(hydratedOrder.status || 'pending_validation')
+      if (hydratedOrder.total_amount) {
+        setTableTotalAmount(prev => Math.max(prev, Number(hydratedOrder.total_amount) || 0))
       }
       loyalty.refresh()
     }
@@ -677,7 +681,7 @@ function DinerMenuContent() {
             hasActiveDailyMenu={hasActiveDailyMenu}
           />
 
-          {/* Menú del Día Dinámico (Visible exclusivamente en la categoría Nuestras Promos, si está activo y en horario) */}
+          {/* Menú del Día Dinámico */}
           {hasActiveDailyMenu && dailyMenu && !isFixedMenu && Boolean(selectedCategory !== 'all' && categories.find(c => c.id === selectedCategory)?.name.toUpperCase().includes('PROMO')) && (
             <div className="pt-0.5 animate-in fade-in duration-300">
               <DailyMenuCard

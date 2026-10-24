@@ -607,7 +607,7 @@ export function isDrinkServed(item: OrderItem, order?: Order | any): boolean {
   )
 }
 
-export function isFoodReady(item: OrderItem): boolean {
+export function isFoodReady(item: OrderItem, parentOrder?: any): boolean {
   if (isStarterItem(item)) return isStarterReady(item)
   if (isMainItem(item)) return isMainReady(item)
   return Boolean(
@@ -618,13 +618,15 @@ export function isFoodReady(item: OrderItem): boolean {
   )
 }
 
-export function isFoodServed(item: OrderItem): boolean {
+export function isFoodServed(item: OrderItem, parentOrder?: any): boolean {
   if (isStarterItem(item)) return isStarterServed(item)
   if (isMainItem(item)) return isMainServed(item)
   return false
 }
 
-export function isStarterReady(item: OrderItem): boolean {
+export function isStarterReady(item: OrderItem, parentOrder?: any): boolean {
+  const pNotes = typeof parentOrder === 'string' ? parentOrder : parentOrder?.notes || ''
+  if (pNotes && (pNotes.includes(TAG_STARTER_READY) || pNotes.includes(TAG_STARTER_SERVED) || pNotes.includes(TAG_FOOD_READY))) return true
   return Boolean(
     item?.notes &&
       (item.notes.includes(TAG_STARTER_READY) ||
@@ -653,11 +655,17 @@ export function isStarterServed(item: OrderItem, parentOrder?: any): boolean {
   return false
 }
 
-export function isMainCooking(item: OrderItem): boolean {
+export function isMainCooking(item: OrderItem, parentOrder?: any): boolean {
+  const pNotes = typeof parentOrder === 'string' ? parentOrder : parentOrder?.notes || ''
+  if (pNotes && pNotes.includes(TAG_MAIN_COOKING)) return true
   return Boolean(item?.notes && item.notes.includes(TAG_MAIN_COOKING))
 }
 
-export function isMainReady(item: OrderItem): boolean {
+export function isMainReady(item: OrderItem, parentOrder?: any): boolean {
+  if (parentOrder && typeof parentOrder === 'object') {
+    if (parentOrder.notes?.includes(TAG_MAIN_READY) || parentOrder.notes?.includes(TAG_MAIN_SERVED)) return true
+    if (parentOrder.status === 'delivered' || parentOrder.status === 'paid') return true
+  }
   return Boolean(
     item?.notes &&
       (item.notes.includes(TAG_MAIN_READY) ||
@@ -670,6 +678,7 @@ export function isMainReady(item: OrderItem): boolean {
 
 export function isMainServed(item: OrderItem, parentOrder?: any): boolean {
   if (item?.notes && item.notes.includes(TAG_MAIN_SERVED)) return true
+  if (typeof parentOrder === 'string' && (parentOrder.includes(TAG_MAIN_SERVED) || parentOrder.includes(TAG_DESSERT_FIRED) || parentOrder.includes(TAG_DESSERT_SERVED))) return true
   if (parentOrder && typeof parentOrder === 'object') {
     if (parentOrder.notes?.includes(TAG_MAIN_SERVED)) return true
     if (parentOrder.status === 'delivered' || parentOrder.status === 'paid') return true
@@ -686,6 +695,7 @@ export function isMainServed(item: OrderItem, parentOrder?: any): boolean {
 }
 
 export function isDessertServed(item: OrderItem, parentOrder?: any): boolean {
+  if (typeof parentOrder === 'string' && (parentOrder.includes(TAG_DESSERT_SERVED) || parentOrder.includes('[POSTRE: SERVIDO]') || parentOrder.includes('[POSTRE:SERVIDO]'))) return true
   if (
     item?.notes &&
     (item.notes.includes(TAG_DESSERT_SERVED) ||
@@ -711,7 +721,11 @@ export function isDessertServed(item: OrderItem, parentOrder?: any): boolean {
   return false
 }
 
-export function isDessertReady(item: OrderItem): boolean {
+export function isDessertReady(item: OrderItem, parentOrder?: any): boolean {
+  if (parentOrder && typeof parentOrder === 'object') {
+    if (parentOrder.notes?.includes(TAG_DESSERT_READY) || parentOrder.notes?.includes(TAG_DESSERT_SERVED)) return true
+    if (parentOrder.status === 'paid') return true
+  }
   return Boolean(
     item?.notes &&
       (item.notes.includes(TAG_DESSERT_READY) ||
@@ -723,7 +737,9 @@ export function isDessertReady(item: OrderItem): boolean {
   )
 }
 
-export function isDessertFired(item: OrderItem): boolean {
+export function isDessertFired(item: OrderItem, parentOrder?: any): boolean {
+  const pNotes = typeof parentOrder === 'string' ? parentOrder : `${parentOrder?.notes || ''} ${parentOrder?.kitchen_notes || ''}`
+  if (pNotes && (pNotes.includes(TAG_DESSERT_FIRED) || pNotes.includes(TAG_DESSERT_COOKING) || pNotes.includes(TAG_DESSERT_READY) || pNotes.includes(TAG_DESSERT_SERVED))) return true
   return Boolean(
     item?.notes &&
       (item.notes.includes(TAG_DESSERT_FIRED) ||
@@ -733,7 +749,9 @@ export function isDessertFired(item: OrderItem): boolean {
   )
 }
 
-export function isDessertCooking(item: OrderItem): boolean {
+export function isDessertCooking(item: OrderItem, parentOrder?: any): boolean {
+  const pNotes = typeof parentOrder === 'string' ? parentOrder : parentOrder?.notes || ''
+  if (pNotes && pNotes.includes(TAG_DESSERT_COOKING)) return true
   return Boolean(item?.notes && item.notes.includes(TAG_DESSERT_COOKING))
 }
 
@@ -777,7 +795,9 @@ export function areOrderStartersServed(order: Order): boolean {
   return starters.every(it => isStarterServed(it, order))
 }
 
-export function isMainFired(item: OrderItem): boolean {
+export function isMainFired(item: OrderItem, parentOrder?: any): boolean {
+  const pNotes = typeof parentOrder === 'string' ? parentOrder : `${parentOrder?.notes || ''} ${parentOrder?.kitchen_notes || ''}`
+  if (pNotes && (pNotes.includes(TAG_MAIN_FIRED) || pNotes.includes(TAG_MAIN_COOKING) || pNotes.includes(TAG_MAIN_READY) || pNotes.includes(TAG_MAIN_SERVED))) return true
   return Boolean(
     item?.notes &&
       (item.notes.includes(TAG_MAIN_FIRED) ||

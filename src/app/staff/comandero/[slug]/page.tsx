@@ -3,12 +3,22 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
-import { areOrderDrinksPending, areOrderDessertsPendingWaiter, orderHasPendingChoiceDesserts, isOrderReadyToPick, isDrinkItem, TAG_DRINK_SERVED } from '@/lib/course-utils'
+import {
+  areOrderDrinksPending,
+  areOrderDessertsPendingWaiter,
+  orderHasPendingChoiceDesserts,
+  isOrderReadyToPick,
+  isDrinkItem,
+  TAG_DRINK_SERVED,
+  mergeItemNotes,
+  hydrateOrderItemsWithCatalog,
+  areAllOrderCoursesDelivered,
+} from '@/lib/course-utils'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { TableSelector } from '@/components/comandero/TableSelector'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
-import { Product, CartItem, CourseType, DailyMenu, Order } from '@/types/database.types'
+import { Product, CartItem, CourseType, DailyMenu, Order, OrderStatus } from '@/types/database.types'
 import { DailyMenuSelectionItem } from '@/components/menu/DailyMenuModal'
 import { PromoConfiguredPayload } from '@/components/menu/PromoConfiguratorModal'
 import { useComanderoData } from '@/hooks/comandero/useComanderoData'
@@ -48,6 +58,7 @@ export default function WaiterComanderoPage() {
     attendedValidationOrderIdsRef,
     recentTogglesRef,
     recentMutationsRef,
+    mutationLockUntilRef,
   } = useComanderoData(slug)
 
   // 2. Carritos y configuración aislada por mesa
@@ -260,6 +271,7 @@ export default function WaiterComanderoPage() {
   } = useComanderoActions({
     slug,
     restaurant,
+    products,
     serverOrders,
     setServerOrders,
     pendingCalls,
@@ -276,6 +288,7 @@ export default function WaiterComanderoPage() {
     readyOrderAlert,
     setReadyOrderAlert,
     recentMutationsRef,
+    mutationLockUntilRef,
   })
 
   // Añadir ítem configurado al carrito de la mesa
@@ -339,31 +352,41 @@ export default function WaiterComanderoPage() {
     setServingDrinkOrderIds(prev => new Set(prev).add(orderId))
 
     let updatedOrderForRef: Order | null = null
+    const lockUntil = Date.now() + 4500
+    mutationLockUntilRef.current.set(orderId, lockUntil)
 
-    // Actualización inmediata en estado local para feedback visual instantáneo
+    // Actualización inmediata en estado local con sellado monotónico e hidratación
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          if (isDrinkItem(it)) {
-            const currentNotes = it.notes || ''
-            if (!currentNotes.includes(TAG_DRINK_SERVED)) {
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            if (isDrinkItem(it)) {
               return {
                 ...it,
-                notes: currentNotes ? `${currentNotes} ${TAG_DRINK_SERVED}` : TAG_DRINK_SERVED,
+                notes: mergeItemNotes(it.notes, TAG_DRINK_SERVED),
               }
             }
-          }
-          return it
-        })
-        const updated = { ...o, order_items: updatedItems }
+            return it
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes((o as any).notes, TAG_DRINK_SERVED)
+        const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
+        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : o.status
+        const updated: Order = { ...candidate, status: nextStatus }
         updatedOrderForRef = updated
         return updated
       })
     )
 
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, until: Date.now() + 4500 })
+      recentMutationsRef.current.set(orderId, {
+        order: updatedOrderForRef,
+        status: (updatedOrderForRef as Order).status,
+        until: lockUntil,
+      })
     }
 
     try {
@@ -379,8 +402,10 @@ export default function WaiterComanderoPage() {
       if (res.ok) {
         const data = await res.json()
         if (data.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, until: Date.now() + 4500 })
-          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+          const until = Date.now() + 4500
+          mutationLockUntilRef.current.set(orderId, until)
+          recentMutationsRef.current.set(orderId, { order: data.order, status: data.order.status, until })
+          setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
         await syncServerData()
@@ -395,7 +420,7 @@ export default function WaiterComanderoPage() {
         return next
       })
     }
-  }, [slug, setServerOrders, syncServerData, recentMutationsRef])
+  }, [slug, products, setServerOrders, syncServerData, recentMutationsRef, mutationLockUntilRef])
 
   const handleServeAllDrinks = useCallback(async () => {
     if (pendingDrinksList.length === 0) return

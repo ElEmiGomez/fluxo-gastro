@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   Trash2,
   Users,
-  Flame,
   Receipt,
   RefreshCw,
   CreditCard,
@@ -19,7 +18,7 @@ import {
   Clock,
   ChefHat,
 } from 'lucide-react'
-import { Table, Order, Product } from '@/types/database.types'
+import { Table, Order } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
 import { PendingServiceCall, PreviousDrinkItem } from '@/types/comandero.types'
 import {
@@ -39,18 +38,14 @@ import {
   getPendingDrinks,
   isStarterItem,
   isMainItem,
-  isStarterReady,
-  isStarterServed,
-  isMainFired,
-  isMainCooking,
-  isMainReady,
-  isMainServed,
   areOrderStartersReady,
   areOrderStartersServed,
   areOrderMainsReady,
   areOrderMainsServed,
   areOrderMainsFired,
   areOrderDessertsServed,
+  resolveCatalogProductForItem,
+  isGenericProductName,
 } from '@/lib/course-utils'
 
 interface ComanderoTableDetailPanelProps {
@@ -87,6 +82,18 @@ interface ComanderoTableDetailPanelProps {
   onDeliverMains?: (orderId: string) => void
 }
 
+function getItemRealProductName(item: any, fallbackLabel: string): string {
+  const currentName = item?.product?.name || item?.name
+  if (currentName && !isGenericProductName(currentName)) {
+    return currentName
+  }
+  const resolved = resolveCatalogProductForItem(item)
+  if (resolved?.name) {
+    return resolved.name
+  }
+  return currentName || fallbackLabel
+}
+
 export function ComanderoTableDetailPanel({
   selectedTable,
   pendingCalls,
@@ -121,9 +128,6 @@ export function ComanderoTableDetailPanel({
   onDeliverMains,
 }: ComanderoTableDetailPanelProps) {
   const tableCalls = pendingCalls.filter(c => c.table_number.toString() === selectedTable.table_number.toString())
-  const readyOrders = serverOrders.filter(
-    o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && o.status === 'ready'
-  )
   const validationOrders = serverOrders.filter(
     o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && o.status === 'pending_validation'
   )
@@ -138,7 +142,7 @@ export function ComanderoTableDetailPanel({
   // 1. Todas las bebidas de esta mesa (para visibilidad completa permanente en sala)
   const tableAllDrinks = React.useMemo(() => {
     return tableActiveOrders.flatMap(ord =>
-      (ord.order_items || []).filter(isDrinkItem).map(it => ({ orderId: ord.id, item: it }))
+      (ord.order_items || []).filter(isDrinkItem).map(it => ({ orderId: ord.id, order: ord, item: it }))
     )
   }, [tableActiveOrders])
 
@@ -152,25 +156,13 @@ export function ComanderoTableDetailPanel({
   // 2. Entradas y Principales de cocina en esta mesa
   const tableStarters = React.useMemo(() => {
     return tableActiveOrders.flatMap(ord =>
-      (ord.order_items || []).filter(isStarterItem).map(it => ({ orderId: ord.id, item: it }))
+      (ord.order_items || []).filter(isStarterItem).map(it => ({ orderId: ord.id, order: ord, item: it }))
     )
   }, [tableActiveOrders])
 
   const tableMains = React.useMemo(() => {
     return tableActiveOrders.flatMap(ord =>
-      (ord.order_items || []).filter(isMainItem).map(it => ({ orderId: ord.id, item: it }))
-    )
-  }, [tableActiveOrders])
-
-  const hasStartersReadyToPick = React.useMemo(() => {
-    return tableActiveOrders.some(
-      o => (o.order_items || []).some(isStarterItem) && areOrderStartersReady(o) && !areOrderStartersServed(o)
-    )
-  }, [tableActiveOrders])
-
-  const hasMainsReadyToPick = React.useMemo(() => {
-    return tableActiveOrders.some(
-      o => (o.order_items || []).some(isMainItem) && areOrderMainsReady(o) && !areOrderMainsServed(o)
+      (ord.order_items || []).filter(isMainItem).map(it => ({ orderId: ord.id, order: ord, item: it }))
     )
   }, [tableActiveOrders])
 
@@ -179,10 +171,24 @@ export function ComanderoTableDetailPanel({
     return tableActiveOrders.every(o => areOrderStartersServed(o))
   }, [tableStarters, tableActiveOrders])
 
+  const hasStartersReadyToPick = React.useMemo(() => {
+    if (hasStartersDone) return false
+    return tableActiveOrders.some(
+      o => (o.order_items || []).some(isStarterItem) && areOrderStartersReady(o) && !areOrderStartersServed(o)
+    )
+  }, [tableActiveOrders, hasStartersDone])
+
   const allMainsServed = React.useMemo(() => {
     if (tableMains.length === 0) return false
     return tableActiveOrders.every(o => areOrderMainsServed(o))
   }, [tableMains, tableActiveOrders])
+
+  const hasMainsReadyToPick = React.useMemo(() => {
+    if (allMainsServed) return false
+    return tableActiveOrders.some(
+      o => (o.order_items || []).some(isMainItem) && areOrderMainsReady(o) && !areOrderMainsServed(o)
+    )
+  }, [tableActiveOrders, allMainsServed])
 
   const areMainsFired = React.useMemo(() => {
     if (tableMains.length === 0) return true
@@ -201,7 +207,7 @@ export function ComanderoTableDetailPanel({
   // 3. Postres de la mesa con sus nombres específicos
   const tableDesserts = React.useMemo(() => {
     return tableActiveOrders.flatMap(ord =>
-      (ord.order_items || []).filter(isDessertItem).map(it => ({ orderId: ord.id, item: it }))
+      (ord.order_items || []).filter(isDessertItem).map(it => ({ orderId: ord.id, order: ord, item: it }))
     )
   }, [tableActiveOrders])
 
@@ -221,27 +227,29 @@ export function ComanderoTableDetailPanel({
   }, [tableMains, tableStarters, tableActiveOrders])
 
   const hasDessertsReadyToPick = React.useMemo(() => {
+    if (allDessertsServed) return false
     return tableActiveOrders.some(
       o => (o.order_items || []).filter(isDessertItem).some(d => isDessertReady(d) && !isDessertServed(d, o))
     )
-  }, [tableActiveOrders])
+  }, [tableActiveOrders, allDessertsServed])
 
   const isTableDessertFired = React.useMemo(() => {
+    if (allDessertsServed) return false
     return tableActiveOrders.some(
       o =>
         (o as any).notes?.includes(TAG_DESSERT_FIRED) ||
         (o as any).kitchen_notes?.includes(TAG_DESSERT_FIRED) ||
         (o.order_items || []).filter(isDessertItem).some(d => isDessertFired(d) || isDessertCooking(d))
     )
-  }, [tableActiveOrders])
+  }, [tableActiveOrders, allDessertsServed])
 
-  const hasPendingDesserts = serverOrders.some(
+  const hasPendingDesserts = !allDessertsServed && serverOrders.some(
     o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
          o.status !== 'pending_validation' && o.status !== 'paid' && o.status !== 'cancelled' &&
          orderHasHeldDesserts(o)
   )
 
-  const hasPendingDessertChoiceInTable = serverOrders.some(
+  const hasPendingDessertChoiceInTable = !allDessertsServed && serverOrders.some(
     o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
          orderHasPendingChoiceDesserts(o)
   )
@@ -256,7 +264,8 @@ export function ComanderoTableDetailPanel({
       if (ord.order_items && ord.order_items.length > 0) {
         ord.order_items.forEach(it => {
           if (!it.is_complimentary) {
-            sum += (it.quantity || 1) * (it.product?.price || 0)
+            const unitPrice = it.product?.price ?? resolveCatalogProductForItem(it)?.price ?? 0
+            sum += (it.quantity || 1) * unitPrice
           }
         })
       } else if (ord.total_amount) {
@@ -345,7 +354,7 @@ export function ComanderoTableDetailPanel({
                     </span>
                   </div>
                   <div className="text-xs font-bold text-slate-800">
-                    {valOrder.order_items?.map(it => `${it.quantity}x ${it.product?.name || 'Plato'}`).join(' + ')}
+                    {valOrder.order_items?.map(it => `${it.quantity}x ${getItemRealProductName(it, 'Plato')}`).join(' + ')}
                   </div>
                   {valOrder.order_items?.some(it => it.notes) && (
                     <p className="text-[11px] text-amber-800 font-semibold">
@@ -473,17 +482,18 @@ export function ComanderoTableDetailPanel({
 
             <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
               {tableAllDrinks.map((d, idx) => {
-                const served = isDrinkServed(d.item)
+                const served = isDrinkServed(d.item, d.order)
+                const cleanNotes = cleanItemNotes(d.item.notes)
                 return (
                   <div key={idx} className="flex items-center justify-between text-xs bg-white px-3 py-2 rounded-xl border border-cyan-200/70 shadow-2xs">
                     <div className="min-w-0">
                       <span className="font-black text-cyan-700 mr-1.5">{d.item.quantity}x</span>
                       <span className={`font-bold ${served ? 'text-slate-500' : 'text-slate-800'}`}>
-                        {d.item.product?.name || 'Bebida'}
+                        {getItemRealProductName(d.item, 'Bebida')}
                       </span>
-                      {d.item.notes && (
+                      {cleanNotes && (
                         <span className="block text-[10px] text-cyan-800/80 font-bold pl-3">
-                          &bull; {cleanItemNotes(d.item.notes)}
+                          &bull; {cleanNotes}
                         </span>
                       )}
                     </div>
@@ -519,7 +529,7 @@ export function ComanderoTableDetailPanel({
                     <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
                     <span>
                       {tableAllDrinks.some(d => {
-                        const n = (d.item.product?.name || '').toLowerCase()
+                        const n = getItemRealProductName(d.item, '').toLowerCase()
                         return n.includes('café') || n.includes('cafe') || n.includes('té') || n.includes('infusión')
                       })
                         ? 'Entregar Café / Bebidas al Cliente'
@@ -558,31 +568,34 @@ export function ComanderoTableDetailPanel({
                     <span className="text-[10px] text-slate-400 font-bold">({tableStarters.reduce((acc, it) => acc + (it.item.quantity || 1), 0)})</span>
                   </span>
                   <span className={`text-xs sm:text-sm font-black px-3 py-1 rounded-lg shadow-xs ${
-                    hasStartersReadyToPick
-                      ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
-                      : hasStartersDone
+                    hasStartersDone
                       ? 'bg-slate-100 text-emerald-700 border border-emerald-200'
+                      : hasStartersReadyToPick
+                      ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
                       : 'bg-amber-50 text-amber-800 border border-amber-200'
                   }`}>
-                    {hasStartersReadyToPick ? '✨ Listo en Cocina' : hasStartersDone ? '✅ Entregado' : '⏳ En Cocina'}
+                    {hasStartersDone ? '✅ Entregado' : hasStartersReadyToPick ? '✨ Listo en Cocina' : '⏳ En Cocina'}
                   </span>
                 </div>
                 <div className="space-y-1 text-xs text-slate-700">
-                  {tableStarters.map((it, idx) => (
-                    <div key={idx} className="flex items-center justify-between">
-                      <div>
-                        <span className="font-black text-amber-600">{it.item.quantity}x </span>
-                        <span className="font-bold text-slate-800">{it.item.product?.name || 'Entrada'}</span>
-                        {it.item.notes && (
-                          <span className="block text-[10px] text-slate-500 italic pl-3">
-                            &bull; {cleanItemNotes(it.item.notes)}
-                          </span>
-                        )}
+                  {tableStarters.map((it, idx) => {
+                    const cleanNotes = cleanItemNotes(it.item.notes)
+                    return (
+                      <div key={idx} className="flex items-center justify-between">
+                        <div>
+                          <span className="font-black text-amber-600">{it.item.quantity}x </span>
+                          <span className="font-bold text-slate-800">{getItemRealProductName(it.item, 'Entrada')}</span>
+                          {cleanNotes && (
+                            <span className="block text-[10px] text-slate-500 italic pl-3">
+                              &bull; {cleanNotes}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
-                {hasStartersReadyToPick && (
+                {hasStartersReadyToPick && !hasStartersDone && (
                   <button
                     type="button"
                     onClick={() => {
@@ -607,20 +620,20 @@ export function ComanderoTableDetailPanel({
                     <span className="text-[10px] text-slate-400 font-bold">({tableMains.reduce((acc, it) => acc + (it.item.quantity || 1), 0)})</span>
                   </span>
                   <span className={`text-xs sm:text-sm font-black px-3 py-1 rounded-lg shadow-xs ${
-                    hasMainsReadyToPick
-                      ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
-                      : allMainsServed
+                    allMainsServed
                       ? 'bg-slate-100 text-emerald-700 border border-emerald-200'
+                      : hasMainsReadyToPick
+                      ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
                       : !areMainsFired
                       ? (tableStarters.length > 0 && !hasStartersDone
-                          ? '⏸️ Esperando 1º'
-                          : '⏳ En Espera del Mozo')
-                      : '🔥 En Cocina'}
+                          ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                          : 'bg-sky-50 text-sky-800 border border-sky-200')
+                      : 'bg-amber-50 text-amber-800 border border-amber-200'
                   }`}>
-                    {hasMainsReadyToPick
-                      ? '✨ Listo en Cocina'
-                      : allMainsServed
+                    {allMainsServed
                       ? '✅ Entregado'
+                      : hasMainsReadyToPick
+                      ? '✨ Listo en Cocina'
                       : !areMainsFired
                       ? (tableStarters.length > 0 && !hasStartersDone
                           ? '⏸️ Esperando 1º'
@@ -629,19 +642,22 @@ export function ComanderoTableDetailPanel({
                   </span>
                 </div>
                 <div className="space-y-1 text-xs text-slate-700">
-                  {tableMains.map((it, idx) => (
-                    <div key={idx} className="flex items-center justify-between">
-                      <div>
-                        <span className="font-black text-sky-600">{it.item.quantity}x </span>
-                        <span className="font-bold text-slate-800">{it.item.product?.name || 'Principal'}</span>
-                        {it.item.notes && (
-                          <span className="block text-[10px] text-slate-500 italic pl-3">
-                            &bull; {cleanItemNotes(it.item.notes)}
-                          </span>
-                        )}
+                  {tableMains.map((it, idx) => {
+                    const cleanNotes = cleanItemNotes(it.item.notes)
+                    return (
+                      <div key={idx} className="flex items-center justify-between">
+                        <div>
+                          <span className="font-black text-sky-600">{it.item.quantity}x </span>
+                          <span className="font-bold text-slate-800">{getItemRealProductName(it.item, 'Principal')}</span>
+                          {cleanNotes && (
+                            <span className="block text-[10px] text-slate-500 italic pl-3">
+                              &bull; {cleanNotes}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
                 {canFireMains && !allMainsServed && !hasMainsReadyToPick && (
                   <button
@@ -656,7 +672,7 @@ export function ComanderoTableDetailPanel({
                     <span>▶️ Marchar Principales a Cocina</span>
                   </button>
                 )}
-                {hasMainsReadyToPick && (
+                {hasMainsReadyToPick && !allMainsServed && (
                   <button
                     type="button"
                     onClick={() => {
@@ -675,7 +691,9 @@ export function ComanderoTableDetailPanel({
             {/* 3º Postres */}
             {tableDesserts.length > 0 && (
               <div className={`bg-white p-3 rounded-xl border border-slate-200/90 border-l-4 ${
-                hasDessertsReadyToPick
+                allDessertsServed
+                  ? 'border-l-emerald-500'
+                  : hasDessertsReadyToPick
                   ? 'border-l-emerald-500'
                   : isTableDessertFired
                   ? 'border-l-amber-500'
@@ -689,10 +707,10 @@ export function ComanderoTableDetailPanel({
                     <span className="text-[10px] text-slate-400 font-bold">({tableDesserts.reduce((acc, it) => acc + (it.item.quantity || 1), 0)})</span>
                   </span>
                   <span className={`text-xs sm:text-sm font-black px-3 py-1 rounded-lg shadow-xs ${
-                    hasDessertsReadyToPick
-                      ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
-                      : allDessertsServed
+                    allDessertsServed
                       ? 'bg-slate-100 text-emerald-700 border border-emerald-200'
+                      : hasDessertsReadyToPick
+                      ? 'bg-emerald-500 text-white animate-pulse shadow-2xs'
                       : isTableDessertFired
                       ? 'bg-amber-50 text-amber-800 border border-amber-200'
                       : hasPendingDessertChoiceInTable
@@ -701,10 +719,10 @@ export function ComanderoTableDetailPanel({
                       ? 'bg-slate-100 text-slate-500 border border-slate-200'
                       : 'bg-purple-50 text-purple-800 border border-purple-200'
                   }`}>
-                    {hasDessertsReadyToPick
-                      ? '✨ Listo en Cocina'
-                      : allDessertsServed
+                    {allDessertsServed
                       ? '✅ Entregado'
+                      : hasDessertsReadyToPick
+                      ? '✨ Listo en Cocina'
                       : isTableDessertFired
                       ? '🔥 En Cocina'
                       : hasPendingDessertChoiceInTable
@@ -718,21 +736,22 @@ export function ComanderoTableDetailPanel({
                 <div className="space-y-1 text-xs text-slate-700">
                   {tableDesserts.map((d, idx) => {
                     const isPendingChoice = isDessertPendingChoice(d.item)
+                    const cleanNotes = cleanItemNotes(d.item.notes)
                     return (
                       <div key={idx} className="flex items-center justify-between">
                         <div>
                           <span className="font-black text-purple-600">{d.item.quantity}x </span>
                           <span className={isPendingChoice ? 'italic text-purple-700 font-bold' : 'font-bold text-slate-800'}>
-                            {d.item.product?.name || (isPendingChoice ? 'Postre incluido por definir' : 'Postre')}
+                            {getItemRealProductName(d.item, isPendingChoice ? 'Postre incluido por definir' : 'Postre')}
                           </span>
-                          {d.item.notes && (
+                          {cleanNotes && (
                             <span className="block text-[10px] text-slate-500 italic pl-3">
-                              &bull; {cleanItemNotes(d.item.notes)}
+                              &bull; {cleanNotes}
                             </span>
                           )}
                         </div>
 
-                        {isPendingChoice && onOpenDessertSelector && (
+                        {isPendingChoice && !allDessertsServed && onOpenDessertSelector && (
                           <button
                             type="button"
                             onClick={onOpenDessertSelector}
@@ -747,7 +766,7 @@ export function ComanderoTableDetailPanel({
                 </div>
 
                 {/* Botón para entregar postres listos */}
-                {hasDessertsReadyToPick && (
+                {hasDessertsReadyToPick && !allDessertsServed && (
                   <button
                     type="button"
                     onClick={() => {
@@ -762,7 +781,7 @@ export function ComanderoTableDetailPanel({
                 )}
 
                 {/* Acciones del Mozo para marchar postres */}
-                {hasPendingDesserts && (
+                {hasPendingDesserts && !allDessertsServed && (
                   <div className="space-y-1.5 pt-1">
                     {!areFoodCoursesServed && (
                       <div className="p-2 rounded-xl bg-purple-50/70 border border-purple-200 text-purple-800 text-[11px] font-semibold flex items-center gap-1.5">

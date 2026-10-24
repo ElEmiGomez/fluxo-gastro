@@ -4,9 +4,18 @@ import { useState, useEffect, useRef } from 'react'
 import { Order, OrderStatus, Product, CartItem } from '@/types/database.types'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
-import { mergeOrderItemsCourseTags, hasItemProgressionTag, orderHasActiveDesserts, areOrderStartersServed, TAG_DESSERT_FIRED } from '@/lib/course-utils'
-
-const STORAGE_CART_PREFIX = 'gastro_cart_'
+import { MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
+import {
+  mergeOrderItemsCourseTags,
+  mergeItemNotes,
+  hasItemProgressionTag,
+  orderHasActiveDesserts,
+  areOrderStartersServed,
+  areOrderMainsFired,
+  hydrateOrderItemsWithCatalog,
+  areAllOrderCoursesDelivered,
+  TAG_DESSERT_FIRED,
+} from '@/lib/course-utils'
 
 interface UseMenuOrderSyncParams {
   slug: string
@@ -22,6 +31,7 @@ interface UseMenuOrderSyncParams {
   hasRequestedBillRef: React.MutableRefObject<boolean>
   userRequestedBillTimeRef: React.MutableRefObject<number | null>
   setPendingServiceCalls: React.Dispatch<React.SetStateAction<Set<string>>>
+  products?: Product[]
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>
   loadData: () => Promise<void>
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>
@@ -42,6 +52,7 @@ export function useMenuOrderSync({
   hasRequestedBillRef,
   userRequestedBillTimeRef,
   setPendingServiceCalls,
+  products,
   setProducts,
   loadData,
   setCart,
@@ -52,6 +63,15 @@ export function useMenuOrderSync({
   const [tableTotalAmount, setTableTotalAmount] = useState<number>(0)
   const prevTableOrdersMapRef = useRef<Map<string, any>>(new Map())
   const hasHadActiveOrderInThisSessionRef = useRef<boolean>(false)
+
+  const productsListRef = useRef<Product[]>(
+    products && products.length > 0 ? products : (MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])
+  )
+  useEffect(() => {
+    if (products && products.length > 0) {
+      productsListRef.current = products
+    }
+  }, [products])
 
   // Estabilización de referencias para evitar desmontaje y re-suscripción innecesaria del canal Realtime
   const handleTableMarkedPaidRef = useRef(handleTableMarkedPaid)
@@ -144,6 +164,8 @@ export function useMenuOrderSync({
         const rawOrders: any[] = ordersRes.orders || []
         const serverOrdersList: any[] = rawOrders.map((ord: any) => {
           const prevOrd = prevTableOrdersMapRef.current.get(ord.id)
+          const mergedOrderNotes = mergeItemNotes((ord as any).notes, (prevOrd as any)?.notes)
+
           let items = ord.order_items
           if (!items || items.length === 0) {
             if (prevOrd?.order_items && prevOrd.order_items.length > 0) {
@@ -157,29 +179,41 @@ export function useMenuOrderSync({
                 }
               } catch (_) {}
             }
-          } else if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem(`fluxo_order_items_${ord.id}`, JSON.stringify(items))
-            } catch (_) {}
           }
+
           if (prevOrd?.order_items && prevOrd.order_items.length > 0 && items && items.length > 0) {
             items = mergeOrderItemsCourseTags(items, prevOrd.order_items)
           }
 
-          const hydratedOrd = { ...ord, order_items: items }
-          let effectiveStatus = ord.status
+          // Hidratación obligatoria con nombres reales de productos y propagación monotónica de fases
+          items = hydrateOrderItemsWithCatalog(
+            items || [],
+            productsListRef.current,
+            prevOrd?.order_items,
+            mergedOrderNotes
+          )
+
+          if (items.length > 0 && typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(`fluxo_order_items_${ord.id}`, JSON.stringify(items))
+            } catch (_) {}
+          }
+
+          const hydratedOrd: Order = { ...ord, notes: mergedOrderNotes, order_items: items }
+          let effectiveStatus: OrderStatus = ord.status
           const hasProgression = (items || []).some((it: any) => hasItemProgressionTag(it.notes))
+
           if (hasProgression && ord.status === 'pending_validation') {
             effectiveStatus = (prevOrd?.status && prevOrd.status !== 'pending_validation') ? prevOrd.status : 'pending'
           } else if (prevOrd?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
-            if ((ord.status === 'preparing' || ord.status === 'ready') && (orderHasActiveDesserts(hydratedOrd) || (ord as any).notes?.includes(TAG_DESSERT_FIRED))) {
+            if ((ord.status === 'preparing' || ord.status === 'ready') && (orderHasActiveDesserts(hydratedOrd) || mergedOrderNotes.includes(TAG_DESSERT_FIRED))) {
               effectiveStatus = ord.status
             } else {
               effectiveStatus = 'delivered'
             }
           } else if (prevOrd?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
-          } else if (prevOrd?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed(hydratedOrd) && !orderHasActiveDesserts(hydratedOrd)))) {
+          } else if (prevOrd?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed(hydratedOrd) && !areOrderMainsFired(hydratedOrd) && !orderHasActiveDesserts(hydratedOrd)))) {
             effectiveStatus = 'ready'
           } else if (prevOrd?.status === 'preparing' && (ord.status === 'pending' || ord.status === 'pending_validation')) {
             effectiveStatus = 'preparing'
@@ -187,7 +221,15 @@ export function useMenuOrderSync({
             effectiveStatus = 'pending'
           }
 
-          return { ...ord, status: effectiveStatus, order_items: items }
+          const finalOrd: Order = { ...hydratedOrd, status: effectiveStatus }
+          if (
+            finalOrd.status !== 'paid' &&
+            finalOrd.status !== 'pending_validation' &&
+            areAllOrderCoursesDelivered(finalOrd)
+          ) {
+            finalOrd.status = 'delivered'
+          }
+          return finalOrd
         })
 
         const isTableExplicitlyFreed = Boolean(
@@ -223,9 +265,6 @@ export function useMenuOrderSync({
           prevTableOrdersMapRef.current.set(ord.id, ord)
         })
 
-        const activeKitchenOrders = allTableOrders.filter(
-          o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready'].includes(o.status)
-        )
         const activeTableOrders = allTableOrders.filter(
           o => ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
         )
@@ -249,7 +288,6 @@ export function useMenuOrderSync({
         })
         const hasPaidOrder = paidOrdersForTable.length > 0
 
-        // Si hay órdenes activas en la mesa, la mesa NO puede estar en estado cobrado/pagado
         if (activeTableOrders.length > 0) {
           if (isTablePaidRef.current) {
             setIsTablePaidRef.current(false)
@@ -444,7 +482,10 @@ export function useMenuOrderSync({
               return
             }
           }
-          checkOrderStatus()
+          triggerDebouncedCheck()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
+          triggerDebouncedCheck()
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events' }, (payload: any) => {
           const newEvt = payload?.new
@@ -453,13 +494,12 @@ export function useMenuOrderSync({
             newEvt.metadata?.table_number?.toString() === tableNumber?.toString()
           )
           if (matchesTable && (newEvt.event_type === 'order_paid' || newEvt.new_status === 'paid')) {
-            const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
             if (hasRequestedBillRef.current || userRequestedBillTimeRef.current) {
               handleTableMarkedPaidRef.current()
               return
             }
           }
-          checkOrderStatus()
+          triggerDebouncedCheck()
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'service_calls' }, (payload: any) => {
           const newCall = payload?.new
@@ -468,7 +508,7 @@ export function useMenuOrderSync({
             handleTableMarkedPaidRef.current()
             return
           }
-          checkOrderStatus()
+          triggerDebouncedCheck()
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'table_sessions' }, (payload: any) => {
           const newSession = payload?.new
@@ -482,12 +522,11 @@ export function useMenuOrderSync({
               return
             }
           }
-          checkOrderStatus()
+          triggerDebouncedCheck()
         })
         .subscribe()
     }
 
-    // SSE (Solo en desarrollo local offline para evitar consumo continuo en Vercel)
     if (process.env.NODE_ENV === 'development') {
       try {
         sseEventSource = new EventSource('/api/events')
@@ -499,7 +538,6 @@ export function useMenuOrderSync({
               data.type === 'table_freed' &&
               (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
             ) {
-              const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
               const prevSessionTotal = Array.from(prevTableOrdersMapRef.current.values()).reduce(
                 (sum, o) => sum + (Number(o.total_amount) || 0),
                 0
@@ -585,7 +623,6 @@ export function useMenuOrderSync({
 
     const handleLocalTableFreed = (e: any) => {
       if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        const hadOrdersInSession = hasHadActiveOrderInThisSessionRef.current || prevTableOrdersMapRef.current.size > 0
         const prevSessionTotal = Array.from(prevTableOrdersMapRef.current.values()).reduce(
           (sum, o) => sum + (Number(o.total_amount) || 0),
           0
@@ -639,7 +676,6 @@ export function useMenuOrderSync({
       }
     }
 
-    // BroadcastChannel cross-tab synchronization
     let menuBc: BroadcastChannel | null = null
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       menuBc = new BroadcastChannel('fluxo_menu_channel')

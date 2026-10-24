@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { ChefHat, Volume2, VolumeX, Sparkles, Wine, Flame, Maximize2, Minimize2, Check } from 'lucide-react'
+import { ChefHat, Volume2, VolumeX, Sparkles, Flame, Maximize2, Minimize2, Check } from 'lucide-react'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { KitchenTicket } from '@/components/kitchen/KitchenTicket'
-import { Order, OrderStatus, Restaurant } from '@/types/database.types'
+import { Order, OrderStatus, Restaurant, Product } from '@/types/database.types'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
 import { createBrowserClient } from '@/lib/supabase/client'
-import { MOCK_RESTAURANTS } from '@/lib/supabase/mock-fallback'
+import { MOCK_RESTAURANTS, MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
 import {
   orderHasFood,
   orderHasDesserts,
@@ -18,37 +18,48 @@ import {
   orderHasActiveDesserts,
   areOrderStartersServed,
   getItemCourse,
-  orderHasMains,
-  areOrderMainsReady,
   mergeOrderItemsCourseTags,
+  mergeItemNotes,
   isDrinkItem,
-  hasItemProgressionTag,
-  orderHasProgressionTags,
+  isPackHeaderItem,
+  isStarterItem,
+  isMainItem,
+  isDessertItem,
+  isStarterReady,
+  isStarterServed,
+  isMainReady,
+  isMainServed,
+  isDessertReady,
+  isDessertServed,
+  orderHasStarters,
+  areOrderMainsFired,
+  hydrateOrderItemsWithCatalog,
+  areAllKitchenCoursesCompleted,
+  resolveCatalogProductForItem,
+  isGenericProductName,
 } from '@/lib/course-utils'
-
-type StationFilterType = 'all' | 'kitchen' | 'bar'
 
 export default function KitchenKDSPage() {
   const params = useParams()
   const slug = (params?.slug as string) || 'burger-gourmet'
 
   const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
+  const productsRef = useRef<Product[]>(MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])
   const [orders, setOrders] = useState<Order[]>([])
   const [soundEnabled, setSoundEnabled] = useState(true)
   const [newOrderAlert, setNewOrderAlert] = useState(false)
   const [filterStatus, setFilterStatus] = useState<'active' | 'all' | 'ready'>('active')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [updatingOrderIds, setUpdatingOrderIds] = useState<Set<string>>(new Set())
-  
-  // Filtro de Estación: Cocina vs. Barra
-  const [stationFilter, setStationFilter] = useState<StationFilterType>('all')
 
   const previousOrdersCountRef = useRef<number>(0)
   const seenOrderIdsRef = useRef<Set<string>>(new Set())
+  const seenFiredMainOrderIdsRef = useRef<Set<string>>(new Set())
   const seenFiredDessertOrderIdsRef = useRef<Set<string>>(new Set())
   const ordersFingerRef = useRef<string>('')
   const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
   const recentMutationsRef = useRef<Map<string, { status?: OrderStatus; order?: Order; until: number }>>(new Map())
+  const mutationLockUntilRef = useRef<Map<string, number>>(new Map())
 
   // Toggle de Pantalla Completa con 1 Toque
   const toggleFullscreen = () => {
@@ -76,7 +87,7 @@ export default function KitchenKDSPage() {
     return () => clearInterval(timer)
   }, [orders, soundEnabled])
 
-  // 1. Mantener pantalla siempre encendida (WakeLock API Nativa con re-adquisición al volver a primer plano)
+  // 1. Mantener pantalla siempre encendida (WakeLock API Nativa)
   useEffect(() => {
     let wakeLock: any = null
     const requestWakeLock = async () => {
@@ -114,61 +125,63 @@ export default function KitchenKDSPage() {
       if (res.ok) {
         const data = await res.json()
         if (Array.isArray(data.orders)) {
-          // La cocina solo recibe comandas que requieren elaboración gastronómica (comida o postres)
-          // y retiene comandas entregadas si tienen postres pendientes de pase 2
           const rawOrders: Order[] = data.orders || []
           const hydratedOrders: Order[] = rawOrders.map((o: Order) => {
             const cached = prevOrdersMapRef.current.get(o.id)
-            const items = (o.order_items && o.order_items.length > 0)
+            const mergedOrderNotes = mergeItemNotes((o as any).notes, (cached as any)?.notes)
+            const rawItems = (o.order_items && o.order_items.length > 0)
               ? o.order_items
               : (cached?.order_items || [])
+            const hydratedItems = hydrateOrderItemsWithCatalog(
+              rawItems,
+              productsRef.current,
+              cached?.order_items,
+              mergedOrderNotes
+            )
             return {
               ...o,
-              order_items: items.map((it: any) => ({
-                ...it,
-                product: it.product || it.products,
-                course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
-                  ? it.course
-                  : getItemCourse(it),
-              })),
+              notes: mergedOrderNotes,
+              order_items: hydratedItems,
             }
           })
 
           const incomingOrders: Order[] = hydratedOrders.filter((o: Order) => {
-            const mut = recentMutationsRef.current.get(o.id)
-            const isMutActive = Boolean(mut && Date.now() < mut.until)
-            if (isMutActive && (mut?.status === 'delivered' || mut?.status === 'cancelled')) {
-              if (!orderHasDesserts(o) || isOrderDessertsReady(o)) {
-                return false
-              }
+            if (o.status === 'cancelled' || o.status === 'paid' || o.status === 'pending_validation') {
+              return false
             }
-            const isEligibleStatus =
-              ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status) ||
-              (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
+
+            // Bloque 3.2: En cuanto todas las fases de cocina de una comanda hayan sido completadas o entregadas,
+            // el ticket desaparece automáticamente de "En Marcha" y "Todas" del monitor de Cocina.
+            if (areAllKitchenCoursesCompleted(o)) {
+              return false
+            }
 
             // Patrón Zero-Flicker (AGENTS.md):
             // Si la orden está en estado elegible de cocina, NUNCA se descarta si sus order_items
-            // están vacíos temporalmente (race condition de red). Solo se descarta si tenemos
-            // la certeza de que contiene ÚNICAMENTE bebidas.
+            // están vacíos temporalmente (race condition de red). Solo se descarta si contiene ÚNICAMENTE bebidas.
             const hasKnownItems = Boolean(o.order_items && o.order_items.length > 0)
             const isDrinksOnly = hasKnownItems && Boolean(o.order_items && o.order_items.every(isDrinkItem))
             if (isDrinksOnly) return false
 
-            const hasFoodOrActiveDessert =
+            const hasFoodOrDessert =
               orderHasFood(o) ||
-              orderHasActiveDesserts(o) ||
-              (!orderHasFood(o) && orderHasDesserts(o) && !isOrderDessertsReady(o))
+              orderHasDesserts(o)
 
-            return isEligibleStatus && (!hasKnownItems || hasFoodOrActiveDessert)
+            return !hasKnownItems || hasFoodOrDessert
           })
 
-          // Detectar nueva orden entrante o marcha de postres para sonar campana
+          // Detectar nueva orden entrante o marcha de principales/postres para sonar campana
           let hasNewUnseenOrder = false
+          let hasNewFiredMain = false
           let hasNewFiredDessert = false
           incomingOrders.forEach(ord => {
             if (!seenOrderIdsRef.current.has(ord.id)) {
               seenOrderIdsRef.current.add(ord.id)
               hasNewUnseenOrder = true
+            }
+            if (orderHasStarters(ord) && areOrderMainsFired(ord) && !seenFiredMainOrderIdsRef.current.has(ord.id)) {
+              seenFiredMainOrderIdsRef.current.add(ord.id)
+              hasNewFiredMain = true
             }
             if (orderHasActiveDesserts(ord) && !seenFiredDessertOrderIdsRef.current.has(ord.id)) {
               seenFiredDessertOrderIdsRef.current.add(ord.id)
@@ -176,69 +189,90 @@ export default function KitchenKDSPage() {
             }
           })
 
-          if ((hasNewUnseenOrder && previousOrdersCountRef.current > 0) || hasNewFiredDessert) {
+          if ((hasNewUnseenOrder && previousOrdersCountRef.current > 0) || hasNewFiredMain || hasNewFiredDessert) {
             if (soundEnabled) playKitchenChime()
             setNewOrderAlert(true)
           }
           previousOrdersCountRef.current = incomingOrders.length
 
-          // Ordenación FIFO (más antiguo primero) para atención por orden de llegada
+          // Ordenación FIFO (más antiguo primero)
           const sorted = [...incomingOrders].sort(
             (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           )
 
+          // Fingerprint completo incluyendo notes de la orden y notes/estados de todos los order_items
           const computeKdsFinger = (list: Order[]) =>
             list
               .map(
                 o =>
-                  `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}:${(o.order_items || [])
-                    .map(i => `${i.product_id}:${i.quantity}:${i.notes || ''}`)
+                  `${o.id}:${o.status}:${o.version || 1}:${(o as any).notes || ''}:${o.order_items?.length || 0}:${(o.order_items || [])
+                    .map(i => `${i.product_id}:${i.quantity}:${i.course || ''}:${i.notes || ''}:${i.product?.name || ''}`)
                     .join(',')}`
               )
               .join('|')
 
           setOrders(prev => {
             const prevMap = new Map(prev.map(o => [o.id, o]))
-            const reconciled = sorted.map(ord => {
-              const existing = prevMap.get(ord.id)
-              const mut = recentMutationsRef.current.get(ord.id)
-              const isMutActive = Boolean(mut && Date.now() < mut.until)
+            const reconciled = sorted
+              .map(ord => {
+                const existing = prevMap.get(ord.id) || prevOrdersMapRef.current.get(ord.id)
+                const mut = recentMutationsRef.current.get(ord.id)
+                const lockUntil = mutationLockUntilRef.current.get(ord.id) || 0
+                const isMutActive = Boolean((mut && Date.now() < mut.until) || Date.now() < lockUntil)
 
-              let effectiveItems = (ord.order_items && ord.order_items.length > 0)
-                ? ord.order_items
-                : (existing?.order_items || [])
-              if (existing?.order_items && existing.order_items.length > 0 && effectiveItems.length > 0) {
-                effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
-              }
-              if (isMutActive && mut?.order?.order_items) {
-                effectiveItems = mergeOrderItemsCourseTags(effectiveItems, mut.order.order_items)
-              }
+                const mergedOrderNotes = mergeItemNotes(
+                  mergeItemNotes((ord as any).notes, (existing as any)?.notes),
+                  (mut?.order as any)?.notes
+                )
 
-              let effectiveStatus = ord.status
-              if (isMutActive && mut?.status) {
-                effectiveStatus = mut.status
-              } else {
-                if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
-                  if (orderHasActiveDesserts(ord) && (ord.status === 'preparing' || ord.status === 'ready')) {
-                    effectiveStatus = ord.status
-                  } else {
-                    effectiveStatus = 'delivered'
-                  }
-                } else if (existing?.status === 'ready' && (ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed(ord) && !orderHasActiveDesserts(ord)))) {
-                  effectiveStatus = 'ready'
-                } else if (existing?.status === 'preparing' && ord.status === 'pending') {
-                  effectiveStatus = 'preparing'
+                let effectiveItems = (ord.order_items && ord.order_items.length > 0)
+                  ? ord.order_items
+                  : (existing?.order_items || [])
+                if (existing?.order_items && existing.order_items.length > 0 && effectiveItems.length > 0) {
+                  effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
                 }
-              }
+                if (isMutActive && mut?.order?.order_items) {
+                  effectiveItems = mergeOrderItemsCourseTags(effectiveItems, mut.order.order_items)
+                }
 
-              return { ...ord, status: effectiveStatus, order_items: effectiveItems }
-            })
+                effectiveItems = hydrateOrderItemsWithCatalog(
+                  effectiveItems,
+                  productsRef.current,
+                  existing?.order_items,
+                  mergedOrderNotes
+                )
 
-            const prevFinger = computeKdsFinger(prev)
+                let effectiveStatus = ord.status
+                if (isMutActive && mut?.status) {
+                  effectiveStatus = mut.status
+                } else {
+                  if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
+                    if (orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && (ord.status === 'preparing' || ord.status === 'ready')) {
+                      effectiveStatus = ord.status
+                    } else {
+                      effectiveStatus = 'delivered'
+                    }
+                  } else if (existing?.status === 'ready' && (ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && !areOrderMainsFired({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && !orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems })))) {
+                    effectiveStatus = 'ready'
+                  } else if (existing?.status === 'preparing' && ord.status === 'pending') {
+                    effectiveStatus = 'preparing'
+                  }
+                }
+
+                return {
+                  ...ord,
+                  status: effectiveStatus,
+                  notes: mergedOrderNotes,
+                  order_items: effectiveItems,
+                } as Order
+              })
+              .filter(ord => !areAllKitchenCoursesCompleted(ord))
+
             const nextFinger = computeKdsFinger(reconciled)
-            if (nextFinger === prevFinger) {
+            if (nextFinger === ordersFingerRef.current) {
               return prev
             }
+            ordersFingerRef.current = nextFinger
             return reconciled
           })
 
@@ -254,7 +288,7 @@ export default function KitchenKDSPage() {
     }
   }, [slug, soundEnabled])
 
-  // 3. Estrategia Dual Realtime (Supabase Realtime + Soft Polling 4.5s + SSE Fallback)
+  // 3. Estrategia Dual Realtime (Supabase Realtime con debounce 350ms + Soft Polling 4.5s + SSE Fallback)
   useEffect(() => {
     let sseEventSource: EventSource | null = null
     let pollInterval: any = null
@@ -265,39 +299,35 @@ export default function KitchenKDSPage() {
       setRestaurant(MOCK_RESTAURANTS[slug])
     }
 
+    fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => {
+        if (d?.products && d.products.length > 0) {
+          productsRef.current = d.products
+        }
+      })
+      .catch(() => {})
+
     fetchServerOrders()
 
-    // A. Canal Nativo Supabase Realtime (postgres_changes en orders y order_events)
     if (supabase) {
+      let realtimeDebounceTimer: any = null
+      const triggerDebouncedRealtimeFetch = () => {
+        if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer)
+        realtimeDebounceTimer = setTimeout(() => {
+          fetchServerOrders()
+        }, 350)
+      }
+
       const channelId = `kds-orders-${slug}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
       realtimeChannel = supabase
         .channel(channelId)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'orders',
-          },
-          () => {
-            fetchServerOrders()
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'order_events',
-          },
-          () => {
-            fetchServerOrders()
-          }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, triggerDebouncedRealtimeFetch)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, triggerDebouncedRealtimeFetch)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_events' }, triggerDebouncedRealtimeFetch)
         .subscribe()
     }
 
-    // B. SSE en desarrollo local para sincronización inmediata sub-50ms
     if (process.env.NODE_ENV === 'development') {
       try {
         let sseDebounceTimer: any = null
@@ -329,7 +359,6 @@ export default function KitchenKDSPage() {
       }
     }
 
-    // C. Soft Polling de Respaldo cada 4.5 segundos (R4 de Interface Contracts)
     pollInterval = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
         return
@@ -337,7 +366,6 @@ export default function KitchenKDSPage() {
       fetchServerOrders()
     }, 4500)
 
-    // D. Reconciliación inmediata en visibilitychange y window.focus
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchServerOrders()
@@ -357,15 +385,17 @@ export default function KitchenKDSPage() {
     }
   }, [slug, fetchServerOrders])
 
-  // Actualizar estado de comanda (No-optimista con OCC)
+  // Actualizar estado de comanda
   const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
     const targetOrd = orders.find(o => o.id === orderId)
     if (!targetOrd || updatingOrderIds.has(orderId)) return
 
     const tableNum = targetOrd?.table?.table_number ?? targetOrd?.table_number ?? 1
+    const lockUntil = Date.now() + 4500
 
     setUpdatingOrderIds(prev => new Set(prev).add(orderId))
-    recentMutationsRef.current.set(orderId, { status: newStatus, until: Date.now() + 4500 })
+    mutationLockUntilRef.current.set(orderId, lockUntil)
+    recentMutationsRef.current.set(orderId, { status: newStatus, until: lockUntil })
 
     try {
       const res = await fetch('/api/orders', {
@@ -383,24 +413,19 @@ export default function KitchenKDSPage() {
 
       const data = await res.json().catch(() => ({}))
       if (res.ok && data.success) {
-        if (newStatus === 'cancelled' || (newStatus === 'delivered' && (!orderHasDesserts(targetOrd) || isOrderDessertsReady(targetOrd)))) {
-          setOrders(prev => prev.filter(o => o.id !== orderId))
-        } else {
-          setOrders(prev =>
-            prev.map(o => (o.id === orderId ? { ...o, status: newStatus, version: data.version ?? (o.version ? o.version + 1 : 1) } : o))
-          )
-        }
-      } else if (res.status === 409) {
-        console.warn(`[KDS] Concurrencia detectada en orden ${orderId}, re-sincronizando...`)
-        recentMutationsRef.current.delete(orderId)
-        await fetchServerOrders()
+        setOrders(prev =>
+          prev
+            .map(o => (o.id === orderId ? { ...o, status: newStatus, version: data.version ?? (o.version ? o.version + 1 : 1) } : o))
+            .filter(o => !areAllKitchenCoursesCompleted(o))
+        )
       } else {
-        console.error('[KDS] Error en transición de orden:', data.error)
+        mutationLockUntilRef.current.delete(orderId)
         recentMutationsRef.current.delete(orderId)
         await fetchServerOrders()
       }
     } catch (err) {
       console.error('Error updating order status from kitchen:', err)
+      mutationLockUntilRef.current.delete(orderId)
       recentMutationsRef.current.delete(orderId)
       await fetchServerOrders()
     } finally {
@@ -412,7 +437,7 @@ export default function KitchenKDSPage() {
     }
   }
 
-  // Ejecutar acciones de pase gastronómico (Comida lista pase 1 / Postres listos pase 2 / Turnos de cocina)
+  // Ejecutar acciones de pase gastronómico
   const handleKitchenAction = async (
     orderId: string,
     action: 'ready_food' | 'ready_desserts' | 'fire_desserts' | 'ready_starters' | 'start_mains' | 'ready_mains' | 'start_desserts'
@@ -420,7 +445,9 @@ export default function KitchenKDSPage() {
     if (updatingOrderIds.has(orderId)) return
     setUpdatingOrderIds(prev => new Set(prev).add(orderId))
     const expectedNextStatus: OrderStatus = (action === 'start_mains' || action === 'start_desserts' || action === 'fire_desserts') ? 'preparing' : 'ready'
-    recentMutationsRef.current.set(orderId, { status: expectedNextStatus, until: Date.now() + 4500 })
+    const lockUntil = Date.now() + 4500
+    mutationLockUntilRef.current.set(orderId, lockUntil)
+    recentMutationsRef.current.set(orderId, { status: expectedNextStatus, until: lockUntil })
 
     try {
       const res = await fetch('/api/orders', {
@@ -436,24 +463,44 @@ export default function KitchenKDSPage() {
       const data = await res.json().catch(() => null)
       if (res.ok) {
         if (data?.order) {
-          setOrders(prev => prev.map(o => {
-            if (o.id !== orderId) return o
-            const effectiveItems = (data.order?.order_items && data.order.order_items.length > 0)
-              ? data.order.order_items
-              : (o.order_items || [])
-            const merged = mergeOrderItemsCourseTags(effectiveItems, o.order_items || [])
-            const updated = { ...data.order, status: data.order.status || expectedNextStatus, order_items: merged }
-            recentMutationsRef.current.set(orderId, { order: updated, status: updated.status, until: Date.now() + 4500 })
-            return updated
-          }))
+          setOrders(prev =>
+            prev
+              .map(o => {
+                if (o.id !== orderId) return o
+                const mergedNotes = mergeItemNotes((data.order as any)?.notes, (o as any)?.notes)
+                const effectiveItems = (data.order?.order_items && data.order.order_items.length > 0)
+                  ? data.order.order_items
+                  : (o.order_items || [])
+                const hydrated = hydrateOrderItemsWithCatalog(
+                  effectiveItems,
+                  productsRef.current,
+                  o.order_items || [],
+                  mergedNotes
+                )
+                const updated: Order = {
+                  ...data.order,
+                  status: data.order.status || expectedNextStatus,
+                  notes: mergedNotes,
+                  order_items: hydrated,
+                }
+                const until = Date.now() + 4500
+                mutationLockUntilRef.current.set(orderId, until)
+                recentMutationsRef.current.set(orderId, { order: updated, status: updated.status, until })
+                prevOrdersMapRef.current.set(orderId, updated)
+                return updated
+              })
+              .filter(o => !areAllKitchenCoursesCompleted(o))
+          )
         }
       } else {
         console.error('[KDS] Error en acción de cocina:', action, data?.error)
+        mutationLockUntilRef.current.delete(orderId)
         recentMutationsRef.current.delete(orderId)
         await fetchServerOrders()
       }
     } catch (err) {
       console.error('Error executing kitchen action:', err)
+      mutationLockUntilRef.current.delete(orderId)
       recentMutationsRef.current.delete(orderId)
       await fetchServerOrders()
     } finally {
@@ -465,70 +512,66 @@ export default function KitchenKDSPage() {
     }
   }
 
-  // Filtrado de comandas por estado (incluye comandas con entradas listas pero principales pendientes, o platos entregados con postres marchados)
-  const activeOrders = orders.filter(o =>
-    o.status === 'pending' ||
-    o.status === 'confirmed' ||
-    o.status === 'preparing' ||
-    o.status === 'ready' ||
-    (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o))
+  // Filtrado de comandas por estado (Bloque 3.2: excluye automáticamente tickets cuyas fases de cocina ya terminaron)
+  const activeOrders = useMemo(
+    () =>
+      orders.filter(
+        o =>
+          !areAllKitchenCoursesCompleted(o) &&
+          (o.status === 'pending' ||
+            o.status === 'confirmed' ||
+            o.status === 'preparing' ||
+            o.status === 'ready' ||
+            (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o)))
+      ),
+    [orders]
   )
-  const readyOrders = orders.filter(o => o.status === 'ready')
 
-  // Resumen acumulado de platos en línea (para saber cuánta carne tirar a la plancha de golpe)
+  const readyOrders = useMemo(
+    () => orders.filter(o => !areAllKitchenCoursesCompleted(o) && o.status === 'ready'),
+    [orders]
+  )
+
+  // Bloque 2.1: Barra superior "En Línea:" filtrada estrictamente para trabajo activo de cocina
+  // (0% bebidas, 0% cabeceras de pack, 0% fases listas/entregadas, 0% principales/postres bloqueados esperando al mozo)
   const pendingDishesSummary = useMemo(() => {
     const counts: Record<string, number> = {}
     activeOrders.forEach(ord => {
-      (ord.order_items || []).forEach(item => {
-        const name = item.product?.name || 'Plato'
-        counts[name] = (counts[name] || 0) + (item.quantity || 1)
+      const hasStarters = orderHasStarters(ord)
+      const mainsUnlocked = !hasStarters || areOrderMainsFired(ord)
+      const dessertsUnlocked =
+        orderHasActiveDesserts(ord) ||
+        (!hasStarters && !(ord.order_items || []).some(isMainItem))
+
+      ;(ord.order_items || []).forEach(item => {
+        if (isDrinkItem(item) || getItemCourse(item) === 'drink' || isPackHeaderItem(item)) {
+          return
+        }
+
+        if (isStarterItem(item)) {
+          if (isStarterReady(item, ord) || isStarterServed(item, ord)) return
+        } else if (isMainItem(item)) {
+          if (!mainsUnlocked || isMainReady(item, ord) || isMainServed(item, ord)) return
+        } else if (isDessertItem(item)) {
+          if (!dessertsUnlocked || isDessertReady(item, ord) || isDessertServed(item, ord)) return
+        }
+
+        const rawName = item.product?.name || (item as any).name
+        const resolvedName =
+          (rawName && !isGenericProductName(rawName) ? rawName : resolveCatalogProductForItem(item)?.name) ||
+          rawName ||
+          'Plato'
+        counts[resolvedName] = (counts[resolvedName] || 0) + (item.quantity || 1)
       })
     })
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
   }, [activeOrders])
 
-  let displayedOrders = filterStatus === 'active'
-    ? activeOrders
-    : filterStatus === 'ready'
-    ? readyOrders
-    : orders.filter(o => ['pending', 'confirmed', 'preparing', 'ready'].includes(o.status))
-
-  // Filtrado por Estación (Cocina vs Barra)
-  if (stationFilter !== 'all') {
-    displayedOrders = displayedOrders.filter(order => {
-      if (!order.order_items || order.order_items.length === 0) return true
-      const hasBarItems = order.order_items.some(item => {
-        const prod = item.product || (item as any).products
-        const catId = (prod?.category_id || '').toLowerCase()
-        const name = (prod?.name || '').toLowerCase()
-        return (
-          catId.includes('bebida') || catId.includes('trago') || catId.includes('gin') ||
-          catId === 'cat-12' || catId === 'cat-13' || catId === 'cat-14' || catId === 'cat-15' ||
-          name.includes('cerveza') || name.includes('vino') || name.includes('gin') ||
-          name.includes('fernet') || name.includes('gaseosa') || name.includes('agua') ||
-          name.includes('pinta') || name.includes('trago')
-        )
-      })
-
-      const hasKitchenItems = order.order_items.some(item => {
-        const prod = item.product || (item as any).products
-        const catId = (prod?.category_id || '').toLowerCase()
-        const name = (prod?.name || '').toLowerCase()
-        return (
-          catId.includes('postre') || catId.includes('cafe') || catId.includes('café') ||
-          catId.includes('entrada') || catId.includes('burger') || catId.includes('principal') ||
-          catId === 'c0000000-0000-0000-0000-000000000006' || catId === 'cat-10' ||
-          name.includes('volcán') || name.includes('volcan') || name.includes('tarta') ||
-          name.includes('postre') || name.includes('burger') || name.includes('milanesa') ||
-          name.includes('bastones') || name.includes('papas') || name.includes('ensalada')
-        )
-      })
-
-      if (stationFilter === 'bar') return hasBarItems
-      if (stationFilter === 'kitchen') return hasKitchenItems || !hasBarItems || order.order_items.length > 1
-      return true
-    })
-  }
+  const displayedOrders = useMemo(() => {
+    if (filterStatus === 'active') return activeOrders
+    if (filterStatus === 'ready') return readyOrders
+    return activeOrders
+  }, [filterStatus, activeOrders, readyOrders])
 
   // Agrupación unificada por mesa (una única tarjeta por mesa con división cronológica por rondas)
   const tableGroupedOrders = useMemo(() => {
@@ -557,7 +600,6 @@ export default function KitchenKDSPage() {
       }
     })
 
-    // Ordenar mesas en pantalla por la comanda más antigua (FIFO)
     return groups.sort((a, b) => a.earliestTime - b.earliestTime)
   }, [displayedOrders])
 
@@ -573,7 +615,7 @@ export default function KitchenKDSPage() {
           <div className="bg-blue-900 text-white px-4 py-3 shadow-lg border-b border-blue-700 flex items-center justify-between gap-3 animate-in slide-in-from-top duration-300">
             <div className="flex items-center gap-2.5 min-w-0">
               <Sparkles className="w-5 h-5 text-amber-400 animate-pulse flex-shrink-0" />
-              <span className="font-black text-xs sm:text-sm uppercase tracking-wide">¡NUEVA COMANDA ENVIADA A COCINA!</span>
+              <span className="font-black text-xs sm:text-sm uppercase tracking-wide">¡NUEVA COMANDA O PASE ENVIADO A COCINA!</span>
             </div>
             <button
               type="button"
@@ -586,56 +628,25 @@ export default function KitchenKDSPage() {
           </div>
         )}
 
-        {/* Barra de Control KDS con Filtro de Estación y Pantalla Completa */}
+        {/* Barra de Control KDS */}
         <div className="bg-white border-b border-slate-200 px-4 py-3 shadow-sm">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
             
-            {/* Métricas y Filtro de Estaciones (Cocina / Barra) */}
+            {/* Métricas de Estación Cocina */}
             <div className="flex items-center gap-3 flex-wrap">
-              {/* Selector de Estación */}
-              <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold">
-                <button
-                  onClick={() => setStationFilter('all')}
-                  className={`px-3 py-1.5 rounded-xl transition-all ${
-                    stationFilter === 'all'
-                      ? 'bg-white text-blue-900 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Todas las Estaciones
-                </button>
-                <button
-                  onClick={() => setStationFilter('kitchen')}
-                  className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all ${
-                    stationFilter === 'kitchen'
-                      ? 'bg-white text-amber-900 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <Flame className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Solo Cocina</span>
-                </button>
-                <button
-                  onClick={() => setStationFilter('bar')}
-                  className={`px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all ${
-                    stationFilter === 'bar'
-                      ? 'bg-white text-purple-900 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <Wine className="w-3.5 h-3.5 text-purple-600" />
-                  <span>Solo Barra / Bebidas</span>
-                </button>
+              <div className="px-3.5 py-1.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs font-black text-amber-950 flex items-center gap-2 shadow-2xs">
+                <Flame className="w-4 h-4 text-amber-600" />
+                <span>Estación de Cocina (Fuegos y Emplatado)</span>
               </div>
 
               <div className="hidden lg:flex items-center gap-2">
                 <div className="px-3 py-1 rounded-xl bg-amber-50 border border-amber-200 text-xs font-bold text-amber-900 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                  <span>Pendientes: <strong>{activeOrders.length}</strong></span>
+                  <span>En Marcha: <strong>{activeOrders.length}</strong></span>
                 </div>
                 <div className="px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-900 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Listas: <strong>{readyOrders.length}</strong></span>
+                  <span>Pases Listos: <strong>{readyOrders.length}</strong></span>
                 </div>
               </div>
             </div>
@@ -651,7 +662,7 @@ export default function KitchenKDSPage() {
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  Todas ({orders.length})
+                  Todas ({activeOrders.length})
                 </button>
                 <button
                   onClick={() => setFilterStatus('active')}
@@ -702,7 +713,7 @@ export default function KitchenKDSPage() {
           </div>
         </div>
 
-        {/* BARRA DE RESUMEN DE PRODUCCIÓN EN LOTE (BATCH BAR) */}
+        {/* BARRA DE RESUMEN DE PRODUCCIÓN EN LOTE (BATCH BAR - 0% BEBIDAS, SOLO PLATOS ACTIVOS) */}
         {pendingDishesSummary.length > 0 && filterStatus === 'active' && (
           <div className="bg-slate-900 text-white px-4 py-2 text-xs font-bold border-b border-slate-800 overflow-x-auto shadow-inner">
             <div className="max-w-7xl mx-auto flex items-center gap-2 no-scrollbar">

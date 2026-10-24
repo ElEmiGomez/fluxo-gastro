@@ -12,7 +12,6 @@ import {
   ExternalLink,
   X,
   TrendingUp,
-  Clock,
   Smartphone,
   ChefHat,
   Printer,
@@ -25,7 +24,6 @@ import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
 import { MonthlyReportModal } from '@/components/analytics/MonthlyReportModal'
 import { ScrollReveal } from '@/components/landing/ScrollReveal'
 import { HeroAuroraBackground } from '@/components/landing/HeroAuroraBackground'
-import { HeroLiveSyncMockup } from '@/components/landing/HeroLiveSyncMockup'
 
 const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '5493585187430'
 const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para mi restaurante.'
@@ -104,88 +102,77 @@ export default function LandingPage() {
 
       <main className="flex-1">
         
-        {/* ── 2. HERO SECTION ── */}
-        <section className="relative overflow-hidden pt-12 pb-20 sm:pt-20 sm:pb-28 border-b border-slate-800/80">
+        {/* ── 2. HERO SECTION CENTRADO & LIMPIO (SIN BLOQUE ARTIFICIAL) ── */}
+        <section className="relative overflow-hidden pt-16 pb-20 sm:pt-24 sm:pb-28 border-b border-slate-800/80">
           
           {/* Fondo Dinámico Aurora B2B */}
           <HeroAuroraBackground />
 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <div className="max-w-3xl mx-auto space-y-6">
               
-              {/* Columna Izquierda: Copy Principal */}
-              <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
-                
-                {/* Badge Superior */}
-                <ScrollReveal delay={80} distance={18}>
-                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-black uppercase tracking-widest">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                    <span>SISTEMA OPERATIVO PARA BARES Y RESTAURANTES</span>
-                  </div>
-                </ScrollReveal>
+              {/* Badge Superior */}
+              <ScrollReveal delay={80} distance={18}>
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-black uppercase tracking-widest">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                  <span>SISTEMA OPERATIVO PARA BARES Y RESTAURANTES</span>
+                </div>
+              </ScrollReveal>
 
-                {/* Titular Principal */}
-                <ScrollReveal delay={180} distance={24}>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
-                    Tecnología invisible.{' '}
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-                      Gastronomía sin pausas.
-                    </span>
-                  </h1>
-                </ScrollReveal>
+              {/* Titular Principal */}
+              <ScrollReveal delay={180} distance={24}>
+                <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1]">
+                  Tecnología invisible.{' '}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+                    Gastronomía sin pausas.
+                  </span>
+                </h1>
+              </ScrollReveal>
 
-                {/* Subtítulo de Control & Velocidad */}
-                <ScrollReveal delay={280} distance={24}>
-                  <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
-                    La agilidad del papel y boli de siempre, pero con la velocidad de la sincronización digital instantánea. Conecta a tus camareros en terraza con la barra y la cocina en tiempo real sin comprar TPVs caros.
-                  </p>
-                </ScrollReveal>
+              {/* Subtítulo de Control & Velocidad */}
+              <ScrollReveal delay={280} distance={24}>
+                <p className="text-base sm:text-lg lg:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
+                  La agilidad del papel y boli de siempre, pero con la velocidad de la sincronización digital instantánea. Conecta a tus camareros en terraza con la barra y la cocina en tiempo real sin comprar TPVs caros.
+                </p>
+              </ScrollReveal>
 
-                {/* Acciones del Hero */}
-                <ScrollReveal delay={380} distance={24}>
-                  <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all active:scale-95 cursor-pointer"
-                    >
-                      <span>SOLICITAR PILOTO 14 DÍAS (0 €)</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
+              {/* Acciones del Hero */}
+              <ScrollReveal delay={380} distance={24}>
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <span>SOLICITAR PILOTO 14 DÍAS (0 €)</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
 
-                    <button
-                      type="button"
-                      onClick={handleOpenAllDashboards}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm sm:text-base font-bold text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/40 transition-all active:scale-95 cursor-pointer group"
-                    >
-                      <span>Ver Demo Interactiva en Vivo</span>
-                      <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" />
-                    </button>
-                  </div>
-                </ScrollReveal>
+                  <button
+                    type="button"
+                    onClick={handleOpenAllDashboards}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm sm:text-base font-bold text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/40 transition-all active:scale-95 cursor-pointer group"
+                  >
+                    <span>Ver Demo Interactiva en Vivo</span>
+                    <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </ScrollReveal>
 
-                {/* Micro-puntos de confianza */}
-                <ScrollReveal delay={480} distance={18}>
-                  <div className="pt-4 flex items-center justify-center lg:justify-start gap-6 text-xs text-slate-400">
-                    <span className="flex items-center gap-1.5">
-                      <Check className="w-4 h-4 text-emerald-500" /> Sin permanencia
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Check className="w-4 h-4 text-emerald-500" /> Setup inicial incluido
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Check className="w-4 h-4 text-emerald-500" /> 100% Mobile Web
-                    </span>
-                  </div>
-                </ScrollReveal>
-              </div>
-
-              {/* Columna Derecha: Mockup Split-Screen Sincronizado */}
-              <div className="lg:col-span-5 w-full">
-                <ScrollReveal delay={300} distance={32} scale={0.96}>
-                  <HeroLiveSyncMockup />
-                </ScrollReveal>
-              </div>
+              {/* Micro-puntos de confianza */}
+              <ScrollReveal delay={480} distance={18}>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-slate-400">
+                  <span className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-500" /> Sin permanencia
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-500" /> Setup inicial incluido
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Check className="w-4 h-4 text-emerald-500" /> 100% Mobile Web
+                  </span>
+                </div>
+              </ScrollReveal>
 
             </div>
           </div>
@@ -213,7 +200,7 @@ export default function LandingPage() {
               
               {/* Tarjeta 1: Carta QR Visual y Ventas Sugeridas */}
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
-                <div className="bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/70 hover:border-cyan-500/40 rounded-2xl p-8 flex flex-col justify-between transition-all duration-300 shadow-xl group h-full">
+                <div className="bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/70 hover:border-cyan-500/40 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
@@ -255,7 +242,7 @@ export default function LandingPage() {
 
               {/* Tarjeta 2: Comandero Ágil en Cualquier Móvil */}
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
-                <div className="bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/70 hover:border-cyan-500/40 rounded-2xl p-8 flex flex-col justify-between transition-all duration-300 shadow-xl group h-full">
+                <div className="bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/70 hover:border-cyan-500/40 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center">
@@ -297,7 +284,7 @@ export default function LandingPage() {
 
               {/* Tarjeta 3: Monitor KDS por Estaciones */}
               <ScrollReveal delay={300} distance={32} className="flex flex-col h-full">
-                <div className="bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/70 hover:border-cyan-500/40 rounded-2xl p-8 flex flex-col justify-between transition-all duration-300 shadow-xl group h-full">
+                <div className="bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/70 hover:border-cyan-500/40 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
@@ -342,7 +329,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── 4. BLOQUE DE PLANES Y PRECIOS (CLARIFICACIÓN VISUAL) ── */}
+        {/* ── 4. BLOQUE DE PLANES Y PRECIOS (ESPACIADO Y COHERENCIA CORREGIDOS) ── */}
         <section id="precios" className="py-20 border-t border-slate-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
@@ -366,14 +353,14 @@ export default function LandingPage() {
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
-                  className="bg-slate-800/60 border border-slate-700 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 group relative cursor-pointer h-full"
+                  className="bg-slate-800/60 border border-slate-700 hover:border-emerald-400 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-blue-500/40 group-hover:border-emerald-400 text-blue-300 group-hover:text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20 transition-colors duration-300">
                     <span>PLAN CARTA DIGITAL</span>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div>
                       <h3 className="text-xl font-black text-white group-hover:text-emerald-300 transition-colors duration-300">Plan Carta</h3>
                       <p className="text-xs text-slate-400 mt-1">
@@ -420,7 +407,7 @@ export default function LandingPage() {
                     </ul>
                   </div>
 
-                  <div className="pt-8 w-full flex items-center justify-center">
+                  <div className="pt-6 sm:pt-8 w-full flex items-center justify-center">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -440,14 +427,14 @@ export default function LandingPage() {
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
-                  className="bg-slate-800/60 border border-slate-700 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 group relative cursor-pointer h-full"
+                  className="bg-slate-800/60 border border-slate-700 hover:border-emerald-400 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-blue-500/40 group-hover:border-emerald-400 text-blue-300 group-hover:text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20 transition-colors duration-300">
                     <span>COMANDERO &amp; SALA</span>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div>
                       <h3 className="text-xl font-black text-white group-hover:text-emerald-300 transition-colors duration-300">Plan Sala</h3>
                       <p className="text-xs text-slate-400 mt-1">
@@ -494,7 +481,7 @@ export default function LandingPage() {
                     </ul>
                   </div>
 
-                  <div className="pt-8 w-full flex items-center justify-center">
+                  <div className="pt-6 sm:pt-8 w-full flex items-center justify-center">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -510,19 +497,19 @@ export default function LandingPage() {
                 </div>
               </ScrollReveal>
 
-              {/* Tarjeta 3: Plan Full (DESTACADA CON BORDE CIAN BRILLANTE & BADGE RECOMENDADO) */}
+              {/* Tarjeta 3: Plan Full (DESTACADA CON BORDE CIAN & BADGE RECOMENDADO LIMPIO) */}
               <ScrollReveal delay={300} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
-                  className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/30 transition-all duration-300 group relative lg:-translate-y-2 cursor-pointer h-full"
+                  className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/30 transition-all duration-300 group relative lg:-translate-y-2 cursor-pointer h-full"
                 >
-                  {/* Badge Recomendado Destacado con Estrella Dorada */}
+                  {/* Badge Recomendado Limpio y sin duplicidades */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1.5">
                     <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950 flex-shrink-0" />
-                    <span>RECOMENDADO &middot; CIRCUITO COMPLETO</span>
+                    <span>RECOMENDADO</span>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     <div>
                       <div className="inline-flex items-center gap-1.5 text-cyan-400 group-hover:text-emerald-300 font-extrabold text-xs uppercase tracking-wider mb-1 transition-colors duration-300">
                         <Layers className="w-4 h-4" /> Circuito Completo
@@ -533,7 +520,7 @@ export default function LandingPage() {
                       </p>
                     </div>
 
-                    {/* BLOQUE DE PRECIO CLARO: Sin superposiciones ni bugs visuales */}
+                    {/* BLOQUE DE PRECIO CLARO Y ARMONIZADO */}
                     <div className="py-2 space-y-1.5">
                       <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-extrabold text-white tracking-tight tabular-nums">99 €</span>
@@ -542,17 +529,18 @@ export default function LandingPage() {
                       <div className="text-xs text-slate-400 font-medium">
                         Sin comisiones por comanda &middot; Cancela en cualquier momento
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-1.5 rounded-lg mt-1 shadow-xs">
-                        <Gift className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                        <span>Prueba 14 días a 0 € (Setup de 149 € bonificado al 100%)</span>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-md mt-1 shadow-xs">
+                        <Gift className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                        <span>Prueba 14 días a 0 € &middot; Setup de 149 € bonificado</span>
                       </div>
                     </div>
 
+                    {/* LISTA DE BENEFICIOS COHERENTE Y SIN CAJAS DISJUNTAS */}
                     <ul className="space-y-3 text-xs sm:text-sm text-slate-200">
-                      {/* DESTACADO OBLIGATORIO: Multiplicador de Reseñas Google Maps */}
-                      <li className="flex items-start gap-2.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25">
-                        <Star className="w-4 h-4 text-amber-400 fill-amber-400 flex-shrink-0 mt-0.5" />
-                        <span className="text-xs sm:text-sm text-amber-200 font-bold">
+                      {/* DESTACADO DE ALTA GAMA: Multiplicador de Reseñas Google Maps */}
+                      <li className="flex items-start gap-2.5">
+                        <Star className="w-5 h-5 text-amber-400 fill-amber-400 flex-shrink-0 mt-0.5" />
+                        <span className="text-white font-bold leading-snug">
                           Multiplicador de Reseñas 5★ en Google Maps automático tras el pago de la mesa.
                         </span>
                       </li>
@@ -602,7 +590,7 @@ export default function LandingPage() {
                     </ul>
                   </div>
 
-                  <div className="pt-8 w-full flex items-center justify-center">
+                  <div className="pt-6 sm:pt-8 w-full flex items-center justify-center">
                     <button
                       type="button"
                       onClick={(e) => {

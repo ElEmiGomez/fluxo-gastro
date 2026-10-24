@@ -7,7 +7,15 @@ import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_CATEGORIES, MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
 import { resolveCanonicalProductId } from '@/lib/category-matcher'
-import { mergeOrderItemsCourseTags, hasItemProgressionTag, orderHasActiveDesserts, areOrderStartersServed } from '@/lib/course-utils'
+import {
+  mergeOrderItemsCourseTags,
+  mergeItemNotes,
+  hasItemProgressionTag,
+  orderHasActiveDesserts,
+  areOrderStartersServed,
+  hydrateOrderItemsWithCatalog,
+  areAllOrderCoursesDelivered,
+} from '@/lib/course-utils'
 import { PendingServiceCall } from '@/types/comandero.types'
 
 export function useComanderoData(slug: string) {
@@ -20,6 +28,7 @@ export function useComanderoData(slug: string) {
   const [restaurant, setRestaurant] = useState<Restaurant>(() => MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet'])
   const [categories, setCategories] = useState<Category[]>(() => MOCK_CATEGORIES[slug] || MOCK_CATEGORIES['burger-gourmet'] || [])
   const [products, setProducts] = useState<Product[]>(() => MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])
+  const productsRef = useRef<Product[]>(MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])
   const [tables, setTables] = useState<Table[]>(() => fallbackTables)
   const [selectedTable, setSelectedTable] = useState<Table | null>(() => fallbackTables[0] || null)
 
@@ -27,11 +36,11 @@ export function useComanderoData(slug: string) {
   const [tableDwellMinutes, setTableDwellMinutes] = useState<Record<string | number, number>>({})
   const [readyOrderAlert, setReadyOrderAlert] = useState<string | number | null>(null)
   const [dismissedReadyBannerOrderIds, setDismissedReadyBannerOrderIds] = useState<Set<string>>(new Set())
-  const [serverOrders, setServerOrders] = useState<Order[]>([])
+  const [serverOrders, setServerOrdersState] = useState<Order[]>([])
   const serverOrdersRef = useRef<Order[]>([])
   const [pendingCalls, setPendingCalls] = useState<PendingServiceCall[]>([])
 
-  // State locks y referencias anti-flicker
+  // State locks y referencias anti-flicker / anti-rollback
   const attendedCallIdsRef = useRef<Set<string>>(new Set())
   const seenCallIdsRef = useRef<Set<string>>(new Set())
   const seenReadyOrderIdsRef = useRef<Set<string>>(new Set())
@@ -41,6 +50,40 @@ export function useComanderoData(slug: string) {
   const tableStatusesFingerRef = useRef<string>('')
   const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
   const attendedValidationOrderIdsRef = useRef<Set<string>>(new Set())
+
+  // Lock de mutación en vuelo de al menos 2500ms por orden para bloquear respuestas GET antiguas
+  const mutationLockUntilRef = useRef<Map<string, number>>(new Map())
+  const pendingOrdersWithoutItemsRef = useRef<Map<string, Order>>(new Map())
+  const recentTogglesRef = useRef<Map<string, { status: boolean; until: number }>>(new Map())
+  const recentMutationsRef = useRef<Map<string, { status?: OrderStatus; order?: Order; until: number }>>(new Map())
+
+  useEffect(() => {
+    productsRef.current = products
+  }, [products])
+
+  // Wrapper de setServerOrders que mantiene serverOrdersRef y prevOrdersMapRef sincronizados al instante
+  const setServerOrders: React.Dispatch<React.SetStateAction<Order[]>> = useCallback((action) => {
+    setServerOrdersState(prev => {
+      const next = typeof action === 'function' ? (action as (p: Order[]) => Order[])(prev) : action
+      const hydratedNext = next.map(ord => {
+        const prevOrd = prevOrdersMapRef.current.get(ord.id)
+        const mergedNotes = mergeItemNotes((ord as any).notes, (prevOrd as any)?.notes)
+        const hydratedItems = hydrateOrderItemsWithCatalog(
+          ord.order_items || [],
+          productsRef.current,
+          prevOrd?.order_items,
+          mergedNotes
+        )
+        const updatedOrd: Order = { ...ord, notes: mergedNotes, order_items: hydratedItems }
+        if (hydratedItems.length > 0) {
+          prevOrdersMapRef.current.set(ord.id, updatedOrd)
+        }
+        return updatedOrd
+      })
+      serverOrdersRef.current = hydratedNext
+      return hydratedNext
+    })
+  }, [])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -53,11 +96,8 @@ export function useComanderoData(slug: string) {
       } catch (_) {}
     }
   }, [slug])
-  const pendingOrdersWithoutItemsRef = useRef<Map<string, Order>>(new Map())
-  const recentTogglesRef = useRef<Map<string, { status: boolean; until: number }>>(new Map())
-  const recentMutationsRef = useRef<Map<string, { status?: OrderStatus; order?: Order; until: number }>>(new Map())
 
-  // 1. WakeLock nativo para mantener pantalla activa en comandero (con re-adquisición al volver a primer plano)
+  // 1. WakeLock nativo para mantener pantalla activa en comandero
   useEffect(() => {
     let wakeLock: any = null
     const requestWakeLock = async () => {
@@ -143,13 +183,13 @@ export function useComanderoData(slug: string) {
       })
       const incomingCalls: any[] = callsRes.calls || []
 
-      // Reconciliación de Órdenes (SSOT) — Updater 100% puro compatible con React 18 Strict Mode
+      // Fingerprint completo incluyendo notes de la orden, notes de cada item y nombre hidratado
       const computeOrdersFinger = (list: Order[]) =>
         list
           .map(
             o =>
-              `${o.id}:${o.status}:${o.version || 1}:${o.order_items?.length || 0}:${(o.order_items || [])
-                .map(i => `${i.product_id}:${i.quantity}:${i.notes || ''}`)
+              `${o.id}:${o.status}:${o.version || 1}:${(o as any).notes || ''}:${o.order_items?.length || 0}:${(o.order_items || [])
+                .map(i => `${i.product_id}:${i.quantity}:${i.course || ''}:${i.notes || ''}:${i.product?.name || ''}`)
                 .join(',')}`
           )
           .join('|')
@@ -162,7 +202,13 @@ export function useComanderoData(slug: string) {
         if (ord.status === 'cancelled') return
         const existing = prevMap.get(ord.id) || prevOrdersMapRef.current.get(ord.id)
         const recentMut = recentMutationsRef.current.get(ord.id)
-        const isMutActive = Boolean(recentMut && Date.now() < recentMut.until)
+        const lockUntil = mutationLockUntilRef.current.get(ord.id) || 0
+        const isMutActive = Boolean((recentMut && Date.now() < recentMut.until) || Date.now() < lockUntil)
+
+        const mergedOrderNotes = mergeItemNotes(
+          mergeItemNotes((ord as any).notes, (existing as any)?.notes),
+          (recentMut?.order as any)?.notes
+        )
 
         let effectiveItems = (ord.order_items && ord.order_items.length > 0)
           ? ord.order_items
@@ -176,6 +222,14 @@ export function useComanderoData(slug: string) {
           effectiveItems = mergeOrderItemsCourseTags(effectiveItems, recentMut.order.order_items)
         }
 
+        // Hidratación obligatoria de product.name y propagación monotónica de tags de fase
+        effectiveItems = hydrateOrderItemsWithCatalog(
+          effectiveItems,
+          productsRef.current,
+          existing?.order_items,
+          mergedOrderNotes
+        )
+
         let effectiveStatus: OrderStatus = ord.status
         if (isMutActive && recentMut?.status) {
           effectiveStatus = recentMut.status
@@ -188,14 +242,14 @@ export function useComanderoData(slug: string) {
               ? existing.status
               : 'pending'
           } else if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
-            if (orderHasActiveDesserts(ord) && (ord.status === 'preparing' || ord.status === 'ready')) {
+            if (orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && (ord.status === 'preparing' || ord.status === 'ready')) {
               effectiveStatus = ord.status
             } else {
               effectiveStatus = 'delivered'
             }
           } else if (existing?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
-          } else if (existing?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed(ord) && !orderHasActiveDesserts(ord)))) {
+          } else if (existing?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && !orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems })))) {
             effectiveStatus = 'ready'
           } else if (existing?.status === 'preparing' && (ord.status === 'pending_validation' || ord.status === 'pending')) {
             effectiveStatus = 'preparing'
@@ -204,8 +258,23 @@ export function useComanderoData(slug: string) {
           }
         }
 
-        const finalOrd: Order = { ...ord, status: effectiveStatus, order_items: effectiveItems }
-        map.set(ord.id, finalOrd)
+        const candidateOrd: Order = {
+          ...ord,
+          status: effectiveStatus,
+          notes: mergedOrderNotes,
+          order_items: effectiveItems,
+        }
+
+        // Si todas las fases están entregadas y la orden no está pagada ni en validación, sellar como 'delivered'
+        if (
+          candidateOrd.status !== 'paid' &&
+          candidateOrd.status !== 'pending_validation' &&
+          areAllOrderCoursesDelivered(candidateOrd)
+        ) {
+          candidateOrd.status = 'delivered'
+        }
+
+        map.set(ord.id, candidateOrd)
       })
 
       // Preservar órdenes no terminales pendientes
@@ -222,16 +291,15 @@ export function useComanderoData(slug: string) {
       const reconciledOrders = Array.from(map.values()).filter(o => o.status !== 'cancelled')
       serverOrdersRef.current = reconciledOrders
 
-      const prevFinger = computeOrdersFinger(currentOrders)
       const nextFinger = computeOrdersFinger(reconciledOrders)
-
-      if (nextFinger !== prevFinger) {
-        setServerOrders(reconciledOrders)
+      if (nextFinger !== ordersFingerRef.current) {
+        ordersFingerRef.current = nextFinger
+        setServerOrdersState(reconciledOrders)
       }
 
       // Actualizar referencias de respaldo fuera del updater puro
       const nextPendingWithoutItems = new Map<string, Order>()
-      incomingOrders.forEach(ord => {
+      reconciledOrders.forEach(ord => {
         if (ord.status === 'cancelled') return
         if (!ord.order_items || ord.order_items.length === 0) {
           nextPendingWithoutItems.set(ord.id, ord)
@@ -294,7 +362,6 @@ export function useComanderoData(slug: string) {
               playKitchenChime()
             }
           } else if (ord.status === 'pending_validation' && !attendedValidationOrderIdsRef.current.has(ord.id)) {
-            // Mesa ocupada con pedido en validación
             if (!statusMap[tblNum] && !statusMap[numKey]) {
               statusMap[tblNum] = 'busy'
               statusMap[numKey] = 'busy'
@@ -391,7 +458,9 @@ export function useComanderoData(slug: string) {
         setRestaurant(rest)
         const cats = MOCK_CATEGORIES[slug] || MOCK_CATEGORIES['burger-gourmet'] || []
         setCategories(cats)
-        setProducts(MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])
+        const initialProds = MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || []
+        setProducts(initialProds)
+        productsRef.current = initialProds
         const currentTables = MOCK_TABLES[slug] || MOCK_TABLES['burger-gourmet'] || fallbackTables
         setTables(currentTables)
         if (currentTables.length > 0) {
@@ -402,7 +471,10 @@ export function useComanderoData(slug: string) {
           fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
             .then(r => r.json())
             .then(data => {
-              if (data?.products && data.products.length > 0) setProducts(data.products)
+              if (data?.products && data.products.length > 0) {
+                setProducts(data.products)
+                productsRef.current = data.products
+              }
               if (data?.categories && data.categories.length > 0) setCategories(data.categories)
             })
             .catch(() => {})
@@ -411,26 +483,27 @@ export function useComanderoData(slug: string) {
 
       await syncServerData()
 
-      // Realtime Supabase Channel
+      // Realtime Supabase Channel con debounce (350ms)
       if (supabase) {
         let realtimeDebounceTimer: any = null
         const triggerDebouncedRealtimeSync = () => {
           if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer)
           realtimeDebounceTimer = setTimeout(() => {
             syncServerData()
-          }, 400)
+          }, 350)
         }
 
         const channelId = `comandero-orders-${slug}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
         realtimeChannel = supabase
           .channel(channelId)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, triggerDebouncedRealtimeSync)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, triggerDebouncedRealtimeSync)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'order_events' }, triggerDebouncedRealtimeSync)
           .on('postgres_changes', { event: '*', schema: 'public', table: 'service_calls' }, triggerDebouncedRealtimeSync)
           .subscribe()
       }
 
-      // SSE (Solo en desarrollo local offline para no quemar recursos en serverless)
+      // SSE (Solo en desarrollo local offline)
       if (process.env.NODE_ENV === 'development') {
         try {
           let sseDebounceTimer: any = null
@@ -464,7 +537,10 @@ export function useComanderoData(slug: string) {
                 fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
                   .then(r => r.json())
                   .then(d => {
-                    if (d?.products && d.products.length > 0) setProducts(d.products)
+                    if (d?.products && d.products.length > 0) {
+                      setProducts(d.products)
+                      productsRef.current = d.products
+                    }
                     if (d?.categories && d.categories.length > 0) setCategories(d.categories)
                   })
                   .catch(() => {})
@@ -520,7 +596,10 @@ export function useComanderoData(slug: string) {
             fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
               .then(r => r.json())
               .then(d => {
-                if (d?.products && d.products.length > 0) setProducts(d.products)
+                if (d?.products && d.products.length > 0) {
+                  setProducts(d.products)
+                  productsRef.current = d.products
+                }
               })
               .catch(() => {})
           }
@@ -555,7 +634,10 @@ export function useComanderoData(slug: string) {
         fetch(`/api/admin/menu?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
           .then(r => r.json())
           .then(data => {
-            if (data?.products && data.products.length > 0) setProducts(data.products)
+            if (data?.products && data.products.length > 0) {
+              setProducts(data.products)
+              productsRef.current = data.products
+            }
             if (data?.categories && data.categories.length > 0) setCategories(data.categories)
           })
           .catch(() => {})
@@ -603,5 +685,6 @@ export function useComanderoData(slug: string) {
     attendedValidationOrderIdsRef,
     recentTogglesRef,
     recentMutationsRef,
+    mutationLockUntilRef,
   }
 }

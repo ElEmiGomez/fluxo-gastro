@@ -14,12 +14,21 @@ import {
   isValidOrderTransition,
   saveCachedOrderItems,
   getCachedOrderItems,
+  getServerProducts,
 } from '@/lib/server-state'
 
 export { getCachedOrderItems }
 import { getTargetRestaurantId } from './restaurants.repository'
-import { inferCourseType, resolveCanonicalProductId } from '@/lib/category-matcher'
-import { ORDER_STATUS_HIERARCHY, getItemCourse, mergeOrderItemsCourseTags, TAG_MAIN_FIRED, TAG_DESSERT_FIRED, orderHasActiveDesserts } from '@/lib/course-utils'
+import { resolveCanonicalProductId } from '@/lib/category-matcher'
+import {
+  getItemCourse,
+  mergeItemNotes,
+  mergeOrderItemsCourseTags,
+  hydrateOrderItemsWithCatalog,
+  enforceMonotonicItemNotes,
+  isPackHeaderItem,
+  orderHasActiveDesserts,
+} from '@/lib/course-utils'
 
 const isUuid = (val?: string | null): boolean =>
   Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val))
@@ -80,6 +89,7 @@ export async function createOrder(
   const initialStatus: OrderStatus = orderData.status || 'pending_validation'
   const supabase = createServerClient()
   const effectiveSessionToken = orderData.session_token || orderData.table_session_id || null
+  const catalogProducts = getServerProducts(slug)
 
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -143,6 +153,17 @@ export async function createOrder(
         safeItemsForDb = (orderData.items || []).filter(it => uuidRegex.test(it.product_id))
       }
 
+      const initialHydratedItems = hydrateOrderItemsWithCatalog(
+        (orderData.items || []).map((it: any) => ({
+          ...it,
+          product: it.product || it.products,
+          course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
+            ? it.course
+            : getItemCourse(it),
+        })),
+        catalogProducts
+      )
+
       if (orderData.idempotency_key) {
         const { data: atomicResult, error: rpcErr } = await supabase.rpc('create_order_atomic', {
           p_restaurant_id: targetRestaurantId,
@@ -162,13 +183,7 @@ export async function createOrder(
             ...atomicResult.order,
             status: initialStatus || atomicResult.order.status,
             session_token: effectiveSessionToken || (atomicResult.order as any).session_token,
-            order_items: (orderData.items || []).map((it: any) => ({
-              ...it,
-              product: it.product || it.products,
-              course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
-                ? it.course
-                : getItemCourse(it),
-            })) as any,
+            order_items: initialHydratedItems,
             table_number: orderData.table_number,
           }
           saveCachedOrderItems(atomicResult.order.id, fullOrder.order_items)
@@ -206,13 +221,7 @@ export async function createOrder(
         const fullOrder: Order = {
           ...newOrder,
           session_token: effectiveSessionToken || (newOrder as any).session_token,
-          order_items: (orderData.items || []).map((it: any) => ({
-            ...it,
-            product: it.product || it.products,
-            course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
-              ? it.course
-              : getItemCourse(it),
-          })) as any,
+          order_items: initialHydratedItems,
           table_number: orderData.table_number,
         }
 
@@ -231,9 +240,24 @@ export async function createOrder(
 
         if (itemsToInsert.length > 0) {
           try {
-            const { error: itemsInsertErr } = await supabase.from('order_items').insert(itemsToInsert)
+            const { data: insertedRows, error: itemsInsertErr } = await supabase
+              .from('order_items')
+              .insert(itemsToInsert)
+              .select('id, product_id, quantity, notes')
             if (itemsInsertErr) {
               console.error('[createOrder] Explicit error inserting order_items in Supabase:', itemsInsertErr)
+            } else if (insertedRows && insertedRows.length > 0) {
+              let dbRowIdx = 0
+              fullOrder.order_items = (fullOrder.order_items || []).map(it => {
+                if (isPackHeaderItem(it)) return it
+                const dbRow = insertedRows[dbRowIdx]
+                if (dbRow?.id) {
+                  dbRowIdx++
+                  return { ...it, id: dbRow.id, order_id: newOrder.id }
+                }
+                return it
+              })
+              saveCachedOrderItems(newOrder.id, fullOrder.order_items)
             }
           } catch (itemsInsertErr) {
             console.error('[createOrder] Exception inserting order_items in Supabase:', itemsInsertErr)
@@ -264,6 +288,7 @@ export async function getRestaurantOrders(
   slug: string,
   tableNumber?: number | string
 ): Promise<Order[]> {
+  const catalogProducts = getServerProducts(slug)
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -341,6 +366,7 @@ export async function getRestaurantOrders(
             }
           }
 
+          const mergedOrderNotes = mergeItemNotes(o.notes, (mem as any)?.notes)
           const cachedItems = getCachedOrderItems(o.id)
           const referenceItems = (mem?.order_items && mem.order_items.length > 0)
             ? mem.order_items
@@ -348,7 +374,7 @@ export async function getRestaurantOrders(
 
           // Anti-Loss Invariant: Si memoria o cache contiene más items que la respuesta parcial de DB,
           // preservar la comanda íntegra en lugar de truncarla.
-          let resolvedOrderItems = (mem?.order_items && mem.order_items.length > normalizedItems.length)
+          const rawCandidateItems = (mem?.order_items && mem.order_items.length > normalizedItems.length)
             ? mem.order_items
             : (cachedItems && cachedItems.length > normalizedItems.length)
                 ? cachedItems
@@ -358,11 +384,14 @@ export async function getRestaurantOrders(
                         ? mem.order_items
                         : (cachedItems && cachedItems.length > 0 ? cachedItems : [])))
 
-          // ANTI-REVERSION INVARIANT: Preservar todas las etiquetas irreversibles de cocina y barra
-          // ([BARRA_SERVIDA], [ENTRADA_SERVIDA], etc.) ya confirmadas en memoria o caché.
-          if (referenceItems.length > 0 && resolvedOrderItems.length > 0) {
-            resolvedOrderItems = mergeOrderItemsCourseTags(resolvedOrderItems, referenceItems)
-          }
+          // ANTI-REVERSION & HYDRATION INVARIANT: Hidratar siempre `item.product.name` y preservar
+          // todas las etiquetas irreversibles ([BARRA_SERVIDA], [ENTRADA_SERVIDA], [PRINCIPAL_SERVIDO], etc.)
+          const resolvedOrderItems = hydrateOrderItemsWithCatalog(
+            rawCandidateItems,
+            catalogProducts,
+            referenceItems,
+            mergedOrderNotes
+          )
 
           if (resolvedOrderItems.length > 0) {
             saveCachedOrderItems(o.id, resolvedOrderItems)
@@ -370,6 +399,7 @@ export async function getRestaurantOrders(
 
           return {
             ...o,
+            notes: mergedOrderNotes || o.notes,
             version: resolvedVersion,
             order_items: resolvedOrderItems,
             status: resolvedStatus,
@@ -378,12 +408,22 @@ export async function getRestaurantOrders(
           } as Order
         })
         const seenIds = new Set(mappedOrders.map(o => o.id))
-        const unindexedMemOrders = memOrders.filter(
-          m => !seenIds.has(m.id) && m.status !== 'cancelled' && m.status !== 'paid' &&
-            (parsedTableNum !== null && !isNaN(parsedTableNum)
-              ? (Number(m.table_number) === parsedTableNum || Number(m.table?.table_number) === parsedTableNum)
-              : true)
-        )
+        const unindexedMemOrders = memOrders
+          .filter(
+            m => !seenIds.has(m.id) && m.status !== 'cancelled' && m.status !== 'paid' &&
+              (parsedTableNum !== null && !isNaN(parsedTableNum)
+                ? (Number(m.table_number) === parsedTableNum || Number(m.table?.table_number) === parsedTableNum)
+                : true)
+          )
+          .map(m => ({
+            ...m,
+            order_items: hydrateOrderItemsWithCatalog(
+              m.order_items || [],
+              catalogProducts,
+              getCachedOrderItems(m.id),
+              (m as any).notes
+            ),
+          }))
         return [...mappedOrders, ...unindexedMemOrders]
       }
     } catch (e) {
@@ -391,7 +431,15 @@ export async function getRestaurantOrders(
     }
   }
 
-  const allMem = getServerOrders(slug)
+  const allMem = getServerOrders(slug).map(m => ({
+    ...m,
+    order_items: hydrateOrderItemsWithCatalog(
+      m.order_items || [],
+      catalogProducts,
+      getCachedOrderItems(m.id),
+      (m as any).notes
+    ),
+  }))
   if (tableNumber !== undefined && tableNumber !== null && tableNumber !== '') {
     const num = parseInt(String(tableNumber), 10)
     if (!isNaN(num)) {
@@ -409,6 +457,8 @@ export async function getActiveOrdersByTable(
   slug: string,
   tableNumber: number
 ): Promise<Order[]> {
+  const catalogProducts = getServerProducts(slug)
+  const memOrders = getServerOrders(slug)
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
@@ -435,16 +485,21 @@ export async function getActiveOrdersByTable(
         return (data as unknown as any[]).map(o => {
           const tableNum = o.table_number || (o.table ? o.table.table_number : tableNumber)
           const token = o.session_token || o.table_session_id
-          const normalizedItems = (o.order_items || []).map((it: any) => ({
-            ...it,
-            product: it.product || it.products,
-            course: it.course || 'first',
-          }))
+          const mem = memOrders.find(m => m.id === o.id)
+          const mergedOrderNotes = mergeItemNotes(o.notes, (mem as any)?.notes)
+          const refItems = mem?.order_items || getCachedOrderItems(o.id)
+          const hydratedItems = hydrateOrderItemsWithCatalog(
+            o.order_items || [],
+            catalogProducts,
+            refItems,
+            mergedOrderNotes
+          )
           return {
             ...o,
+            notes: mergedOrderNotes || o.notes,
             table_number: tableNum,
             session_token: token,
-            order_items: normalizedItems,
+            order_items: hydratedItems,
           } as Order
         })
       }
@@ -454,11 +509,20 @@ export async function getActiveOrdersByTable(
   }
 
   // Fallback a memoria
-  const allOrders = getServerOrders(slug)
-  return allOrders.filter(
-    o => o.table_number?.toString() === tableNumber.toString() &&
-         ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
-  )
+  return memOrders
+    .filter(
+      o => o.table_number?.toString() === tableNumber.toString() &&
+           ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'].includes(o.status)
+    )
+    .map(o => ({
+      ...o,
+      order_items: hydrateOrderItemsWithCatalog(
+        o.order_items || [],
+        catalogProducts,
+        getCachedOrderItems(o.id),
+        (o as any).notes
+      ),
+    }))
 }
 
 /**
@@ -479,6 +543,7 @@ export async function transitionOrderStatus(
     forceAllowReactivation = false,
   } = params
 
+  const catalogProducts = getServerProducts(slug)
   const supabase = createServerClient()
   const hasSupabase = supabase && isSupabaseConfigured()
 
@@ -502,11 +567,18 @@ export async function transitionOrderStatus(
         .eq('id', orderId)
         .maybeSingle()
       if (supaOrder) {
+        const hydratedItems = hydrateOrderItemsWithCatalog(
+          supaOrder.order_items || [],
+          catalogProducts,
+          getCachedOrderItems(orderId),
+          supaOrder.notes
+        )
         currentOrder = {
           ...supaOrder,
           version: supaOrder.version || 1,
-          order_items: supaOrder.order_items || [],
+          order_items: hydratedItems,
         } as Order
+        saveCachedOrderItems(orderId, hydratedItems)
         addServerOrder(slug, currentOrder, true)
       }
     } catch {
@@ -514,15 +586,35 @@ export async function transitionOrderStatus(
     }
   }
 
-  // Idempotencia inmediata si ya está en el estado solicitado
+  // Idempotencia inmediata si ya está en el estado solicitado (pero emitiendo orden 100% hidratada)
   if (currentOrder && currentOrder.status === nextStatus) {
+    const hydratedItems = hydrateOrderItemsWithCatalog(
+      currentOrder.order_items || [],
+      catalogProducts,
+      getCachedOrderItems(orderId),
+      (currentOrder as any).notes
+    )
+    const hydratedOrder: Order = {
+      ...currentOrder,
+      order_items: hydratedItems,
+    }
+    saveCachedOrderItems(orderId, hydratedItems)
+    addServerOrder(slug, hydratedOrder, true)
+    broadcastEvent({
+      type: 'order_updated',
+      slug,
+      orderId,
+      status: nextStatus,
+      tableNumber: hydratedOrder.table_number || tableNumber,
+      order: hydratedOrder,
+    })
     return {
       success: true,
       code: 'ALREADY_IN_STATE',
       message: `Orden ${orderId} ya se encuentra en estado ${nextStatus}`,
-      order: currentOrder,
-      version: currentOrder.version || 1,
-      current_status: currentOrder.status,
+      order: hydratedOrder,
+      version: hydratedOrder.version || 1,
+      current_status: hydratedOrder.status,
     }
   }
 
@@ -574,28 +666,29 @@ export async function transitionOrderStatus(
               : getItemCourse(it),
           }))
 
-          // Backfill desde memoria o caché si el RPC devolvió items vacíos (race condition Supabase)
+          // Backfill y reconciliación monotónica + hidratación de productos desde memoria/caché/catálogo
           const memOrder = getServerOrders(slug).find(o => o.id === orderId)
           const cachedItems = getCachedOrderItems(orderId)
           const referenceItems = (memOrder?.order_items && memOrder.order_items.length > 0)
             ? memOrder.order_items
             : (cachedItems && cachedItems.length > 0 ? cachedItems : [])
 
-          let resolvedItems =
-            rpcItems.length > 0
-              ? rpcItems
-              : (referenceItems.length > 0 ? referenceItems : [])
-
-          if (referenceItems.length > 0 && resolvedItems.length > 0) {
-            resolvedItems = mergeOrderItemsCourseTags(resolvedItems, referenceItems)
-          }
+          const mergedOrderNotes = mergeItemNotes(data.order?.notes, (memOrder as any)?.notes)
+          const resolvedItems = hydrateOrderItemsWithCatalog(
+            rpcItems.length > 0 ? rpcItems : referenceItems,
+            catalogProducts,
+            referenceItems,
+            mergedOrderNotes
+          )
 
           if (resolvedItems.length > 0) {
             saveCachedOrderItems(orderId, resolvedItems)
           }
 
           const parsedOrder: Order | undefined = data.order ? {
+            ...(memOrder || {}),
             ...data.order,
+            notes: mergedOrderNotes || data.order?.notes,
             order_items: resolvedItems,
           } : undefined
 
@@ -676,27 +769,20 @@ export async function transitionOrderStatus(
         .maybeSingle()
 
       if (!supaErr && supaOrder) {
-        const supaItems = (supaOrder.order_items || []).map((it: any) => ({
-          ...it,
-          product: it.product || it.products,
-          course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
-            ? it.course
-            : getItemCourse(it),
-        }))
         const cached = getCachedOrderItems(orderId)
-        let effectiveItems = supaItems.length > 0
-          ? supaItems
-          : (cached && cached.length > 0 ? cached : [])
-
-        if (cached && cached.length > 0 && effectiveItems.length > 0) {
-          effectiveItems = mergeOrderItemsCourseTags(effectiveItems, cached)
-        }
+        const effectiveItems = hydrateOrderItemsWithCatalog(
+          supaOrder.order_items || [],
+          catalogProducts,
+          cached,
+          supaOrder.notes
+        )
 
         const orderToHydrate: Order = {
           ...supaOrder,
           version: supaOrder.version || 1,
           order_items: effectiveItems,
         }
+        saveCachedOrderItems(orderId, effectiveItems)
         addServerOrder(slug, orderToHydrate)
         memResult = updateServerOrderStatus(slug, orderId, nextStatus, tableNumber, expectedVersion, forceAllowReactivation)
       }
@@ -714,6 +800,21 @@ export async function transitionOrderStatus(
       current_version: memResult.current_version,
       current_status: memResult.current_status,
     }
+  }
+
+  if (memResult.order) {
+    const hydratedFallbackItems = hydrateOrderItemsWithCatalog(
+      memResult.order.order_items || [],
+      catalogProducts,
+      getCachedOrderItems(orderId),
+      (memResult.order as any).notes
+    )
+    memResult.order = {
+      ...memResult.order,
+      order_items: hydratedFallbackItems,
+    }
+    saveCachedOrderItems(orderId, hydratedFallbackItems)
+    addServerOrder(slug, memResult.order, true)
   }
 
   // Si la transición fue válida y Supabase está configurado, persistir en PostgreSQL
@@ -778,8 +879,8 @@ export async function updateOrderStatus(
 
 /**
  * 6.2 Actualiza tags de curso/pase gastronómico en las notas de los ítems de una orden
- * (ej. [BARRA_SERVIDA], [COCINA_LISTA], [POSTRE_LISTO], [MARCHAR_POSTRE])
- * garantizando persistencia en PostgreSQL (Supabase) y sincronización Realtime SSE.
+ * (ej. [BARRA_SERVIDA], [ENTRADA_LISTA], [ENTRADA_SERVIDA], [MARCHAR_PRINCIPAL], [PRINCIPAL_SERVIDO], [POSTRE_SERVIDO])
+ * garantizando persistencia monotónica en PostgreSQL (Supabase) y sincronización Realtime SSE con productos hidratados.
  */
 export async function updateOrderCourseTags(
   slug: string,
@@ -788,6 +889,7 @@ export async function updateOrderCourseTags(
   itemFilter: (item: OrderItem) => boolean,
   options?: { skipBroadcast?: boolean }
 ): Promise<{ success: boolean; order?: Order; error?: string }> {
+  const catalogProducts = getServerProducts(slug)
   const supabase = createServerClient()
   const hasSupabase = supabase && isSupabaseConfigured()
 
@@ -807,20 +909,49 @@ export async function updateOrderCourseTags(
     return { success: false, error: 'ORDER_NOT_FOUND' }
   }
 
-  const updatedItems: OrderItem[] = (order.order_items || []).map(it => {
+  const tagsToApply = tag.split(/\s+/).filter(Boolean)
+  let updatedOrderNotes = (order as any).notes || ''
+  for (const singleTag of tagsToApply) {
+    if (!updatedOrderNotes.includes(singleTag)) {
+      updatedOrderNotes = updatedOrderNotes ? `${updatedOrderNotes} ${singleTag}` : singleTag
+    }
+  }
+  updatedOrderNotes = enforceMonotonicItemNotes(updatedOrderNotes)
+
+  const baseHydratedItems = hydrateOrderItemsWithCatalog(
+    order.order_items || [],
+    catalogProducts,
+    getCachedOrderItems(orderId),
+    (order as any).notes
+  )
+
+  const rawUpdatedItems: OrderItem[] = baseHydratedItems.map(it => {
     if (itemFilter(it)) {
-      const currentNotes = it.notes || ''
-      if (!currentNotes.includes(tag)) {
-        return {
-          ...it,
-          notes: currentNotes ? `${currentNotes} ${tag}` : tag,
+      let currentNotes = it.notes || ''
+      for (const singleTag of tagsToApply) {
+        if (!currentNotes.includes(singleTag)) {
+          currentNotes = currentNotes ? `${currentNotes} ${singleTag}` : singleTag
         }
       }
+      return {
+        ...it,
+        notes: enforceMonotonicItemNotes(currentNotes),
+      }
     }
-    return it
+    return {
+      ...it,
+      notes: enforceMonotonicItemNotes(it.notes),
+    }
   })
 
-  // Persistir en Supabase (order_items)
+  const updatedItems = hydrateOrderItemsWithCatalog(
+    rawUpdatedItems,
+    catalogProducts,
+    baseHydratedItems,
+    updatedOrderNotes
+  )
+
+  // Persistir en Supabase (order_items y orders.notes)
   if (hasSupabase) {
     try {
       const itemsToUpdate = updatedItems.filter(it => itemFilter(it))
@@ -842,9 +973,12 @@ export async function updateOrderCourseTags(
           itemsToUpdate.map(async it => {
             if (isUuid(it.id)) {
               usedDbItemIds.add(it.id!)
+              const existingDb = dbItems.find(d => d.id === it.id)
+              const mergedDbNotes = mergeItemNotes(it.notes, existingDb?.notes)
+              it.notes = mergedDbNotes
               const { error } = await supabase
                 .from('order_items')
-                .update({ notes: it.notes })
+                .update({ notes: mergedDbNotes })
                 .eq('id', it.id)
               if (error) {
                 console.warn('[updateOrderCourseTags] Error updating by id:', error)
@@ -868,9 +1002,11 @@ export async function updateOrderCourseTags(
             if (matchedDbItem?.id && isUuid(matchedDbItem.id)) {
               usedDbItemIds.add(matchedDbItem.id)
               it.id = matchedDbItem.id
+              const mergedDbNotes = mergeItemNotes(it.notes, matchedDbItem.notes)
+              it.notes = mergedDbNotes
               const { error } = await supabase
                 .from('order_items')
-                .update({ notes: it.notes })
+                .update({ notes: mergedDbNotes })
                 .eq('id', matchedDbItem.id)
               if (error) {
                 console.warn('[updateOrderCourseTags] Error updating by matchedDbItem.id:', error)
@@ -897,20 +1033,16 @@ export async function updateOrderCourseTags(
           })
         )
       }
+
+      if (isUuid(orderId) && updatedOrderNotes !== ((order as any).notes || '')) {
+        try {
+          await supabase.from('orders').update({ notes: updatedOrderNotes }).eq('id', orderId)
+        } catch (err) {
+          console.warn('[updateOrderCourseTags] Error updating order notes in DB:', err)
+        }
+      }
     } catch (dbErr) {
       console.warn('[updateOrderCourseTags] DB update error:', dbErr)
-    }
-  }
-
-  let updatedOrderNotes = (order as any).notes || ''
-  if ((tag === TAG_MAIN_FIRED || tag === TAG_DESSERT_FIRED) && !updatedOrderNotes.includes(tag)) {
-    updatedOrderNotes = updatedOrderNotes ? `${updatedOrderNotes} ${tag}` : tag
-    if (hasSupabase && isUuid(orderId)) {
-      try {
-        await supabase.from('orders').update({ notes: updatedOrderNotes }).eq('id', orderId)
-      } catch (err) {
-        console.warn('[updateOrderCourseTags] Error updating order notes in DB:', err)
-      }
     }
   }
 
@@ -946,6 +1078,7 @@ export async function resolvePendingDessertInOrder(
   dessertProduct: { id: string; name: string; description?: string; image_url?: string | null },
   note?: string
 ): Promise<{ success: boolean; order?: Order; error?: string }> {
+  const catalogProducts = getServerProducts(slug)
   const supabase = createServerClient()
   const hasSupabase = supabase && isSupabaseConfigured()
 
@@ -966,7 +1099,7 @@ export async function resolvePendingDessertInOrder(
   }
 
   let resolved = false
-  const updatedItems: OrderItem[] = (order.order_items || []).map(it => {
+  const rawUpdatedItems: OrderItem[] = (order.order_items || []).map(it => {
     const isPending = Boolean(
       (it.notes && it.notes.includes('[POSTRE_PENDIENTE_ELECCION]')) ||
       it.product_id === 'p-dessert-pending' ||
@@ -1004,6 +1137,14 @@ export async function resolvePendingDessertInOrder(
     }
     return it
   })
+
+  const updatedOrderNotes = mergeItemNotes((order as any).notes, '[MARCHAR_POSTRE]')
+  const updatedItems = hydrateOrderItemsWithCatalog(
+    rawUpdatedItems,
+    catalogProducts,
+    order.order_items,
+    updatedOrderNotes
+  )
 
   const nextStatus: OrderStatus = order.status === 'ready' || order.status === 'delivered' ? 'preparing' : order.status
 
@@ -1043,10 +1184,10 @@ export async function resolvePendingDessertInOrder(
           }
         }
       }
-      if (nextStatus !== order.status && isUuid(orderId)) {
+      if (isUuid(orderId)) {
         await supabase
           .from('orders')
-          .update({ status: nextStatus })
+          .update({ status: nextStatus, notes: updatedOrderNotes })
           .eq('id', orderId)
       }
     } catch (dbErr) {
@@ -1057,22 +1198,21 @@ export async function resolvePendingDessertInOrder(
   const updatedOrder: Order = {
     ...order,
     status: nextStatus,
+    notes: updatedOrderNotes,
     order_items: updatedItems,
   }
 
   saveCachedOrderItems(orderId, updatedItems)
   addServerOrder(slug, updatedOrder, true)
 
-    broadcastEvent({
-      type: 'order_updated',
-      slug,
-      orderId,
-      status: updatedOrder.status,
-      tableNumber: updatedOrder.table_number,
-      order: updatedOrder,
-    })
+  broadcastEvent({
+    type: 'order_updated',
+    slug,
+    orderId,
+    status: updatedOrder.status,
+    tableNumber: updatedOrder.table_number,
+    order: updatedOrder,
+  })
 
   return { success: true, order: updatedOrder }
 }
-
-

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Table, Order, Restaurant, CartItem, OrderStatus } from '@/types/database.types'
+import { Table, Order, Restaurant, CartItem, OrderStatus, Product } from '@/types/database.types'
 import { TableStatusType } from '@/components/comandero/TableSelector'
 import { PendingServiceCall } from '@/types/comandero.types'
 import {
@@ -9,17 +9,23 @@ import {
   isDessertReady,
   isStarterItem,
   isMainItem,
+  TAG_STARTER_READY,
   TAG_STARTER_SERVED,
   TAG_MAIN_FIRED,
+  TAG_MAIN_READY,
   TAG_MAIN_SERVED,
   TAG_DESSERT_FIRED,
   TAG_DESSERT_READY,
   TAG_DESSERT_SERVED,
+  mergeItemNotes,
+  hydrateOrderItemsWithCatalog,
+  areAllOrderCoursesDelivered,
 } from '@/lib/course-utils'
 
 interface UseComanderoActionsParams {
   slug: string
   restaurant: Restaurant
+  products?: Product[]
   serverOrders: Order[]
   setServerOrders: React.Dispatch<React.SetStateAction<Order[]>>
   pendingCalls: PendingServiceCall[]
@@ -36,11 +42,15 @@ interface UseComanderoActionsParams {
   readyOrderAlert: string | number | null
   setReadyOrderAlert: (val: string | number | null) => void
   recentMutationsRef: React.MutableRefObject<Map<string, { status?: OrderStatus; order?: Order; until: number }>>
+  mutationLockUntilRef?: React.MutableRefObject<Map<string, number>>
 }
+
+const MUTATION_LOCK_MS = 4500
 
 export function useComanderoActions({
   slug,
   restaurant,
+  products = [],
   serverOrders,
   setServerOrders,
   pendingCalls,
@@ -57,11 +67,23 @@ export function useComanderoActions({
   readyOrderAlert,
   setReadyOrderAlert,
   recentMutationsRef,
+  mutationLockUntilRef,
 }: UseComanderoActionsParams) {
   const [validatingOrderIds, setValidatingOrderIds] = useState<Set<string>>(new Set())
   const [deliveringOrderIds, setDeliveringOrderIds] = useState<Set<string>>(new Set())
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderSentToast, setOrderSentToast] = useState(false)
+
+  const lockOrderMutation = (orderId: string, payload: { status?: OrderStatus; order?: Order }) => {
+    const until = Date.now() + MUTATION_LOCK_MS
+    mutationLockUntilRef?.current.set(orderId, until)
+    recentMutationsRef.current.set(orderId, { ...payload, until })
+  }
+
+  const releaseOrderMutation = (orderId: string) => {
+    mutationLockUntilRef?.current.delete(orderId)
+    recentMutationsRef.current.delete(orderId)
+  }
 
   // Marcar llamada como atendida (Servidor + Local con State Lock)
   const handleAttendCall = async (callId: string) => {
@@ -90,7 +112,7 @@ export function useComanderoActions({
     }
   }
 
-  // Entregar un ticket o comanda individual específica (No-optimista con OCC)
+  // Entregar un ticket o comanda individual específica (con lock de mutación en vuelo)
   const handleDeliverSingleOrder = async (orderId: string, tableNum?: number | string) => {
     if (deliveringOrderIds.has(orderId)) return
 
@@ -98,10 +120,8 @@ export function useComanderoActions({
     const targetOrder = serverOrders.find(o => o.id === orderId)
     const expectedVersion = targetOrder?.version
 
-    // Protección inmediata de mutación reciente contra sobrescrituras por polling
-    recentMutationsRef.current.set(orderId, { status: 'delivered', until: Date.now() + 4500 })
+    lockOrderMutation(orderId, { status: 'delivered' })
 
-    // Actualización visual inmediata
     setServerOrders(prev =>
       prev.map(o => (o.id === orderId ? { ...o, status: 'delivered' } : o))
     )
@@ -129,7 +149,7 @@ export function useComanderoActions({
           ? { ...data.order, table_number: tableNum || data.order.table_number }
           : null
         if (finalOrder) {
-          recentMutationsRef.current.set(orderId, { order: finalOrder, status: 'delivered', until: Date.now() + 4500 })
+          lockOrderMutation(orderId, { order: finalOrder, status: 'delivered' })
         }
         setServerOrders(prev =>
           prev.map(o => {
@@ -141,18 +161,13 @@ export function useComanderoActions({
             return o
           })
         )
-      } else if (res.status === 409) {
-        console.warn(`[handleDeliverSingleOrder] Conflicto OCC 409 en orden ${orderId}. Reconciliando...`)
-        recentMutationsRef.current.delete(orderId)
-        await syncServerData()
       } else {
-        console.error(`[handleDeliverSingleOrder] Error entregando orden ${orderId}:`, res.status)
-        recentMutationsRef.current.delete(orderId)
+        releaseOrderMutation(orderId)
         await syncServerData()
       }
     } catch (e) {
       console.error('Error de red al entregar orden:', e)
-      recentMutationsRef.current.delete(orderId)
+      releaseOrderMutation(orderId)
       await syncServerData()
     } finally {
       setDeliveringOrderIds(prev => {
@@ -183,7 +198,7 @@ export function useComanderoActions({
     }
   }
 
-  // Validar comanda de comensal y enviarla a cocina (No-optimista con OCC)
+  // Validar comanda de comensal y enviarla a cocina
   const handleValidateOrder = async (orderId: string, tableNum?: number | string) => {
     if (validatingOrderIds.has(orderId)) return
 
@@ -198,8 +213,7 @@ export function useComanderoActions({
       } catch (_) {}
     }
 
-    // Bloqueo de mutación reciente contra regresiones en soft-polling
-    recentMutationsRef.current.set(orderId, { status: 'pending', until: Date.now() + 4500 })
+    lockOrderMutation(orderId, { status: 'pending' })
 
     const targetOrder = serverOrders.find(o => o.id === orderId)
     const expectedVersion = targetOrder?.version
@@ -222,7 +236,7 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json()
         if (data.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, status: 'pending', until: Date.now() + 4500 })
+          lockOrderMutation(orderId, { order: data.order, status: 'pending' })
         }
         setServerOrders(prev =>
           prev.map(o => {
@@ -237,18 +251,13 @@ export function useComanderoActions({
             return o
           })
         )
-      } else if (res.status === 409) {
-        console.warn(`[handleValidateOrder] Conflicto OCC 409 en orden ${orderId}. Reconciliando...`)
-        recentMutationsRef.current.delete(orderId)
-        await syncServerData()
       } else {
-        console.error(`[handleValidateOrder] Error en validación de orden ${orderId}:`, res.status)
-        recentMutationsRef.current.delete(orderId)
+        releaseOrderMutation(orderId)
         await syncServerData()
       }
     } catch (e) {
       console.error('Error de red al validar comanda hacia cocina:', e)
-      recentMutationsRef.current.delete(orderId)
+      releaseOrderMutation(orderId)
       await syncServerData()
     } finally {
       setValidatingOrderIds(prev => {
@@ -313,68 +322,72 @@ export function useComanderoActions({
     )
     const fireableOrderIds = new Set(fireableOrders.map(o => o.id))
 
-    // Actualización optimista inmediata en estado local
     setServerOrders(prev =>
       prev.map(o => {
         if (!fireableOrderIds.has(o.id)) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          if (isMainItem(it)) {
-            const currentNotes = it.notes || ''
-            if (!currentNotes.includes(TAG_MAIN_FIRED)) {
-              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_MAIN_FIRED}` : TAG_MAIN_FIRED }
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            if (isMainItem(it)) {
+              return { ...it, notes: mergeItemNotes(it.notes, TAG_MAIN_FIRED) }
             }
-          }
-          return it
-        })
-        const currentOrderNotes = (o as any).notes || ''
-        const updatedOrderNotes = currentOrderNotes.includes(TAG_MAIN_FIRED)
-          ? currentOrderNotes
-          : (currentOrderNotes ? `${currentOrderNotes} ${TAG_MAIN_FIRED}` : TAG_MAIN_FIRED)
+            return it
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes((o as any).notes, TAG_MAIN_FIRED)
         const updated: Order = { ...o, status: 'preparing' as OrderStatus, notes: updatedOrderNotes, order_items: updatedItems }
-        recentMutationsRef.current.set(o.id, { order: updated, status: 'preparing', until: Date.now() + 4500 })
+        lockOrderMutation(o.id, { order: updated, status: 'preparing' })
         return updated
       })
     )
 
     for (const ord of fireableOrders) {
-      await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, orderId: ord.id, action: 'fire_mains' }),
-      })
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, orderId: ord.id, action: 'fire_mains' }),
+        })
+        if (res.ok) {
+          const data = await res.json().catch(() => null)
+          if (data?.order) {
+            lockOrderMutation(ord.id, { order: data.order, status: 'preparing' })
+            setServerOrders(prev => prev.map(o => (o.id === ord.id ? data.order : o)))
+          }
+        }
+      } catch (e) {
+        console.error('Error firing second courses for order:', ord.id, e)
+      }
     }
-    await syncServerData()
     setOrderSentToast(true)
     setTimeout(() => setOrderSentToast(false), 2500)
   }
 
-  // Marchar postres retenidos de una orden específica a la cocina (Pase 2 dulce)
+  // Marchar postres retenidos de una orden específica a la cocina (Pase 3 dulce)
   const handleFireOrderDesserts = async (orderId: string) => {
     let updatedOrderForRef: Order | null = null
-    // Actualización optimista inmediata en estado local
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          if (isDessertItem(it)) {
-            const currentNotes = it.notes || ''
-            if (!currentNotes.includes(TAG_DESSERT_FIRED)) {
-              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_DESSERT_FIRED}` : TAG_DESSERT_FIRED }
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            if (isDessertItem(it)) {
+              return { ...it, notes: mergeItemNotes(it.notes, TAG_DESSERT_FIRED) }
             }
-          }
-          return it
-        })
-        const currentOrderNotes = (o as any).notes || ''
-        const updatedOrderNotes = currentOrderNotes.includes(TAG_DESSERT_FIRED)
-          ? currentOrderNotes
-          : (currentOrderNotes ? `${currentOrderNotes} ${TAG_DESSERT_FIRED}` : TAG_DESSERT_FIRED)
+            return it
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes((o as any).notes, TAG_DESSERT_FIRED)
         const updated: Order = { ...o, status: 'preparing' as OrderStatus, notes: updatedOrderNotes, order_items: updatedItems }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: 'preparing', until: Date.now() + 4500 })
+      lockOrderMutation(orderId, { order: updatedOrderForRef, status: 'preparing' })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -385,7 +398,7 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, status: 'preparing', until: Date.now() + 4500 })
+          lockOrderMutation(orderId, { order: data.order, status: 'preparing' })
           setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
@@ -399,34 +412,42 @@ export function useComanderoActions({
     }
   }
 
-  // Entregar postres retenidos de una orden directamente por el mozo (Tachar sin pasar por cocina)
+  // Entregar postres retenidos de una orden directamente por el mozo
   const handleDeliverOrderDessertsDirect = async (orderId: string) => {
     let updatedOrderForRef: Order | null = null
-    // Actualización optimista inmediata en estado local
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          let currentNotes = it.notes || ''
-          if (isStarterItem(it) && !currentNotes.includes(TAG_STARTER_SERVED)) {
-            currentNotes = currentNotes ? `${currentNotes} ${TAG_STARTER_SERVED}` : TAG_STARTER_SERVED
-          }
-          if (isMainItem(it) && !currentNotes.includes(TAG_MAIN_SERVED)) {
-            currentNotes = currentNotes ? `${currentNotes} ${TAG_MAIN_SERVED}` : TAG_MAIN_SERVED
-          }
-          if (isDessertItem(it) && !currentNotes.includes(TAG_DESSERT_SERVED)) {
-            const tags = `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
-            currentNotes = currentNotes ? `${currentNotes} ${tags}` : tags
-          }
-          return { ...it, notes: currentNotes }
-        })
-        const updated: Order = { ...o, status: 'delivered' as OrderStatus, order_items: updatedItems }
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            let currentNotes = it.notes || ''
+            if (isStarterItem(it)) {
+              currentNotes = mergeItemNotes(currentNotes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`)
+            }
+            if (isMainItem(it)) {
+              currentNotes = mergeItemNotes(currentNotes, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`)
+            }
+            if (isDessertItem(it)) {
+              currentNotes = mergeItemNotes(currentNotes, `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`)
+            }
+            return { ...it, notes: currentNotes }
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes(
+          (o as any).notes,
+          `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
+        )
+        const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
+        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : o.status
+        const updated: Order = { ...candidate, status: nextStatus }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: 'delivered', until: Date.now() + 4500 })
+      lockOrderMutation(orderId, { order: updatedOrderForRef, status: (updatedOrderForRef as Order).status })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -437,7 +458,7 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, status: 'delivered', until: Date.now() + 4500 })
+          lockOrderMutation(orderId, { order: data.order, status: data.order.status })
           setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
@@ -449,7 +470,7 @@ export function useComanderoActions({
     }
   }
 
-  // Marchar postres retenidos de toda la mesa a la cocina (Pase 2 dulce)
+  // Marchar postres retenidos de toda la mesa a la cocina
   const handleFireDesserts = async (tableNum: string | number) => {
     const tableOrders = serverOrders.filter(
       o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
@@ -460,38 +481,49 @@ export function useComanderoActions({
     })
     const dessertOrderIds = new Set(dessertOrders.map(o => o.id))
 
-    // Actualización optimista inmediata en estado local
     setServerOrders(prev =>
       prev.map(o => {
         if (!dessertOrderIds.has(o.id)) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          if (isDessertItem(it)) {
-            const currentNotes = it.notes || ''
-            if (!currentNotes.includes(TAG_DESSERT_FIRED)) {
-              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_DESSERT_FIRED}` : TAG_DESSERT_FIRED }
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            if (isDessertItem(it)) {
+              return { ...it, notes: mergeItemNotes(it.notes, TAG_DESSERT_FIRED) }
             }
-          }
-          return it
-        })
-        const updated: Order = { ...o, status: 'preparing' as OrderStatus, order_items: updatedItems }
-        recentMutationsRef.current.set(o.id, { order: updated, status: 'preparing', until: Date.now() + 4500 })
+            return it
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes((o as any).notes, TAG_DESSERT_FIRED)
+        const updated: Order = { ...o, status: 'preparing' as OrderStatus, notes: updatedOrderNotes, order_items: updatedItems }
+        lockOrderMutation(o.id, { order: updated, status: 'preparing' })
         return updated
       })
     )
 
     for (const ord of dessertOrders) {
-      await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, orderId: ord.id, action: 'fire_desserts' }),
-      })
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, orderId: ord.id, action: 'fire_desserts' }),
+        })
+        if (res.ok) {
+          const data = await res.json().catch(() => null)
+          if (data?.order) {
+            lockOrderMutation(ord.id, { order: data.order, status: 'preparing' })
+            setServerOrders(prev => prev.map(o => (o.id === ord.id ? data.order : o)))
+          }
+        }
+      } catch (e) {
+        console.error('Error firing desserts for order:', ord.id, e)
+      }
     }
-    await syncServerData()
     setOrderSentToast(true)
     setTimeout(() => setOrderSentToast(false), 2500)
   }
 
-  // Entregar postres retenidos de toda la mesa directamente por el mozo (Tachar sin cocina)
+  // Entregar postres retenidos de toda la mesa directamente por el mozo
   const handleDeliverTableDessertsDirect = async (tableNum: string | number) => {
     const tableOrders = serverOrders.filter(
       o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
@@ -502,38 +534,56 @@ export function useComanderoActions({
     })
     const dessertOrderIds = new Set(dessertOrders.map(o => o.id))
 
-    // Actualización optimista inmediata en estado local
     setServerOrders(prev =>
       prev.map(o => {
         if (!dessertOrderIds.has(o.id)) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          let currentNotes = it.notes || ''
-          if (isStarterItem(it) && !currentNotes.includes(TAG_STARTER_SERVED)) {
-            currentNotes = currentNotes ? `${currentNotes} ${TAG_STARTER_SERVED}` : TAG_STARTER_SERVED
-          }
-          if (isMainItem(it) && !currentNotes.includes(TAG_MAIN_SERVED)) {
-            currentNotes = currentNotes ? `${currentNotes} ${TAG_MAIN_SERVED}` : TAG_MAIN_SERVED
-          }
-          if (isDessertItem(it) && !currentNotes.includes(TAG_DESSERT_SERVED)) {
-            const tags = `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
-            currentNotes = currentNotes ? `${currentNotes} ${tags}` : tags
-          }
-          return { ...it, notes: currentNotes }
-        })
-        const updated: Order = { ...o, status: 'delivered' as OrderStatus, order_items: updatedItems }
-        recentMutationsRef.current.set(o.id, { order: updated, status: 'delivered', until: Date.now() + 4500 })
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            let currentNotes = it.notes || ''
+            if (isStarterItem(it)) {
+              currentNotes = mergeItemNotes(currentNotes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`)
+            }
+            if (isMainItem(it)) {
+              currentNotes = mergeItemNotes(currentNotes, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`)
+            }
+            if (isDessertItem(it)) {
+              currentNotes = mergeItemNotes(currentNotes, `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`)
+            }
+            return { ...it, notes: currentNotes }
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes(
+          (o as any).notes,
+          `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
+        )
+        const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
+        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : o.status
+        const updated: Order = { ...candidate, status: nextStatus }
+        lockOrderMutation(o.id, { order: updated, status: nextStatus })
         return updated
       })
     )
 
     for (const ord of dessertOrders) {
-      await fetch('/api/orders', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, orderId: ord.id, action: 'deliver_desserts_direct' }),
-      })
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug, orderId: ord.id, action: 'deliver_desserts_direct' }),
+        })
+        if (res.ok) {
+          const data = await res.json().catch(() => null)
+          if (data?.order) {
+            lockOrderMutation(ord.id, { order: data.order, status: data.order.status })
+            setServerOrders(prev => prev.map(o => (o.id === ord.id ? data.order : o)))
+          }
+        }
+      } catch (e) {
+        console.error('Error delivering desserts direct for order:', ord.id, e)
+      }
     }
-    await syncServerData()
   }
 
   // Marcar mesa como cobrada y liberarla
@@ -713,25 +763,27 @@ export function useComanderoActions({
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          if (isStarterItem(it)) {
-            const currentNotes = it.notes || ''
-            if (!currentNotes.includes(TAG_STARTER_SERVED)) {
-              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_STARTER_SERVED}` : TAG_STARTER_SERVED }
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            if (isStarterItem(it)) {
+              return { ...it, notes: mergeItemNotes(it.notes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`) }
             }
-          }
-          return it
-        })
-        const hasMains = (o.order_items || []).some(isMainItem)
-        const nextStatus: OrderStatus = hasMains ? 'preparing' : 'delivered'
-        const updated: Order = { ...o, status: nextStatus, order_items: updatedItems }
+            return it
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes((o as any).notes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`)
+        const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
+        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : 'preparing'
+        const updated: Order = { ...candidate, status: nextStatus }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
       const effStatus = (updatedOrderForRef as Order).status
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: effStatus, until: Date.now() + 4500 })
+      lockOrderMutation(orderId, { order: updatedOrderForRef, status: effStatus })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -746,8 +798,8 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, status: data.order.status, until: Date.now() + 4500 })
-          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+          lockOrderMutation(orderId, { order: data.order, status: data.order.status })
+          setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
         await syncServerData()
@@ -770,22 +822,27 @@ export function useComanderoActions({
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          if (isMainItem(it)) {
-            const currentNotes = it.notes || ''
-            if (!currentNotes.includes(TAG_MAIN_SERVED)) {
-              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_MAIN_SERVED}` : TAG_MAIN_SERVED }
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            if (isMainItem(it)) {
+              return { ...it, notes: mergeItemNotes(it.notes, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`) }
             }
-          }
-          return it
-        })
-        const updated: Order = { ...o, status: 'delivered', order_items: updatedItems }
+            return it
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes((o as any).notes, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`)
+        const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
+        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : 'preparing'
+        const updated: Order = { ...candidate, status: nextStatus }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: 'delivered', until: Date.now() + 4500 })
+      const effStatus = (updatedOrderForRef as Order).status
+      lockOrderMutation(orderId, { order: updatedOrderForRef, status: effStatus })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -800,8 +857,8 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, status: data.order.status || 'delivered', until: Date.now() + 4500 })
-          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+          lockOrderMutation(orderId, { order: data.order, status: data.order.status || 'delivered' })
+          setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
         await syncServerData()
@@ -823,26 +880,24 @@ export function useComanderoActions({
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          if (isMainItem(it)) {
-            const currentNotes = it.notes || ''
-            if (!currentNotes.includes(TAG_MAIN_FIRED)) {
-              return { ...it, notes: currentNotes ? `${currentNotes} ${TAG_MAIN_FIRED}` : TAG_MAIN_FIRED }
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            if (isMainItem(it)) {
+              return { ...it, notes: mergeItemNotes(it.notes, TAG_MAIN_FIRED) }
             }
-          }
-          return it
-        })
-        const currentOrderNotes = (o as any).notes || ''
-        const updatedOrderNotes = currentOrderNotes.includes(TAG_MAIN_FIRED)
-          ? currentOrderNotes
-          : (currentOrderNotes ? `${currentOrderNotes} ${TAG_MAIN_FIRED}` : TAG_MAIN_FIRED)
+            return it
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes((o as any).notes, TAG_MAIN_FIRED)
         const updated: Order = { ...o, status: 'preparing', notes: updatedOrderNotes, order_items: updatedItems }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: 'preparing', until: Date.now() + 4500 })
+      lockOrderMutation(orderId, { order: updatedOrderForRef, status: 'preparing' })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -857,8 +912,8 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, status: 'preparing', until: Date.now() + 4500 })
-          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+          lockOrderMutation(orderId, { order: data.order, status: 'preparing' })
+          setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
         await syncServerData()
@@ -877,26 +932,37 @@ export function useComanderoActions({
     setServerOrders(prev =>
       prev.map(o => {
         if (o.id !== orderId) return o
-        const updatedItems = (o.order_items || []).map(it => {
-          let currentNotes = it.notes || ''
-          if (isStarterItem(it) && !currentNotes.includes(TAG_STARTER_SERVED)) {
-            currentNotes = currentNotes ? `${currentNotes} ${TAG_STARTER_SERVED}` : TAG_STARTER_SERVED
-          }
-          if (isMainItem(it) && !currentNotes.includes(TAG_MAIN_SERVED)) {
-            currentNotes = currentNotes ? `${currentNotes} ${TAG_MAIN_SERVED}` : TAG_MAIN_SERVED
-          }
-          if (isDessertItem(it) && !currentNotes.includes(TAG_DESSERT_SERVED)) {
-            currentNotes = currentNotes ? `${currentNotes} ${TAG_DESSERT_SERVED}` : TAG_DESSERT_SERVED
-          }
-          return { ...it, notes: currentNotes }
-        })
-        const updated: Order = { ...o, status: 'delivered' as OrderStatus, order_items: updatedItems }
+        const updatedItems = hydrateOrderItemsWithCatalog(
+          (o.order_items || []).map(it => {
+            let currentNotes = it.notes || ''
+            if (isStarterItem(it)) {
+              currentNotes = mergeItemNotes(currentNotes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`)
+            }
+            if (isMainItem(it)) {
+              currentNotes = mergeItemNotes(currentNotes, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`)
+            }
+            if (isDessertItem(it)) {
+              currentNotes = mergeItemNotes(currentNotes, `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`)
+            }
+            return { ...it, notes: currentNotes }
+          }),
+          products,
+          o.order_items
+        )
+        const updatedOrderNotes = mergeItemNotes(
+          (o as any).notes,
+          `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
+        )
+        const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
+        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : 'preparing'
+        const updated: Order = { ...candidate, status: nextStatus }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
-      recentMutationsRef.current.set(orderId, { order: updatedOrderForRef, status: 'delivered', until: Date.now() + 4500 })
+      const effStatus = (updatedOrderForRef as Order).status
+      lockOrderMutation(orderId, { order: updatedOrderForRef, status: effStatus })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -911,8 +977,8 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          recentMutationsRef.current.set(orderId, { order: data.order, status: data.order.status || 'delivered', until: Date.now() + 4500 })
-          setServerOrders(prev => prev.map(o => o.id === orderId ? data.order : o))
+          lockOrderMutation(orderId, { order: data.order, status: data.order.status || 'delivered' })
+          setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
         }
       } else {
         await syncServerData()

@@ -7,20 +7,18 @@ import { Order, OrderStatus } from '@/types/database.types'
 import { getWaitingMinutes } from '@/lib/utils'
 import {
   cleanItemNotes,
-  sortItemsForKitchen,
   getItemCourse,
   orderHasFood,
   orderHasDesserts,
-  orderHasHeldDesserts,
   orderHasActiveDesserts,
-  isOrderFoodReady,
   isFoodReady,
   isOrderDessertsReady,
-  isDrinkServed,
   isDessertReady,
   isDessertFired,
   isDessertCooking,
+  isDessertServed,
   isDessertItem,
+  isDrinkItem,
   TAG_DESSERT_FIRED,
   isPackHeaderItem,
   isDessertPendingChoice,
@@ -31,13 +29,14 @@ import {
   isMainCooking,
   isMainReady,
   isMainServed,
-  orderHasStarters,
-  orderHasMains,
   areOrderStartersReady,
   areOrderStartersServed,
   areOrderMainsReady,
   areOrderMainsServed,
   areOrderMainsFired,
+  areOrderDessertsServed,
+  resolveCatalogProductForItem,
+  isGenericProductName,
 } from '@/lib/course-utils'
 
 interface KitchenTicketProps {
@@ -241,42 +240,65 @@ export function KitchenTicket({
             ? new Date(roundOrder.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             : '--:--'
 
-          // Regla de Oro Cocina: 0% BEBIDAS (barra/mozo) y 0% CABECERAS DE PACK (se cocinan los platos reales desglosados)
+          // Regla de Oro Cocina (Bloque 2.1): 0% BEBIDAS y 0% CABECERAS DE PACK
           const allRoundItems = roundOrder.order_items || []
-          const kitchenItems = allRoundItems.filter(item => getItemCourse(item) !== 'drink' && !isPackHeaderItem(item))
+          const kitchenItems = allRoundItems.filter(
+            item => !isDrinkItem(item) && getItemCourse(item) !== 'drink' && !isPackHeaderItem(item)
+          )
           const starters = kitchenItems.filter(item => isStarterItem(item))
           const mains = kitchenItems.filter(item => isMainItem(item))
           const desserts = kitchenItems.filter(item => isDessertItem(item))
 
           const hasStarters = starters.length > 0
           const hasMains = mains.length > 0
+          const hasDesserts = desserts.length > 0
+
           const startersReady = areOrderStartersReady(roundOrder)
           const startersServed = areOrderStartersServed(roundOrder)
-          const mainsCooking = (roundOrder.order_items || []).filter(isMainItem).some(isMainCooking)
+          const mainsCooking = mains.some(isMainCooking)
           const mainsReady = areOrderMainsReady(roundOrder)
           const mainsServed = areOrderMainsServed(roundOrder)
 
-          // Bloqueo de principales: si hay entradas, los principales están bloqueados hasta que el mozo los marche o se sirvan entradas
+          // Bloqueo estricto de principales (Bloque 2.2):
+          // Si la comanda tiene entradas, los 2° Principales permanecen bloqueados con candado
+          // hasta que el mozo pulse explícitamente "+ MARCHAR PRINCIPALES A COCINA" (fire_mains).
           const mainsFired = areOrderMainsFired(roundOrder) || mainsCooking || mainsReady || mainsServed
-          const areMainsLocked = hasStarters && !mainsFired && !startersServed
+          const areMainsLocked = hasStarters && !mainsFired
 
-          const dessertsHeld = orderHasHeldDesserts(roundOrder)
-          const dessertsActive = orderHasActiveDesserts(roundOrder) || !orderHasFood(roundOrder)
+          // Bloqueo estricto de postres (Bloque 2.2):
+          // Cocina jamás puede iniciar ni marcar listos los postres hasta que el mozo pulse "Marchar a Cocina"
+          const dessertsFired =
+            orderHasActiveDesserts(roundOrder) ||
+            (!hasStarters && !hasMains && roundOrder.status === 'preparing')
+          const dessertsReady = isOrderDessertsReady(roundOrder)
+          const dessertsServed = areOrderDessertsServed(roundOrder)
+          const areDessertsLocked = (hasStarters || hasMains) && !dessertsFired && !dessertsReady && !dessertsServed
 
           const renderItemCard = (item: any, idx: number, isHeldItem: boolean, lockLabel?: string) => {
             const prod = item.product || (item as any).products
-            const productName = prod?.name || `Plato #${item.product_id?.substring?.(0, 6) || idx + 1}`
-            const imageUrl = prod?.image_url
+            const catalogProd = resolveCatalogProductForItem(item)
+            const rawName = prod?.name || item.name
+            const productName =
+              (rawName && !isGenericProductName(rawName) ? rawName : catalogProd?.name) ||
+              rawName ||
+              `Plato #${item.product_id?.substring?.(0, 6) || idx + 1}`
+            const imageUrl = prod?.image_url || catalogProd?.image_url
             const itemKey = item.id || `${item.product_id}-${roundIdx}-${idx}`
             const courseType = getItemCourse(item)
             const isRoundPending = ['pending', 'confirmed', 'pending_validation'].includes(roundOrder.status)
             const isStarter = isStarterItem(item) || courseType === 'first'
             const isMain = isMainItem(item) || courseType === 'second'
             const isDessert = isDessertItem(item) || courseType === 'dessert'
-            const isItemReadyFromDb = isStarter ? isStarterReady(item) : isMain ? isMainReady(item) : isDessert ? isDessertReady(item) : isFoodReady(item)
+            const isItemReadyFromDb = isStarter
+              ? isStarterReady(item, roundOrder)
+              : isMain
+              ? isMainReady(item, roundOrder)
+              : isDessert
+              ? isDessertReady(item, roundOrder)
+              : isFoodReady(item)
             const isDone = completedItemIds[itemKey] !== undefined ? Boolean(completedItemIds[itemKey]) : isItemReadyFromDb
 
-            // Comprobar estrictamente si la preparación específica de este plato ya fue iniciada
+            // Comprobar estrictamente si la preparación específica de este plato ya fue iniciada y desbloqueada por el mozo
             let isItemCookingOrReady = false
             let disabledReason = ''
 
@@ -285,21 +307,29 @@ export function KitchenTicket({
               disabledReason = 'Inicia la preparación en cocina para poder tachar platos'
             } else if (isHeldItem) {
               isItemCookingOrReady = false
-              disabledReason = lockLabel || 'Plato retenido en espera de pase'
+              disabledReason = lockLabel || '🔒 En espera de orden del mozo'
             } else if (isStarter) {
               isItemCookingOrReady = roundOrder.status === 'preparing' || roundOrder.status === 'ready'
               disabledReason = 'Inicia la preparación de entradas para poder tacharlas'
             } else if (isMain) {
               if (hasStarters) {
-                isItemCookingOrReady = (mainsFired || mainsCooking || startersServed || areOrderMainsReady(roundOrder) || areOrderMainsServed(roundOrder)) && (roundOrder.status === 'preparing' || roundOrder.status === 'ready')
-                disabledReason = (!mainsFired && !startersServed) ? 'Espera a que el mozo marche los platos principales' : 'Inicia la preparación en cocina para poder tachar platos'
+                isItemCookingOrReady = mainsFired && (roundOrder.status === 'preparing' || roundOrder.status === 'ready')
+                disabledReason = !mainsFired
+                  ? '🔒 En espera de orden del mozo'
+                  : 'Inicia la preparación en cocina para poder tachar platos'
               } else {
                 isItemCookingOrReady = roundOrder.status === 'preparing' || roundOrder.status === 'ready'
                 disabledReason = 'Inicia la preparación en cocina para poder tachar platos'
               }
             } else if (isDessert) {
-              isItemCookingOrReady = isDessertCooking(item) || isDessertReady(item) || (orderHasActiveDesserts(roundOrder) && (roundOrder.status === 'preparing' || roundOrder.status === 'ready'))
-              disabledReason = 'Inicia la preparación del postre en cocina para poder tacharlo'
+              isItemCookingOrReady = !areDessertsLocked && (
+                isDessertCooking(item, roundOrder) ||
+                isDessertReady(item, roundOrder) ||
+                (dessertsFired && (roundOrder.status === 'preparing' || roundOrder.status === 'ready' || roundOrder.status === 'delivered'))
+              )
+              disabledReason = areDessertsLocked
+                ? '🔒 En espera de orden del mozo'
+                : 'Inicia la preparación del postre en cocina para poder tacharlo'
             } else {
               isItemCookingOrReady = roundOrder.status === 'preparing' || roundOrder.status === 'ready'
               disabledReason = 'Inicia la preparación para poder tachar platos'
@@ -368,7 +398,7 @@ export function KitchenTicket({
                     {isHeldItem && (
                       <span className="px-1.5 py-0.2 rounded-md bg-slate-200 text-slate-700 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 flex-shrink-0">
                         <Lock size={10} />
-                        <span>{lockLabel || 'En Espera'}</span>
+                        <span>{lockLabel || 'En espera de orden del mozo'}</span>
                       </span>
                     )}
                   </div>
@@ -387,13 +417,13 @@ export function KitchenTicket({
                     )}
                     {courseType === 'dessert' && (
                       <span className={`px-1.5 py-0.2 rounded-md font-black text-[9px] border flex items-center gap-1 ${
-                        isDessertReady(item)
+                        isDessertReady(item, roundOrder)
                           ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
                           : isHeldItem
                           ? 'bg-slate-200 text-slate-800 border-slate-300'
                           : 'bg-purple-100 text-purple-950 border-purple-300'
                       }`}>
-                        <span>🍰 {isDessertReady(item) ? 'POSTRE (LISTO)' : isHeldItem ? 'POSTRE (ESPERANDO PASE)' : 'POSTRE (MARCHADO)'}</span>
+                        <span>🍰 {isDessertReady(item, roundOrder) ? 'POSTRE (LISTO)' : isHeldItem ? 'POSTRE (EN ESPERA DEL MOZO)' : 'POSTRE (MARCHADO)'}</span>
                       </span>
                     )}
                     {isDessertPendingChoice(item) && (
@@ -496,7 +526,7 @@ export function KitchenTicket({
                             <span>1º Entradas listas ({starters.length} platos)</span>
                           </span>
                           <span className="text-[10px] font-black uppercase bg-emerald-100 px-2 py-0.5 rounded-md text-emerald-800">
-                            Pase 1 Completado
+                            {startersServed ? 'Entregado en Mesa' : 'Pase 1 Completado'}
                           </span>
                         </div>
                       ) : (
@@ -512,37 +542,25 @@ export function KitchenTicket({
                       )
                     )}
 
-                    {/* Bloque 2: Platos Principales */}
+                    {/* Bloque 2: Platos Principales (Bloque 2.2: Sin botón "+ Iniciar Ahora", candado estricto hasta orden del mozo) */}
                     {hasMains && (
                       areMainsLocked ? (
-                        <div className="space-y-2 p-2.5 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200">
+                        <div className="space-y-2 p-2.5 rounded-2xl bg-slate-100/80 border-2 border-dashed border-slate-300 opacity-80">
                           <div className="flex items-center justify-between text-[11px] font-black uppercase text-slate-500 tracking-wider">
                             <span className="flex items-center gap-1.5">
-                              <Lock size={13} className="text-slate-400" />
+                              <Lock size={13} className="text-slate-500" />
                               <span>🍔 2º Principales ({mains.length})</span>
                             </span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[9px] font-black bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">
-                                {!startersReady ? 'En espera del 1º plato' : 'En espera de marcha por el mozo'}
-                              </span>
-                              {onKitchenAction && (
-                                <button
-                                  type="button"
-                                  onClick={() => onKitchenAction(roundOrder.id, 'start_mains')}
-                                  className="text-[9px] font-black bg-sky-600 hover:bg-sky-500 text-white px-2 py-0.5 rounded-md active:scale-95 transition-all cursor-pointer shadow-2xs"
-                                  title="Iniciar preparación de principales directamente desde cocina"
-                                >
-                                  ▶️ Iniciar Ahora
-                                </button>
-                              )}
-                            </div>
+                            <span className="text-[10px] font-black bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md">
+                              🔒 En espera de orden del mozo
+                            </span>
                           </div>
                           {mains.map((item, idx) =>
                             renderItemCard(
                               item,
                               idx + starters.length,
                               true,
-                              !startersReady ? 'En espera del 1º plato' : 'En espera de marcha por el mozo'
+                              'En espera de orden del mozo'
                             )
                           )}
                         </div>
@@ -553,7 +571,7 @@ export function KitchenTicket({
                             <span>2º Principales listos ({mains.length} platos)</span>
                           </span>
                           <span className="text-[10px] font-black uppercase bg-emerald-100 px-2 py-0.5 rounded-md text-emerald-800">
-                            Pase 2 Completado
+                            {mainsServed ? 'Entregado en Mesa' : 'Pase 2 Completado'}
                           </span>
                         </div>
                       ) : (
@@ -573,30 +591,48 @@ export function KitchenTicket({
                       )
                     )}
 
-                    {/* Bloque 3: Postres */}
-                    {desserts.length > 0 && (
-                      dessertsHeld ? (
-                        <div className="p-2.5 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 text-slate-500 text-xs flex items-center justify-between">
-                          <span className="flex items-center gap-1.5 font-bold">
-                            <Lock size={12} className="text-slate-400" />
-                            <span>🍰 Postres ({desserts.length}) en espera del mozo</span>
+                    {/* Bloque 3: Postres (Candado estricto hasta que el mozo pulse "Marchar a Cocina") */}
+                    {hasDesserts && (
+                      areDessertsLocked ? (
+                        <div className="space-y-2 p-2.5 rounded-2xl bg-slate-100/80 border-2 border-dashed border-slate-300 opacity-80">
+                          <div className="flex items-center justify-between text-[11px] font-black uppercase text-slate-500 tracking-wider">
+                            <span className="flex items-center gap-1.5">
+                              <Lock size={13} className="text-slate-500" />
+                              <span>🍰 3º Postres ({desserts.length})</span>
+                            </span>
+                            <span className="text-[10px] font-black bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md">
+                              🔒 En espera de orden del mozo
+                            </span>
+                          </div>
+                          {desserts.map((item, idx) =>
+                            renderItemCard(
+                              item,
+                              idx + starters.length + mains.length,
+                              true,
+                              'En espera de orden del mozo'
+                            )
+                          )}
+                        </div>
+                      ) : dessertsReady || dessertsServed ? (
+                        <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 size={13} className="text-emerald-600" />
+                            <span>3º Postres listos ({desserts.length})</span>
                           </span>
-                          <span className="text-[9px] font-black uppercase bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md">
-                            Tras los principales
+                          <span className="text-[10px] font-black uppercase bg-emerald-100 px-2 py-0.5 rounded-md text-emerald-800">
+                            {dessertsServed ? 'Entregado en Mesa' : 'Pase 3 Completado'}
                           </span>
                         </div>
                       ) : (
                         <div className={`space-y-2 ${(hasStarters || hasMains) ? 'pt-2.5 border-t border-slate-200/80' : ''}`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-purple-900 tracking-wider">
-                              <span>🍰 Postres ({desserts.length})</span>
+                              <span>🍰 3º Postres ({desserts.length})</span>
                             </div>
-                            {dessertsActive && !isOrderDessertsReady(roundOrder) && (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-purple-100 text-purple-900 border border-purple-200 flex items-center gap-1">
-                                <Sparkles size={10} />
-                                <span>Marchados por el mozo · En preparación</span>
-                              </span>
-                            )}
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-purple-100 text-purple-900 border border-purple-200 flex items-center gap-1">
+                              <Sparkles size={10} />
+                              <span>Marchados por el mozo · En preparación</span>
+                            </span>
                           </div>
                           {desserts.map((item, idx) => renderItemCard(item, idx + starters.length + mains.length, false))}
                         </div>
@@ -615,8 +651,9 @@ export function KitchenTicket({
               <div className="pt-2">
                 {(roundOrder.status === 'pending' || roundOrder.status === 'confirmed') && (
                   <button
+                    type="button"
                     onClick={() => {
-                      if (!hasStarters && !hasMains && desserts.length > 0 && onKitchenAction) {
+                      if (!hasStarters && !hasMains && hasDesserts && onKitchenAction) {
                         onKitchenAction(roundOrder.id, 'start_desserts')
                       } else {
                         onUpdateStatus(roundOrder.id, 'preparing')
@@ -639,11 +676,12 @@ export function KitchenTicket({
                   </button>
                 )}
 
-                {(roundOrder.status === 'preparing' || roundOrder.status === 'ready') && (() => {
+                {(roundOrder.status === 'preparing' || roundOrder.status === 'ready' || roundOrder.status === 'delivered') && (() => {
                   // Caso 1: Hay entradas y aún no están listas
                   if (hasStarters && !startersReady) {
                     return (
                       <button
+                        type="button"
                         onClick={() => {
                           markItemsAsDone(starters, roundIdx)
                           if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_starters')
@@ -671,15 +709,20 @@ export function KitchenTicket({
                   if (hasMains && !mainsReady) {
                     if (areMainsLocked) {
                       return (
-                        <div className="w-full h-14 py-3 px-4 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-200 text-slate-600 text-xs sm:text-sm font-black flex items-center justify-center gap-2 select-none uppercase tracking-wide">
-                          <Lock size={16} className="text-slate-400 flex-shrink-0" />
-                          <span>2º PRINCIPALES EN ESPERA DE MARCHA POR EL MOZO</span>
-                        </div>
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full h-14 py-3 px-4 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 text-slate-600 text-xs sm:text-sm font-black flex items-center justify-center gap-2 select-none uppercase tracking-wide cursor-not-allowed opacity-90"
+                        >
+                          <Lock size={16} className="text-slate-500 flex-shrink-0" />
+                          <span>⏳ ESPERANDO QUE EL MOZO MARCHE LOS PRINCIPALES</span>
+                        </button>
                       )
                     }
 
                     return (
                       <button
+                        type="button"
                         onClick={() => {
                           markItemsAsDone(mains, roundIdx)
                           if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_mains')
@@ -703,10 +746,24 @@ export function KitchenTicket({
                     )
                   }
 
-                  // Caso 3: Postres marchados por el mozo (o comanda de solo postres)
-                  if (desserts.length > 0 && (dessertsActive || !orderHasFood(roundOrder)) && !isOrderDessertsReady(roundOrder)) {
+                  // Caso 3: Hay postres pendientes
+                  if (hasDesserts && !dessertsReady && !dessertsServed) {
+                    if (areDessertsLocked) {
+                      return (
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full h-14 py-3 px-4 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 text-slate-600 text-xs sm:text-sm font-black flex items-center justify-center gap-2 select-none uppercase tracking-wide cursor-not-allowed opacity-90"
+                        >
+                          <Lock size={16} className="text-slate-500 flex-shrink-0" />
+                          <span>⏳ ESPERANDO QUE EL MOZO MARCHE LOS POSTRES</span>
+                        </button>
+                      )
+                    }
+
                     return (
                       <button
+                        type="button"
                         onClick={() => {
                           markItemsAsDone(desserts, roundIdx)
                           if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_desserts')
@@ -730,80 +787,7 @@ export function KitchenTicket({
                     )
                   }
 
-                  // Caso 4: Todo lo activo de la comanda está listo y en espera de entrega por el mozo
-                  if (roundOrder.status === 'ready') {
-                    return (
-                      <button
-                        onClick={() => onUpdateStatus(roundOrder.id, 'delivered')}
-                        disabled={isRoundUpdating}
-                        className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-blue-900 hover:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-blue-950/30 cursor-pointer"
-                      >
-                        {isRoundUpdating ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>DESPACHANDO...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-5 h-5" />
-                            <span>MARCAR ENTREGADO EN SALA</span>
-                          </>
-                        )}
-                      </button>
-                    )
-                  }
-
-                  return null
-                })()}
-
-                {roundOrder.status === 'delivered' && (() => {
-                  const hasDesserts = orderHasDesserts(roundOrder)
-                  const dessertsReady = isOrderDessertsReady(roundOrder)
-                  const dessertsFired =
-                    Boolean((roundOrder as any).notes?.includes(TAG_DESSERT_FIRED) || (roundOrder as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)) ||
-                    (roundOrder.order_items || []).some(it => isDessertItem(it) && isDessertFired(it))
-
-                  if (hasDesserts && !dessertsReady) {
-                    return (
-                      <div className="space-y-2">
-                        <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 text-xs font-bold flex items-center justify-between">
-                          <span>Comida servida en mesa</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-extrabold ${dessertsFired ? 'bg-amber-200 text-amber-900' : 'bg-purple-200 text-purple-900'}`}>
-                            {dessertsFired ? '🍰 Postres Marchados' : 'Postres en Espera'}
-                          </span>
-                        </div>
-                        {dessertsFired ? (
-                          <button
-                            onClick={() => {
-                              const dessertsList = (roundOrder.order_items || []).filter(isDessertItem)
-                              markItemsAsDone(dessertsList, roundIdx)
-                              if (onKitchenAction) onKitchenAction(roundOrder.id, 'ready_desserts')
-                              else onUpdateStatus(roundOrder.id, 'ready')
-                            }}
-                            disabled={isRoundUpdating}
-                            className="w-full h-14 py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-purple-600 hover:bg-purple-500 disabled:opacity-60 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2.5 shadow-md active:scale-95 transition-all uppercase tracking-wide border-2 border-purple-700/30 cursor-pointer"
-                          >
-                            {isRoundUpdating ? (
-                              <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                <span>AVISANDO AL MOZO...</span>
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
-                                <span>🍰 AVISAR AL MOZO (POSTRES LISTOS)</span>
-                              </>
-                            )}
-                          </button>
-                        ) : (
-                          <div className="w-full h-14 py-3 px-4 rounded-2xl bg-purple-50/60 border-2 border-dashed border-purple-200 text-purple-900 text-xs sm:text-sm font-black flex items-center justify-center gap-2 select-none uppercase tracking-wide">
-                            <Lock size={16} className="text-purple-400 flex-shrink-0" />
-                            <span>🍰 POSTRES EN ESPERA DE MARCHA POR EL MOZO</span>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  }
+                  // Bloque 3.1: Se eliminó el botón azul "MARCAR ENTREGADO EN SALA" de Cocina.
                   return null
                 })()}
               </div>

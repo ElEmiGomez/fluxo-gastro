@@ -4,33 +4,31 @@ import {
   sanitizeText,
   setTableOccupied,
   recordAnalyticsEvent,
-  getIdempotentOrder,
   saveIdempotentOrder,
   acquireIdempotencyLock,
   completeIdempotencyLock,
   releaseIdempotencyLock,
-  isValidOrderTransition,
   getServerProducts,
   setServerProducts,
   resolveCanonicalProductId,
-  CANONICAL_PRODUCT_MAP,
   getProductAvailabilityOverrides,
   getServerOrders,
   getCachedOrderItems,
+  saveCachedOrderItems,
+  addServerOrder,
 } from '@/lib/server-state'
 import {
   getRestaurantBySlug,
   validateSessionToken,
   createOrder,
   getRestaurantOrders,
-  updateOrderStatus,
   transitionOrderStatus,
   getTargetRestaurantId,
 } from '@/lib/supabase/repository'
 import { createServerClient } from '@/lib/supabase/server'
 import { isSupabaseConfigured } from '@/lib/supabase/client'
 import { MOCK_PRODUCTS, MOCK_TABLES } from '@/lib/supabase/mock-fallback'
-import { inferCourseType } from '@/lib/category-matcher'
+import { inferCourseType, deduplicateProducts } from '@/lib/category-matcher'
 import { updateOrderCourseTags, resolvePendingDessertInOrder } from '@/lib/supabase/repositories/orders.repository'
 import {
   TAG_DRINK_SERVED,
@@ -51,19 +49,19 @@ import {
   isMainItem,
   isDessertItem,
   orderHasDesserts,
-  orderHasStarters,
   orderHasMains,
   isStarterServed,
   isMainServed,
   isDessertServed,
   areOrderStartersServed,
   areOrderMainsServed,
+  areOrderDessertsServed,
+  areAllOrderCoursesDelivered,
   orderHasPendingDesserts,
   isDrinkOnlyOrder,
-  evaluateOrderStations,
+  hydrateOrderItemsWithCatalog,
 } from '@/lib/course-utils'
 import { PRODUCT_NAMES } from '@/lib/i18n'
-import { deduplicateProducts } from '@/lib/category-matcher'
 import { Order, OrderItem, OrderStatus, Product } from '@/types/database.types'
 import { verifyStaffRequest } from '@/lib/auth/pin-security'
 import { getDailyMenu, isDailyMenuActive } from '@/lib/supabase/repositories/daily-menu.repository'
@@ -78,6 +76,37 @@ const cleanStr = (s?: string | null): string =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '')
     .trim()
+
+function ensureHydratedOrder(order: Order | undefined, slug: string): Order | undefined {
+  if (!order) return undefined
+  const catalogProducts = deduplicateProducts([
+    ...(getServerProducts(slug) || []),
+    ...(MOCK_PRODUCTS[slug] || []),
+  ])
+  const memOrder = getServerOrders(slug).find(o => o.id === order.id)
+  const cachedItems = getCachedOrderItems(order.id)
+  const referenceItems =
+    memOrder?.order_items && memOrder.order_items.length > 0
+      ? memOrder.order_items
+      : cachedItems && cachedItems.length > 0
+        ? cachedItems
+        : []
+  const hydratedItems = hydrateOrderItemsWithCatalog(
+    order.order_items || [],
+    catalogProducts,
+    referenceItems,
+    (order as any).notes || (memOrder as any)?.notes
+  )
+  const hydrated: Order = {
+    ...order,
+    order_items: hydratedItems,
+  }
+  if (hydratedItems.length > 0) {
+    saveCachedOrderItems(order.id, hydratedItems)
+    addServerOrder(slug, hydrated, true)
+  }
+  return hydrated
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -94,7 +123,20 @@ export async function GET(req: NextRequest) {
     if (!isNaN(parsedT)) {
       returnedOrders = orders.filter(o => Number(o.table_number) === parsedT || Number(o.table?.table_number) === parsedT)
     }
-    const catalogProducts = getServerProducts(slug)
+    const catalogProducts = deduplicateProducts([
+      ...(getServerProducts(slug) || []),
+      ...(MOCK_PRODUCTS[slug] || []),
+    ])
+    returnedOrders = returnedOrders.map(ord => ({
+      ...ord,
+      order_items: hydrateOrderItemsWithCatalog(
+        ord.order_items || [],
+        catalogProducts,
+        getCachedOrderItems(ord.id),
+        (ord as any).notes
+      ),
+    }))
+
     const overrides = getProductAvailabilityOverrides(slug)
 
     const pausedIdsSet = new Set<string>()
@@ -173,7 +215,7 @@ export async function POST(req: NextRequest) {
         if (lock.order) {
           return NextResponse.json({
             success: true,
-            order: lock.order,
+            order: ensureHydratedOrder(lock.order, slug),
             idempotent: true,
             message: 'Comanda ya procesada previamente (Idempotency Key)',
           })
@@ -551,15 +593,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const hydratedSaved = ensureHydratedOrder(saved, slug) || saved
 
     if (idempotencyKeyStr && idempotencyLocked) {
-      completeIdempotencyLock(idempotencyKeyStr, saved)
+      completeIdempotencyLock(idempotencyKeyStr, hydratedSaved)
     } else if (idempotency_key && typeof idempotency_key === 'string') {
-      saveIdempotentOrder(idempotency_key, saved)
+      saveIdempotentOrder(idempotency_key, hydratedSaved)
     }
 
     recordAnalyticsEvent(slug, { slug, type: 'order_placed', table_number: assignedTableNum })
-    const response = NextResponse.json({ success: true, order: saved, session_token: finalSessionToken })
+    const response = NextResponse.json({ success: true, order: hydratedSaved, session_token: finalSessionToken })
     response.cookies.set(`gastro_session_${slug}_${assignedTableNum}`, finalSessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -624,14 +667,12 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar bebidas como servidas' }, { status: 404 })
       }
 
-      const currentOrder = tagRes.order
-      if (currentOrder && currentOrder.status !== 'delivered' && currentOrder.status !== 'paid') {
+      const currentOrder = ensureHydratedOrder(tagRes.order, slug)
+      if (currentOrder && currentOrder.status !== 'paid') {
         const isDrinkOnly = isDrinkOnlyOrder(currentOrder)
-        const startersDone = areOrderStartersServed(currentOrder)
-        const mainsDone = areOrderMainsServed(currentOrder)
-        const dessertsDone = !orderHasPendingDesserts(currentOrder)
+        const allCoursesDone = areAllOrderCoursesDelivered(currentOrder)
 
-        if (isDrinkOnly || (startersDone && mainsDone && dessertsDone)) {
+        if (isDrinkOnly || allCoursesDone) {
           const restaurant = await getRestaurantBySlug(slug)
           const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
           const transRes = await transitionOrderStatus({
@@ -643,20 +684,24 @@ export async function PATCH(req: NextRequest) {
           })
           return NextResponse.json({
             success: true,
-            order: transRes.order || currentOrder,
+            order: ensureHydratedOrder(transRes.order || currentOrder, slug),
             message: 'Bebidas entregadas y comanda completada en mesa',
           })
         }
       }
 
-      return NextResponse.json({ success: true, order: tagRes.order, message: 'Bebidas marcadas como servidas' })
+      return NextResponse.json({
+        success: true,
+        order: currentOrder,
+        message: 'Bebidas marcadas como servidas',
+      })
     }
 
     if (body.action === 'ready_starters') {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_READY, isStarterItem)
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_READY, isStarterItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar entradas listas' }, { status: 404 })
       }
@@ -666,7 +711,10 @@ export async function PATCH(req: NextRequest) {
         nextStatus: 'ready',
         actorType: 'kitchen',
       })
-      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'ready' } : tagRes.order)
+      const finalOrder = ensureHydratedOrder(
+        transRes.order || (tagRes.order ? { ...tagRes.order, status: 'ready' } : tagRes.order),
+        slug
+      )
       return NextResponse.json({ success: true, order: finalOrder, message: 'Entradas listas para retirar en cocina' })
     }
 
@@ -674,7 +722,7 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_FIRED, isMainItem)
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_FIRED, isMainItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marchar principales' }, { status: 404 })
       }
@@ -683,8 +731,12 @@ export async function PATCH(req: NextRequest) {
         slug,
         nextStatus: 'preparing',
         actorType: 'waiter',
+        forceAllowReactivation: true,
       })
-      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
+      const finalOrder = ensureHydratedOrder(
+        transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order),
+        slug
+      )
       return NextResponse.json({ success: true, order: finalOrder, message: 'Platos principales marchados a cocina' })
     }
 
@@ -692,7 +744,7 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_COOKING, isMainItem)
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_COOKING, isMainItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al iniciar principales' }, { status: 404 })
       }
@@ -703,7 +755,10 @@ export async function PATCH(req: NextRequest) {
         actorType: 'kitchen',
         forceAllowReactivation: true,
       })
-      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
+      const finalOrder = ensureHydratedOrder(
+        transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order),
+        slug
+      )
       return NextResponse.json({ success: true, order: finalOrder, message: 'Preparación de platos principales iniciada' })
     }
 
@@ -711,7 +766,7 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_READY, isMainItem)
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_READY, isMainItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar principales listos' }, { status: 404 })
       }
@@ -721,7 +776,10 @@ export async function PATCH(req: NextRequest) {
         nextStatus: 'ready',
         actorType: 'kitchen',
       })
-      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'ready' } : tagRes.order)
+      const finalOrder = ensureHydratedOrder(
+        transRes.order || (tagRes.order ? { ...tagRes.order, status: 'ready' } : tagRes.order),
+        slug
+      )
       return NextResponse.json({ success: true, order: finalOrder, message: 'Platos principales listos para retirar en cocina' })
     }
 
@@ -729,7 +787,7 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_COOKING, isDessertItem)
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_COOKING, isDessertItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al iniciar postres' }, { status: 404 })
       }
@@ -740,7 +798,10 @@ export async function PATCH(req: NextRequest) {
         actorType: 'kitchen',
         forceAllowReactivation: true,
       })
-      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
+      const finalOrder = ensureHydratedOrder(
+        transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order),
+        slug
+      )
       return NextResponse.json({ success: true, order: finalOrder, message: 'Preparación de postres iniciada' })
     }
 
@@ -748,15 +809,18 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem)
+      const tagRes = await updateOrderCourseTags(
+        slug,
+        targetOrderId,
+        `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`,
+        isStarterItem,
+        { skipBroadcast: true }
+      )
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar entradas entregadas' }, { status: 404 })
       }
 
-      // Si la comanda todavía tiene principales o postres que NO han sido servidos,
-      // la orden debe volver a 'preparing' para que NO figure como 'ready' en el pase ni en la barra de avisos superiores.
-      // Si ya no quedan principales ni postres (o no tenía), entonces pasa a 'delivered'.
-      const currentOrder = tagRes.order
+      const currentOrder = ensureHydratedOrder(tagRes.order, slug)
       let finalOrder = currentOrder
       if (currentOrder) {
         const hasMains = orderHasMains(currentOrder)
@@ -764,15 +828,18 @@ export async function PATCH(req: NextRequest) {
         const hasDesserts = orderHasDesserts(currentOrder)
         const dessertsDone = (currentOrder.order_items || []).filter(isDessertItem).every(d => isDessertServed(d, currentOrder))
 
-        if ((hasMains && !mainsDone) || (hasDesserts && !dessertsDone)) {
+        if ((hasMains && !mainsDone) || (hasDesserts && !dessertsDone) || !areAllOrderCoursesDelivered(currentOrder)) {
           const transRes = await transitionOrderStatus({
             orderId: targetOrderId,
             slug,
-            nextStatus: 'preparing',
+            nextStatus: (hasMains && !mainsDone) || (hasDesserts && !dessertsDone) ? 'preparing' : 'delivered',
             actorType: 'waiter',
             forceAllowReactivation: true,
           })
-          finalOrder = transRes.order || (currentOrder ? { ...currentOrder, status: 'preparing' } : currentOrder)
+          finalOrder = ensureHydratedOrder(
+            transRes.order || (currentOrder ? { ...currentOrder, status: 'preparing' } : currentOrder),
+            slug
+          )
         } else {
           const transRes = await transitionOrderStatus({
             orderId: targetOrderId,
@@ -780,7 +847,10 @@ export async function PATCH(req: NextRequest) {
             nextStatus: 'delivered',
             actorType: 'waiter',
           })
-          finalOrder = transRes.order || (currentOrder ? { ...currentOrder, status: 'delivered' } : currentOrder)
+          finalOrder = ensureHydratedOrder(
+            transRes.order || (currentOrder ? { ...currentOrder, status: 'delivered' } : currentOrder),
+            slug
+          )
         }
       }
 
@@ -791,29 +861,53 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem)
+      await updateOrderCourseTags(
+        slug,
+        targetOrderId,
+        `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`,
+        isStarterItem,
+        { skipBroadcast: true }
+      )
+      const tagRes = await updateOrderCourseTags(
+        slug,
+        targetOrderId,
+        `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`,
+        isMainItem,
+        { skipBroadcast: true }
+      )
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar principales entregados' }, { status: 404 })
       }
-      const currentOrder = tagRes.order
+      const currentOrder = ensureHydratedOrder(tagRes.order, slug)
       let finalOrder = currentOrder
       if (currentOrder) {
-        const startersDone = (currentOrder.order_items || []).filter(isStarterItem).every(s => isStarterServed(s, currentOrder))
-        const mainsDone = (currentOrder.order_items || []).filter(isMainItem).every(m => isMainServed(m, currentOrder))
-        // Al entregar los platos principales (o si no había principales), la comanda pasa a 'delivered'
-        // permitiendo que los postres en espera se activen en la cola de tareas del mozo para el 2º pase dulce.
-        if (startersDone && mainsDone) {
+        const hasDesserts = orderHasDesserts(currentOrder)
+        const dessertsDone = areOrderDessertsServed(currentOrder)
+        const allCoursesDone = areAllOrderCoursesDelivered(currentOrder)
+
+        if (allCoursesDone || (!hasDesserts || dessertsDone)) {
           const transRes = await transitionOrderStatus({
             orderId: targetOrderId,
             slug,
             nextStatus: 'delivered',
             actorType: 'waiter',
           })
-          const transOrd = transRes.order || (currentOrder ? { ...currentOrder, status: 'delivered' } : currentOrder)
-          const effItems = (transOrd.order_items && transOrd.order_items.length > 0)
-            ? transOrd.order_items
-            : (currentOrder.order_items || [])
-          finalOrder = { ...transOrd, status: 'delivered', order_items: effItems }
+          finalOrder = ensureHydratedOrder(
+            transRes.order || { ...currentOrder, status: 'delivered' },
+            slug
+          )
+        } else {
+          const transRes = await transitionOrderStatus({
+            orderId: targetOrderId,
+            slug,
+            nextStatus: 'preparing',
+            actorType: 'waiter',
+            forceAllowReactivation: true,
+          })
+          finalOrder = ensureHydratedOrder(
+            transRes.order || { ...currentOrder, status: 'preparing' },
+            slug
+          )
         }
       }
       return NextResponse.json({ success: true, order: finalOrder, message: 'Principales entregados en mesa' })
@@ -823,7 +917,7 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_FOOD_READY, isFoodItem)
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_FOOD_READY, isFoodItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar comida lista' }, { status: 404 })
       }
@@ -833,7 +927,10 @@ export async function PATCH(req: NextRequest) {
         nextStatus: 'ready',
         actorType: 'kitchen',
       })
-      const finalOrder = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'ready' } : tagRes.order)
+      const finalOrder = ensureHydratedOrder(
+        transRes.order || (tagRes.order ? { ...tagRes.order, status: 'ready' } : tagRes.order),
+        slug
+      )
       return NextResponse.json({ success: true, order: finalOrder, message: 'Comida salada marcada como lista' })
     }
 
@@ -841,7 +938,7 @@ export async function PATCH(req: NextRequest) {
       if (!targetOrderId) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_READY, isDessertItem)
+      const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_READY, isDessertItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar postres listos' }, { status: 404 })
       }
@@ -851,7 +948,11 @@ export async function PATCH(req: NextRequest) {
         nextStatus: 'ready',
         actorType: 'kitchen',
       })
-      return NextResponse.json({ success: true, order: transRes.order || tagRes.order, message: 'Postres listos para servir' })
+      return NextResponse.json({
+        success: true,
+        order: ensureHydratedOrder(transRes.order || tagRes.order, slug),
+        message: 'Postres listos para servir',
+      })
     }
 
     if (body.action === 'fire_desserts') {
@@ -859,8 +960,8 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
       // Asegurar que entradas y principales queden permanentemente sellados como servidos en base de datos al marchar postres
-      await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem, { skipBroadcast: true })
-      await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem, { skipBroadcast: true })
+      await updateOrderCourseTags(slug, targetOrderId, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`, isStarterItem, { skipBroadcast: true })
+      await updateOrderCourseTags(slug, targetOrderId, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`, isMainItem, { skipBroadcast: true })
       const tagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DESSERT_FIRED, isDessertItem, { skipBroadcast: true })
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marchar postres' }, { status: 404 })
@@ -875,10 +976,10 @@ export async function PATCH(req: NextRequest) {
         actorType: 'waiter',
         forceAllowReactivation: true,
       })
-      const finalOrd = transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order)
-      if (finalOrd && tagRes.order?.order_items && (!finalOrd.order_items || finalOrd.order_items.length === 0)) {
-        finalOrd.order_items = tagRes.order.order_items
-      }
+      const finalOrd = ensureHydratedOrder(
+        transRes.order || (tagRes.order ? { ...tagRes.order, status: 'preparing' } : tagRes.order),
+        slug
+      )
       return NextResponse.json({
         success: true,
         order: finalOrd,
@@ -891,37 +992,36 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: 'Falta orderId' }, { status: 400 })
       }
       // 1. Asegurar primero que entradas y principales queden permanentemente sellados como servidos en base de datos
-      await updateOrderCourseTags(slug, targetOrderId, TAG_STARTER_SERVED, isStarterItem, { skipBroadcast: true })
-      await updateOrderCourseTags(slug, targetOrderId, TAG_MAIN_SERVED, isMainItem, { skipBroadcast: true })
+      await updateOrderCourseTags(slug, targetOrderId, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`, isStarterItem, { skipBroadcast: true })
+      await updateOrderCourseTags(slug, targetOrderId, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`, isMainItem, { skipBroadcast: true })
       // 2. Ahora actualizar postres a listos y servidos
-      const tagRes = await updateOrderCourseTags(slug, targetOrderId, `${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`, isDessertItem, { skipBroadcast: true })
+      const tagRes = await updateOrderCourseTags(
+        slug,
+        targetOrderId,
+        `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`,
+        isDessertItem,
+        { skipBroadcast: true }
+      )
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al entregar postres directamente' }, { status: 404 })
       }
-      if (tagRes.order && tagRes.order.status !== 'delivered' && tagRes.order.status !== 'paid') {
-        const restaurant = await getRestaurantBySlug(slug)
-        const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
-        const transRes = await transitionOrderStatus({
-          orderId: targetOrderId,
-          restaurantId,
-          slug,
-          nextStatus: 'delivered',
-          actorType: 'waiter',
-        })
-        const finalOrd = transRes.order || { ...tagRes.order, status: 'delivered' }
-        if (tagRes.order?.order_items && (!finalOrd.order_items || finalOrd.order_items.length === 0)) {
-          finalOrd.order_items = tagRes.order.order_items
-        }
-        return NextResponse.json({
-          success: true,
-          order: finalOrd,
-          message: 'Postres entregados directamente por el mozo',
-        })
-      }
+      const restaurant = await getRestaurantBySlug(slug)
+      const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
+      const transRes = await transitionOrderStatus({
+        orderId: targetOrderId,
+        restaurantId,
+        slug,
+        nextStatus: 'delivered',
+        actorType: 'waiter',
+      })
+      const finalOrd = ensureHydratedOrder(
+        transRes.order || (tagRes.order ? { ...tagRes.order, status: 'delivered' } : tagRes.order),
+        slug
+      )
       return NextResponse.json({
         success: true,
-        order: tagRes.order,
-        message: 'Postres entregados directamente por el mozo',
+        order: finalOrd,
+        message: 'Postres entregados en mesa por el mozo',
       })
     }
 
@@ -945,7 +1045,7 @@ export async function PATCH(req: NextRequest) {
       })
       return NextResponse.json({
         success: true,
-        order: transRes.order || resolveRes.order,
+        order: ensureHydratedOrder(transRes.order || resolveRes.order, slug),
         message: 'Postre elegido y marchado a cocina',
       })
     }
@@ -1058,16 +1158,20 @@ export async function PATCH(req: NextRequest) {
     if (targetStatus === 'delivered' && result.success && result.order) {
       const hasUnservedDrinks = (result.order.order_items || []).some(it => isDrinkItem(it) && !it.notes?.includes(TAG_DRINK_SERVED))
       if (hasUnservedDrinks) {
-        await updateOrderCourseTags(slug, targetOrderId, TAG_DRINK_SERVED, isDrinkItem)
+        const drinkTagRes = await updateOrderCourseTags(slug, targetOrderId, TAG_DRINK_SERVED, isDrinkItem)
+        if (drinkTagRes.order) {
+          result.order = drinkTagRes.order
+        }
       }
     }
 
     // Caso 4: Transición exitosa o idempotente
+    const hydratedFinal = ensureHydratedOrder(result.order, slug)
     return NextResponse.json({
       success: true,
       message: result.message || `Orden ${orderId} actualizada a ${status}`,
-      order: result.order,
-      version: result.version ?? result.order?.version,
+      order: hydratedFinal,
+      version: result.version ?? hydratedFinal?.version,
       code: result.code,
     })
   } catch (err: any) {
