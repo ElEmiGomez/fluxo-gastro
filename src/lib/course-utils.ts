@@ -595,7 +595,10 @@ export function isMainItem(item: OrderItem): boolean {
   return getItemCourse(item) === 'second'
 }
 
-export function isDrinkServed(item: OrderItem): boolean {
+export function isDrinkServed(item: OrderItem, order?: Order | any): boolean {
+  if (order && typeof order === 'object' && Boolean((order as any).notes?.includes(TAG_DRINK_SERVED))) {
+    return true
+  }
   return Boolean(
     item?.notes &&
       (item.notes.includes(TAG_DRINK_SERVED) ||
