@@ -1,5 +1,7 @@
-import { Order, OrderItem, CourseType } from '@/types/database.types'
+import { Order, OrderItem, CourseType, Product } from '@/types/database.types'
 import { inferCourseType, resolveCanonicalProductId } from './category-matcher'
+import { MOCK_PRODUCTS } from './supabase/mock-fallback'
+import { PRODUCT_NAMES } from './i18n'
 
 export const TAG_DRINK_SERVED = '[BARRA_SERVIDA]'
 export const TAG_FOOD_READY = '[COCINA_LISTA]'
@@ -43,7 +45,146 @@ export const STATION_PROGRESSION_TAGS = [
   TAG_DESSERT_PENDING,
   '[POSTRE_EN_ESPERA]',
   '[POSTRE: EN ESPERA]',
+  TAG_PACK_HEADER,
+  '[PACK_SUBITEM]',
+  '[PACK_COMPONENT]',
+  '[COURSE:first]',
+  '[COURSE:second]',
+  '[COURSE:dessert]',
+  '[COURSE:drink]',
 ]
+
+const GENERIC_PLACEHOLDER_NAMES = new Set([
+  'bebida',
+  'entrada',
+  'principal',
+  'postre',
+  'plato',
+  'producto',
+  'item',
+])
+
+export function isGenericProductName(name?: string | null): boolean {
+  if (!name) return true
+  return GENERIC_PLACEHOLDER_NAMES.has(name.trim().toLowerCase())
+}
+
+/**
+ * Resuelve y garantiza el objeto Product completo (con nombre real) para un OrderItem,
+ * cruzando su product_id con el catálogo en memoria/Supabase, MOCK_PRODUCTS y PRODUCT_NAMES.
+ */
+export function resolveCatalogProductForItem(
+  item: OrderItem | any,
+  catalogProducts?: Product[]
+): Product | undefined {
+  if (!item) return undefined
+
+  const existingProd = item.product || item.products
+  if (existingProd && existingProd.name && !isGenericProductName(existingProd.name)) {
+    return existingProd
+  }
+
+  const rawPid = String(
+    item.product_id ||
+    existingProd?.id ||
+    item.id ||
+    ''
+  ).trim()
+  const canonPid = resolveCanonicalProductId(rawPid) || rawPid
+  const rawName = String(existingProd?.name || item.name || '').trim()
+
+  const allMockProducts = Object.values(MOCK_PRODUCTS || {}).flat()
+  const pool: Product[] = [...(catalogProducts || []), ...allMockProducts]
+
+  // 1. Búsqueda por ID exacto o canónico
+  if (rawPid || canonPid) {
+    const byId = pool.find(p => {
+      if (!p?.id) return false
+      const pCanon = resolveCanonicalProductId(p.id) || p.id
+      return (
+        p.id === rawPid ||
+        p.id === canonPid ||
+        p.id.toLowerCase() === rawPid.toLowerCase() ||
+        p.id.toLowerCase() === canonPid.toLowerCase() ||
+        (canonPid && pCanon === canonPid)
+      )
+    })
+    if (byId && byId.name && !isGenericProductName(byId.name)) {
+      return {
+        ...byId,
+        ...(existingProd || {}),
+        id: existingProd?.id || byId.id,
+        name: byId.name,
+        price: existingProd?.price ?? byId.price,
+      }
+    }
+  }
+
+  // 2. Búsqueda en diccionario multilingüe PRODUCT_NAMES
+  const i18nEntry = (rawPid && PRODUCT_NAMES[rawPid]) || (canonPid && PRODUCT_NAMES[canonPid])
+  if (i18nEntry && i18nEntry.es) {
+    const matchedInPool = pool.find(p => p.id === canonPid || p.id === rawPid || p.name === i18nEntry.es)
+    if (matchedInPool) return matchedInPool
+    return {
+      id: canonPid || rawPid || 'prod-hydrated',
+      restaurant_id: existingProd?.restaurant_id || 'a0000000-0000-0000-0000-000000000001',
+      category_id: existingProd?.category_id || 'cat-1',
+      name: i18nEntry.es,
+      description: existingProd?.description || '',
+      price: Number(existingProd?.price ?? item.price ?? 0),
+      image_url: existingProd?.image_url || null,
+      model_3d_url: null,
+      is_available: true,
+    }
+  }
+
+  // 3. Si es cabecera de pack/menú, extraer nombre de las notas (ej. [Combo Pareja: ... #1])
+  const notes = String(item.notes || '')
+  if (item.is_pack_header || notes.includes(TAG_PACK_HEADER)) {
+    const packMatch = notes.match(/\[((?:Combo|Menú|Menu|Promo|Pack)[^\]#]*?)(?:\s*#\d+)?\]/i)
+    const packName = packMatch?.[1]?.trim() || (!isGenericProductName(rawName) ? rawName : 'Combo / Menú Especial')
+    return {
+      id: canonPid || rawPid || 'pack-header',
+      restaurant_id: existingProd?.restaurant_id || 'a0000000-0000-0000-0000-000000000001',
+      category_id: existingProd?.category_id || 'cat-promos',
+      name: packName,
+      description: existingProd?.description || '',
+      price: Number(existingProd?.price ?? item.price ?? 0),
+      image_url: existingProd?.image_url || null,
+      model_3d_url: null,
+      is_available: true,
+    }
+  }
+
+  if (existingProd && existingProd.name) {
+    return existingProd
+  }
+
+  return undefined
+}
+
+/**
+ * Impone monotonía estricta en las notas de un ítem:
+ * Si un ítem ya tiene etiqueta terminal de Entregado/Servido, garantiza que conserve
+ * también sus etiquetas previas de Listo/Marchado y que jamás pueda revertirse.
+ */
+export function enforceMonotonicItemNotes(notes: string | null | undefined): string {
+  let res = notes || ''
+  if (!res) return ''
+
+  if (res.includes(TAG_STARTER_SERVED) && !res.includes(TAG_STARTER_READY)) {
+    res = `${res} ${TAG_STARTER_READY}`.trim()
+  }
+  if (res.includes(TAG_MAIN_SERVED)) {
+    if (!res.includes(TAG_MAIN_FIRED)) res = `${res} ${TAG_MAIN_FIRED}`.trim()
+    if (!res.includes(TAG_MAIN_READY)) res = `${res} ${TAG_MAIN_READY}`.trim()
+  }
+  if (res.includes(TAG_DESSERT_SERVED)) {
+    if (!res.includes(TAG_DESSERT_FIRED)) res = `${res} ${TAG_DESSERT_FIRED}`.trim()
+    if (!res.includes(TAG_DESSERT_READY)) res = `${res} ${TAG_DESSERT_READY}`.trim()
+  }
+  return res
+}
 
 /**
  * Fusiona las notas de un ítem con las notas de referencia ya confirmadas,
@@ -55,7 +196,7 @@ export function mergeItemNotes(
 ): string {
   const inStr = incomingNotes || ''
   const refStr = referenceNotes || ''
-  if (!refStr) return inStr
+  if (!refStr) return enforceMonotonicItemNotes(inStr)
 
   let merged = inStr
   for (const tag of STATION_PROGRESSION_TAGS) {
@@ -63,23 +204,108 @@ export function mergeItemNotes(
       merged = merged ? `${merged} ${tag}` : tag
     }
   }
-  return merged
+  return enforceMonotonicItemNotes(merged)
+}
+
+/**
+ * Propaga las etiquetas de progresión de fase almacenadas a nivel de orden (`order.notes`)
+ * hacia cada uno de los `order_items` correspondientes a esa estación.
+ */
+export function propagateOrderLevelTagsToItems(
+  items: OrderItem[] | any[],
+  orderNotes?: string | null
+): OrderItem[] {
+  if (!items || items.length === 0) return []
+  const ordNotes = orderNotes || ''
+
+  return items.map(rawItem => {
+    if (!rawItem) return rawItem
+    let itemNotes = enforceMonotonicItemNotes(rawItem.notes)
+
+    if (ordNotes && !isPackHeaderItem(rawItem)) {
+      const course = getItemCourse(rawItem)
+      const appendTagIfMissing = (tag: string) => {
+        if (!itemNotes.includes(tag)) {
+          itemNotes = itemNotes ? `${itemNotes} ${tag}` : tag
+        }
+      }
+
+      if (course === 'drink') {
+        if (ordNotes.includes(TAG_DRINK_SERVED)) appendTagIfMissing(TAG_DRINK_SERVED)
+      } else if (course === 'first') {
+        if (ordNotes.includes(TAG_STARTER_READY) || ordNotes.includes(TAG_FOOD_READY)) {
+          appendTagIfMissing(TAG_STARTER_READY)
+        }
+        if (ordNotes.includes(TAG_STARTER_SERVED)) {
+          appendTagIfMissing(TAG_STARTER_READY)
+          appendTagIfMissing(TAG_STARTER_SERVED)
+        }
+      } else if (course === 'second') {
+        if (ordNotes.includes(TAG_MAIN_FIRED)) appendTagIfMissing(TAG_MAIN_FIRED)
+        if (ordNotes.includes(TAG_MAIN_COOKING)) appendTagIfMissing(TAG_MAIN_COOKING)
+        if (ordNotes.includes(TAG_MAIN_READY) || ordNotes.includes(TAG_FOOD_READY)) {
+          appendTagIfMissing(TAG_MAIN_READY)
+        }
+        if (ordNotes.includes(TAG_MAIN_SERVED)) {
+          appendTagIfMissing(TAG_MAIN_FIRED)
+          appendTagIfMissing(TAG_MAIN_READY)
+          appendTagIfMissing(TAG_MAIN_SERVED)
+        }
+      } else if (course === 'dessert') {
+        if (ordNotes.includes(TAG_DESSERT_FIRED)) appendTagIfMissing(TAG_DESSERT_FIRED)
+        if (ordNotes.includes(TAG_DESSERT_COOKING)) appendTagIfMissing(TAG_DESSERT_COOKING)
+        if (ordNotes.includes(TAG_DESSERT_READY)) appendTagIfMissing(TAG_DESSERT_READY)
+        if (ordNotes.includes(TAG_DESSERT_SERVED)) {
+          appendTagIfMissing(TAG_DESSERT_FIRED)
+          appendTagIfMissing(TAG_DESSERT_READY)
+          appendTagIfMissing(TAG_DESSERT_SERVED)
+        }
+      }
+    }
+
+    itemNotes = enforceMonotonicItemNotes(itemNotes)
+    if (itemNotes !== (rawItem.notes || '')) {
+      return { ...rawItem, notes: itemNotes }
+    }
+    return rawItem
+  })
 }
 
 /**
  * Reconcilia un array de ítems de comanda preservando todas las etiquetas de progresión
- * ya adquiridas en el ciclo de vida (bebida servida, entrada servida, principal marchado, etc.).
+ * ya adquiridas en el ciclo de vida (bebida servida, entrada servida, principal marchado, etc.)
+ * así como los metadatos hidratados del producto (`item.product`).
  */
 export function mergeOrderItemsCourseTags(
   currentItems: OrderItem[] | any[],
-  referenceItems?: OrderItem[] | any[]
+  referenceItems?: OrderItem[] | any[],
+  orderNotes?: string | null
 ): OrderItem[] {
-  if (!referenceItems || referenceItems.length === 0) return currentItems as OrderItem[]
-  if (!currentItems || currentItems.length === 0) return referenceItems as OrderItem[]
+  if (!referenceItems || referenceItems.length === 0) {
+    return propagateOrderLevelTagsToItems(currentItems || [], orderNotes)
+  }
+  if (!currentItems || currentItems.length === 0) {
+    return propagateOrderLevelTagsToItems(referenceItems, orderNotes)
+  }
 
   const usedRefIndices = new Set<number>()
 
-  return currentItems.map((currItem, idx) => {
+  // Preservar cabeceras de pack/menú que existan en referenceItems pero no en currentItems (por filtrado DB)
+  const missingPackHeaders: OrderItem[] = []
+  referenceItems.forEach((refItem, rIdx) => {
+    if (isPackHeaderItem(refItem)) {
+      const existsInCurrent = currentItems.some(c => isPackHeaderItem(c))
+      if (!existsInCurrent) {
+        usedRefIndices.add(rIdx)
+        missingPackHeaders.push({
+          ...refItem,
+          product: resolveCatalogProductForItem(refItem) || refItem.product || refItem.products,
+        })
+      }
+    }
+  })
+
+  const mergedCurrent = currentItems.map((currItem, idx) => {
     // 1. Coincidencia por id único
     let matchIdx = currItem.id
       ? referenceItems.findIndex((r, rIdx) => !usedRefIndices.has(rIdx) && r.id === currItem.id)
@@ -87,11 +313,11 @@ export function mergeOrderItemsCourseTags(
 
     // 2. Coincidencia por product_id o id canónico
     if (matchIdx === -1) {
-      const cProdId = currItem.product_id || currItem.product?.id
+      const cProdId = currItem.product_id || currItem.product?.id || currItem.products?.id
       const cCanon = resolveCanonicalProductId(cProdId) || cProdId
       matchIdx = referenceItems.findIndex((r, rIdx) => {
-        if (usedRefIndices.has(rIdx)) return false
-        const rProdId = r.product_id || r.product?.id
+        if (usedRefIndices.has(rIdx) || isPackHeaderItem(r) !== isPackHeaderItem(currItem)) return false
+        const rProdId = r.product_id || r.product?.id || r.products?.id
         const rCanon = resolveCanonicalProductId(rProdId) || rProdId
         return Boolean(
           (rProdId && cProdId && rProdId === cProdId) ||
@@ -100,7 +326,16 @@ export function mergeOrderItemsCourseTags(
       })
     }
 
-    // 3. Coincidencia posicional 1:1 si las listas tienen el mismo tamaño
+    // 3. Coincidencia por mismo course entre ítems no emparejados
+    if (matchIdx === -1) {
+      const cCourse = getItemCourse(currItem)
+      matchIdx = referenceItems.findIndex((r, rIdx) => {
+        if (usedRefIndices.has(rIdx) || isPackHeaderItem(r) !== isPackHeaderItem(currItem)) return false
+        return getItemCourse(r) === cCourse
+      })
+    }
+
+    // 4. Coincidencia posicional 1:1 si las listas tienen el mismo tamaño
     if (matchIdx === -1 && currentItems.length === referenceItems.length && !usedRefIndices.has(idx)) {
       matchIdx = idx
     }
@@ -109,14 +344,84 @@ export function mergeOrderItemsCourseTags(
       usedRefIndices.add(matchIdx)
       const matchedRef = referenceItems[matchIdx]
       const mergedNotes = mergeItemNotes(currItem.notes, matchedRef.notes)
-      return {
+      const bestProduct =
+        (!isGenericProductName(currItem.product?.name) ? currItem.product : null) ||
+        (!isGenericProductName(currItem.products?.name) ? currItem.products : null) ||
+        (!isGenericProductName(matchedRef.product?.name) ? matchedRef.product : null) ||
+        (!isGenericProductName((matchedRef as any).products?.name) ? (matchedRef as any).products : null) ||
+        resolveCatalogProductForItem(currItem) ||
+        resolveCatalogProductForItem(matchedRef) ||
+        currItem.product ||
+        matchedRef.product
+
+      const mergedItem = {
+        ...matchedRef,
         ...currItem,
+        id: currItem.id || matchedRef.id,
+        product_id: currItem.product_id || matchedRef.product_id || bestProduct?.id,
+        product: bestProduct,
         notes: mergedNotes,
-        course: currItem.course || matchedRef.course,
+        course: currItem.course || matchedRef.course || getItemCourse({ ...currItem, product: bestProduct, notes: mergedNotes }),
+        is_complimentary: currItem.is_complimentary ?? matchedRef.is_complimentary,
+        is_pack_header: currItem.is_pack_header ?? matchedRef.is_pack_header,
+        is_pack_component: currItem.is_pack_component ?? matchedRef.is_pack_component,
+        pack_id: currItem.pack_id ?? matchedRef.pack_id,
       } as OrderItem
+      return mergedItem
     }
 
-    return currItem as OrderItem
+    const hydratedProd = resolveCatalogProductForItem(currItem) || currItem.product || currItem.products
+    return {
+      ...currItem,
+      product: hydratedProd,
+      notes: enforceMonotonicItemNotes(currItem.notes),
+      course: currItem.course || getItemCourse({ ...currItem, product: hydratedProd }),
+    } as OrderItem
+  })
+
+  return propagateOrderLevelTagsToItems([...missingPackHeaders, ...mergedCurrent], orderNotes)
+}
+
+/**
+ * Hidrata obligatoriamente todos los ítems de una comanda cruzando su product_id
+ * con el catálogo (`catalogProducts`, `MOCK_PRODUCTS`, `PRODUCT_NAMES`), reconciliando
+ * etiquetas con `referenceItems` y propagando las etiquetas de `orderNotes`.
+ */
+export function hydrateOrderItemsWithCatalog(
+  items: OrderItem[] | any[],
+  catalogProducts?: Product[],
+  referenceItems?: OrderItem[] | any[] | null,
+  orderNotes?: string | null
+): OrderItem[] {
+  const baseItems =
+    items && items.length > 0
+      ? items
+      : referenceItems && referenceItems.length > 0
+        ? referenceItems
+        : []
+
+  if (baseItems.length === 0) return []
+
+  const reconciled =
+    referenceItems && referenceItems.length > 0
+      ? mergeOrderItemsCourseTags(baseItems, referenceItems, orderNotes)
+      : propagateOrderLevelTagsToItems(baseItems, orderNotes)
+
+  return reconciled.map(it => {
+    const resolvedProd = resolveCatalogProductForItem(it, catalogProducts) || it.product || (it as any).products
+    const effectiveNotes = enforceMonotonicItemNotes(it.notes)
+    const effectiveCourse =
+      it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course)
+        ? it.course
+        : getItemCourse({ ...it, product: resolvedProd, notes: effectiveNotes })
+
+    return {
+      ...it,
+      product_id: it.product_id || resolvedProd?.id,
+      product: resolvedProd,
+      notes: effectiveNotes,
+      course: effectiveCourse,
+    } as OrderItem
   })
 }
 
@@ -142,6 +447,7 @@ export function cleanItemNotes(notes?: string | null): string {
  * Determina si un ítem es la cabecera contable/financiera de un pack o menú
  */
 export function isPackHeaderItem(item: OrderItem): boolean {
+  if (!item) return false
   if (item.is_pack_header) return true
   const notes = item.notes || ''
   if (notes.includes(TAG_PACK_HEADER)) return true
@@ -156,12 +462,9 @@ export function isPackHeaderItem(item: OrderItem): boolean {
  * Determina si un postre es un comodín pendiente de elección por parte del comensal
  */
 export function isDessertPendingChoice(item: OrderItem): boolean {
-  return Boolean(item.notes && item.notes.includes(TAG_DESSERT_PENDING))
+  return Boolean(item?.notes && item.notes.includes(TAG_DESSERT_PENDING))
 }
 
-/**
- * Obtiene el tiempo gastronómico efectivo (course) de un ítem.
- */
 // Jerarquía formal y monotónica de estados de comanda
 export const ORDER_STATUS_HIERARCHY: Record<string, number> = {
   pending_validation: 0,
@@ -220,32 +523,33 @@ export function getItemCourse(item: OrderItem | any): CourseType {
   if (notes.includes('[COURSE:dessert]') || notes.includes(TAG_DESSERT_PENDING)) return 'dessert'
   if (notes.includes('[COURSE:drink]')) return 'drink'
   const prod = item?.product || item?.products
-  if (prod) {
+  if (prod && prod.name && !isGenericProductName(prod.name)) {
     return inferCourseType(prod)
   }
 
   // Fallback por identificador de producto cuando la relación product no fue hidratada en Supabase
-  const rawPid = String(item?.product_id || item?.id || '').toLowerCase()
+  const rawPid = String(item?.product_id || prod?.id || item?.id || '').toLowerCase()
+  const canonPid = String(resolveCanonicalProductId(rawPid) || rawPid).toLowerCase()
   if (
     rawPid.startsWith('p-beb') ||
     rawPid.startsWith('drk-') ||
     rawPid.startsWith('p-caf') ||
-    rawPid === 'b0000000-0000-0000-0000-000000000003' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000008' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000009' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000019' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000020' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000021'
+    canonPid === 'b0000000-0000-0000-0000-000000000003' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000008' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000009' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000019' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000020' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000021'
   ) {
     return 'drink'
   }
   if (
     rawPid.startsWith('p-pos') ||
     rawPid.startsWith('p-dessert') ||
-    rawPid === 'b0000000-0000-0000-0000-000000000006' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000007' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000018' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000099'
+    canonPid === 'b0000000-0000-0000-0000-000000000006' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000007' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000018' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000099'
   ) {
     return 'dessert'
   }
@@ -254,10 +558,10 @@ export function getItemCourse(item: OrderItem | any): CourseType {
     rawPid.startsWith('side-opt') ||
     rawPid.startsWith('p-tab') ||
     rawPid.startsWith('p-ens') ||
-    rawPid === 'b0000000-0000-0000-0000-000000000011' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000012' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000013' ||
-    rawPid === 'b0000000-0000-0000-0000-000000000022'
+    canonPid === 'b0000000-0000-0000-0000-000000000011' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000012' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000013' ||
+    canonPid === 'b0000000-0000-0000-0000-000000000022'
   ) {
     return 'first'
   }
@@ -293,7 +597,7 @@ export function isMainItem(item: OrderItem): boolean {
 
 export function isDrinkServed(item: OrderItem): boolean {
   return Boolean(
-    item.notes &&
+    item?.notes &&
       (item.notes.includes(TAG_DRINK_SERVED) ||
         item.notes.includes('[BARRA: SERVIDA]') ||
         item.notes.includes('[BARRA:SERVIDA]'))
@@ -304,7 +608,7 @@ export function isFoodReady(item: OrderItem): boolean {
   if (isStarterItem(item)) return isStarterReady(item)
   if (isMainItem(item)) return isMainReady(item)
   return Boolean(
-    item.notes &&
+    item?.notes &&
       (item.notes.includes(TAG_FOOD_READY) ||
         item.notes.includes('[COCINA: LISTA]') ||
         item.notes.includes('[COCINA:LISTA]'))
@@ -319,7 +623,7 @@ export function isFoodServed(item: OrderItem): boolean {
 
 export function isStarterReady(item: OrderItem): boolean {
   return Boolean(
-    item.notes &&
+    item?.notes &&
       (item.notes.includes(TAG_STARTER_READY) ||
         item.notes.includes(TAG_STARTER_SERVED) ||
         item.notes.includes(TAG_FOOD_READY) ||
@@ -329,15 +633,14 @@ export function isStarterReady(item: OrderItem): boolean {
 }
 
 export function isStarterServed(item: OrderItem, parentOrder?: any): boolean {
-  if (item.notes && item.notes.includes(TAG_STARTER_SERVED)) return true
+  if (item?.notes && item.notes.includes(TAG_STARTER_SERVED)) return true
   if (parentOrder && typeof parentOrder === 'object') {
+    if (parentOrder.notes?.includes(TAG_STARTER_SERVED)) return true
     if (parentOrder.status === 'delivered' || parentOrder.status === 'paid') return true
     if (
-      areOrderMainsFired(parentOrder) ||
-      areOrderMainsReady(parentOrder) ||
-      areOrderMainsServed(parentOrder) ||
-      parentOrder.notes?.includes(TAG_MAIN_FIRED) ||
+      parentOrder.notes?.includes(TAG_MAIN_SERVED) ||
       parentOrder.notes?.includes(TAG_DESSERT_FIRED) ||
+      parentOrder.notes?.includes(TAG_DESSERT_SERVED) ||
       orderHasActiveDesserts(parentOrder) ||
       (orderHasDesserts(parentOrder) && (isOrderDessertsReady(parentOrder) || areOrderDessertsServed(parentOrder) || areOrderDessertsCooking(parentOrder)))
     ) {
@@ -348,12 +651,12 @@ export function isStarterServed(item: OrderItem, parentOrder?: any): boolean {
 }
 
 export function isMainCooking(item: OrderItem): boolean {
-  return Boolean(item.notes && item.notes.includes(TAG_MAIN_COOKING))
+  return Boolean(item?.notes && item.notes.includes(TAG_MAIN_COOKING))
 }
 
 export function isMainReady(item: OrderItem): boolean {
   return Boolean(
-    item.notes &&
+    item?.notes &&
       (item.notes.includes(TAG_MAIN_READY) ||
         item.notes.includes(TAG_MAIN_SERVED) ||
         item.notes.includes(TAG_FOOD_READY) ||
@@ -363,11 +666,13 @@ export function isMainReady(item: OrderItem): boolean {
 }
 
 export function isMainServed(item: OrderItem, parentOrder?: any): boolean {
-  if (item.notes && item.notes.includes(TAG_MAIN_SERVED)) return true
+  if (item?.notes && item.notes.includes(TAG_MAIN_SERVED)) return true
   if (parentOrder && typeof parentOrder === 'object') {
+    if (parentOrder.notes?.includes(TAG_MAIN_SERVED)) return true
     if (parentOrder.status === 'delivered' || parentOrder.status === 'paid') return true
     if (
       parentOrder.notes?.includes(TAG_DESSERT_FIRED) ||
+      parentOrder.notes?.includes(TAG_DESSERT_SERVED) ||
       orderHasActiveDesserts(parentOrder) ||
       (orderHasDesserts(parentOrder) && (isOrderDessertsReady(parentOrder) || areOrderDessertsServed(parentOrder) || areOrderDessertsCooking(parentOrder)))
     ) {
@@ -378,29 +683,34 @@ export function isMainServed(item: OrderItem, parentOrder?: any): boolean {
 }
 
 export function isDessertServed(item: OrderItem, parentOrder?: any): boolean {
-  if (parentOrder && typeof parentOrder === 'object' && parentOrder.status === 'paid') return true
   if (
-    parentOrder &&
-    typeof parentOrder === 'object' &&
-    parentOrder.status === 'delivered' &&
-    !item.notes?.includes(TAG_DESSERT_FIRED) &&
-    !item.notes?.includes(TAG_DESSERT_COOKING) &&
-    !item.notes?.includes(TAG_DESSERT_READY) &&
-    !item.notes?.includes(TAG_DESSERT_PENDING)
+    item?.notes &&
+    (item.notes.includes(TAG_DESSERT_SERVED) ||
+      item.notes.includes('[POSTRE: SERVIDO]') ||
+      item.notes.includes('[POSTRE:SERVIDO]'))
   ) {
     return true
   }
-  return Boolean(
-    item.notes &&
-      (item.notes.includes(TAG_DESSERT_SERVED) ||
-        item.notes.includes('[POSTRE: SERVIDO]') ||
-        item.notes.includes('[POSTRE:SERVIDO]'))
-  )
+  if (parentOrder && typeof parentOrder === 'object') {
+    if (parentOrder.notes?.includes(TAG_DESSERT_SERVED)) return true
+    if (parentOrder.status === 'paid') return true
+    if (
+      parentOrder.status === 'delivered' &&
+      !item?.notes?.includes(TAG_DESSERT_FIRED) &&
+      !item?.notes?.includes(TAG_DESSERT_COOKING) &&
+      !item?.notes?.includes(TAG_DESSERT_READY) &&
+      !item?.notes?.includes(TAG_DESSERT_PENDING) &&
+      !orderHasHeldDesserts(parentOrder)
+    ) {
+      return true
+    }
+  }
+  return false
 }
 
 export function isDessertReady(item: OrderItem): boolean {
   return Boolean(
-    item.notes &&
+    item?.notes &&
       (item.notes.includes(TAG_DESSERT_READY) ||
         item.notes.includes('[POSTRE: LISTO]') ||
         item.notes.includes('[POSTRE:LISTO]') ||
@@ -412,7 +722,7 @@ export function isDessertReady(item: OrderItem): boolean {
 
 export function isDessertFired(item: OrderItem): boolean {
   return Boolean(
-    item.notes &&
+    item?.notes &&
       (item.notes.includes(TAG_DESSERT_FIRED) ||
         item.notes.includes(TAG_DESSERT_COOKING) ||
         item.notes.includes(TAG_DESSERT_READY) ||
@@ -421,12 +731,13 @@ export function isDessertFired(item: OrderItem): boolean {
 }
 
 export function isDessertCooking(item: OrderItem): boolean {
-  return Boolean(item.notes && item.notes.includes(TAG_DESSERT_COOKING))
+  return Boolean(item?.notes && item.notes.includes(TAG_DESSERT_COOKING))
 }
 
 export function areOrderDessertsCooking(order: Order): boolean {
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return true
+  if ((order as any).notes?.includes(TAG_DESSERT_COOKING)) return true
   return desserts.some(isDessertCooking)
 }
 
@@ -449,11 +760,15 @@ export function orderHasMains(order: Order): boolean {
 export function areOrderStartersReady(order: Order): boolean {
   const starters = (order.order_items || []).filter(isStarterItem)
   if (starters.length === 0) return true
-  return starters.every(isStarterReady)
+  if ((order as any).notes?.includes(TAG_STARTER_READY) || (order as any).notes?.includes(TAG_STARTER_SERVED)) {
+    return true
+  }
+  return starters.every(it => isStarterReady(it) || isStarterServed(it, order))
 }
 
 export function areOrderStartersServed(order: Order): boolean {
   if (order.status === 'delivered' || order.status === 'paid') return true
+  if ((order as any).notes?.includes(TAG_STARTER_SERVED)) return true
   const starters = (order.order_items || []).filter(isStarterItem)
   if (starters.length === 0) return true
   return starters.every(it => isStarterServed(it, order))
@@ -461,7 +776,7 @@ export function areOrderStartersServed(order: Order): boolean {
 
 export function isMainFired(item: OrderItem): boolean {
   return Boolean(
-    item.notes &&
+    item?.notes &&
       (item.notes.includes(TAG_MAIN_FIRED) ||
         item.notes.includes(TAG_MAIN_COOKING) ||
         item.notes.includes('[PRINCIPAL_COCINANDO]') ||
@@ -472,23 +787,34 @@ export function isMainFired(item: OrderItem): boolean {
 
 export function areOrderMainsFired(order: Order): boolean {
   if (order.status === 'paid') return true
-  if ((order as any).notes?.includes(TAG_MAIN_FIRED) || (order as any).kitchen_notes?.includes(TAG_MAIN_FIRED)) return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
-  if (mains.every(m => isMainServed(m, order))) return true
   // Si la comanda no tiene entrantes, los principales se consideran marchados de inicio
   if (!orderHasStarters(order)) return true
+  if (
+    (order as any).notes?.includes(TAG_MAIN_FIRED) ||
+    (order as any).kitchen_notes?.includes(TAG_MAIN_FIRED) ||
+    (order as any).notes?.includes(TAG_MAIN_COOKING) ||
+    (order as any).notes?.includes(TAG_MAIN_READY) ||
+    (order as any).notes?.includes(TAG_MAIN_SERVED)
+  ) {
+    return true
+  }
   return mains.some(isMainFired)
 }
 
 export function areOrderMainsReady(order: Order): boolean {
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
-  return mains.every(isMainReady)
+  if ((order as any).notes?.includes(TAG_MAIN_READY) || (order as any).notes?.includes(TAG_MAIN_SERVED)) {
+    return true
+  }
+  return mains.every(it => isMainReady(it) || isMainServed(it, order))
 }
 
 export function areOrderMainsServed(order: Order): boolean {
   if (order.status === 'delivered' || order.status === 'paid') return true
+  if ((order as any).notes?.includes(TAG_MAIN_SERVED)) return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
   return mains.every(it => isMainServed(it, order))
@@ -496,9 +822,9 @@ export function areOrderMainsServed(order: Order): boolean {
 
 export function areOrderDessertsServed(order: Order): boolean {
   if (order.status === 'paid') return true
+  if ((order as any).notes?.includes(TAG_DESSERT_SERVED)) return true
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return true
-  if (order.status === 'delivered' && !orderHasPendingDesserts(order)) return true
   return desserts.every(it => isDessertServed(it, order))
 }
 
@@ -513,6 +839,7 @@ export function orderHasDesserts(order: Order): boolean {
  */
 export function orderHasPendingDesserts(order: Order): boolean {
   if (['cancelled', 'paid'].includes(order.status)) return false
+  if ((order as any).notes?.includes(TAG_DESSERT_SERVED)) return false
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
   return desserts.some(d => !isDessertServed(d, order))
@@ -531,9 +858,9 @@ export function isOrderReadyToPick(order: Order): boolean {
   const items = order.order_items || []
   if (items.length === 0) return true
 
-  const hasReadyStarters = items.some(it => isStarterItem(it) && isStarterReady(it) && !isStarterServed(it))
-  const hasReadyMains = items.some(it => isMainItem(it) && isMainReady(it) && !isMainServed(it))
-  const hasReadyDesserts = items.some(it => isDessertItem(it) && isDessertReady(it) && !isDessertServed(it))
+  const hasReadyStarters = items.some(it => isStarterItem(it) && isStarterReady(it) && !isStarterServed(it, order))
+  const hasReadyMains = items.some(it => isMainItem(it) && isMainReady(it) && !isMainServed(it, order))
+  const hasReadyDesserts = items.some(it => isDessertItem(it) && isDessertReady(it) && !isDessertServed(it, order))
   const hasGeneralFood = items.some(it => isFoodItem(it) && isFoodReady(it) && !isFoodServed(it))
 
   return hasReadyStarters || hasReadyMains || hasReadyDesserts || hasGeneralFood
@@ -541,8 +868,9 @@ export function isOrderReadyToPick(order: Order): boolean {
 
 export function isDrinkOnlyOrder(input?: Order | OrderItem[] | null): boolean {
   if (!input) return false
-  const items = Array.isArray(input) ? input : (input as Order).order_items
-  if (!items || items.length === 0) return false
+  const rawItems = Array.isArray(input) ? input : (input as Order).order_items
+  const items = (rawItems || []).filter(it => !isPackHeaderItem(it))
+  if (items.length === 0) return false
   return items.every(isDrinkItem)
 }
 
@@ -554,16 +882,30 @@ export function orderHasHeldDesserts(order: Order): boolean {
   if (!orderHasFood(order)) return false
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
-  if ((order as any).notes?.includes(TAG_DESSERT_FIRED) || (order as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)) return false
-  return desserts.some(d => !isDessertFired(d) && !isDessertReady(d))
+  if (
+    (order as any).notes?.includes(TAG_DESSERT_FIRED) ||
+    (order as any).kitchen_notes?.includes(TAG_DESSERT_FIRED) ||
+    (order as any).notes?.includes(TAG_DESSERT_READY) ||
+    (order as any).notes?.includes(TAG_DESSERT_SERVED)
+  ) {
+    return false
+  }
+  return desserts.some(d => !isDessertFired(d) && !isDessertReady(d) && !isDessertServed(d))
 }
 
 /**
  * Retorna la lista de postres retenidos pendientes de decisión del mozo (marchar a cocina o entregar directo).
  */
 export function getHeldDesserts(order: Order): OrderItem[] {
-  if ((order as any).notes?.includes(TAG_DESSERT_FIRED) || (order as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)) return []
-  return (order.order_items || []).filter(d => isDessertItem(d) && !isDessertFired(d) && !isDessertReady(d))
+  if (
+    (order as any).notes?.includes(TAG_DESSERT_FIRED) ||
+    (order as any).kitchen_notes?.includes(TAG_DESSERT_FIRED) ||
+    (order as any).notes?.includes(TAG_DESSERT_READY) ||
+    (order as any).notes?.includes(TAG_DESSERT_SERVED)
+  ) {
+    return []
+  }
+  return (order.order_items || []).filter(d => isDessertItem(d) && !isDessertFired(d) && !isDessertReady(d) && !isDessertServed(d))
 }
 
 /**
@@ -571,8 +913,9 @@ export function getHeldDesserts(order: Order): OrderItem[] {
  * y existen postres retenidos listos para que el mozo los marche a cocina o los entregue directamente.
  */
 export function areOrderDessertsPendingWaiter(order: Order): boolean {
-  if (order.status !== 'delivered') return false
+  if (['cancelled', 'paid', 'pending_validation'].includes(order.status)) return false
   if (areOrderDrinksPending(order)) return false
+  if (!areOrderStartersServed(order) || !areOrderMainsServed(order)) return false
   return orderHasHeldDesserts(order)
 }
 
@@ -583,6 +926,9 @@ export function areOrderDessertsPendingWaiter(order: Order): boolean {
 export function orderHasActiveDesserts(order: Order): boolean {
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return false
+  if ((order as any).notes?.includes(TAG_DESSERT_READY) || (order as any).notes?.includes(TAG_DESSERT_SERVED)) {
+    return false
+  }
   const orderLevelFired = Boolean(
     (order as any).notes?.includes(TAG_DESSERT_FIRED) || (order as any).kitchen_notes?.includes(TAG_DESSERT_FIRED)
   )
@@ -594,6 +940,70 @@ export function orderHasActiveDesserts(order: Order): boolean {
 
 export function orderHasPendingChoiceDesserts(order: Order): boolean {
   return (order.order_items || []).some(d => isDessertItem(d) && isDessertPendingChoice(d) && !isDessertReady(d))
+}
+
+/**
+ * Verifica si TODAS las fases que componen una comanda (Bebidas, 1° Entradas, 2° Principales, 3° Postres)
+ * ya fueron entregadas en mesa al cliente.
+ */
+export function areAllOrderCoursesDelivered(order: Order): boolean {
+  if (!order) return false
+  if (order.status === 'paid') return true
+  const items = (order.order_items || []).filter(it => !isPackHeaderItem(it))
+  if (items.length === 0) return order.status === 'delivered'
+
+  const hasDrinks = orderHasDrinks(order)
+  const drinksDone =
+    !hasDrinks ||
+    Boolean((order as any).notes?.includes(TAG_DRINK_SERVED)) ||
+    items.filter(isDrinkItem).every(isDrinkServed)
+
+  const hasStarters = orderHasStarters(order)
+  const startersDone =
+    !hasStarters ||
+    Boolean((order as any).notes?.includes(TAG_STARTER_SERVED)) ||
+    items.filter(isStarterItem).every(it => Boolean(it.notes?.includes(TAG_STARTER_SERVED)))
+
+  const hasMains = orderHasMains(order)
+  const mainsDone =
+    !hasMains ||
+    Boolean((order as any).notes?.includes(TAG_MAIN_SERVED)) ||
+    items.filter(isMainItem).every(it => Boolean(it.notes?.includes(TAG_MAIN_SERVED)))
+
+  const hasDesserts = orderHasDesserts(order)
+  const dessertsDone =
+    !hasDesserts ||
+    Boolean((order as any).notes?.includes(TAG_DESSERT_SERVED)) ||
+    items.filter(isDessertItem).every(it =>
+      Boolean(
+        it.notes?.includes(TAG_DESSERT_SERVED) ||
+          it.notes?.includes('[POSTRE: SERVIDO]') ||
+          it.notes?.includes('[POSTRE:SERVIDO]')
+      )
+    )
+
+  return drinksDone && startersDone && mainsDone && dessertsDone
+}
+
+/**
+ * Verifica si TODAS las fases de cocina de una comanda (`1° Entradas`, `2° Principales`, `3° Postres`)
+ * están completadas (listas o entregadas), para que el ticket se cierre automáticamente en el KDS.
+ */
+export function areAllKitchenCoursesCompleted(order: Order): boolean {
+  if (!order) return true
+  if (['cancelled', 'paid'].includes(order.status)) return true
+  if (isDrinkOnlyOrder(order)) return true
+
+  const hasStarters = orderHasStarters(order)
+  const startersDone = !hasStarters || areOrderStartersReady(order) || areOrderStartersServed(order)
+
+  const hasMains = orderHasMains(order)
+  const mainsDone = !hasMains || areOrderMainsReady(order) || areOrderMainsServed(order)
+
+  const hasDesserts = orderHasDesserts(order)
+  const dessertsDone = !hasDesserts || isOrderDessertsReady(order) || areOrderDessertsServed(order)
+
+  return startersDone && mainsDone && dessertsDone
 }
 
 export interface OrderStationEvaluation {
@@ -700,6 +1110,7 @@ export function areOrderDrinksPending(order: Order): boolean {
   if (order.status === 'paid' || order.status === 'cancelled' || order.status === 'pending_validation') {
     return false
   }
+  if ((order as any).notes?.includes(TAG_DRINK_SERVED)) return false
   const drinks = (order.order_items || []).filter(isDrinkItem)
   if (drinks.length === 0) return false
   return drinks.some(d => !isDrinkServed(d))
@@ -709,6 +1120,7 @@ export function areOrderDrinksPending(order: Order): boolean {
  * Retorna la lista de ítems de bebida pendientes de servir de una orden.
  */
 export function getPendingDrinks(order: Order): OrderItem[] {
+  if ((order as any).notes?.includes(TAG_DRINK_SERVED)) return []
   return (order.order_items || []).filter(it => isDrinkItem(it) && !isDrinkServed(it))
 }
 
@@ -725,6 +1137,9 @@ export function isOrderFoodReady(order: Order): boolean {
  * Retorna true si todos los postres de la orden fueron marcados listos por cocina.
  */
 export function isOrderDessertsReady(order: Order): boolean {
+  if ((order as any).notes?.includes(TAG_DESSERT_READY) || (order as any).notes?.includes(TAG_DESSERT_SERVED)) {
+    return true
+  }
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return true
   return desserts.every(isDessertReady)
@@ -748,4 +1163,3 @@ export function sortItemsForKitchen(items: OrderItem[]): OrderItem[] {
     return pA - pB
   })
 }
-

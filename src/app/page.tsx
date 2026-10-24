@@ -5,9 +5,7 @@ import Link from 'next/link'
 import {
   ShieldCheck,
   CheckCircle2,
-  Tv2,
   ArrowRight,
-  Play,
   Check,
   ChevronRight,
   Layers,
@@ -18,13 +16,16 @@ import {
   Smartphone,
   ChefHat,
   Printer,
-  Eye
+  Eye,
+  Star,
+  Gift
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
 import { MonthlyReportModal } from '@/components/analytics/MonthlyReportModal'
 import { ScrollReveal } from '@/components/landing/ScrollReveal'
 import { HeroAuroraBackground } from '@/components/landing/HeroAuroraBackground'
+import { HeroLiveSyncMockup } from '@/components/landing/HeroLiveSyncMockup'
 
 const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '5493585187430'
 const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para mi restaurante.'
@@ -119,7 +120,7 @@ export default function LandingPage() {
                 <ScrollReveal delay={80} distance={18}>
                   <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-black uppercase tracking-widest">
                     <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                    <span>SISTEMA OPERATIVO GASTRONÓMICO B2B</span>
+                    <span>SISTEMA OPERATIVO PARA BARES Y RESTAURANTES</span>
                   </div>
                 </ScrollReveal>
 
@@ -136,9 +137,7 @@ export default function LandingPage() {
                 {/* Subtítulo de Control & Velocidad */}
                 <ScrollReveal delay={280} distance={24}>
                   <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-normal">
-                    Control total, paridad analógica y máxima velocidad gerencial. 
-                    Sincroniza en tiempo real al comensal en mesa, el comandero del mozo y 
-                    el pase de cocina sin alterar los tiempos ni la dinámica humana de tu restaurante.
+                    La agilidad del papel y boli de siempre, pero con la velocidad de la sincronización digital instantánea. Conecta a tus camareros en terraza con la barra y la cocina en tiempo real sin comprar TPVs caros.
                   </p>
                 </ScrollReveal>
 
@@ -147,19 +146,20 @@ export default function LandingPage() {
                   <div className="pt-4 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
                     <button
                       type="button"
-                      onClick={handleOpenAllDashboards}
+                      onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all active:scale-95 cursor-pointer"
                     >
-                      <span>PROBAR SIMULADOR</span>
+                      <span>SOLICITAR PILOTO 14 DÍAS (0 €)</span>
                       <ArrowRight className="w-5 h-5" />
                     </button>
 
                     <button
                       type="button"
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-base font-bold text-slate-400 bg-slate-800/40 border border-slate-700/60 cursor-default"
+                      onClick={handleOpenAllDashboards}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm sm:text-base font-bold text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/40 transition-all active:scale-95 cursor-pointer group"
                     >
-                      <Play className="w-4 h-4 fill-slate-500 text-slate-500" />
-                      <span>Ver Video Explicativo</span>
+                      <span>Ver Demo Interactiva en Vivo</span>
+                      <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" />
                     </button>
                   </div>
                 </ScrollReveal>
@@ -180,40 +180,10 @@ export default function LandingPage() {
                 </ScrollReveal>
               </div>
 
-              {/* Columna Derecha: Mockup para Video Pitch */}
+              {/* Columna Derecha: Mockup Split-Screen Sincronizado */}
               <div className="lg:col-span-5 w-full">
                 <ScrollReveal delay={300} distance={32} scale={0.96}>
-                  <div className="relative group">
-                    {/* Resplandor del marco */}
-                    <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 rounded-2xl blur-xl opacity-40 transition duration-500" />
-                    
-                    {/* Contenedor Mockup para Video Pitch */}
-                    <div 
-                      className="relative aspect-video bg-gradient-to-br from-slate-800 to-slate-850 rounded-2xl border-2 border-slate-700 overflow-hidden flex flex-col items-center justify-center p-6 text-center shadow-2xl cursor-default transition-all"
-                    >
-                      {/* Badge de Video */}
-                      <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950/80 border border-slate-700 text-[10px] font-bold text-slate-400">
-                        <Tv2 className="w-3.5 h-3.5" />
-                        <span>Video Explicativo</span>
-                      </div>
-
-                      {/* Botón Play */}
-                      <div className="w-16 h-16 rounded-full bg-slate-700/40 border-2 border-slate-600/50 flex items-center justify-center text-slate-400 mb-3 shadow-lg">
-                        <Play className="w-7 h-7 ml-1 fill-current" />
-                      </div>
-
-                      <p className="text-sm sm:text-base font-extrabold text-white tracking-wide">
-                        ¿Cómo se conectan los Dashboards?
-                      </p>
-                      <p className="text-xs text-slate-300 mt-1 max-w-xs leading-relaxed">
-                        Descubre cómo viaja la orden desde la carta del móvil hasta el Comandero del Mozo y el Monitor de Cocina.
-                      </p>
-
-                      <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400">
-                        <span>Próximamente disponible</span>
-                      </div>
-                    </div>
-                  </div>
+                  <HeroLiveSyncMockup />
                 </ScrollReveal>
               </div>
 
@@ -241,7 +211,7 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               
-              {/* Tarjeta 1: Venta Visual & Carta Viva (1.1 + 3.2) */}
+              {/* Tarjeta 1: Carta QR Visual y Ventas Sugeridas */}
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
                 <div className="bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/70 hover:border-cyan-500/40 rounded-2xl p-8 flex flex-col justify-between transition-all duration-300 shadow-xl group h-full">
                   <div className="space-y-4">
@@ -255,35 +225,35 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <h3 className="text-xl font-extrabold text-white group-hover:text-cyan-400 transition-colors">
-                        Venta Visual &amp; Carta Viva
+                        Carta QR Visual y Ventas Sugeridas
                       </h3>
                       <p className="text-xs text-cyan-400 font-bold uppercase tracking-wider mt-1">
-                        El dolor de vender poco margen y quedarte sin stock
+                        Aumenta el ticket medio sin presionar al comensal
                       </p>
                     </div>
                     <p className="text-sm text-slate-300 leading-relaxed">
-                      En una carta tradicional de papel la gente no suele pedir postres ni segundas rondas porque el mozo está ocupado. Con fotos en alta resolución y sugerencias automáticas, el consumo por impulso se dispara. Y si un plato estrella se agota a mitad de servicio, lo desactivas o cambias precios en 5 segundos desde tu móvil.
+                      Tus comensales piden segundas rondas de bebida y postres directamente desde el móvil. Bloquea platos agotados en 1 toque y cumple con la normativa europea de alérgenos al instante.
                     </p>
                   </div>
 
                   <ul className="pt-6 space-y-2.5 border-t border-slate-700/50 mt-6 text-xs text-slate-300">
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                      <span><strong>+22% en consumo</strong> de bebidas, postres y cafés por estímulo visual</span>
+                      <span><strong>+22% en consumo:</strong> fotos de alta resolución que disparan el consumo por impulso.</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                      <span><strong>Pausa platos en 5 segundos</strong> sin tachar cartas ni reimprimir nada</span>
+                      <span><strong>Pausado en 5 segundos:</strong> agota platos en sala al instante sin reimprimir cartas.</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                      <span>Sugerencias automáticas de maridajes y guarniciones con 1 toque</span>
+                      <span><strong>Alérgenos 100% legales:</strong> cumplimiento europeo automático sin multas.</span>
                     </li>
                   </ul>
                 </div>
               </ScrollReveal>
 
-              {/* Tarjeta 2: Mozo Ágil & Cero Terminales Caras (2.3 + 3.1) */}
+              {/* Tarjeta 2: Comandero Ágil en Cualquier Móvil */}
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
                 <div className="bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/70 hover:border-cyan-500/40 rounded-2xl p-8 flex flex-col justify-between transition-all duration-300 shadow-xl group h-full">
                   <div className="space-y-4">
@@ -292,40 +262,40 @@ export default function LandingPage() {
                         <Smartphone className="w-7 h-7" />
                       </div>
                       <span className="px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-                        +40% Capacidad
+                        +14 MIN / MESA EN HORA PUNTA
                       </span>
                     </div>
                     <div>
                       <h3 className="text-xl font-extrabold text-white group-hover:text-cyan-400 transition-colors">
-                        Mozo Ágil &amp; Cero Hardware Caro
+                        Comandero Ágil en Cualquier Móvil
                       </h3>
                       <p className="text-xs text-cyan-400 font-bold uppercase tracking-wider mt-1">
-                        El dolor de terminales de miles de euros y mozos quemados
+                        Elimina la lentitud de servicio y colas en barra
                       </p>
                     </div>
                     <p className="text-sm text-slate-300 leading-relaxed">
-                      Olvídate de comprar terminales propietarias costosas que si se caen o rompen detienen tu servicio. Fluxo es 100% Mobile Web: tus mozos usan cualquier smartphone (Android o iPhone) o tablet común. Dejan de correr anotando papelitos para convertirse en anfitriones que atienden más mesas con menos fatiga.
+                      Olvídate de comprar terminales propietarios de 2.000 €. Los camareros usan su propio smartphone o tablet para validar comandas y cobrar sin viajes innecesarios.
                     </p>
                   </div>
 
                   <ul className="pt-6 space-y-2.5 border-t border-slate-700/50 mt-6 text-xs text-slate-300">
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                      <span><strong>Cero gasto en hardware:</strong> funciona en los móviles de tu equipo</span>
+                      <span><strong>Cero inversión en TPVs:</strong> funciona en los móviles Android o iPhone de tu equipo.</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                      <span>El personal atiende hasta un <strong>+40% más de mesas</strong> sin estrés</span>
+                      <span><strong>Cobro y comanda en mesa:</strong> menos viajes a barra y rotación un 35% más rápida.</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                      <span>Comandero móvil con mapa de mesas y filtro anti-fraude en salón</span>
+                      <span><strong>Filtro antifraude de sala:</strong> el camarero valida antes de que la orden entre a cocina.</span>
                     </li>
                   </ul>
                 </div>
               </ScrollReveal>
 
-              {/* Tarjeta 3: Cocina en Silencio y Sincronizada (2.2) */}
+              {/* Tarjeta 3: Monitor KDS por Estaciones */}
               <ScrollReveal delay={300} distance={32} className="flex flex-col h-full">
                 <div className="bg-slate-800/60 hover:bg-slate-800/90 border border-slate-700/70 hover:border-cyan-500/40 rounded-2xl p-8 flex flex-col justify-between transition-all duration-300 shadow-xl group h-full">
                   <div className="space-y-4">
@@ -334,34 +304,34 @@ export default function LandingPage() {
                         <ChefHat className="w-7 h-7" />
                       </div>
                       <span className="px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                        0 Gritos en Cocina
+                        PASE DE COCINA SIN ERRORES
                       </span>
                     </div>
                     <div>
                       <h3 className="text-xl font-extrabold text-white group-hover:text-cyan-400 transition-colors">
-                        Cocina Sincronizada &amp; Cero Papelitos
+                        Monitor KDS por Estaciones
                       </h3>
                       <p className="text-xs text-cyan-400 font-bold uppercase tracking-wider mt-1">
-                        El dolor de comandas pisadas, letra ilegible y platos fríos
+                        Cero comandas perdidas, letra ilegible o platos fríos
                       </p>
                     </div>
                     <p className="text-sm text-slate-300 leading-relaxed">
-                      La comanda viaja de la mesa o el comandero al pase de cocina en 0.2 segundos. Despliega un monitor KDS en cualquier Smart TV o tablet con botones táctiles masivos (&gt;70px) y alertas sonoras de timbre, o conecta tus impresoras térmicas de tickets existentes vía ESC/POS sin cables raros.
+                      Las bebidas van directas a la barra, la comida caliente entra al monitor de cocina y los postres quedan retenidos hasta que el camarero los marcha.
                     </p>
                   </div>
 
                   <ul className="pt-6 space-y-2.5 border-t border-slate-700/50 mt-6 text-xs text-slate-300">
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                      <span><strong>Monitor táctil KDS industrial:</strong> avanza comandas incluso con guantes</span>
+                      <span><strong>Enrutamiento automático:</strong> bebidas a barra y comida a fuegos sin errores de voz.</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                      <span><strong>Avisos sonoros de timbre:</strong> cocina enterada al instante de cada marcha</span>
+                      <span><strong>Tiempos bajo control:</strong> tickets cromáticos por tiempo de espera y alerta acústica.</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                      <span>Compatibilidad estándar con impresoras térmicas de tickets (ESC/POS)</span>
+                      <span><strong>Impresoras térmicas ESC/POS:</strong> conecta tus impresoras de tickets actuales sin cables raros.</span>
                     </li>
                   </ul>
                 </div>
@@ -372,7 +342,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── 4. BLOQUE DE PRECIOS (3 TARJETAS) ── */}
+        {/* ── 4. BLOQUE DE PLANES Y PRECIOS (CLARIFICACIÓN VISUAL) ── */}
         <section id="precios" className="py-20 border-t border-slate-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
@@ -392,18 +362,15 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch pt-4">
               
-              {/* Tarjeta 1: Plan Carta */}
+              {/* Tarjeta 1: Plan Carta (39 €) */}
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
                   className="bg-slate-800/60 border border-slate-700 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 group relative cursor-pointer h-full"
                 >
-                  
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-blue-500/40 group-hover:border-emerald-400 text-blue-300 group-hover:text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20 transition-colors duration-300">
-                    <span className="sm:hidden">14 DÍAS DE PRUEBA 0€</span>
-                    <span className="hidden sm:inline group-hover:hidden">PLAN CARTA DIGITAL</span>
-                    <span className="hidden sm:group-hover:inline">14 DÍAS DE PRUEBA 0€</span>
+                    <span>PLAN CARTA DIGITAL</span>
                   </div>
 
                   <div className="space-y-6">
@@ -414,43 +381,18 @@ export default function LandingPage() {
                       </p>
                     </div>
 
-                    {/* BLOQUE DE PRECIO */}
-                    {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
-                    <div className="sm:hidden py-2 space-y-1.5">
+                    {/* BLOQUE DE PRECIO CLARO */}
+                    <div className="py-2 space-y-1.5">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-white group-hover:text-emerald-300 tracking-tight tabular-nums transition-colors duration-300">39€</span>
-                        <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                        <span className="text-4xl font-extrabold text-white tracking-tight tabular-nums">39 €</span>
+                        <span className="text-slate-400 text-sm font-semibold">/ mes (+ IVA)</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 group-hover:text-emerald-300 bg-blue-500/10 group-hover:bg-emerald-500/15 border border-blue-500/20 group-hover:border-emerald-500/30 px-2.5 py-0.5 rounded-md transition-all duration-300">
-                        <ShieldCheck className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
-                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                      <div className="text-xs text-slate-400 font-medium">
+                        Sin comisiones por comanda &middot; Cancela en cualquier momento
                       </div>
-                    </div>
-
-                    {/* 💻 VISTA PC: Azul por default -> Verde promo con precio tachado en Hover */}
-                    <div className="hidden sm:block py-2 min-h-[76px]">
-                      {/* Default Azul */}
-                      <div className="group-hover:hidden transition-all duration-300">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-5xl font-black text-white tracking-tight tabular-nums">39€</span>
-                          <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                          <span>Suscripción mensual flexible &middot; Sin permanencia</span>
-                        </div>
-                      </div>
-
-                      {/* Hover Verde Promo */}
-                      <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
-                        <div className="flex items-baseline gap-3">
-                          <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">39€</span>
-                          <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                          <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
-                        </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-md mt-1 shadow-xs">
+                        <Gift className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                        <span>Prueba 14 días a 0 € &middot; Sin compromiso</span>
                       </div>
                     </div>
 
@@ -485,31 +427,24 @@ export default function LandingPage() {
                         e.stopPropagation()
                         handleOpenPilotModal('Plan Carta (39€)')
                       }}
-                      className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none
-                        bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 border border-blue-400/30
-                        group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/30 group-hover:border-emerald-300"
+                      className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 border border-blue-400/30 group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/30 group-hover:border-emerald-300"
                     >
+                      <span>Elegir Plan Carta</span>
                       <ArrowRight className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-                      <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
-                      <span className="hidden sm:inline group-hover:hidden">Elegir Plan Carta (39€)</span>
-                      <span className="hidden sm:group-hover:inline">Probar 14 Días a 0€ &middot; Sin Coste</span>
                     </button>
                   </div>
                 </div>
               </ScrollReveal>
 
-              {/* Tarjeta 2: Plan Sala */}
+              {/* Tarjeta 2: Plan Sala (69 €) */}
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
                   className="bg-slate-800/60 border border-slate-700 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-xl hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 group relative cursor-pointer h-full"
                 >
-                  
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-900 border border-blue-500/40 group-hover:border-emerald-400 text-blue-300 group-hover:text-emerald-300 text-[11px] font-black tracking-wide shadow-md flex items-center gap-1.5 z-20 transition-colors duration-300">
-                    <span className="sm:hidden">14 DÍAS DE PRUEBA 0€</span>
-                    <span className="hidden sm:inline group-hover:hidden">COMANDERO & SALA</span>
-                    <span className="hidden sm:group-hover:inline">14 DÍAS DE PRUEBA 0€</span>
+                    <span>COMANDERO &amp; SALA</span>
                   </div>
 
                   <div className="space-y-6">
@@ -520,43 +455,18 @@ export default function LandingPage() {
                       </p>
                     </div>
 
-                    {/* BLOQUE DE PRECIO */}
-                    {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
-                    <div className="sm:hidden py-2 space-y-1.5">
+                    {/* BLOQUE DE PRECIO CLARO */}
+                    <div className="py-2 space-y-1.5">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-white group-hover:text-emerald-300 tracking-tight tabular-nums transition-colors duration-300">69€</span>
-                        <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                        <span className="text-4xl font-extrabold text-white tracking-tight tabular-nums">69 €</span>
+                        <span className="text-slate-400 text-sm font-semibold">/ mes (+ IVA)</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 group-hover:text-emerald-300 bg-blue-500/10 group-hover:bg-emerald-500/15 border border-blue-500/20 group-hover:border-emerald-500/30 px-2.5 py-0.5 rounded-md transition-all duration-300">
-                        <ShieldCheck className="w-3.5 h-3.5 text-blue-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
-                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                      <div className="text-xs text-slate-400 font-medium">
+                        Sin comisiones por comanda &middot; Cancela en cualquier momento
                       </div>
-                    </div>
-
-                    {/* 💻 VISTA PC: Azul por default -> Verde promo con precio tachado en Hover */}
-                    <div className="hidden sm:block py-2 min-h-[76px]">
-                      {/* Default Azul */}
-                      <div className="group-hover:hidden transition-all duration-300">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-5xl font-black text-white tracking-tight tabular-nums">69€</span>
-                          <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-                          <span>Comandero para todos tus camareros &middot; Sin permanencia</span>
-                        </div>
-                      </div>
-
-                      {/* Hover Verde Promo */}
-                      <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
-                        <div className="flex items-baseline gap-3">
-                          <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">69€</span>
-                          <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                          <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
-                        </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-md mt-1 shadow-xs">
+                        <Gift className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                        <span>Prueba 14 días a 0 € &middot; Sin compromiso</span>
                       </div>
                     </div>
 
@@ -591,14 +501,10 @@ export default function LandingPage() {
                         e.stopPropagation()
                         handleOpenPilotModal('Plan Sala (69€)')
                       }}
-                      className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none
-                        bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 border border-blue-400/30
-                        group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/30 group-hover:border-emerald-300"
+                      className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 border border-blue-400/30 group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/30 group-hover:border-emerald-300"
                     >
+                      <span>Elegir Plan Sala</span>
                       <ArrowRight className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-                      <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
-                      <span className="hidden sm:inline group-hover:hidden">Elegir Plan Sala (69€)</span>
-                      <span className="hidden sm:group-hover:inline">Probar 14 Días a 0€ &middot; Sin Coste</span>
                     </button>
                   </div>
                 </div>
@@ -610,13 +516,10 @@ export default function LandingPage() {
                   onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
                   className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/30 transition-all duration-300 group relative lg:-translate-y-2 cursor-pointer h-full"
                 >
-                  
-                  {/* Badge Recomendado / 14 Días */}
-                  <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-cyan-500 group-hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1 transition-colors duration-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-950 animate-pulse flex-shrink-0" />
-                    <span className="sm:hidden">RECOMENDADO &middot; 14 DÍAS 0€</span>
-                    <span className="hidden sm:inline group-hover:hidden">RECOMENDADO &middot; CIRCUITO COMPLETO</span>
-                    <span className="hidden sm:group-hover:inline">PROBAR 14 DÍAS A 0€</span>
+                  {/* Badge Recomendado Destacado con Estrella Dorada */}
+                  <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950 flex-shrink-0" />
+                    <span>RECOMENDADO &middot; CIRCUITO COMPLETO</span>
                   </div>
 
                   <div className="space-y-6">
@@ -630,51 +533,35 @@ export default function LandingPage() {
                       </p>
                     </div>
 
-                    {/* BLOQUE DE PRECIO */}
-                    {/* 📱 VISTA MÓVIL: Directa y clara con precio oficial y badge de prueba */}
-                    <div className="sm:hidden py-2 space-y-1.5">
+                    {/* BLOQUE DE PRECIO CLARO: Sin superposiciones ni bugs visuales */}
+                    <div className="py-2 space-y-1.5">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-cyan-400 group-hover:text-emerald-400 tracking-tight tabular-nums transition-colors duration-300">99€</span>
-                        <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
+                        <span className="text-4xl font-extrabold text-white tracking-tight tabular-nums">99 €</span>
+                        <span className="text-slate-400 text-sm font-semibold">/ mes (+ IVA)</span>
                       </div>
-                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 group-hover:text-emerald-300 bg-cyan-500/10 group-hover:bg-emerald-500/15 border border-cyan-500/20 group-hover:border-emerald-500/30 px-2.5 py-0.5 rounded-md transition-all duration-300">
-                        <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 group-hover:text-emerald-400 transition-colors duration-300 flex-shrink-0" />
-                        <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
+                      <div className="text-xs text-slate-400 font-medium">
+                        Sin comisiones por comanda &middot; Cancela en cualquier momento
                       </div>
-                    </div>
-
-                    {/* 💻 VISTA PC: Azul/Cian por default -> Verde promo con precio tachado en Hover */}
-                    <div className="hidden sm:block py-2 min-h-[76px]">
-                      {/* Default Azul/Cian */}
-                      <div className="group-hover:hidden transition-all duration-300">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-5xl font-black text-cyan-400 tracking-tight tabular-nums">99€</span>
-                          <span className="text-slate-400 text-sm font-semibold">/mes + IVA</span>
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-cyan-300 bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 rounded-md mt-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-                          <span>Menú QR + Comandero + Cocina KDS &middot; Todo incluido</span>
-                        </div>
-                      </div>
-
-                      {/* Hover Verde Promo */}
-                      <div className="hidden group-hover:block transition-all duration-300 animate-in fade-in zoom-in-95">
-                        <div className="flex items-baseline gap-3">
-                          <span className="text-3xl font-bold text-slate-500 line-through tabular-nums">99€</span>
-                          <span className="text-5xl font-black text-emerald-400 tracking-tight tabular-nums">0€</span>
-                        </div>
-                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-md mt-1.5 shadow-xs">
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                          <span>14 días de prueba a 0€ &middot; Sin compromiso</span>
-                        </div>
+                      <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-1.5 rounded-lg mt-1 shadow-xs">
+                        <Gift className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                        <span>Prueba 14 días a 0 € (Setup de 149 € bonificado al 100%)</span>
                       </div>
                     </div>
 
                     <ul className="space-y-3 text-xs sm:text-sm text-slate-200">
+                      {/* DESTACADO OBLIGATORIO: Multiplicador de Reseñas Google Maps */}
+                      <li className="flex items-start gap-2.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25">
+                        <Star className="w-4 h-4 text-amber-400 fill-amber-400 flex-shrink-0 mt-0.5" />
+                        <span className="text-xs sm:text-sm text-amber-200 font-bold">
+                          Multiplicador de Reseñas 5★ en Google Maps automático tras el pago de la mesa.
+                        </span>
+                      </li>
+
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                         <span><strong>Todo lo del Plan Carta y Plan Sala</strong></span>
                       </li>
+
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                         <div className="space-y-0.5">
@@ -686,7 +573,7 @@ export default function LandingPage() {
                                 e.stopPropagation()
                                 setIsReportModalOpen(true)
                               }}
-                              className="inline-flex items-center gap-1 text-[11px] font-black text-cyan-400 group-hover:text-emerald-300 underline hover:text-white transition-colors cursor-pointer"
+                              className="inline-flex items-center gap-1.5 text-[11px] font-black text-cyan-400 group-hover:text-emerald-300 underline hover:text-white transition-colors cursor-pointer"
                             >
                               <Eye className="w-3.5 h-3.5 flex-shrink-0" />
                               <span>Ver muestra del reporte ejecutivo</span>
@@ -695,6 +582,7 @@ export default function LandingPage() {
                           </div>
                         </div>
                       </li>
+
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                         <span>Monitor KDS industrial con botones gigantes (&gt;70px)</span>
@@ -721,14 +609,10 @@ export default function LandingPage() {
                         e.stopPropagation()
                         handleOpenPilotModal('Plan Full (Recomendado)')
                       }}
-                      className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none
-                        bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-xl shadow-cyan-500/25 border border-cyan-300/40
-                        group-hover:bg-emerald-400 group-hover:text-slate-950 group-hover:shadow-emerald-500/35 group-hover:border-emerald-300"
+                      className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 hover:from-cyan-300 hover:to-emerald-300 shadow-xl shadow-cyan-500/25 border border-cyan-300/40"
                     >
+                      <span>Probar 14 Días a 0 €</span>
                       <ArrowRight className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-                      <span className="sm:hidden">Iniciar Prueba Gratis (14 Días)</span>
-                      <span className="hidden sm:inline group-hover:hidden">Elegir Plan Full (Recomendado)</span>
-                      <span className="hidden sm:group-hover:inline">Probar 14 Días a 0€ &middot; Sin Coste</span>
                     </button>
                   </div>
                 </div>
@@ -754,12 +638,11 @@ export default function LandingPage() {
                   </span>
                   
                   <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                    Inicia hoy tu prueba piloto de 14 días a 0€
+                    Inicia hoy tu prueba piloto de 14 días a 0 €
                   </h2>
 
                   <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-                    No te preocupes por cargar platos, fotos ni alérgenos. 
-                    <strong className="text-white"> El setup de tu carta y la puesta en marcha la hacemos nosotros:</strong> envíanos tu menú y en 24 horas lo tendrás activo en sala y terraza para medir el aumento real de ventas y rotación durante 14 días sin coste.
+                    Nosotros cargamos tu carta, fotos y alérgenos en 24 horas. Te entregamos el sistema configurado y listo para probar en tu próximo turno sin riesgo.
                   </p>
 
                   <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -768,23 +651,22 @@ export default function LandingPage() {
                       onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
                       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-sm sm:text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 transition-all active:scale-95 cursor-pointer"
                     >
-                      <span>Solicitar Piloto de 14 Días a 0€</span>
+                      <span>Solicitar Piloto 14 Días (0 €)</span>
                       <ChevronRight className="w-5 h-5" />
                     </button>
 
-                    <a
-                      href="/menu/burger-gourmet?table=7"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-6 py-4 rounded-xl text-sm sm:text-base font-bold text-slate-300 bg-slate-900/90 hover:bg-slate-900 border border-slate-700 hover:text-white transition-colors"
+                    <button
+                      type="button"
+                      onClick={handleOpenAllDashboards}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-6 py-4 rounded-xl text-sm sm:text-base font-bold text-slate-300 bg-slate-900/90 hover:bg-slate-900 border border-slate-700 hover:text-white transition-colors cursor-pointer"
                     >
-                      <span>Ver Prueba en Vivo</span>
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
+                      <span>Ver Demo Interactiva en Vivo</span>
+                      <ExternalLink className="w-4 h-4 text-cyan-400" />
+                    </button>
                   </div>
 
                   <p className="text-xs text-slate-400 pt-2">
-                    0€ durante el piloto &middot; Sin tarjeta ni permanencia &middot; Soporte presencial incluido
+                    0 € durante el piloto &middot; Sin tarjeta ni permanencia &middot; Puesta en marcha incluida
                   </p>
                 </div>
 
@@ -840,7 +722,7 @@ export default function LandingPage() {
         </aside>
       )}
 
-      {/* ── 7. FOOTER ── */}
+      {/* ── 7. FOOTER LIMPIO ── */}
       <footer className="border-t border-slate-800/80 py-8 px-4 bg-slate-950 text-xs text-slate-400">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
           <div className="flex items-center justify-center sm:justify-start gap-3">
@@ -863,8 +745,18 @@ export default function LandingPage() {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 font-bold transition-all shadow-sm group"
             >
               <Printer className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span>Simulador Ticket ESC/POS</span>
+              <span>Compatibilidad con Impresoras Térmicas</span>
             </Link>
+
+            <a 
+              href={getWhatsAppUrl('Contacto Comercial')}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-400 font-bold transition-all shadow-sm group"
+            >
+              <span>Contacto Comercial</span>
+              <ExternalLink className="w-3.5 h-3.5 text-cyan-400 group-hover:translate-x-0.5 transition-transform" />
+            </a>
           </div>
         </div>
       </footer>
