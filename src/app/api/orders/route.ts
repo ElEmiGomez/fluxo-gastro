@@ -166,9 +166,9 @@ export async function GET(req: NextRequest) {
         const hasNewerOrderAfterPaid = returnedOrders.some(other => {
           const otherT = Number(other.table_number || other.table?.table_number)
           const otherCreated = new Date(other.created_at || 0).getTime()
-          return otherT === tNum && other.status !== 'paid' && other.status !== 'cancelled' && otherCreated > latestPaidTs + 2000
+          return otherT === tNum && other.status !== 'paid' && other.status !== 'cancelled' && otherCreated > latestPaidTs
         })
-        if (!hasNewerOrderAfterPaid && (isNaN(ordCreatedTs) || ordCreatedTs <= latestPaidTs + 2000)) {
+        if (!hasNewerOrderAfterPaid && (isNaN(ordCreatedTs) || ordCreatedTs <= latestPaidTs)) {
           tablesToSweep.add(tNum)
           return {
             ...o,
@@ -1112,7 +1112,18 @@ export async function PATCH(req: NextRequest) {
     if (body.action === 'pay_table' || body.action === 'close_table') {
       const restaurant = await getRestaurantBySlug(slug)
       const restaurantId = getTargetRestaurantId(restaurant?.id, slug)
-      const existingOrd = targetOrderId ? (findServerOrderById(targetOrderId) || getServerOrders(slug, true).find(o => o.id === targetOrderId)) : undefined
+      let existingOrd: any = targetOrderId ? (findServerOrderById(targetOrderId) || getServerOrders(slug, true).find(o => o.id === targetOrderId)) : undefined
+      if (!existingOrd && targetOrderId && isUuid(targetOrderId) && isSupabaseConfigured()) {
+        const sb = createServerClient()
+        if (sb) {
+          const { data: dbOrd } = await sb
+            .from('orders')
+            .select('id, table_number, status, total_amount')
+            .eq('id', targetOrderId)
+            .maybeSingle()
+          if (dbOrd) existingOrd = dbOrd
+        }
+      }
       const resolvedTbl = table_number ?? tableNumber ?? existingOrd?.table_number
       if (resolvedTbl === undefined || resolvedTbl === null) {
         return NextResponse.json({ error: 'Falta table_number o orderId para cobrar la mesa' }, { status: 400 })
@@ -1159,8 +1170,20 @@ export async function PATCH(req: NextRequest) {
 
     let targetStatus: OrderStatus = status
 
+    const sbClient = isSupabaseConfigured() ? createServerClient() : null
+
     // Blindaje estricto: Si la orden ya está pagada ('paid'), es terminal e irreversible
-    const existingTargetOrd = findServerOrderById(targetOrderId) || getServerOrders(slug, true).find(o => o.id === targetOrderId)
+    let existingTargetOrd: any = findServerOrderById(targetOrderId) || getServerOrders(slug, true).find(o => o.id === targetOrderId)
+    if (!existingTargetOrd && isUuid(targetOrderId) && sbClient) {
+      const { data: dbTargetOrd } = await sbClient
+        .from('orders')
+        .select('*, order_items(id, product_id, quantity, notes, products(id, name, price, category_id, image_url, is_available))')
+        .eq('id', targetOrderId)
+        .maybeSingle()
+      if (dbTargetOrd) {
+        existingTargetOrd = dbTargetOrd
+      }
+    }
     if (existingTargetOrd?.status === 'paid' && targetStatus !== 'paid') {
       return NextResponse.json(
         {
@@ -1175,22 +1198,41 @@ export async function PATCH(req: NextRequest) {
 
     // Si se solicita pagar una orden en mesa multi-ronda (o con sweep_table explícito desde Comandero)
     // donde otra ronda ya está entregada/pagada o todos sus pases están servidos, barrer toda la mesa a 'paid'
-    if (targetStatus === 'paid' && existingTargetOrd && existingTargetOrd.status !== 'pending_validation') {
-      const tblToCheck = existingTargetOrd.table_number ?? effectiveTableNum
-      const hasDeliveredOrPaidSibling = tblToCheck !== undefined && tblToCheck !== null &&
+    if (targetStatus === 'paid' && (!existingTargetOrd || existingTargetOrd.status !== 'pending_validation')) {
+      const tblToCheck = existingTargetOrd?.table_number ?? effectiveTableNum
+      let hasDeliveredOrPaidSibling = tblToCheck !== undefined && tblToCheck !== null &&
         getServerOrders(slug, true).some(
           o => o.id !== targetOrderId &&
             String(o.table_number) === String(tblToCheck) &&
             (o.status === 'delivered' || o.status === 'paid')
         )
       if (
+        !hasDeliveredOrPaidSibling &&
+        body.sweep_table !== true &&
+        tblToCheck !== undefined &&
+        tblToCheck !== null &&
+        sbClient
+      ) {
+        const { data: siblingRows } = await sbClient
+          .from('orders')
+          .select('id, status')
+          .eq('restaurant_id', restaurantId)
+          .eq('table_number', Number(tblToCheck))
+          .in('status', ['delivered', 'paid'])
+          .neq('id', targetOrderId)
+          .limit(1)
+        if (siblingRows && siblingRows.length > 0) {
+          hasDeliveredOrPaidSibling = true
+        }
+      }
+      if (
         body.sweep_table === true ||
         hasDeliveredOrPaidSibling ||
-        (existingTargetOrd.status !== 'delivered' && areAllOrderCoursesDelivered(existingTargetOrd))
+        (existingTargetOrd && existingTargetOrd.status !== 'delivered' && areAllOrderCoursesDelivered(existingTargetOrd))
       ) {
         if (tblToCheck !== undefined && tblToCheck !== null) {
           const swept = await sweepTableOrdersToPaid(restaurantId, slug, tblToCheck)
-          const matchedSwept = swept.find(o => o.id === targetOrderId) || { ...existingTargetOrd, status: 'paid' as OrderStatus }
+          const matchedSwept = swept.find(o => o.id === targetOrderId) || (existingTargetOrd ? { ...existingTargetOrd, status: 'paid' as OrderStatus } : { id: targetOrderId, table_number: Number(tblToCheck), status: 'paid' as OrderStatus })
           const hydratedSwept = ensureHydratedOrder(matchedSwept, slug)
           return NextResponse.json({
             success: true,

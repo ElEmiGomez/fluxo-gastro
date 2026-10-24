@@ -163,17 +163,11 @@ export async function attendServiceCall(
     })
 
     const targetRestaurantId = getTargetRestaurantId(attendedCall?.restaurant_id, slug)
-    if (supabase && isSupabaseConfigured() && tableNum) {
-      try {
-        await supabase
-          .from('orders')
-          .update({ status: 'paid' })
-          .eq('restaurant_id', targetRestaurantId)
-          .eq('table_number', tableNum)
-          .neq('status', 'cancelled')
-      } catch (err) {
-        console.warn('Error marking table orders as paid on bill attended:', err)
-      }
+    try {
+      const { sweepTableOrdersToPaid } = await import('./orders.repository')
+      await sweepTableOrdersToPaid(targetRestaurantId, slug, tableNum)
+    } catch (err) {
+      console.warn('Error sweeping table orders as paid on bill attended:', err)
     }
 
     try {

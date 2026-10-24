@@ -596,6 +596,7 @@ export function sweepServerTableOrdersToPaid(slug: string, tableNumber: string |
 
   const nowIso = new Date().toISOString()
   const sweptOrders: Order[] = []
+  const newlyTransitionedOrders: Order[] = []
 
   globalStore.__GASTRO_ORDERS__[slug] = globalStore.__GASTRO_ORDERS__[slug].map(o => {
     const isThisTable =
@@ -605,6 +606,8 @@ export function sweepServerTableOrdersToPaid(slug: string, tableNumber: string |
     if (!isThisTable || o.status === 'cancelled') {
       return o
     }
+
+    const wasAlreadyPaid = o.status === 'paid'
 
     const baseItems =
       o.order_items && o.order_items.length > 0
@@ -624,16 +627,19 @@ export function sweepServerTableOrdersToPaid(slug: string, tableNumber: string |
     const updatedOrder: Order = {
       ...o,
       status: 'paid',
-      version: (o.version || 1) + 1,
-      updated_at: nowIso,
+      version: wasAlreadyPaid ? (o.version || 1) : (o.version || 1) + 1,
+      updated_at: wasAlreadyPaid ? (o.updated_at || o.created_at || nowIso) : nowIso,
       notes: appendTags((o as any).notes),
       order_items: updatedItems,
     }
     sweptOrders.push(updatedOrder)
+    if (!wasAlreadyPaid) {
+      newlyTransitionedOrders.push(updatedOrder)
+    }
     return updatedOrder
   })
 
-  sweptOrders.forEach(ord => {
+  newlyTransitionedOrders.forEach(ord => {
     broadcastEvent({
       type: 'order_updated',
       slug,

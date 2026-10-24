@@ -80,6 +80,7 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now()))
+        sessionStorage.removeItem(`fluxo_active_order_ids_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_lock_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_table_paid_lock_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_order_${slug}_${tableNumber}`)

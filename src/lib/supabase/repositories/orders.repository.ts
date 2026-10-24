@@ -1066,13 +1066,7 @@ export async function updateOrderCourseTags(
         )
       }
 
-      if (isUuid(orderId) && updatedOrderNotes !== ((order as any).notes || '')) {
-        try {
-          await supabase.from('orders').update({ notes: updatedOrderNotes }).eq('id', orderId)
-        } catch (err) {
-          console.warn('[updateOrderCourseTags] Error updating order notes in DB:', err)
-        }
-      }
+      // Nota: La tabla orders en PostgreSQL no tiene columna notes (las etiquetas viven en order_items.notes)
     } catch (dbErr) {
       console.warn('[updateOrderCourseTags] DB update error:', dbErr)
     }
@@ -1219,7 +1213,7 @@ export async function resolvePendingDessertInOrder(
       if (isUuid(orderId)) {
         await supabase
           .from('orders')
-          .update({ status: nextStatus, notes: updatedOrderNotes })
+          .update({ status: nextStatus })
           .eq('id', orderId)
       }
     } catch (dbErr) {
@@ -1264,7 +1258,10 @@ export async function sweepTableOrdersToPaid(
   if (isNaN(parsedTableNum)) return []
 
   const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
+  const catalogProducts = getServerProducts(slug)
   const sweptMemOrders = sweepServerTableOrdersToPaid(slug, parsedTableNum)
+  const sweptMap = new Map<string, Order>()
+  sweptMemOrders.forEach(o => sweptMap.set(o.id, o))
 
   const allServedTagsStr =
     '[BARRA_SERVIDA] [ENTRADA_LISTA] [ENTRADA_SERVIDA] [MARCHAR_PRINCIPAL] [PRINCIPAL_LISTO] [PRINCIPAL_SERVIDO] [MARCHAR_POSTRE] [POSTRE_LISTO] [POSTRE_SERVIDO]'
@@ -1272,13 +1269,23 @@ export async function sweepTableOrdersToPaid(
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
-      const { data: openOrders } = await supabase
+      const { data: tableOrdersInDb } = await supabase
         .from('orders')
-        .select('id, status, notes, order_items(id, notes)')
+        .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            quantity,
+            notes,
+            products (id, name, price, category_id, image_url, is_available)
+          )
+        `)
         .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', parsedTableNum)
         .neq('status', 'cancelled')
-        .neq('status', 'paid')
+        .order('created_at', { ascending: false })
+        .limit(15)
 
       // Batch update de todas las órdenes abiertas/zombis de esta mesa a 'paid'
       await supabase
@@ -1288,31 +1295,59 @@ export async function sweepTableOrdersToPaid(
         .eq('table_number', parsedTableNum)
         .in('status', ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'])
 
-      if (openOrders && openOrders.length > 0) {
+      if (tableOrdersInDb && tableOrdersInDb.length > 0) {
+        const nowIso = new Date().toISOString()
         await Promise.all(
-          openOrders.map(async (ord: any) => {
-            const mergedOrdNotes = mergeItemNotes(ord.notes, allServedTagsStr)
-            try {
-              await supabase
-                .from('orders')
-                .update({ status: 'paid', notes: mergedOrdNotes })
-                .eq('id', ord.id)
-            } catch {
-              // ignore if notes column absent
-            }
+          tableOrdersInDb.map(async (ord: any) => {
+            const wasOpenInDb = ord.status !== 'paid'
             const items = ord.order_items || []
             for (const it of items) {
               if (it.id && isUuid(it.id)) {
                 const mergedItNotes = mergeItemNotes(it.notes, allServedTagsStr)
-                try {
-                  await supabase
-                    .from('order_items')
-                    .update({ notes: mergedItNotes })
-                    .eq('id', it.id)
-                } catch {
-                  // ignore
+                if (mergedItNotes !== (it.notes || '').trim()) {
+                  it.notes = mergedItNotes
+                  try {
+                    await supabase
+                      .from('order_items')
+                      .update({ notes: mergedItNotes })
+                      .eq('id', it.id)
+                  } catch {
+                    // ignore
+                  }
                 }
               }
+            }
+
+            if (!sweptMap.has(ord.id)) {
+              const normalizedItems = items.map((it: any) => ({
+                ...it,
+                status: 'delivered',
+                product: it.product || it.products,
+                notes: mergeItemNotes(it.notes, allServedTagsStr),
+                course: (it.course && ['first', 'second', 'dessert', 'drink'].includes(it.course))
+                  ? it.course
+                  : getItemCourse(it),
+              }))
+              const hydratedItems = hydrateOrderItemsWithCatalog(
+                normalizedItems,
+                catalogProducts,
+                getCachedOrderItems(ord.id),
+                allServedTagsStr
+              )
+              if (hydratedItems.length > 0) {
+                saveCachedOrderItems(ord.id, hydratedItems)
+              }
+              const hydratedOrd: Order = {
+                ...ord,
+                status: 'paid',
+                updated_at: wasOpenInDb ? nowIso : (ord.updated_at || ord.created_at || nowIso),
+                notes: allServedTagsStr,
+                table_number: parsedTableNum,
+                session_token: ord.session_token || ord.table_session_id,
+                order_items: hydratedItems,
+              }
+              addServerOrder(slug, hydratedOrd, true)
+              sweptMap.set(ord.id, hydratedOrd)
             }
           })
         )
@@ -1329,6 +1364,6 @@ export async function sweepTableOrdersToPaid(
     tableNumber: parsedTableNum,
   })
 
-  return sweptMemOrders
+  return Array.from(sweptMap.values())
 }
 

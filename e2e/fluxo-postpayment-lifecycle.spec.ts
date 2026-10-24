@@ -147,6 +147,19 @@ test.describe('Fluxo 1.3 — Post-Payment Multi-Round Anti-Zombie & Google Maps 
     await modalConfirmBtn.click()
     await waiterPage.waitForTimeout(1000)
 
+    // Verificar en API que AMBAS órdenes (Ronda 1 y Ronda 2) fueron barridas a 'paid' y sus order_items marcados como servidos
+    const checkOrdersAfterPayRes = await request.get(`/api/orders?slug=${SLUG}&table=${TABLE_NUM}`)
+    expect(checkOrdersAfterPayRes.ok()).toBeTruthy()
+    const checkOrdersAfterPayData = await checkOrdersAfterPayRes.json()
+    const afterPayR1 = checkOrdersAfterPayData.orders.find((o: any) => o.id === orderIdR1)
+    const afterPayR2 = checkOrdersAfterPayData.orders.find((o: any) => o.id === orderIdR2)
+    expect(afterPayR1?.status).toBe('paid')
+    expect(afterPayR2?.status).toBe('paid')
+    for (const item of afterPayR1?.order_items || []) {
+      expect(item.notes).toContain('[ENTRADA_SERVIDA]')
+      expect(item.notes).toContain('[PRINCIPAL_SERVIDO]')
+    }
+
     // --------------------------------------------------------------------------
     // PASO 3: Verificar en el cliente el Banner Esmeralda con AMBOS botones + Tarjeta 5 Estrellas
     // --------------------------------------------------------------------------

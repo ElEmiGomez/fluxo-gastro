@@ -521,7 +521,10 @@ function DinerMenuContent() {
 
   const handleOrderSubmitted = (newOrder: any) => {
     if (newOrder) {
-      resetPaidOrderSession()
+      const wasPaidBeforeSubmit = isTablePaid || isOrderPaid
+      if (wasPaidBeforeSubmit) {
+        resetPaidOrderSession()
+      }
       setIsTablePaid(false)
       setIsPaidBannerDismissed(false)
       setIsReviewBoosterDismissed(false)
@@ -530,12 +533,24 @@ function DinerMenuContent() {
       userRequestedBillTimeRef.current = null
       if (typeof window !== 'undefined') {
         try {
+          if (wasPaidBeforeSubmit) {
+            const ordCreatedMs = new Date(newOrder.created_at || Date.now()).getTime() || Date.now()
+            sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(ordCreatedMs - 1000))
+          }
           sessionStorage.removeItem(`fluxo_paid_lock_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_table_paid_lock_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_paid_order_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
           sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
+          if (newOrder.id) {
+            const rawIds = sessionStorage.getItem(`fluxo_active_order_ids_${slug}_${tableNumber}`)
+            const existingIds: string[] = rawIds ? JSON.parse(rawIds) : []
+            if (!existingIds.includes(newOrder.id)) {
+              existingIds.push(newOrder.id)
+              sessionStorage.setItem(`fluxo_active_order_ids_${slug}_${tableNumber}`, JSON.stringify(existingIds))
+            }
+          }
         } catch {}
       }
       const hydratedItems = hydrateOrderItemsWithCatalog(
