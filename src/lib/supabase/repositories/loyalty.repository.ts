@@ -27,7 +27,7 @@ const globalStore = globalThis as unknown as {
 export const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
   mode: 'stamps',
   target_stamps: 5,
-  min_spend_per_stamp: 50,
+  min_spend_per_stamp: 0,
   reward_label: 'Postre o Café gratis',
   reward_category_filter: ['postres', 'bebidas'],
 }
@@ -35,8 +35,8 @@ export const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
 if (!globalStore.__GASTRO_LOYALTY_SETTINGS__) {
   globalStore.__GASTRO_LOYALTY_SETTINGS__ = {
     'burger-gourmet': { ...DEFAULT_LOYALTY_SETTINGS },
-    'taperia-casco-antigo': { ...DEFAULT_LOYALTY_SETTINGS, min_spend_per_stamp: 40 },
-    'terraza-malecon': { ...DEFAULT_LOYALTY_SETTINGS, min_spend_per_stamp: 45 },
+    'taperia-casco-antigo': { ...DEFAULT_LOYALTY_SETTINGS },
+    'terraza-malecon': { ...DEFAULT_LOYALTY_SETTINGS },
   }
 }
 
@@ -483,6 +483,11 @@ export async function registerOrGetLoyaltyProfile(
     const settings = await getLoyaltySettings(slug)
     const isStampsMode = settings?.mode === 'stamps'
     const targetStamps = settings?.target_stamps || 5
+    const hasOrderToCredit = Boolean(
+      uncreditedOrdersToMark.length > 0 ||
+      (params.lastPaidSessionTotal && params.lastPaidSessionTotal > 0) ||
+      (params.tableNumber && retroactivePoints > 0)
+    )
 
     let profile = await getLoyaltyProfile(slug, normEmail)
     if (profile) {
@@ -493,9 +498,23 @@ export async function registerOrGetLoyaltyProfile(
       }
 
       // Acreditar consumiciones previas no premiadas de esta mesa
-      if (retroactivePoints > 0) {
-        profile.total_points += retroactivePoints
-        profile.available_points += retroactivePoints
+      if (hasOrderToCredit) {
+        if (isStampsMode) {
+          const currentStamps = (profile.stamps_count || 0) + 1
+          let unlockedRewards = profile.unlocked_rewards_count || 0
+          let newStamps = currentStamps
+          if (currentStamps >= targetStamps) {
+            unlockedRewards += 1
+            newStamps = 0
+          }
+          profile.stamps_count = newStamps
+          profile.stamps_target = targetStamps
+          profile.unlocked_rewards_count = unlockedRewards
+          profile.total_stamps_earned = (profile.total_stamps_earned || 0) + 1
+        } else if (retroactivePoints > 0) {
+          profile.total_points += retroactivePoints
+          profile.available_points += retroactivePoints
+        }
         uncreditedOrdersToMark.forEach(o => {
           globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id)
           const memOrd = (globalStore as any).__GASTRO_ORDERS__?.[slug]?.find((x: any) => x.id === o.id)
@@ -570,17 +589,17 @@ export async function registerOrGetLoyaltyProfile(
     // Generar ID compatible con UUID de PostgreSQL
     const newId = crypto.randomUUID()
     const reviewBonus = params.claimGoogleReviewBonus && !isStampsMode ? 50 : 0
-    const initialPoints = retroactivePoints + reviewBonus
-    let initialStamps = 0
-    let initialUnlockedRewards = 0
-    let initialTotalStampsEarned = 0
+    const initialPoints = isStampsMode ? 0 : (retroactivePoints + reviewBonus)
+    let initialStamps = (isStampsMode && hasOrderToCredit) ? 1 : 0
+    let initialTotalStampsEarned = initialStamps
     if (params.claimGoogleReviewBonus && isStampsMode) {
-      initialStamps = 1
-      initialTotalStampsEarned = 1
-      if (initialStamps >= targetStamps) {
-        initialUnlockedRewards = 1
-        initialStamps = 0
-      }
+      initialStamps += 1
+      initialTotalStampsEarned += 1
+    }
+    let initialUnlockedRewards = 0
+    if (initialStamps >= targetStamps) {
+      initialUnlockedRewards = Math.floor(initialStamps / targetStamps)
+      initialStamps = initialStamps % targetStamps
     }
     uncreditedOrdersToMark.forEach(o => {
       globalStore.__GASTRO_LOYALTY_AWARDED_ORDERS__?.add(o.id)
@@ -596,9 +615,9 @@ export async function registerOrGetLoyaltyProfile(
       name: normName,
       email: normEmail,
       phone: params.phone || null,
-      total_points: isStampsMode ? retroactivePoints : initialPoints,
+      total_points: initialPoints,
       held_points: 0,
-      available_points: isStampsMode ? retroactivePoints : initialPoints,
+      available_points: initialPoints,
       stamps_count: initialStamps,
       stamps_target: targetStamps,
       unlocked_rewards_count: initialUnlockedRewards,
@@ -623,7 +642,7 @@ export async function registerOrGetLoyaltyProfile(
             name: normName,
             email: normEmail,
             phone: params.phone || null,
-            total_points: isStampsMode ? retroactivePoints : initialPoints,
+            total_points: initialPoints,
             stamps_count: initialStamps,
             unlocked_rewards_count: initialUnlockedRewards,
             total_stamps_earned: initialTotalStampsEarned,
@@ -1056,7 +1075,8 @@ export async function settleLoyaltySession(
   // 4. Lógica de Cartilla de Sellos por Compras
   const settings = await getLoyaltySettings(slug)
   const finalBillAmount = Number(params.finalAmount) || totalBillPoints || 0
-  const qualifiesForStamp = finalBillAmount >= settings.min_spend_per_stamp
+  const minSpend = (settings.min_spend_per_stamp && settings.min_spend_per_stamp !== 50) ? settings.min_spend_per_stamp : 0
+  const qualifiesForStamp = finalBillAmount > 0 && finalBillAmount >= minSpend
   let stampAwarded = false
   let stampRewardUnlockedNow = false
 

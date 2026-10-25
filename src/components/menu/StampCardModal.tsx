@@ -540,7 +540,7 @@ export function StampCardModal({
                     className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
                   >
                     <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
-                    <span>Valorar en Google Maps (+1 Sello)</span>
+                    <span>⭐ Valóranos y gana +1 sello extra</span>
                     <ExternalLink className="w-3 h-3 ml-0.5" />
                   </button>
                 </div>

@@ -71,6 +71,11 @@ export function PostPaymentView({
       try {
         onClaimLoyaltyBonus()
       } catch {}
+    } else if (!loyaltyProfile) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+        localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+      }
     }
 
     if (star >= 4) {
@@ -91,15 +96,21 @@ export function PostPaymentView({
       try {
         onClaimLoyaltyBonus()
       } catch {}
+    } else if (!loyaltyProfile) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+        localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+      }
     }
     window.open(directReviewLink, '_blank', 'noopener,noreferrer')
   }
 
   const isPointsSaved = Boolean(loyaltyProfile?.email)
+  const stampsCount = loyaltyProfile?.stamps_count ?? 1
 
   return (
     <div className="w-full animate-in fade-in duration-300 space-y-3 pb-6 select-none">
-      {/* BLOQUE 1: Agradecimiento por la visita y Club de Premios / Puntos (Estética de tarjeta blanca y esmeralda) */}
+      {/* BLOQUE 1: Agradecimiento por la visita y Club de Premios / Cartilla (Estética de tarjeta blanca y esmeralda) */}
       <div className="overflow-hidden rounded-3xl bg-white border border-emerald-200 shadow-md p-4 sm:p-5 space-y-3">
         <div className="flex items-start gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-sm">
@@ -128,7 +139,9 @@ export function PostPaymentView({
             <div className="flex items-center gap-2 min-w-0">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
               <span className="truncate">
-                ✓ Puntos guardados en tu cuenta ({loyaltyProfile?.available_points ?? storedPoints} pts acumulados)
+                {loyaltyMode === 'stamps'
+                  ? `✓ Sellos guardados en tu cartilla (${stampsCount} ${stampsCount === 1 ? 'sello acumulado' : 'sellos acumulados'})`
+                  : `✓ Puntos guardados en tu cuenta (${loyaltyProfile?.available_points ?? storedPoints} pts acumulados)`}
               </span>
             </div>
             {onOpenLoyaltyModal && (
@@ -137,7 +150,7 @@ export function PostPaymentView({
                 onClick={onOpenLoyaltyModal}
                 className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black flex-shrink-0 cursor-pointer transition-colors"
               >
-                Ver Premios
+                {loyaltyMode === 'stamps' ? 'Ver Cartilla' : 'Ver Premios'}
               </button>
             )}
           </div>
@@ -148,7 +161,11 @@ export function PostPaymentView({
             className="w-full py-3 px-4 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-700/20 cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-emerald-300" />
-            <span>🎁 Unirme al Club de Premios / Guardar mis puntos</span>
+            <span>
+              {loyaltyMode === 'stamps'
+                ? '🎁 Unirme a la Cartilla de Sellos / Guardar mis sellos'
+                : '🎁 Unirme al Club de Premios / Guardar mis puntos'}
+            </span>
           </button>
         )}
       </div>
@@ -165,7 +182,11 @@ export function PostPaymentView({
                 Google Maps
               </span>
               <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-100 text-amber-800">
-                Reseña 5★
+                {loyaltyProfile?.google_review_bonus_awarded
+                  ? 'Reseña 5★'
+                  : loyaltyMode === 'stamps'
+                  ? '+1 Sello Extra'
+                  : '+50 Puntos'}
               </span>
             </div>
             <h4 className="text-sm font-extrabold text-slate-900 leading-tight">
@@ -175,7 +196,13 @@ export function PostPaymentView({
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed">
-          Tu valoración de 5 estrellas en Google Maps nos ayuda muchísimo y apoya directamente a nuestro equipo de sala y cocina.
+          {loyaltyProfile?.google_review_bonus_awarded
+            ? 'Tu valoración de 5 estrellas en Google Maps nos ayuda muchísimo y apoya directamente a nuestro equipo de sala y cocina.'
+            : `Tu valoración de 5 estrellas en Google Maps nos ayuda muchísimo y te regala ${
+                loyaltyMode === 'stamps'
+                  ? '+1 sello extra en tu cartilla digital'
+                  : '+50 puntos extra para canjear platos gratis'
+              }.`}
         </p>
 
         {/* Estrellas Interactivas */}
@@ -203,7 +230,11 @@ export function PostPaymentView({
         {thankYouFiveStars ? (
           <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-extrabold flex items-center gap-2 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>¡Gracias por tus 5 estrellas!</span>
+            <span>
+              {loyaltyMode === 'stamps'
+                ? '¡Gracias por tus 5 estrellas! Sumaste +1 sello extra a tu cartilla.'
+                : '¡Gracias por tus 5 estrellas! Sumaste +50 puntos extra.'}
+            </span>
           </div>
         ) : feedbackSent ? (
           <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
@@ -219,7 +250,13 @@ export function PostPaymentView({
           className="w-full py-3 px-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-amber-400/20 cursor-pointer"
         >
           <Star className="w-4 h-4 fill-slate-950 text-slate-950" />
-          <span>⭐ Valorar con 5 estrellas en Google Maps</span>
+          <span>
+            {loyaltyProfile?.google_review_bonus_awarded
+              ? '⭐ Valorar con 5 estrellas en Google Maps'
+              : loyaltyMode === 'stamps'
+              ? '⭐ Valóranos y gana +1 sello extra'
+              : '⭐ Valóranos en Google (+50 pts)'}
+          </span>
           <ExternalLink className="w-3.5 h-3.5 text-slate-800" />
         </button>
       </div>

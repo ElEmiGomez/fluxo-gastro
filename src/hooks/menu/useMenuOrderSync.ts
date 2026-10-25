@@ -25,6 +25,8 @@ interface UseMenuOrderSyncParams {
   isFixedMenu: boolean
   isTablePaid: boolean
   setIsTablePaid: (paid: boolean) => void
+  setIsOrderPaid?: (paid: boolean) => void
+  resetPaidOrderSession?: () => void
   setIsPaidBannerDismissed: (dismissed: boolean) => void
   setIsReviewBoosterDismissed: (dismissed: boolean) => void
   setHasRequestedBill: (req: boolean) => void
@@ -46,6 +48,8 @@ export function useMenuOrderSync({
   isFixedMenu,
   isTablePaid,
   setIsTablePaid,
+  setIsOrderPaid,
+  resetPaidOrderSession,
   setIsPaidBannerDismissed,
   setIsReviewBoosterDismissed,
   setHasRequestedBill,
@@ -110,6 +114,12 @@ export function useMenuOrderSync({
 
   const setIsTablePaidRef = useRef(setIsTablePaid)
   setIsTablePaidRef.current = setIsTablePaid
+
+  const setIsOrderPaidRef = useRef(setIsOrderPaid)
+  setIsOrderPaidRef.current = setIsOrderPaid
+
+  const resetPaidOrderSessionRef = useRef(resetPaidOrderSession)
+  resetPaidOrderSessionRef.current = resetPaidOrderSession
 
   const setIsPaidBannerDismissedRef = useRef(setIsPaidBannerDismissed)
   setIsPaidBannerDismissedRef.current = setIsPaidBannerDismissed
@@ -464,26 +474,31 @@ export function useMenuOrderSync({
 
         const trackedOrderIds = getActiveSessionOrderIds()
 
-        const paidOrdersForTable = serverOrdersList.filter(o => {
-          const matchesTable = (
-            o.table_number?.toString() === tableNumber?.toString() ||
-            o.table?.table_number?.toString() === tableNumber?.toString() ||
-            o.table_id === `table-${tableNumber}`
-          )
-          if (!matchesTable || o.status !== 'paid') return false
-          if (trackedOrderIds.has(o.id)) {
-            return true
-          }
-          const paidAt = new Date(o.updated_at || o.created_at || 0).getTime()
-          if (dismissedAt > 0 && paidAt > 0 && paidAt <= dismissedAt) {
-            return false
-          }
-          const isRecentPaid = isNaN(paidAt) || paidAt === 0 || Date.now() - paidAt < 15 * 60 * 1000
-          if (currentSessionId && o.session_token) {
-            return o.session_token === currentSessionId || isRecentPaid
-          }
-          return isRecentPaid
-        })
+        const paidOrdersForTable = isTableExplicitlyFreed
+          ? []
+          : serverOrdersList.filter(o => {
+              const matchesTable = (
+                o.table_number?.toString() === tableNumber?.toString() ||
+                o.table?.table_number?.toString() === tableNumber?.toString() ||
+                o.table_id === `table-${tableNumber}`
+              )
+              if (!matchesTable || o.status !== 'paid') return false
+              if (trackedOrderIds.has(o.id)) {
+                return true
+              }
+              const paidAt = new Date(o.updated_at || o.created_at || 0).getTime()
+              if (dismissedAt > 0 && paidAt > 0 && paidAt <= dismissedAt) {
+                return false
+              }
+              if (currentSessionId && o.session_token && o.session_token !== currentSessionId && (!thisTableSession?.session_id || o.session_token !== thisTableSession.session_id)) {
+                return false
+              }
+              const isRecentPaid = isNaN(paidAt) || paidAt === 0 || Date.now() - paidAt < 15 * 60 * 1000
+              if (currentSessionId && o.session_token) {
+                return o.session_token === currentSessionId || (Boolean(thisTableSession?.session_id) && o.session_token === thisTableSession?.session_id)
+              }
+              return isRecentPaid && hasActiveSessionHistory()
+            })
         const hasPaidOrder = paidOrdersForTable.length > 0
         const hasSavedPaidFlag = isPaidLockActive()
 
@@ -502,39 +517,33 @@ export function useMenuOrderSync({
         }
 
         if (hasSavedPaidFlag) {
-          stopPollingAndLockPaid()
-          return
+          if (isTableExplicitlyFreed) {
+            resetPaidOrderSessionRef.current?.()
+            setIsTablePaidRef.current(false)
+            setIsTablePaid(false)
+            setIsOrderPaidRef.current?.(false)
+          } else {
+            stopPollingAndLockPaid()
+            return
+          }
         }
 
         if (isTableExplicitlyFreed && activeTableOrders.length === 0) {
-          const hadOrdersInSession = hasActiveSessionHistory()
-          const prevSessionTotal = getSessionKnownTotal()
-          if (
-            hasRequestedBillRef.current ||
-            userRequestedBillTimeRef.current ||
-            isTablePaidRef.current ||
-            hasSavedPaidFlag ||
-            hadOrdersInSession
-          ) {
-            if (prevSessionTotal > 0 && typeof window !== 'undefined') {
-              try {
-                sessionStorage.setItem(`fluxo_last_paid_total_${slug}_${tableNumber}`, String(prevSessionTotal))
-              } catch (_) {}
-            }
-            stopPollingAndLockPaid(prevSessionTotal > 0 ? { total: prevSessionTotal, points: Math.round(prevSessionTotal * 10) } : undefined)
-            return
-          }
+          // La mesa fue liberada por el personal para el siguiente cliente: limpiar carteles post-pago
+          resetPaidOrderSessionRef.current?.()
+          setIsTablePaidRef.current(false)
+          setIsTablePaid(false)
+          setIsOrderPaidRef.current?.(false)
+          setIsPaidBannerDismissedRef.current(false)
+          setIsPaidBannerDismissed(false)
+          setIsReviewBoosterDismissedRef.current(false)
+          setIsReviewBoosterDismissed(false)
+
           hasHadActiveOrderInThisSessionRef.current = false
           prevTableOrdersMapRef.current.clear()
           setTableOrderStatus(null)
           setTableOrders([])
           setTableTotalAmount(0)
-          if (!hasSavedPaidFlag) {
-            setIsTablePaidRef.current(false)
-          }
-          if (!hasSavedPaidFlag) {
-            setIsTablePaid(false)
-          }
           setHasRequestedBill(false)
           hasRequestedBillRef.current = false
           userRequestedBillTimeRef.current = null
@@ -544,16 +553,17 @@ export function useMenuOrderSync({
           }
           if (typeof window !== 'undefined') {
             try {
+              sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now()))
+              sessionStorage.removeItem(`fluxo_active_order_ids_${slug}_${tableNumber}`)
               sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
               sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
               sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
               sessionStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
-              if (thisTableSession?.session_id) {
-                localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, thisTableSession.session_id)
-              }
+              sessionStorage.removeItem(`fluxo_paid_lock_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_table_paid_lock_${slug}_${tableNumber}`)
+              sessionStorage.removeItem(`fluxo_paid_order_${slug}_${tableNumber}`)
             } catch (_) {}
           }
-          return
         }
 
         const calls: any[] = callsRes.calls || []
@@ -734,26 +744,7 @@ export function useMenuOrderSync({
               data.type === 'table_freed' &&
               (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
             ) {
-              const prevSessionTotal = getSessionKnownTotal()
-              const hasSavedPaidFlag = isPaidLockActive()
-              if (
-                hasRequestedBillRef.current ||
-                userRequestedBillTimeRef.current ||
-                isTablePaidRef.current ||
-                hasSavedPaidFlag ||
-                hasActiveSessionHistory()
-              ) {
-                stopPollingAndLockPaid({ total: prevSessionTotal > 0 ? prevSessionTotal : undefined })
-                return
-              }
-              hasHadActiveOrderInThisSessionRef.current = false
-              prevTableOrdersMapRef.current.clear()
-              setTableOrderStatus(null)
-              setTableOrders([])
-              setTableTotalAmount(0)
-              if (data.new_session_id) {
-                setSessionIdRef.current(data.new_session_id)
-              }
+              handleLocalTableFreed({ detail: { tableNumber, new_session_id: data.new_session_id } })
               return
             }
 
@@ -821,39 +812,46 @@ export function useMenuOrderSync({
     }, 4500)
 
     const handleLocalTableFreed = (e: any) => {
-      if (e.detail?.tableNumber?.toString() === tableNumber?.toString()) {
-        const prevSessionTotal = getSessionKnownTotal()
-        const hasSavedPaidFlag = isPaidLockActive()
-        if (
-          hasRequestedBillRef.current ||
-          userRequestedBillTimeRef.current ||
-          isTablePaidRef.current ||
-          hasSavedPaidFlag ||
-          hasActiveSessionHistory()
-        ) {
-          setHasRequestedBill(false)
-          hasRequestedBillRef.current = false
-          userRequestedBillTimeRef.current = null
-          stopPollingAndLockPaid(prevSessionTotal > 0 ? { total: prevSessionTotal, points: Math.round(prevSessionTotal * 10) } : undefined)
-          return
-        }
+      const freedTbl = e.detail?.tableNumber ?? e.detail?.table_number
+      if (freedTbl?.toString() === tableNumber?.toString()) {
+        resetPaidOrderSessionRef.current?.()
+        setIsTablePaidRef.current(false)
+        setIsTablePaid(false)
+        setIsOrderPaidRef.current?.(false)
+        setIsPaidBannerDismissedRef.current(false)
+        setIsPaidBannerDismissed(false)
+        setIsReviewBoosterDismissedRef.current(false)
+        setIsReviewBoosterDismissed(false)
 
         hasHadActiveOrderInThisSessionRef.current = false
         prevTableOrdersMapRef.current.clear()
         setTableOrderStatus(null)
         setTableOrders([])
         setTableTotalAmount(0)
-        setIsTablePaidRef.current(false)
-        setIsTablePaid(false)
         setHasRequestedBill(false)
         hasRequestedBillRef.current = false
         userRequestedBillTimeRef.current = null
+
+        if (e.detail?.new_session_id) {
+          setSessionIdRef.current(e.detail.new_session_id)
+          setSessionId(e.detail.new_session_id)
+          try {
+            localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, e.detail.new_session_id)
+          } catch (_) {}
+        }
+
         if (typeof window !== 'undefined') {
           try {
+            sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now()))
+            sessionStorage.removeItem(`fluxo_active_order_ids_${slug}_${tableNumber}`)
             sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
             sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
             sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
             sessionStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
+            sessionStorage.removeItem(`fluxo_paid_lock_${slug}_${tableNumber}`)
+            sessionStorage.removeItem(`fluxo_table_paid_lock_${slug}_${tableNumber}`)
+            sessionStorage.removeItem(`fluxo_paid_order_${slug}_${tableNumber}`)
+            localStorage.removeItem(`fluxo_cart_${slug}_${tableNumber}`)
           } catch (_) {}
         }
       }
@@ -883,7 +881,7 @@ export function useMenuOrderSync({
           data.type === 'table_freed' &&
           (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())
         ) {
-          handleLocalTableFreed({ detail: { tableNumber } })
+          handleLocalTableFreed({ detail: { tableNumber, new_session_id: data.new_session_id } })
         } else if (
           data.type === 'table_bill_paid' &&
           (data.tableNumber?.toString() === tableNumber?.toString() || data.table_number?.toString() === tableNumber?.toString())

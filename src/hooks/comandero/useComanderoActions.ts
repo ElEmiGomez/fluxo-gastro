@@ -765,6 +765,16 @@ export function useComanderoActions({
       return next
     })
 
+    // Emitir inmediatamente evento local y BroadcastChannel para liberar el menú en pantalla de comensales concurrentes
+    if (typeof window !== 'undefined') {
+      try {
+        window.dispatchEvent(new CustomEvent('fluxo_table_freed', { detail: { tableNumber: tableNum, slug } }))
+        const bc = new BroadcastChannel('fluxo_menu_channel')
+        bc.postMessage({ type: 'table_freed', tableNumber: tableNum, slug })
+        bc.close()
+      } catch (_) {}
+    }
+
     try {
       await fetch('/api/tables', {
         method: 'POST',

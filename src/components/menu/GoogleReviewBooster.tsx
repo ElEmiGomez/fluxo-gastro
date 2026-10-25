@@ -244,7 +244,7 @@ export function GoogleReviewBooster({
             {loyaltyProfile?.google_review_bonus_awarded
               ? 'Abrir Google Maps'
               : loyaltyMode === 'stamps'
-              ? 'Abrir Google Maps (+1 Sello)'
+              ? '⭐ Valóranos y gana +1 sello extra'
               : 'Abrir Google Maps (+50 pts)'}
           </span>
           <ExternalLink size={10} />

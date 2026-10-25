@@ -19,6 +19,7 @@ interface LoyaltyModalProps {
   googleReviewUrl?: string | null
   googlePlaceId?: string | null
   onClaimLoyaltyBonus?: () => Promise<any> | void
+  loyaltyMode?: 'points' | 'stamps'
 }
 
 export function LoyaltyModal({
@@ -35,6 +36,7 @@ export function LoyaltyModal({
   googleReviewUrl,
   googlePlaceId,
   onClaimLoyaltyBonus,
+  loyaltyMode = 'points',
 }: LoyaltyModalProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -115,10 +117,10 @@ export function LoyaltyModal({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-black tracking-tight leading-tight">
-                Tarjeta de Fidelización
+                {loyaltyMode === 'stamps' ? 'Cartilla de Sellos Digital' : 'Tarjeta de Fidelización'}
               </h2>
               <p className="text-xs text-amber-100 font-medium">
-                Puntos, regalos y ventajas exclusivas
+                {loyaltyMode === 'stamps' ? 'Sellos, regalos y ventajas exclusivas' : 'Puntos, regalos y ventajas exclusivas'}
               </p>
             </div>
           </div>
@@ -154,10 +156,12 @@ export function LoyaltyModal({
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-amber-950">
-                      Suma 1 punto por cada euro consumido
+                      {loyaltyMode === 'stamps' ? 'Suma 1 sello por cada visita' : 'Suma 1 punto por cada euro consumido'}
                     </h3>
                     <p className="text-xs text-amber-900/80 mt-1 leading-relaxed">
-                      Sin contraseñas. Solo introduce tu nombre y email para consultar tu saldo y canjear platos o cafés gratis.
+                      {loyaltyMode === 'stamps'
+                        ? 'Sin contraseñas. Solo introduce tu nombre y email para consultar tu cartilla y canjear premios.'
+                        : 'Sin contraseñas. Solo introduce tu nombre y email para consultar tu saldo y canjear platos o cafés gratis.'}
                     </p>
                   </div>
                 </div>
@@ -223,7 +227,7 @@ export function LoyaltyModal({
                     <span>Conectando...</span>
                   ) : (
                     <>
-                      <span>Consultar y Activar mis Puntos</span>
+                      <span>{loyaltyMode === 'stamps' ? 'Consultar y Activar mi Cartilla' : 'Consultar y Activar mis Puntos'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
@@ -314,16 +318,20 @@ export function LoyaltyModal({
                           Bonus Google Maps
                         </span>
                         <h4 className="text-xs font-black text-slate-900 leading-tight">
-                          ⭐ ¡Suma +50 PUNTOS EXTRA dejando tu reseña!
+                          {loyaltyMode === 'stamps'
+                            ? '⭐ ¡Suma +1 SELLO EXTRA dejando tu reseña!'
+                            : '⭐ ¡Suma +50 PUNTOS EXTRA dejando tu reseña!'}
                         </h4>
                       </div>
                     </div>
                     <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 shrink-0">
-                      +50 PTS
+                      {loyaltyMode === 'stamps' ? '+1 SELLO' : '+50 PTS'}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Valora a nuestro equipo en Google Maps y sumaremos 50 puntos adicionales a tu saldo inmediatamente.
+                    {loyaltyMode === 'stamps'
+                      ? 'Valora a nuestro equipo en Google Maps y sumaremos 1 sello adicional a tu cartilla inmediatamente.'
+                      : 'Valora a nuestro equipo en Google Maps y sumaremos 50 puntos adicionales a tu saldo inmediatamente.'}
                   </p>
                   <button
                     type="button"
@@ -331,14 +339,22 @@ export function LoyaltyModal({
                     className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
                   >
                     <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
-                    <span>Valorar en Google Maps (+50 pts)</span>
+                    <span>
+                      {loyaltyMode === 'stamps'
+                        ? '⭐ Valóranos y gana +1 sello extra'
+                        : 'Valorar en Google Maps (+50 pts)'}
+                    </span>
                     <ExternalLink className="w-3 h-3 ml-0.5" />
                   </button>
                 </div>
               ) : (
                 <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold flex items-center gap-2">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                  <span>¡Bonus de +50 puntos por valoración en Google Maps canjeado con éxito!</span>
+                  <span>
+                    {loyaltyMode === 'stamps'
+                      ? '¡Bonus de +1 sello por valoración en Google Maps canjeado con éxito!'
+                      : '¡Bonus de +50 puntos por valoración en Google Maps canjeado con éxito!'}
+                  </span>
                 </div>
               )}
 

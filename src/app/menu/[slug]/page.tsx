@@ -101,6 +101,7 @@ function DinerMenuContent() {
     isTablePaid,
     setIsTablePaid,
     isOrderPaid,
+    setIsOrderPaid,
     resetPaidOrderSession,
     isPaidBannerDismissed,
     setIsPaidBannerDismissed,
@@ -206,6 +207,8 @@ function DinerMenuContent() {
     isFixedMenu,
     isTablePaid,
     setIsTablePaid,
+    setIsOrderPaid,
+    resetPaidOrderSession,
     setIsPaidBannerDismissed,
     setIsReviewBoosterDismissed,
     setHasRequestedBill,
@@ -980,6 +983,7 @@ function DinerMenuContent() {
             googleReviewUrl={restaurant?.google_review_url || null}
             googlePlaceId={restaurant?.google_place_id || null}
             onClaimLoyaltyBonus={loyalty.claimGoogleReviewBonus}
+            loyaltyMode={loyalty.settings?.mode === 'points' ? 'points' : 'stamps'}
           />
         ) : (
           <StampCardModal
