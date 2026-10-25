@@ -577,7 +577,17 @@ export async function POST(req: NextRequest) {
         isPackComponent)
       )
 
-      const itemPriceToCharge = isComplimentary ? 0 : (Number(catalogProduct.price) || 0)
+      let itemPriceToCharge = isComplimentary ? 0 : (Number(catalogProduct.price) || 0)
+      if (!isComplimentary && catalogProduct.price_type === 'weight') {
+        const weight = Number(item.weight_grams) || (item.notes?.match(/(\d+)\s*g/i)?.[1] ? Number(item.notes.match(/(\d+)\s*g/i)[1]) : (item.weightGrams ? Number(item.weightGrams) : 1000))
+        const divisor = catalogProduct.price_unit === 'kg' ? 1000 : 100
+        const computedWeightPrice = Number(((Number(catalogProduct.price) * weight) / divisor).toFixed(2))
+        if (typeof item.price === 'number' && item.price > 0 && Math.abs(item.price - computedWeightPrice) < 0.1) {
+          itemPriceToCharge = item.price
+        } else {
+          itemPriceToCharge = computedWeightPrice
+        }
+      }
       computedTotal += itemPriceToCharge * quantity
 
       const sanitizedNotes = item.notes ? sanitizeText(item.notes, 200) : null
@@ -592,9 +602,11 @@ export async function POST(req: NextRequest) {
         notes: sanitizedNotes || null,
         product: {
           ...catalogProduct,
+          price: itemPriceToCharge,
           id: canonicalProdId,
         },
         is_complimentary: isComplimentary,
+        weight_grams: item.weight_grams || (catalogProduct.price_type === 'weight' ? (Number(item.notes?.match(/(\d+)\s*g/i)?.[1]) || 300) : undefined),
         loyalty_points_redeemed: item.loyalty_points_redeemed ? Number(item.loyalty_points_redeemed) : undefined,
         course: (item.course && ['first', 'second', 'dessert', 'drink'].includes(item.course))
           ? item.course

@@ -306,9 +306,26 @@ export default function WaiterComanderoPage() {
     isComplimentary?: boolean,
     weightGrams?: number
   ) => {
+    const effectiveUnitPrice = product.price_type === 'weight' && weightGrams && product.price > 20
+      ? Number(((product.price * weightGrams) / (product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+      : product.price
+
+    const customizedProduct = {
+      ...product,
+      price: effectiveUnitPrice,
+    }
+
     updateCartForCurrentTable(prev => [
       ...prev,
-      { product, quantity, selectedPills, notes, course, isComplimentary, weightGrams },
+      {
+        product: customizedProduct,
+        quantity,
+        selectedPills,
+        notes,
+        course,
+        is_complimentary: isComplimentary,
+        weight_grams: weightGrams,
+      },
     ])
   }
 

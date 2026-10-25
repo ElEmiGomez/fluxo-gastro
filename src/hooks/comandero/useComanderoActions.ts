@@ -20,7 +20,9 @@ import {
   mergeItemNotes,
   hydrateOrderItemsWithCatalog,
   areAllOrderCoursesDelivered,
+  areAllKitchenCoursesCompleted,
 } from '@/lib/course-utils'
+import { broadcastFluxoSync } from '@/lib/sync-channel'
 
 interface UseComanderoActionsParams {
   slug: string
@@ -155,6 +157,16 @@ export function useComanderoActions({
       setReadyOrderAlert(null)
     }
 
+    broadcastFluxoSync({
+      type: 'order_delivered',
+      slug,
+      orderId,
+      tableNumber: tableNum,
+      status: 'delivered',
+      action: 'deliver_order',
+      updatedOrder: deliveredOrder,
+    })
+
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -177,6 +189,15 @@ export function useComanderoActions({
         if (finalOrder) {
           lockOrderMutation(orderId, { order: finalOrder, status: 'delivered' })
         }
+        broadcastFluxoSync({
+          type: 'order_delivered',
+          slug,
+          orderId,
+          tableNumber: tableNum,
+          status: 'delivered',
+          action: 'deliver_order',
+          updatedOrder: finalOrder || deliveredOrder,
+        })
         setServerOrders(prev =>
           prev.map(o => {
             if (o.id === orderId) {
@@ -250,6 +271,16 @@ export function useComanderoActions({
       prev.map(o => (o.id === orderId ? { ...o, status: 'pending' } : o))
     )
 
+    broadcastFluxoSync({
+      type: 'order_validated',
+      slug,
+      orderId,
+      tableNumber: tableNum,
+      status: 'pending',
+      action: 'validate_order',
+      updatedOrder: pendingOrder,
+    })
+
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
@@ -270,6 +301,15 @@ export function useComanderoActions({
         if (data.order) {
           lockOrderMutation(orderId, { order: data.order, status: 'pending' })
         }
+        broadcastFluxoSync({
+          type: 'order_validated',
+          slug,
+          orderId,
+          tableNumber: tableNum,
+          status: 'pending',
+          action: 'validate_order',
+          updatedOrder: data.order || pendingOrder,
+        })
         setServerOrders(prev =>
           prev.map(o => {
             if (o.id === orderId) {
@@ -467,7 +507,13 @@ export function useComanderoActions({
             if (isDessertItem(it)) {
               currentNotes = mergeItemNotes(currentNotes, `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`)
             }
-            return { ...it, notes: currentNotes }
+            return {
+              ...it,
+              notes: currentNotes,
+              course_status: 'delivered',
+              kitchen_status: 'delivered',
+              status: 'delivered',
+            }
           }),
           products,
           o.order_items
@@ -477,14 +523,24 @@ export function useComanderoActions({
           `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
         )
         const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
-        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : o.status
+        const nextStatus: OrderStatus = (areAllKitchenCoursesCompleted(candidate) || areAllOrderCoursesDelivered(candidate)) ? 'delivered' : o.status
         const updated: Order = { ...candidate, status: nextStatus }
         updatedOrderForRef = updated
         return updated
       })
     )
     if (updatedOrderForRef) {
-      lockOrderMutation(orderId, { order: updatedOrderForRef, status: (updatedOrderForRef as Order).status })
+      const effOrder = updatedOrderForRef as Order
+      lockOrderMutation(orderId, { order: effOrder, status: effOrder.status })
+      broadcastFluxoSync({
+        type: 'course_delivered',
+        slug,
+        orderId,
+        tableNumber: effOrder.table_number || effOrder.table?.table_number,
+        status: effOrder.status,
+        action: 'deliver_desserts_direct',
+        updatedOrder: effOrder,
+      })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -496,8 +552,18 @@ export function useComanderoActions({
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (data?.order) {
-          lockOrderMutation(orderId, { order: data.order, status: data.order.status })
-          setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
+          const finalOrd = { ...data.order, status: data.order.status || 'delivered' }
+          lockOrderMutation(orderId, { order: finalOrd, status: finalOrd.status })
+          setServerOrders(prev => prev.map(o => (o.id === orderId ? finalOrd : o)))
+          broadcastFluxoSync({
+            type: 'course_delivered',
+            slug,
+            orderId,
+            tableNumber: finalOrd.table_number || finalOrd.table?.table_number,
+            status: finalOrd.status,
+            action: 'deliver_desserts_direct',
+            updatedOrder: finalOrd,
+          })
         }
       } else {
         await syncServerData()
@@ -561,6 +627,13 @@ export function useComanderoActions({
         console.error('Error firing desserts for order:', ord.id, e)
       }
     }
+    broadcastFluxoSync({
+      type: 'course_fired',
+      slug,
+      tableNumber: tableNum,
+      status: 'preparing',
+      action: 'fire_desserts',
+    })
     setOrderSentToast(true)
     setTimeout(() => setOrderSentToast(false), 2500)
   }
@@ -594,7 +667,13 @@ export function useComanderoActions({
             if (isDessertItem(it)) {
               currentNotes = mergeItemNotes(currentNotes, `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`)
             }
-            return { ...it, notes: currentNotes }
+            return {
+              ...it,
+              notes: currentNotes,
+              course_status: 'delivered',
+              kitchen_status: 'delivered',
+              status: 'delivered',
+            }
           }),
           products,
           o.order_items
@@ -604,12 +683,23 @@ export function useComanderoActions({
           `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
         )
         const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
-        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : o.status
+        const nextStatus: OrderStatus = (areAllKitchenCoursesCompleted(candidate) || areAllOrderCoursesDelivered(candidate)) ? 'delivered' : o.status
         const updated: Order = { ...candidate, status: nextStatus }
         lockOrderMutation(o.id, { order: updated, status: nextStatus })
         return updated
       })
     )
+
+    dessertOrders.forEach(ord => {
+      broadcastFluxoSync({
+        type: 'course_delivered',
+        slug,
+        orderId: ord.id,
+        tableNumber: tableNum,
+        status: 'delivered',
+        action: 'deliver_desserts_direct',
+      })
+    })
 
     for (const ord of dessertOrders) {
       try {
@@ -622,8 +712,18 @@ export function useComanderoActions({
         if (res.ok) {
           const data = await res.json().catch(() => null)
           if (data?.order) {
-            lockOrderMutation(ord.id, { order: data.order, status: data.order.status })
-            setServerOrders(prev => prev.map(o => (o.id === ord.id ? data.order : o)))
+            const finalOrd = { ...data.order, status: data.order.status || 'delivered' }
+            lockOrderMutation(ord.id, { order: finalOrd, status: finalOrd.status })
+            setServerOrders(prev => prev.map(o => (o.id === ord.id ? finalOrd : o)))
+            broadcastFluxoSync({
+              type: 'course_delivered',
+              slug,
+              orderId: ord.id,
+              tableNumber: tableNum,
+              status: finalOrd.status,
+              action: 'deliver_desserts_direct',
+              updatedOrder: finalOrd,
+            })
           }
         }
       } catch (e) {
@@ -727,6 +827,14 @@ export function useComanderoActions({
         bc.close()
       }
 
+      broadcastFluxoSync({
+        type: 'table_paid',
+        slug,
+        tableNumber: tableNum,
+        status: 'paid',
+        action: 'charge_table',
+      })
+
       // Cobro completado sin falsas alarmas de envío a cocina
     } catch (e) {
       console.error('Error charging table:', e)
@@ -798,6 +906,13 @@ export function useComanderoActions({
         setTimeout(() => {
           try { bc.close() } catch (_) {}
         }, 1000)
+        broadcastFluxoSync({
+          type: 'table_freed',
+          slug,
+          tableNumber: tableNum,
+          status: 'free',
+          action: 'free_table',
+        })
       } catch (_) {}
     }
 
@@ -883,9 +998,10 @@ export function useComanderoActions({
     setIsSubmitting(true)
     const rawTotal = cart.reduce((sum, item) => {
       if (item.is_complimentary) return sum
-      const price = item.product.price_type === 'weight'
-        ? item.product.price * ((item.weight_grams || 300) / (item.product.price_unit === 'kg' ? 1000 : 100))
-        : item.product.price
+      const rawPrice = Number(item.product.price || 0)
+      const price = item.product.price_type === 'weight' && item.weight_grams && rawPrice > 20
+        ? Number(((rawPrice * item.weight_grams) / (item.product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+        : rawPrice
       return sum + price * item.quantity
     }, 0)
 
@@ -893,6 +1009,11 @@ export function useComanderoActions({
 
     try {
       const formattedItems = cart.map(item => {
+        const rawPrice = Number(item.product.price || 0)
+        const effectivePrice = item.product.price_type === 'weight' && item.weight_grams && rawPrice > 20
+          ? Number(((rawPrice * item.weight_grams) / (item.product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+          : rawPrice
+
         const formattedNotes = [
           item.is_complimentary ? '[🎁 INVITACIÓN DE LA CASA]' : '',
           item.weight_grams ? `[⚖️ ${item.weight_grams}g]` : '',
@@ -903,10 +1024,10 @@ export function useComanderoActions({
         return {
           product_id: item.product.id,
           name: item.product.name,
-          price: item.product.price,
+          price: effectivePrice,
           quantity: item.quantity,
           notes: formattedNotes || null,
-          product: item.product,
+          product: { ...item.product, price: effectivePrice },
           course: item.course || 'first',
           is_complimentary: item.is_complimentary || false,
           weight_grams: item.weight_grams,
@@ -936,6 +1057,14 @@ export function useComanderoActions({
         const errData = await res.json().catch(() => ({}))
         throw new Error(errData.message || errData.error || 'No se pudo registrar la comanda en cocina')
       }
+
+      broadcastFluxoSync({
+        type: 'order_created',
+        slug: restaurant?.slug || slug,
+        tableNumber: selectedTable.table_number,
+        status: 'pending',
+        action: 'create_order',
+      })
 
       setOrderSentToast(true)
       setTableCarts(prev => ({ ...prev, [selectedTable.table_number]: [] }))
@@ -974,8 +1103,17 @@ export function useComanderoActions({
       })
     )
     if (updatedOrderForRef) {
-      const effStatus = (updatedOrderForRef as Order).status
-      lockOrderMutation(orderId, { order: updatedOrderForRef, status: effStatus })
+      const effOrder = updatedOrderForRef as Order
+      lockOrderMutation(orderId, { order: effOrder, status: effOrder.status })
+      broadcastFluxoSync({
+        type: 'course_delivered',
+        slug,
+        orderId,
+        tableNumber: effOrder.table_number || effOrder.table?.table_number,
+        status: effOrder.status,
+        action: 'deliver_starters',
+        updatedOrder: effOrder,
+      })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -993,6 +1131,15 @@ export function useComanderoActions({
         if (data?.order) {
           lockOrderMutation(orderId, { order: data.order, status: data.order.status })
           setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
+          broadcastFluxoSync({
+            type: 'course_delivered',
+            slug,
+            orderId,
+            tableNumber: data.order.table_number || data.order.table?.table_number,
+            status: data.order.status,
+            action: 'deliver_starters',
+            updatedOrder: data.order,
+          })
         }
       } else {
         await syncServerData()
@@ -1035,8 +1182,17 @@ export function useComanderoActions({
       })
     )
     if (updatedOrderForRef) {
-      const effStatus = (updatedOrderForRef as Order).status
-      lockOrderMutation(orderId, { order: updatedOrderForRef, status: effStatus })
+      const effOrder = updatedOrderForRef as Order
+      lockOrderMutation(orderId, { order: effOrder, status: effOrder.status })
+      broadcastFluxoSync({
+        type: 'course_delivered',
+        slug,
+        orderId,
+        tableNumber: effOrder.table_number || effOrder.table?.table_number,
+        status: effOrder.status,
+        action: 'deliver_mains',
+        updatedOrder: effOrder,
+      })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -1054,6 +1210,15 @@ export function useComanderoActions({
         if (data?.order) {
           lockOrderMutation(orderId, { order: data.order, status: data.order.status || 'delivered' })
           setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
+          broadcastFluxoSync({
+            type: 'course_delivered',
+            slug,
+            orderId,
+            tableNumber: data.order.table_number || data.order.table?.table_number,
+            status: data.order.status || 'delivered',
+            action: 'deliver_mains',
+            updatedOrder: data.order,
+          })
         }
       } else {
         await syncServerData()
@@ -1094,6 +1259,14 @@ export function useComanderoActions({
     )
     if (updatedOrderForRef) {
       lockOrderMutation(orderId, { order: updatedOrderForRef, status: 'preparing' })
+      broadcastFluxoSync({
+        type: 'course_fired',
+        slug,
+        orderId,
+        status: 'preparing',
+        action: 'fire_mains',
+        updatedOrder: updatedOrderForRef as Order,
+      })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -1159,8 +1332,17 @@ export function useComanderoActions({
       })
     )
     if (updatedOrderForRef) {
-      const effStatus = (updatedOrderForRef as Order).status
-      lockOrderMutation(orderId, { order: updatedOrderForRef, status: effStatus })
+      const effOrder = updatedOrderForRef as Order
+      lockOrderMutation(orderId, { order: effOrder, status: effOrder.status })
+      broadcastFluxoSync({
+        type: 'course_delivered',
+        slug,
+        orderId,
+        tableNumber: effOrder.table_number || effOrder.table?.table_number,
+        status: effOrder.status,
+        action: 'deliver_desserts',
+        updatedOrder: effOrder,
+      })
     }
     try {
       const res = await fetch('/api/orders', {
@@ -1178,6 +1360,15 @@ export function useComanderoActions({
         if (data?.order) {
           lockOrderMutation(orderId, { order: data.order, status: data.order.status || 'delivered' })
           setServerOrders(prev => prev.map(o => (o.id === orderId ? data.order : o)))
+          broadcastFluxoSync({
+            type: 'course_delivered',
+            slug,
+            orderId,
+            tableNumber: data.order.table_number || data.order.table?.table_number,
+            status: data.order.status || 'delivered',
+            action: 'deliver_desserts',
+            updatedOrder: data.order,
+          })
         }
       } else {
         await syncServerData()

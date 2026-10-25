@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react'
 import { useParams, useSearchParams, usePathname } from 'next/navigation'
 import { Check, Loader2 } from 'lucide-react'
-import { CartItem, Product, DailyMenu, Order } from '@/types/database.types'
+import { CartItem, Product, DailyMenu, Order, CourseType } from '@/types/database.types'
 import { TenantProvider } from '@/components/tenant/TenantProvider'
 import { MicroOnboardingBanner } from '@/components/menu/MicroOnboardingBanner'
 import { MenuHeader } from '@/components/menu/MenuHeader'
@@ -369,12 +369,30 @@ function DinerMenuContent() {
   }
 
   // Agregar producto configurado (modal con modificadores)
-  const handleAddCustomized = (product: Product, quantity: number, selectedPills: string[], notes: string) => {
+  const handleAddCustomized = (
+    product: Product,
+    quantity: number,
+    selectedPills: string[],
+    notes: string,
+    course?: CourseType,
+    isComplimentary?: boolean,
+    weightGrams?: number
+  ) => {
     triggerHaptic(HAPTIC_PATTERNS.ADD_CART)
+    const effectiveUnitPrice = product.price_type === 'weight' && weightGrams && product.price > 20
+      ? Number(((product.price * weightGrams) / (product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+      : product.price
+
+    const customizedProduct: Product = {
+      ...product,
+      price: effectiveUnitPrice,
+    }
+
     setCart(prev => {
       const existingIdx = prev.findIndex(
         item => item.product.id === product.id && 
           (item.notes || '').trim() === (notes || '').trim() && 
+          item.weight_grams === weightGrams &&
           JSON.stringify([...(item.selectedPills || [])].sort()) === JSON.stringify([...(selectedPills || [])].sort())
       )
 
@@ -384,7 +402,18 @@ function DinerMenuContent() {
         return copy
       }
 
-      return [...prev, { product, quantity, selectedPills, notes }]
+      return [
+        ...prev,
+        {
+          product: customizedProduct,
+          quantity,
+          selectedPills,
+          notes,
+          course,
+          is_complimentary: isComplimentary,
+          weight_grams: weightGrams,
+        },
+      ]
     })
 
     setAddedToast(translateProductName(currentLang, product.id, product.name))

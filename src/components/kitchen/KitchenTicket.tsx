@@ -35,6 +35,7 @@ import {
   areOrderMainsServed,
   areOrderMainsFired,
   areOrderDessertsServed,
+  areAllKitchenCoursesCompleted,
   resolveCatalogProductForItem,
   isGenericProductName,
 } from '@/lib/course-utils'
@@ -117,8 +118,16 @@ export function KitchenTicket({
     return null
   }
 
-  // Invariante Zero-Flicker: La visibilidad de comandas depende exclusivamente de su status, NUNCA de order_items.length
-  const validOrders = effectiveOrders
+  // Invariante Zero-Flicker: La visibilidad de comandas depende exclusivamente de su status activo en cocina
+  const validOrders = effectiveOrders.filter(o => {
+    if (['cancelled', 'paid', 'delivered'].includes(o.status)) return false
+    if (areAllKitchenCoursesCompleted(o)) return false
+    return true
+  })
+
+  if (validOrders.length === 0) {
+    return null
+  }
 
   const primaryOrder = validOrders[0]
   const tableNumberDisplay = primaryOrder.table?.table_number ?? primaryOrder.table_number ?? '?'

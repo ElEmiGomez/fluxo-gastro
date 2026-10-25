@@ -223,7 +223,14 @@ export function CartDrawer({
       const prodId = String(prod.id || (item as any).product_id || (item as any).id || (item as any).productId || '').trim() || 'p-unknown'
       const prodName = String(prod.name || (item as any).name || 'Plato').trim()
       const isFree = Boolean(item.is_complimentary || item.is_pack_component)
-      const prodPrice = isFree ? 0 : Number(prod.price ?? (item as any).price ?? 0)
+      const rawPrice = Number(prod.price ?? (item as any).price ?? 0)
+      const notesWeightMatch = item.notes?.match(/(\d+)\s*g/i)
+      const weight = item.weight_grams || (notesWeightMatch ? Number(notesWeightMatch[1]) : undefined)
+      const prodPrice = isFree
+        ? 0
+        : (prod.price_type === 'weight' && weight && rawPrice > 20)
+        ? Number(((rawPrice * weight) / (prod.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+        : rawPrice
       return {
         ...item,
         product: {
@@ -355,6 +362,7 @@ export function CartDrawer({
             notes: item.notes || (item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : null),
             course: item.course,
             is_complimentary: item.is_complimentary,
+            weight_grams: item.weight_grams,
             loyalty_points_redeemed: item.loyalty_points_redeemed,
             is_pack_header: item.is_pack_header,
             is_pack_component: item.is_pack_component,

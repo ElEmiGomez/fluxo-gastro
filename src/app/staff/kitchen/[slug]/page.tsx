@@ -44,6 +44,7 @@ import {
   resolveCatalogProductForItem,
   isGenericProductName,
 } from '@/lib/course-utils'
+import { subscribeFluxoSync } from '@/lib/sync-channel'
 
 export default function KitchenKDSPage() {
   const params = useParams()
@@ -297,12 +298,36 @@ export default function KitchenKDSPage() {
             // Preservar comandas activas previas que la red o un GET omitió temporalmente (Zero-Flicker Invariant)
             prev.forEach(prevOrd => {
               if (!map.has(prevOrd.id)) {
+                // 1. Verificar si el servidor ya conoce esta orden y la marcó finalizada/entregada
+                const serverMatch = rawOrders.find(r => r.id === prevOrd.id)
+                if (serverMatch) {
+                  const isServerTerminal =
+                    serverMatch.status === 'cancelled' ||
+                    serverMatch.status === 'paid' ||
+                    serverMatch.status === 'delivered' ||
+                    areAllKitchenCoursesCompleted(serverMatch)
+                  if (isServerTerminal) {
+                    prevOrdersMapRef.current.delete(prevOrd.id)
+                    recentMutationsRef.current.delete(prevOrd.id)
+                    mutationLockUntilRef.current.delete(prevOrd.id)
+                    return // Descartar permanentemente de pantalla KDS
+                  }
+                }
+
                 const mut = recentMutationsRef.current.get(prevOrd.id)
                 const lockUntil = mutationLockUntilRef.current.get(prevOrd.id) || 0
                 const isMutActive = Boolean((mut && Date.now() < mut.until) || Date.now() < lockUntil)
                 const hasItems = Boolean(prevOrd.order_items && prevOrd.order_items.length > 0)
                 const isCompleted = hasItems && areAllKitchenCoursesCompleted(prevOrd)
                 const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || prevOrd.status === 'delivered' || isCompleted
+
+                if (isTerminal) {
+                  prevOrdersMapRef.current.delete(prevOrd.id)
+                  recentMutationsRef.current.delete(prevOrd.id)
+                  mutationLockUntilRef.current.delete(prevOrd.id)
+                  return
+                }
+
                 if (isMutActive || !isTerminal) {
                   map.set(prevOrd.id, prevOrd)
                 }
@@ -324,6 +349,19 @@ export default function KitchenKDSPage() {
           sorted.forEach(ord => {
             if (ord.order_items && ord.order_items.length > 0) {
               prevOrdersMapRef.current.set(ord.id, ord)
+            }
+          })
+
+          rawOrders.forEach(ord => {
+            if (
+              ord.status === 'delivered' ||
+              ord.status === 'paid' ||
+              ord.status === 'cancelled' ||
+              areAllKitchenCoursesCompleted(ord)
+            ) {
+              prevOrdersMapRef.current.delete(ord.id)
+              recentMutationsRef.current.delete(ord.id)
+              mutationLockUntilRef.current.delete(ord.id)
             }
           })
         }
@@ -419,12 +457,98 @@ export default function KitchenKDSPage() {
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('focus', handleVisibilityChange)
 
+    // 4. Puente Reactivo Instantáneo (0ms) Comandero <-> Cocina KDS
+    const unsubscribeSync = subscribeFluxoSync(event => {
+      if (event.slug && event.slug !== slug) return
+
+      // Caso 1: Mesa liberada o cobrada -> Purgar inmediatamente en 0ms todas las órdenes de la mesa
+      if (
+        event.type === 'table_freed' ||
+        event.type === 'table_paid' ||
+        event.status === 'free' ||
+        event.status === 'paid'
+      ) {
+        const tNumStr = event.tableNumber ? String(event.tableNumber) : ''
+        if (tNumStr) {
+          prevOrdersMapRef.current.forEach((ord, id) => {
+            const oTbl = String(ord.table_number || ord.table?.table_number)
+            if (oTbl === tNumStr) {
+              prevOrdersMapRef.current.delete(id)
+              recentMutationsRef.current.delete(id)
+              mutationLockUntilRef.current.delete(id)
+            }
+          })
+          setOrders(prev =>
+            prev.filter(o => {
+              const oTbl = String(o.table_number || o.table?.table_number)
+              return oTbl !== tNumStr
+            })
+          )
+        }
+        fetchServerOrders()
+        return
+      }
+
+      // Caso 2: Comanda o platos entregados -> Si se completaron las fases de cocina, purgar ticket en 0ms
+      if (
+        event.type === 'order_delivered' ||
+        event.type === 'course_delivered' ||
+        event.status === 'delivered'
+      ) {
+        if (event.orderId) {
+          const isDone =
+            event.status === 'delivered' ||
+            (event.updatedOrder && areAllKitchenCoursesCompleted(event.updatedOrder))
+          if (isDone) {
+            prevOrdersMapRef.current.delete(event.orderId)
+            recentMutationsRef.current.delete(event.orderId)
+            mutationLockUntilRef.current.delete(event.orderId)
+            setOrders(prev => prev.filter(o => o.id !== event.orderId))
+          } else if (event.updatedOrder) {
+            setOrders(prev =>
+              prev.map(o => (o.id === event.orderId ? event.updatedOrder! : o))
+            )
+          }
+        }
+        fetchServerOrders()
+        return
+      }
+
+      // Caso 3: Marcha de platos, validación o nuevo pedido -> Refrescar servidor de inmediato
+      fetchServerOrders()
+    })
+
+    const handleTableFreedEvent = (e: any) => {
+      const tNum = e?.detail?.tableNumber
+      if (tNum) {
+        const tNumStr = String(tNum)
+        prevOrdersMapRef.current.forEach((ord, id) => {
+          const oTbl = String(ord.table_number || ord.table?.table_number)
+          if (oTbl === tNumStr) {
+            prevOrdersMapRef.current.delete(id)
+            recentMutationsRef.current.delete(id)
+            mutationLockUntilRef.current.delete(id)
+          }
+        })
+        setOrders(prev =>
+          prev.filter(o => {
+            const oTbl = String(o.table_number || o.table?.table_number)
+            return oTbl !== tNumStr
+          })
+        )
+        fetchServerOrders()
+      }
+    }
+    window.addEventListener('fluxo_table_freed', handleTableFreedEvent)
+
     return () => {
       if (realtimeChannel && supabase) {
         supabase.removeChannel(realtimeChannel)
       }
       if (sseEventSource) sseEventSource.close()
       if (pollInterval) clearInterval(pollInterval)
+      unsubscribeSync()
+      window.removeEventListener('fluxo_table_freed', handleTableFreedEvent)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleVisibilityChange)
     }

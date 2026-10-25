@@ -81,26 +81,16 @@ export function ProductModifierModal({
   // Opciones de Guarnición
   const sideOptions = ['Papas Fritas', 'Papas Rústicas', 'Ensalada']
 
-  // Opciones de Preferencias Rápidas / Alergias según tipo de producto
+  // Opciones de Preferencias Rápidas / Alergias según tipo de producto (unificadas sin duplicados)
   const preferenceOptions = isDrink
-    ? ['Con hielo', 'Sin hielo', 'Extra hielo', 'Con limón', 'Sin limón', 'Tónica aparte', 'Vaso frío']
+    ? ['Con hielo', 'Sin hielo', 'Extra hielo', 'Con limón', 'Sin limón', 'Tónica aparte', 'Vaso frío', 'Sin alcohol', 'Sin pajita']
     : isCoffee
-    ? ['Leche entera', 'Leche desnatada', 'Leche de avena', 'Leche de soja', 'Sacarina', 'Azúcar blanco', 'Azúcar moreno']
+    ? ['Leche entera', 'Leche desnatada', 'Leche de avena', 'Leche de soja', 'Sacarina', 'Azúcar blanco', 'Azúcar moreno', 'Muy caliente', 'Tibio', 'Descafeinado']
     : isDessert
-    ? ['Con nata', 'Sin nata', 'Con sirope', 'Sin sirope', 'Para compartir', 'Cucharas extra']
+    ? ['Con nata', 'Sin nata', 'Con sirope', 'Sin sirope', 'Para compartir', 'Cucharas extra', 'Helado aparte']
     : isMeatOrBurger
-    ? ['Sin Sal', 'Sin Cebolla', 'Sin TACC', 'Sin Tomate', 'Sin Mayonesa', 'Extra Queso']
-    : ['Sin Sal', 'Sin Cebolla', 'Sin TACC', 'Salsa Aparte', 'Para Compartir', 'Sin Gluten']
-
-  const quickNotesList = isDrink
-    ? ['Sin alcohol', 'Hielo al vaso', 'Sin pajita', 'Poco hielo', 'Vaso grande']
-    : isCoffee
-    ? ['Muy caliente', 'Tibio', 'Descafeinado de máquina', 'Descafeinado de sobre', 'En vaso', 'En taza']
-    : isDessert
-    ? ['Para compartir', 'Sin azúcar añadido', 'Helado aparte', '2 cucharas', '3 cucharas']
-    : isMeatOrBurger
-    ? ['Sin mayonesa', 'Sin cebolla', 'Salsa aparte', 'Sin sal', 'Pan bien tostado', 'Para compartir']
-    : ['Salsa aparte', 'Sin sal', 'Para compartir', 'Sin picante', 'Aliño aparte']
+    ? ['Sin Sal', 'Sin Cebolla', 'Sin TACC', 'Sin Tomate', 'Sin Mayonesa', 'Salsa Aparte', 'Para Compartir', 'Extra Queso']
+    : ['Sin Sal', 'Sin Cebolla', 'Sin TACC', 'Salsa Aparte', 'Para Compartir', 'Sin Gluten', 'Sin Picante']
 
   const handleSelectCookingPoint = (pt: string) => {
     setSelectedCookingPoint(prev => (prev === pt ? '' : pt))
@@ -116,8 +106,18 @@ export function ProductModifierModal({
     )
   }
 
+  const unitOrWeightPrice = (isStaff && isComplimentary)
+    ? 0
+    : product.price_type === 'weight'
+    ? Number(((product.price * weightGrams) / (product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+    : product.price
+
+  const subtotal = Number((unitOrWeightPrice * quantity).toFixed(2))
+
   const handleAdd = () => {
+    const weightTag = product.price_type === 'weight' ? `${weightGrams}g` : ''
     const combinedPills = [
+      weightTag,
       selectedCookingPoint,
       selectedSide,
       ...selectedPreferences,
@@ -125,8 +125,13 @@ export function ProductModifierModal({
 
     const effectiveComplimentary = Boolean(isStaff && isComplimentary)
 
+    const customizedProduct: Product = {
+      ...product,
+      price: unitOrWeightPrice,
+    }
+
     onConfirm(
-      product,
+      customizedProduct,
       quantity,
       combinedPills,
       notes.trim(),
@@ -136,14 +141,6 @@ export function ProductModifierModal({
     )
     onClose()
   }
-
-  const unitOrWeightPrice = (isStaff && isComplimentary)
-    ? 0
-    : product.price_type === 'weight'
-    ? product.price * (weightGrams / (product.price_unit === 'kg' ? 1000 : 100))
-    : product.price
-
-  const subtotal = unitOrWeightPrice * quantity
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/60 backdrop-blur-sm animate-in fade-in p-0 sm:p-4 select-none" style={{ touchAction: 'manipulation' }}>
@@ -324,7 +321,7 @@ export function ProductModifierModal({
             </div>
           )}
 
-          {/* SECCIÓN 3: PREFERENCIAS & OPCIONES DE PRODUCTO */}
+          {/* SECCIÓN 3: PREFERENCIAS & ACLARACIONES DE COCINA */}
           <div className="space-y-2 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
@@ -336,7 +333,7 @@ export function ProductModifierModal({
                     ? 'Opciones de Cafetería'
                     : isDessert
                     ? 'Opciones del Postre'
-                    : 'Preferencias / Alergias'}
+                    : 'Preferencias / Aclaraciones de Cocina'}
                 </span>
               </label>
               <span className="text-[10px] text-slate-400 font-medium">Opcional múltiple</span>
@@ -362,103 +359,6 @@ export function ProductModifierModal({
                 )
               })}
             </div>
-          </div>
-
-          {/* SECCIÓN 4: MODIFICADORES ESTRUCTURADOS (CERO TEXTO LIBRE) */}
-          <div className="space-y-2.5 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-                <Edit3 className="w-3.5 h-3.5 text-slate-600" />
-                <span>
-                  {isDrink
-                    ? 'Aclaraciones para Barra'
-                    : isCoffee
-                    ? 'Aclaraciones de Cafetería'
-                    : isDessert
-                    ? 'Aclaraciones de Repostería'
-                    : isMeatOrBurger
-                    ? 'Punto de Cocción y Notas'
-                    : 'Aclaraciones de Cocina'}
-                </span>
-              </label>
-              <span className="text-[10px] text-slate-400 font-medium">Opciones estándar</span>
-            </div>
-
-            {/* Puntos de Cocción (Exclusivo Carnes / Burgers) */}
-            {isMeatOrBurger && (
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">Término de la carne / Cocción:</span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {['Poco hecha', 'Al punto', 'Bien hecha'].map((cookingPoint) => {
-                    const isSelected = notes.includes(cookingPoint)
-                    return (
-                      <button
-                        key={cookingPoint}
-                        type="button"
-                        onClick={() => {
-                          const cleaned = notes
-                            .split(',')
-                            .map(s => s.trim())
-                            .filter(s => !['Poco hecha', 'Al punto', 'Bien hecha'].includes(s))
-                            .join(', ')
-                          if (isSelected) {
-                            setNotes(cleaned)
-                          } else {
-                            setNotes(cleaned ? `${cleaned}, ${cookingPoint}` : cookingPoint)
-                          }
-                        }}
-                        className={`py-2 px-1 rounded-xl text-[11px] font-extrabold transition-all text-center border ${
-                          isSelected
-                            ? 'bg-amber-500 text-slate-950 border-amber-500 font-black shadow-xs ring-1 ring-amber-400'
-                            : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
-                        }`}
-                      >
-                        {cookingPoint}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Exclusiones / Aclaraciones Rápidas contextualizadas */}
-            <div className="space-y-1 pt-1">
-              <span className="text-[10px] uppercase font-extrabold text-slate-500 tracking-wider">
-                {isDrink ? 'Aclaraciones de servicio:' : isCoffee ? 'Detalles de servicio:' : 'Aclaraciones de Cocina:'}
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {quickNotesList.map((quickNote) => {
-                  const isIncluded = notes.toLowerCase().includes(quickNote.toLowerCase())
-                  return (
-                    <button
-                      key={quickNote}
-                      type="button"
-                      onClick={() => {
-                        if (isIncluded) {
-                          setNotes(prev =>
-                            prev
-                              .split(',')
-                              .map(s => s.trim())
-                              .filter(s => s.toLowerCase() !== quickNote.toLowerCase())
-                              .join(', ')
-                          )
-                        } else {
-                          setNotes(prev => (prev ? `${prev}, ${quickNote}` : quickNote))
-                        }
-                      }}
-                      className={`px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 border ${
-                        isIncluded
-                          ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs font-black ring-1 ring-amber-400'
-                          : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
-                      }`}
-                    >
-                      {isIncluded && <Check className="w-3 h-3 stroke-[3]" />}
-                      <span>{quickNote}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
 
             {/* Aviso Operativo de Paridad Analógica */}
             <div className="mt-2 p-2 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 leading-tight flex items-start gap-1.5">
@@ -468,6 +368,33 @@ export function ProductModifierModal({
               </span>
             </div>
           </div>
+
+          {/* SECCIÓN: PRODUCTO AL PESO (SI APLICA) */}
+          {product.price_type === 'weight' && (
+            <div className="space-y-2 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                  <Scale className="w-3.5 h-3.5 text-blue-700" />
+                  <span>Peso Real en Báscula ({product.price_unit === 'kg' ? 'Kg' : '100g'})</span>
+                </label>
+                <span className="text-xs font-black text-blue-900">
+                  {formatCurrency(product.price)} / {product.price_unit || '100g'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="50"
+                  step="50"
+                  value={weightGrams}
+                  onChange={(e) => setWeightGrams(Math.max(50, Number(e.target.value) || 50))}
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-blue-700"
+                />
+                <span className="text-xs font-black text-slate-600">gramos</span>
+              </div>
+            </div>
+          )}
 
           {/* SECCIÓN 5: PASE DE COCINA (TIEMPOS DE MARCHA - EXCLUSIVO PERSONAL DE SALA / MOZO) */}
           {isStaff && (
@@ -520,32 +447,6 @@ export function ProductModifierModal({
             </div>
           )}
 
-          {/* SECCIÓN 6: PRODUCTO AL PESO (SI APLICA) */}
-          {product.price_type === 'weight' && (
-            <div className="space-y-2 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-                  <Scale className="w-3.5 h-3.5 text-blue-700" />
-                  <span>Peso Real en Báscula ({product.price_unit === 'kg' ? 'Kg' : '100g'})</span>
-                </label>
-                <span className="text-xs font-black text-blue-900">
-                  {formatCurrency(product.price)} / {product.price_unit || '100g'}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="50"
-                  step="50"
-                  value={weightGrams}
-                  onChange={(e) => setWeightGrams(Math.max(50, Number(e.target.value) || 50))}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-extrabold text-sm focus:outline-none focus:ring-2 focus:ring-blue-700"
-                />
-                <span className="text-xs font-black text-slate-600">gramos</span>
-              </div>
-            </div>
-          )}
 
           {/* SECCIÓN 7: INVITACIÓN DE LA CASA (CORTESÍA - EXCLUSIVO MOZO) Y CANTIDAD */}
           <div className={`flex items-center pt-2 border-t border-slate-200 gap-2 ${isStaff ? 'justify-between' : 'justify-end'}`}>

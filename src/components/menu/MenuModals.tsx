@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Bell, X, Check, Sparkles } from 'lucide-react'
-import { Product, Category, Restaurant, CartItem, Order, OrderStatus } from '@/types/database.types'
+import { Product, Category, Restaurant, CartItem, Order, OrderStatus, CourseType } from '@/types/database.types'
 import { ProductModifierModal } from '@/components/comandero/ProductModifierModal'
 import { Product3DModal } from '@/components/menu/Product3DModal'
 import { CartDrawer } from '@/components/menu/CartDrawer'
@@ -55,7 +55,15 @@ interface MenuModalsProps {
   serviceRequestedToast: string | null
   inSituFeedbackToast: string | null
   setInSituFeedbackToast: (t: string | null) => void
-  onAddCustomized: (product: Product, quantity: number, selectedPills: string[], notes: string) => void
+  onAddCustomized: (
+    product: Product,
+    quantity: number,
+    selectedPills: string[],
+    notes: string,
+    course?: CourseType,
+    isComplimentary?: boolean,
+    weightGrams?: number
+  ) => void
   onRequestMicroService: (serviceName: string) => void
   onBillRequested: () => void
   onOpenSobremesa?: () => void
