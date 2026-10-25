@@ -193,6 +193,7 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
               setSessionId(data.session_token)
               localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, data.session_token)
             } else {
+              resetPaidOrderSession()
               localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
               ensureServerSession()
             }
@@ -208,6 +209,7 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
               setSessionId(data.session_token)
               localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, data.session_token)
             } else {
+              resetPaidOrderSession()
               ensureServerSession()
             }
           })
@@ -216,7 +218,57 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
           })
       }
     }
-  }, [slug, tableNumber, urlSession])
+  }, [slug, tableNumber, urlSession, resetPaidOrderSession])
+
+  // Escuchar evento de liberación de mesa para resetear inmediatamente el estado del comensal
+  useEffect(() => {
+    const handleFreed = (e: any) => {
+      const freedTbl = e.detail?.tableNumber ?? e.detail?.table_number
+      if (freedTbl?.toString() === tableNumber?.toString()) {
+        resetPaidOrderSession()
+        setIsOrderPaid(false)
+        setIsTablePaid(false)
+        setIsPaidBannerDismissed(false)
+        setIsReviewBoosterDismissed(false)
+        setHasRequestedBill(false)
+        hasRequestedBillRef.current = false
+        userRequestedBillTimeRef.current = null
+        if (e.detail?.new_session_id) {
+          setSessionId(e.detail.new_session_id)
+          try {
+            localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, e.detail.new_session_id)
+          } catch (_) {}
+        } else {
+          setSessionId(null)
+          try {
+            localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
+          } catch (_) {}
+          fetch('/api/tables', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug, table_number: tableNumber, action: 'start_session' }),
+          })
+            .then(r => r.json())
+            .then(startData => {
+              if (startData?.session_token) {
+                setSessionId(startData.session_token)
+                try {
+                  localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, startData.session_token)
+                } catch (_) {}
+              }
+            })
+            .catch(() => {})
+        }
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('fluxo_table_freed', handleFreed)
+      return () => {
+        window.removeEventListener('fluxo_table_freed', handleFreed)
+      }
+    }
+  }, [slug, tableNumber, resetPaidOrderSession])
 
   return {
     tableNumber,

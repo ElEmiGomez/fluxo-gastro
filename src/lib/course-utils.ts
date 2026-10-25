@@ -1023,14 +1023,25 @@ export function areAllKitchenCoursesCompleted(order: Order): boolean {
   if (['cancelled', 'paid'].includes(order.status)) return true
   if (isDrinkOnlyOrder(order)) return true
 
+  const items = order.order_items || []
+  if (items.length === 0) {
+    // Patrón Zero-Flicker: Si la comanda está activa en cocina pero sus ítems aún se están hidratando,
+    // NO debe considerarse completada (evita que desaparezca temporalmente del KDS por race condition de red).
+    return order.status === 'delivered'
+  }
+
   const hasStarters = orderHasStarters(order)
-  const startersDone = !hasStarters || areOrderStartersReady(order) || areOrderStartersServed(order)
+  const startersDone = !hasStarters || areOrderStartersServed(order)
 
   const hasMains = orderHasMains(order)
-  const mainsDone = !hasMains || areOrderMainsReady(order) || areOrderMainsServed(order)
+  const mainsDone = !hasMains || areOrderMainsServed(order)
 
   const hasDesserts = orderHasDesserts(order)
-  const dessertsDone = !hasDesserts || isOrderDessertsReady(order) || areOrderDessertsServed(order)
+  const dessertsDone = !hasDesserts || areOrderDessertsServed(order)
+
+  if (order.status === 'delivered' && (!hasDesserts || dessertsDone)) {
+    return true
+  }
 
   return startersDone && mainsDone && dessertsDone
 }

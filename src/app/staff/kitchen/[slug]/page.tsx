@@ -32,7 +32,9 @@ import {
   isDessertReady,
   isDessertServed,
   orderHasStarters,
+  areOrderStartersReady,
   areOrderMainsFired,
+  areOrderMainsReady,
   hydrateOrderItemsWithCatalog,
   areAllKitchenCoursesCompleted,
   resolveCatalogProductForItem,
@@ -60,6 +62,7 @@ export default function KitchenKDSPage() {
   const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
   const recentMutationsRef = useRef<Map<string, { status?: OrderStatus; order?: Order; until: number }>>(new Map())
   const mutationLockUntilRef = useRef<Map<string, number>>(new Map())
+  const fetchRequestIdRef = useRef<number>(0)
 
   // Toggle de Pantalla Completa con 1 Toque
   const toggleFullscreen = () => {
@@ -120,14 +123,30 @@ export default function KitchenKDSPage() {
 
   // 2. Sincronización con el servidor (Single Source of Truth - PostgreSQL)
   const fetchServerOrders = useCallback(async () => {
+    const reqId = ++fetchRequestIdRef.current
     try {
       const res = await fetch(`/api/orders?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
+      if (reqId !== fetchRequestIdRef.current) {
+        return // Descartar respuesta desactualizada si ya se disparó una petición más reciente
+      }
       if (res.ok) {
         const data = await res.json()
+        if (reqId !== fetchRequestIdRef.current) return
         if (Array.isArray(data.orders)) {
           const rawOrders: Order[] = data.orders || []
           const hydratedOrders: Order[] = rawOrders.map((o: Order) => {
             const cached = prevOrdersMapRef.current.get(o.id)
+            const mut = recentMutationsRef.current.get(o.id)
+            const lockUntil = mutationLockUntilRef.current.get(o.id) || 0
+            const isMutActive = Boolean((mut && Date.now() < mut.until) || Date.now() < lockUntil)
+
+            let effectiveOrdStatus = o.status
+            if (isMutActive && mut?.status) {
+              effectiveOrdStatus = mut.status
+            } else if (o.status === 'pending_validation' && cached?.status && cached.status !== 'pending_validation') {
+              effectiveOrdStatus = cached.status
+            }
+
             const mergedOrderNotes = mergeItemNotes((o as any).notes, (cached as any)?.notes)
             const rawItems = (o.order_items && o.order_items.length > 0)
               ? o.order_items
@@ -140,6 +159,7 @@ export default function KitchenKDSPage() {
             )
             return {
               ...o,
+              status: effectiveOrdStatus,
               notes: mergedOrderNotes,
               order_items: hydratedItems,
             }
@@ -150,16 +170,12 @@ export default function KitchenKDSPage() {
               return false
             }
 
-            // Bloque 3.2: En cuanto todas las fases de cocina de una comanda hayan sido completadas o entregadas,
-            // el ticket desaparece automáticamente de "En Marcha" y "Todas" del monitor de Cocina.
-            if (areAllKitchenCoursesCompleted(o)) {
+            // Bloque 3.2: Solo si tiene items conocidos y ya se completaron todas las fases de cocina, se descarta.
+            const hasKnownItems = Boolean(o.order_items && o.order_items.length > 0)
+            if (hasKnownItems && areAllKitchenCoursesCompleted(o)) {
               return false
             }
 
-            // Patrón Zero-Flicker (AGENTS.md):
-            // Si la orden está en estado elegible de cocina, NUNCA se descarta si sus order_items
-            // están vacíos temporalmente (race condition de red). Solo se descarta si contiene ÚNICAMENTE bebidas.
-            const hasKnownItems = Boolean(o.order_items && o.order_items.length > 0)
             const isDrinksOnly = hasKnownItems && Boolean(o.order_items && o.order_items.every(isDrinkItem))
             if (isDrinksOnly) return false
 
@@ -213,60 +229,84 @@ export default function KitchenKDSPage() {
 
           setOrders(prev => {
             const prevMap = new Map(prev.map(o => [o.id, o]))
-            const reconciled = sorted
-              .map(ord => {
-                const existing = prevMap.get(ord.id) || prevOrdersMapRef.current.get(ord.id)
-                const mut = recentMutationsRef.current.get(ord.id)
-                const lockUntil = mutationLockUntilRef.current.get(ord.id) || 0
-                const isMutActive = Boolean((mut && Date.now() < mut.until) || Date.now() < lockUntil)
+            const map = new Map<string, Order>()
 
-                const mergedOrderNotes = mergeItemNotes(
-                  mergeItemNotes((ord as any).notes, (existing as any)?.notes),
-                  (mut?.order as any)?.notes
-                )
+            sorted.forEach(ord => {
+              const existing = prevMap.get(ord.id) || prevOrdersMapRef.current.get(ord.id)
+              const mut = recentMutationsRef.current.get(ord.id)
+              const lockUntil = mutationLockUntilRef.current.get(ord.id) || 0
+              const isMutActive = Boolean((mut && Date.now() < mut.until) || Date.now() < lockUntil)
 
-                let effectiveItems = (ord.order_items && ord.order_items.length > 0)
-                  ? ord.order_items
-                  : (existing?.order_items || [])
-                if (existing?.order_items && existing.order_items.length > 0 && effectiveItems.length > 0) {
-                  effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
-                }
-                if (isMutActive && mut?.order?.order_items) {
-                  effectiveItems = mergeOrderItemsCourseTags(effectiveItems, mut.order.order_items)
-                }
+              const mergedOrderNotes = mergeItemNotes(
+                mergeItemNotes((ord as any).notes, (existing as any)?.notes),
+                (mut?.order as any)?.notes
+              )
 
-                effectiveItems = hydrateOrderItemsWithCatalog(
-                  effectiveItems,
-                  productsRef.current,
-                  existing?.order_items,
-                  mergedOrderNotes
-                )
+              let effectiveItems = (ord.order_items && ord.order_items.length > 0)
+                ? ord.order_items
+                : (existing?.order_items || [])
+              if (existing?.order_items && existing.order_items.length > 0 && effectiveItems.length > 0) {
+                effectiveItems = mergeOrderItemsCourseTags(effectiveItems, existing.order_items)
+              }
+              if (isMutActive && mut?.order?.order_items) {
+                effectiveItems = mergeOrderItemsCourseTags(effectiveItems, mut.order.order_items)
+              }
 
-                let effectiveStatus = ord.status
-                if (isMutActive && mut?.status) {
-                  effectiveStatus = mut.status
-                } else {
-                  if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
-                    if (orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && (ord.status === 'preparing' || ord.status === 'ready')) {
-                      effectiveStatus = ord.status
-                    } else {
-                      effectiveStatus = 'delivered'
-                    }
-                  } else if (existing?.status === 'ready' && (ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && !areOrderMainsFired({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && !orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems })))) {
-                    effectiveStatus = 'ready'
-                  } else if (existing?.status === 'preparing' && ord.status === 'pending') {
-                    effectiveStatus = 'preparing'
+              effectiveItems = hydrateOrderItemsWithCatalog(
+                effectiveItems,
+                productsRef.current,
+                existing?.order_items,
+                mergedOrderNotes
+              )
+
+              let effectiveStatus = ord.status
+              if (isMutActive && mut?.status) {
+                effectiveStatus = mut.status
+              } else {
+                if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
+                  if (orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && (ord.status === 'preparing' || ord.status === 'ready')) {
+                    effectiveStatus = ord.status
+                  } else {
+                    effectiveStatus = 'delivered'
                   }
+                } else if (existing?.status === 'ready' && (ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && !areOrderMainsFired({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && !orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems })))) {
+                  effectiveStatus = 'ready'
+                } else if (existing?.status === 'preparing' && ord.status === 'pending') {
+                  effectiveStatus = 'preparing'
                 }
+              }
 
-                return {
-                  ...ord,
-                  status: effectiveStatus,
-                  notes: mergedOrderNotes,
-                  order_items: effectiveItems,
-                } as Order
-              })
-              .filter(ord => !areAllKitchenCoursesCompleted(ord))
+              const candidate = {
+                ...ord,
+                status: effectiveStatus,
+                notes: mergedOrderNotes,
+                order_items: effectiveItems,
+              } as Order
+
+              const hasItems = Boolean(candidate.order_items && candidate.order_items.length > 0)
+              if (!hasItems || !areAllKitchenCoursesCompleted(candidate)) {
+                map.set(candidate.id, candidate)
+              }
+            })
+
+            // Preservar comandas activas previas que la red o un GET omitió temporalmente (Zero-Flicker Invariant)
+            prev.forEach(prevOrd => {
+              if (!map.has(prevOrd.id)) {
+                const mut = recentMutationsRef.current.get(prevOrd.id)
+                const lockUntil = mutationLockUntilRef.current.get(prevOrd.id) || 0
+                const isMutActive = Boolean((mut && Date.now() < mut.until) || Date.now() < lockUntil)
+                const hasItems = Boolean(prevOrd.order_items && prevOrd.order_items.length > 0)
+                const isCompleted = hasItems && areAllKitchenCoursesCompleted(prevOrd)
+                const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || isCompleted
+                if (isMutActive || !isTerminal) {
+                  map.set(prevOrd.id, prevOrd)
+                }
+              }
+            })
+
+            const reconciled = Array.from(map.values()).sort(
+              (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            )
 
             const nextFinger = computeKdsFinger(reconciled)
             if (nextFinger === ordersFingerRef.current) {
@@ -528,7 +568,7 @@ export default function KitchenKDSPage() {
   )
 
   const readyOrders = useMemo(
-    () => orders.filter(o => !areAllKitchenCoursesCompleted(o) && o.status === 'ready'),
+    () => orders.filter(o => !areAllKitchenCoursesCompleted(o) && (o.status === 'ready' || areOrderStartersReady(o) || areOrderMainsReady(o) || isOrderDessertsReady(o))),
     [orders]
   )
 

@@ -57,6 +57,7 @@ export function useComanderoData(slug: string) {
   const pendingOrdersWithoutItemsRef = useRef<Map<string, Order>>(new Map())
   const recentTogglesRef = useRef<Map<string, { status: boolean; until: number }>>(new Map())
   const recentMutationsRef = useRef<Map<string, { status?: OrderStatus; order?: Order; until: number }>>(new Map())
+  const syncRequestIdRef = useRef<number>(0)
 
   useEffect(() => {
     productsRef.current = products
@@ -131,12 +132,17 @@ export function useComanderoData(slug: string) {
 
   // 2. Sincronización reactiva desde el servidor (SSOT)
   const syncServerData = useCallback(async () => {
+    const reqId = ++syncRequestIdRef.current
     try {
       const [ordersRes, callsRes, tablesRes] = await Promise.all([
         fetch(`/api/orders?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ orders: [] })),
         fetch(`/api/service-calls?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ calls: [] })),
         fetch(`/api/tables?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ sessions: {} })),
       ])
+
+      if (reqId !== syncRequestIdRef.current) {
+        return // Ignorar respuesta de petición anterior si ya hay otra más nueva en vuelo
+      }
 
       const rawOrders: Order[] = ordersRes.orders || []
 
@@ -265,12 +271,18 @@ export function useComanderoData(slug: string) {
           effectiveStatus = recentMut.status
         } else {
           const isAttendedOrValidated = attendedValidationOrderIdsRef.current.has(ord.id)
-          const hasProgression = (effectiveItems || []).some(it => hasItemProgressionTag(it.notes))
+          const hasProgression =
+            (effectiveItems || []).some(it => hasItemProgressionTag(it.notes)) ||
+            hasItemProgressionTag((ord as any).notes) ||
+            hasItemProgressionTag(mergedOrderNotes)
 
-          if ((isAttendedOrValidated || hasProgression) && ord.status === 'pending_validation') {
-            effectiveStatus = (existing?.status && existing.status !== 'pending_validation')
-              ? existing.status
-              : 'pending'
+          if (ord.status === 'pending_validation') {
+            if (existing?.status && existing.status !== 'pending_validation') {
+              // Invariante Monotónica Anti-Flicker: Si la orden ya había salido de validación, nunca rebotar
+              effectiveStatus = existing.status
+            } else if (isAttendedOrValidated || hasProgression) {
+              effectiveStatus = 'pending'
+            }
           } else if (existing?.status === 'delivered' && ord.status !== 'delivered' && ord.status !== 'paid') {
             if (orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && (ord.status === 'preparing' || ord.status === 'ready')) {
               effectiveStatus = ord.status
@@ -279,12 +291,10 @@ export function useComanderoData(slug: string) {
             }
           } else if (existing?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
-          } else if (existing?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && !orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems })))) {
+          } else if (existing?.status === 'ready' && (ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems }) && !orderHasActiveDesserts({ ...ord, notes: mergedOrderNotes, order_items: effectiveItems })))) {
             effectiveStatus = 'ready'
-          } else if (existing?.status === 'preparing' && (ord.status === 'pending_validation' || ord.status === 'pending')) {
+          } else if (existing?.status === 'preparing' && ord.status === 'pending') {
             effectiveStatus = 'preparing'
-          } else if (existing?.status === 'pending' && ord.status === 'pending_validation') {
-            effectiveStatus = 'pending'
           }
         }
 
@@ -295,10 +305,9 @@ export function useComanderoData(slug: string) {
           order_items: effectiveItems,
         }
 
-        // Si todas las fases están entregadas y la orden no está pagada ni en validación, sellar como 'delivered'
+        // Si todas las fases están entregadas y la orden no está pagada, sellar como 'delivered'
         if (
           candidateOrd.status !== 'paid' &&
-          candidateOrd.status !== 'pending_validation' &&
           areAllOrderCoursesDelivered(candidateOrd)
         ) {
           candidateOrd.status = 'delivered'
@@ -311,10 +320,9 @@ export function useComanderoData(slug: string) {
       currentOrders.forEach(prevOrd => {
         if (!map.has(prevOrd.id)) {
           const isCancelled = prevOrd.status === 'cancelled'
-          const isHandledLocally = attendedValidationOrderIdsRef.current.has(prevOrd.id)
           const pTbl = prevOrd.table_number?.toString() || prevOrd.table?.table_number?.toString()
           const isTableFreed = Boolean(pTbl && (freedTableNumbersRef.current.has(pTbl) || freedTableNumbersRef.current.has(Number(pTbl))))
-          if (!isCancelled && !isHandledLocally && !isTableFreed) {
+          if (!isCancelled && !isTableFreed) {
             map.set(prevOrd.id, prevOrd)
           } else if (isTableFreed) {
             prevOrdersMapRef.current.delete(prevOrd.id)

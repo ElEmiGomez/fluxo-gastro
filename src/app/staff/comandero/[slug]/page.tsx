@@ -22,7 +22,7 @@ import { Product, CartItem, CourseType, DailyMenu, Order, OrderStatus } from '@/
 import { DailyMenuSelectionItem } from '@/components/menu/DailyMenuModal'
 import { PromoConfiguredPayload } from '@/components/menu/PromoConfiguratorModal'
 import { useComanderoData } from '@/hooks/comandero/useComanderoData'
-import { useComanderoActions } from '@/hooks/comandero/useComanderoActions'
+import { useComanderoActions, getStaffHeaders } from '@/hooks/comandero/useComanderoActions'
 import { ComanderoTaskQueue } from '@/components/comandero/ComanderoTaskQueue'
 import { ComanderoTableDetailPanel } from '@/components/comandero/ComanderoTableDetailPanel'
 import { ComanderoCatalogGrid } from '@/components/comandero/ComanderoCatalogGrid'
@@ -354,6 +354,7 @@ export default function WaiterComanderoPage() {
   const pendingDessertsList = useMemo(() => serverOrders.filter(areOrderDessertsPendingWaiter), [serverOrders])
 
   const handleServeDrinks = useCallback(async (orderId: string) => {
+    attendedValidationOrderIdsRef.current.add(orderId)
     setServingDrinkOrderIds(prev => new Set(prev).add(orderId))
 
     let updatedOrderForRef: Order | null = null
@@ -397,7 +398,8 @@ export default function WaiterComanderoPage() {
     try {
       const res = await fetch('/api/orders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: getStaffHeaders(slug),
         body: JSON.stringify({
           slug,
           orderId,

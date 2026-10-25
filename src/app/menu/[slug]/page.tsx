@@ -233,13 +233,25 @@ function DinerMenuContent() {
     const handleLoyaltyRefresh = () => {
       loyalty.refresh()
     }
+    const handleTableFreed = (e: any) => {
+      const freedTbl = e.detail?.tableNumber ?? e.detail?.table_number
+      if (freedTbl?.toString() === tableNumber?.toString()) {
+        resetPaidOrderSession()
+        setIsTablePaid(false)
+        setIsOrderPaid(false)
+        setIsPaidBannerDismissed(false)
+        setIsReviewBoosterDismissed(false)
+        setHasRequestedBill(false)
+        loyalty.refresh()
+      }
+    }
     window.addEventListener('fluxo_loyalty_refresh', handleLoyaltyRefresh)
-    window.addEventListener('fluxo_table_freed', handleLoyaltyRefresh)
+    window.addEventListener('fluxo_table_freed', handleTableFreed)
     return () => {
       window.removeEventListener('fluxo_loyalty_refresh', handleLoyaltyRefresh)
-      window.removeEventListener('fluxo_table_freed', handleLoyaltyRefresh)
+      window.removeEventListener('fluxo_table_freed', handleTableFreed)
     }
-  }, [loyalty])
+  }, [loyalty, tableNumber, resetPaidOrderSession, setIsTablePaid, setIsOrderPaid, setIsPaidBannerDismissed, setIsReviewBoosterDismissed, setHasRequestedBill])
 
   // 6. Persistencia y recuperación del carrito en localStorage
   useEffect(() => {

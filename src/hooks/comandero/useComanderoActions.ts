@@ -49,7 +49,7 @@ interface UseComanderoActionsParams {
 
 const MUTATION_LOCK_MS = 4500
 
-const getStaffHeaders = (slug?: string): Record<string, string> => {
+export const getStaffHeaders = (slug?: string): Record<string, string> => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-staff-pin': '1234',
@@ -140,10 +140,13 @@ export function useComanderoActions({
     if (deliveringOrderIds.has(orderId)) return
 
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
+    attendedValidationOrderIdsRef.current.add(orderId)
     const targetOrder = serverOrders.find(o => o.id === orderId)
-    const expectedVersion = targetOrder?.version
+    const deliveredOrder: Order | undefined = targetOrder
+      ? { ...targetOrder, status: 'delivered' }
+      : undefined
 
-    lockOrderMutation(orderId, { status: 'delivered' })
+    lockOrderMutation(orderId, { order: deliveredOrder, status: 'delivered' })
 
     setServerOrders(prev =>
       prev.map(o => (o.id === orderId ? { ...o, status: 'delivered' } : o))
@@ -162,7 +165,6 @@ export function useComanderoActions({
           orderId,
           status: 'delivered',
           table_number: tableNum,
-          expected_version: expectedVersion,
           actor_type: 'waiter',
         }),
       })
@@ -237,10 +239,16 @@ export function useComanderoActions({
       } catch (_) {}
     }
 
-    lockOrderMutation(orderId, { status: 'pending' })
-
     const targetOrder = serverOrders.find(o => o.id === orderId)
-    const expectedVersion = targetOrder?.version
+    const pendingOrder: Order | undefined = targetOrder
+      ? { ...targetOrder, status: 'pending' }
+      : undefined
+
+    lockOrderMutation(orderId, { order: pendingOrder, status: 'pending' })
+
+    setServerOrders(prev =>
+      prev.map(o => (o.id === orderId ? { ...o, status: 'pending' } : o))
+    )
 
     try {
       const res = await fetch('/api/orders', {
@@ -253,7 +261,6 @@ export function useComanderoActions({
           status: 'pending',
           table_number: tableNum,
           tableNumber: tableNum,
-          expected_version: expectedVersion,
           actor_type: 'waiter',
         }),
       })
@@ -277,12 +284,10 @@ export function useComanderoActions({
           })
         )
       } else {
-        releaseOrderMutation(orderId)
         await syncServerData()
       }
     } catch (e) {
       console.error('Error de red al validar comanda hacia cocina:', e)
-      releaseOrderMutation(orderId)
       await syncServerData()
     } finally {
       setValidatingOrderIds(prev => {
@@ -296,8 +301,6 @@ export function useComanderoActions({
   // Descartar/cancelar comanda de validación
   const handleCancelValidationOrder = async (orderId: string, tableNum?: number | string) => {
     attendedValidationOrderIdsRef.current.add(orderId)
-    const targetOrder = serverOrders.find(o => o.id === orderId)
-    const expectedVersion = targetOrder?.version
 
     try {
       const res = await fetch('/api/orders', {
@@ -309,7 +312,6 @@ export function useComanderoActions({
           orderId,
           status: 'cancelled',
           table_number: tableNum,
-          expected_version: expectedVersion,
           actor_type: 'waiter',
         }),
       })
@@ -326,6 +328,7 @@ export function useComanderoActions({
 
   // Anular plato marchado
   const handleCancelSingleOrder = async (orderId: string, reason: string) => {
+    attendedValidationOrderIdsRef.current.add(orderId)
     try {
       await fetch('/api/orders', {
           method: 'PATCH',
@@ -348,6 +351,9 @@ export function useComanderoActions({
       o => o.status === 'pending' || o.status === 'ready' || o.status === 'preparing' || o.status === 'delivered'
     )
     const fireableOrderIds = new Set(fireableOrders.map(o => o.id))
+    fireableOrders.forEach(o => {
+      attendedValidationOrderIdsRef.current.add(o.id)
+    })
 
     setServerOrders(prev =>
       prev.map(o => {
@@ -394,6 +400,7 @@ export function useComanderoActions({
 
   // Marchar postres retenidos de una orden específica a la cocina (Pase 3 dulce)
   const handleFireOrderDesserts = async (orderId: string) => {
+    attendedValidationOrderIdsRef.current.add(orderId)
     let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>
       prev.map(o => {
@@ -443,6 +450,7 @@ export function useComanderoActions({
 
   // Entregar postres retenidos de una orden directamente por el mozo
   const handleDeliverOrderDessertsDirect = async (orderId: string) => {
+    attendedValidationOrderIdsRef.current.add(orderId)
     let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>
       prev.map(o => {
@@ -510,6 +518,9 @@ export function useComanderoActions({
       return desserts.length > 0 && desserts.some(d => !isDessertReady(d))
     })
     const dessertOrderIds = new Set(dessertOrders.map(o => o.id))
+    dessertOrders.forEach(o => {
+      attendedValidationOrderIdsRef.current.add(o.id)
+    })
 
     setServerOrders(prev =>
       prev.map(o => {
@@ -564,6 +575,9 @@ export function useComanderoActions({
       return desserts.length > 0 && desserts.some(d => !isDessertReady(d))
     })
     const dessertOrderIds = new Set(dessertOrders.map(o => o.id))
+    dessertOrders.forEach(o => {
+      attendedValidationOrderIdsRef.current.add(o.id)
+    })
 
     setServerOrders(prev =>
       prev.map(o => {
@@ -782,7 +796,9 @@ export function useComanderoActions({
         window.dispatchEvent(new CustomEvent('fluxo_table_freed', { detail: { tableNumber: tableNum, slug } }))
         const bc = new BroadcastChannel('fluxo_menu_channel')
         bc.postMessage({ type: 'table_freed', tableNumber: tableNum, slug })
-        bc.close()
+        setTimeout(() => {
+          try { bc.close() } catch (_) {}
+        }, 1000)
       } catch (_) {}
     }
 
@@ -934,6 +950,7 @@ export function useComanderoActions({
   }
 
   const handleDeliverStarters = async (orderId: string) => {
+    attendedValidationOrderIdsRef.current.add(orderId)
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
     let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>
@@ -994,6 +1011,7 @@ export function useComanderoActions({
   }
 
   const handleDeliverMains = async (orderId: string) => {
+    attendedValidationOrderIdsRef.current.add(orderId)
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
     let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>
@@ -1054,6 +1072,7 @@ export function useComanderoActions({
   }
 
   const handleFireMains = async (orderId: string) => {
+    attendedValidationOrderIdsRef.current.add(orderId)
     let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>
       prev.map(o => {
@@ -1106,6 +1125,7 @@ export function useComanderoActions({
   }
 
   const handleDeliverDesserts = async (orderId: string) => {
+    attendedValidationOrderIdsRef.current.add(orderId)
     setDeliveringOrderIds(prev => new Set(prev).add(orderId))
     let updatedOrderForRef: Order | null = null
     setServerOrders(prev =>

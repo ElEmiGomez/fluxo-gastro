@@ -80,6 +80,7 @@ export function useMenuOrderSync({
   })
   const prevTableOrdersMapRef = useRef<Map<string, any>>(new Map())
   const hasHadActiveOrderInThisSessionRef = useRef<boolean>(false)
+  const checkRequestIdRef = useRef<number>(0)
 
   const productsListRef = useRef<Product[]>(
     products && products.length > 0 ? products : (MOCK_PRODUCTS[slug] || MOCK_PRODUCTS['burger-gourmet'] || [])
@@ -263,17 +264,6 @@ export function useMenuOrderSync({
     }
 
     const triggerDebouncedCheck = () => {
-      if (isPaidLockActive()) {
-        if (pollInterval) {
-          clearInterval(pollInterval)
-          pollInterval = null
-        }
-        if (debounceTimer) {
-          clearTimeout(debounceTimer)
-          debounceTimer = null
-        }
-        return
-      }
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
         checkOrderStatus()
@@ -281,30 +271,47 @@ export function useMenuOrderSync({
     }
 
     const checkOrderStatus = async () => {
-      if (isPaidLockActive()) {
-        if (pollInterval) {
-          clearInterval(pollInterval)
-          pollInterval = null
-        }
-        setTableOrderStatus(null)
-        setTableOrders([])
-        if (!isTablePaidRef.current) {
-          setIsTablePaidRef.current(true)
-          setIsTablePaid(true)
-        }
-        return
-      }
+      const currentCheckId = ++checkRequestIdRef.current
       if (isChecking || isFixedMenu) {
         if (!isFixedMenu) hasQueuedCheck = true
         return
       }
       isChecking = true
       try {
+        if (isPaidLockActive()) {
+          // Si la mesa está en estado post-pago, verificamos continuamente si el personal la liberó
+          const tablesRes = await fetch(`/api/tables?slug=${slug}&table=${tableNumber}&_t=${Date.now()}`, { cache: 'no-store' })
+            .then(r => r.json())
+            .catch(() => ({ sessions: {} }))
+          if (currentCheckId !== checkRequestIdRef.current) return
+          const sessions = tablesRes.sessions || {}
+          const thisTableSession = sessions[tableNumber] || sessions[String(tableNumber)] || (!isNaN(Number(tableNumber)) ? sessions[Number(tableNumber)] : undefined)
+          const isTableExplicitlyFreed = Boolean(
+            !thisTableSession ||
+            thisTableSession.status === 'free' ||
+            thisTableSession.status === 'closed' ||
+            (thisTableSession.session_id && sessionIdRef.current && thisTableSession.session_id !== sessionIdRef.current)
+          )
+          if (isTableExplicitlyFreed) {
+            handleLocalTableFreed({ detail: { tableNumber, new_session_id: thisTableSession?.session_id } })
+            return
+          }
+          setTableOrderStatus(null)
+          setTableOrders([])
+          if (!isTablePaidRef.current) {
+            setIsTablePaidRef.current(true)
+            setIsTablePaid(true)
+          }
+          return
+        }
+
         const [ordersRes, callsRes, tablesRes] = await Promise.all([
           fetch(`/api/orders?slug=${slug}&table=${tableNumber}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ orders: [] })),
           fetch(`/api/service-calls?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ calls: [] })),
           fetch(`/api/tables?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ sessions: {} })),
         ])
+
+        if (currentCheckId !== checkRequestIdRef.current) return
 
         if (ordersRes?.product_availability) {
           setProductsRef.current(prev => {
@@ -324,7 +331,7 @@ export function useMenuOrderSync({
         }
 
         const sessions = tablesRes.sessions || {}
-        const thisTableSession = sessions[tableNumber]
+        const thisTableSession = sessions[tableNumber] || sessions[String(tableNumber)] || (!isNaN(Number(tableNumber)) ? sessions[Number(tableNumber)] : undefined)
         if (thisTableSession?.session_id) {
           setSessionIdRef.current(thisTableSession.session_id)
         }
@@ -403,7 +410,10 @@ export function useMenuOrderSync({
         })
 
         const isTableExplicitlyFreed = Boolean(
-          !thisTableSession || thisTableSession.status === 'free' || thisTableSession.status === 'closed'
+          !thisTableSession ||
+          thisTableSession.status === 'free' ||
+          thisTableSession.status === 'closed' ||
+          (thisTableSession.session_id && sessionIdRef.current && thisTableSession.session_id !== sessionIdRef.current)
         )
 
         serverOrdersList.forEach(o => {
@@ -474,12 +484,12 @@ export function useMenuOrderSync({
                 o.table_id === `table-${tableNumber}`
               )
               if (!matchesTable || o.status !== 'paid') return false
-              if (trackedOrderIds.has(o.id)) {
-                return true
-              }
               const paidAt = new Date(o.updated_at || o.created_at || 0).getTime()
               if (dismissedAt > 0 && paidAt > 0 && paidAt <= dismissedAt) {
                 return false
+              }
+              if (trackedOrderIds.has(o.id)) {
+                return true
               }
               if (currentSessionId && o.session_token && o.session_token !== currentSessionId && (!thisTableSession?.session_id || o.session_token !== thisTableSession.session_id)) {
                 return false
@@ -518,39 +528,9 @@ export function useMenuOrderSync({
 
         if (isTableExplicitlyFreed && activeTableOrders.length === 0) {
           // La mesa fue liberada por el personal para el siguiente cliente: limpiar carteles post-pago
-          resetPaidOrderSessionRef.current?.()
-          setIsTablePaidRef.current(false)
-          setIsTablePaid(false)
-          setIsOrderPaidRef.current?.(false)
-          setIsPaidBannerDismissedRef.current(false)
-          setIsPaidBannerDismissed(false)
-          setIsReviewBoosterDismissedRef.current(false)
-          setIsReviewBoosterDismissed(false)
-
-          hasHadActiveOrderInThisSessionRef.current = false
-          prevTableOrdersMapRef.current.clear()
-          setTableOrderStatus(null)
-          setTableOrders([])
-          setTableTotalAmount(0)
-          setHasRequestedBill(false)
-          hasRequestedBillRef.current = false
-          userRequestedBillTimeRef.current = null
-          if (thisTableSession?.session_id) {
-            setSessionIdRef.current(thisTableSession.session_id)
-            setSessionId(thisTableSession.session_id)
-          }
-          if (typeof window !== 'undefined') {
-            try {
-              sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now()))
-              sessionStorage.removeItem(`fluxo_active_order_ids_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_paid_lock_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_table_paid_lock_${slug}_${tableNumber}`)
-              sessionStorage.removeItem(`fluxo_paid_order_${slug}_${tableNumber}`)
-            } catch (_) {}
+          if (isTablePaid || isPaidLockActive()) {
+            handleLocalTableFreed({ detail: { tableNumber, new_session_id: thisTableSession?.session_id } })
+            return
           }
         }
 
@@ -640,7 +620,6 @@ export function useMenuOrderSync({
     if (isPaidLockActive()) {
       setTableOrderStatus(null)
       setTableOrders([])
-      return
     }
 
     checkOrderStatus()
@@ -705,9 +684,13 @@ export function useMenuOrderSync({
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'table_sessions' }, (payload: any) => {
           const newSession = payload?.new
-          const matchesTable = newSession && newSession.table_number?.toString() === tableNumber?.toString()
-          if (matchesTable && (newSession.status === 'closed' || newSession.status === 'free')) {
-            handleLocalTableFreed({ detail: { tableNumber, new_session_id: newSession.session_token || newSession.session_id } })
+          const oldSession = payload?.old
+          const matchesTable = (
+            (newSession && newSession.table_number?.toString() === tableNumber?.toString()) ||
+            (oldSession && oldSession.table_number?.toString() === tableNumber?.toString())
+          )
+          if (matchesTable && (payload?.eventType === 'DELETE' || newSession?.status === 'closed' || newSession?.status === 'free')) {
+            handleLocalTableFreed({ detail: { tableNumber, new_session_id: newSession?.session_token || newSession?.session_id } })
             return
           }
           if (isPaidLockActive()) return
@@ -814,6 +797,28 @@ export function useMenuOrderSync({
           try {
             localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, e.detail.new_session_id)
           } catch (_) {}
+        } else {
+          setSessionIdRef.current(null)
+          setSessionId(null)
+          try {
+            localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
+          } catch (_) {}
+          fetch('/api/tables', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug, table_number: tableNumber, action: 'start_session' }),
+          })
+            .then(r => r.json())
+            .then(startData => {
+              if (startData?.session_token) {
+                setSessionIdRef.current(startData.session_token)
+                setSessionId(startData.session_token)
+                try {
+                  localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, startData.session_token)
+                } catch (_) {}
+              }
+            })
+            .catch(() => {})
         }
 
         if (typeof window !== 'undefined') {
