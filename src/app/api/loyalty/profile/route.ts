@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     const email = searchParams.get('email')
     const phone = searchParams.get('phone')
     const tableNumber = searchParams.get('table') || searchParams.get('tableNumber')
+    const lastPaidSessionTotal = searchParams.get('lastPaidSessionTotal') || searchParams.get('lastPaid')
     const targetIdentifier = (email || phone || '').trim()
 
     if (!targetIdentifier) {
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
         email: profile.email,
         phone: profile.phone,
         tableNumber,
+        lastPaidSessionTotal: lastPaidSessionTotal ? Number(lastPaidSessionTotal) : undefined,
       })
     }
 
@@ -108,6 +110,16 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({
         success: true,
         message: `Todas las cuentas de fidelización y sellos han sido reseteadas para ${slug}`,
+      })
+    }
+
+    const tableNumber = searchParams.get('table') || searchParams.get('tableNumber') || body.tableNumber || body.table
+    if (tableNumber && (action === 'leave_table' || action === 'logout')) {
+      const { clearTableLoyaltyMembers } = await import('@/lib/supabase/repositories/loyalty.repository')
+      await clearTableLoyaltyMembers(slug, tableNumber)
+      return NextResponse.json({
+        success: true,
+        message: `Comensal desconectado de la mesa ${tableNumber}`,
       })
     }
 

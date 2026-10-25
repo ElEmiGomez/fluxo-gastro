@@ -608,6 +608,8 @@ function DinerMenuContent() {
           onLogoPointerUp={handleLogoPointerUp}
           onLogoTouchStart={handleLogoTouchStart}
           onLogoTouchMove={handleLogoTouchMove}
+          loyaltyProfile={loyalty.profile}
+          onLogout={loyalty.logout}
           loyaltyPoints={loyalty.profile?.available_points}
           loyaltyMode={loyalty.settings?.mode || 'stamps'}
           stampsCount={loyalty.stampsCount}

@@ -69,16 +69,16 @@ export function GoogleReviewBooster({
     setSelectedRating(stars)
     triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
 
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+      localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+    }
+
     if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
       try {
         await onClaimLoyaltyBonus()
       } catch (e) {
         console.warn('[GoogleReviewBooster] Error reclamando bonus:', e)
-      }
-    } else if (!loyaltyProfile) {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-        localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
       }
     }
 
@@ -223,16 +223,16 @@ export function GoogleReviewBooster({
           target="_blank"
           rel="noopener noreferrer"
           onClick={async () => {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+              localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+            }
+
             if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
               try {
                 await onClaimLoyaltyBonus()
               } catch (e) {
                 console.warn('[GoogleReviewBooster] Error reclamando bonus:', e)
-              }
-            } else if (!loyaltyProfile) {
-              if (typeof window !== 'undefined') {
-                sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-                localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
               }
             }
             onReviewOpened?.()

@@ -259,7 +259,7 @@ export async function getLoyaltyProfile(slug: string, identifier: string): Promi
             : (prevMem?.unlocked_rewards_count ?? 0),
           total_stamps_earned: data.total_stamps_earned !== undefined && data.total_stamps_earned !== null
             ? Number(data.total_stamps_earned)
-            : (prevMem?.total_stamps_earned ?? (data.stamps_count ? Number(data.stamps_count) : 0)),
+            : (prevMem?.total_stamps_earned ?? (data.stamps_count ? Number(data.stamps_count) : (Boolean(data.google_review_bonus_awarded) ? 1 : 0))),
           created_at: data.created_at,
           updated_at: data.updated_at,
         }
@@ -285,7 +285,9 @@ export async function getLoyaltyProfile(slug: string, identifier: string): Promi
     ...profile,
     held_points: held,
     available_points: available,
-    stamps_count: profile.stamps_count ?? (Boolean(profile.google_review_bonus_awarded) ? 1 : 0),
+    stamps_count: profile.stamps_count !== undefined && profile.stamps_count !== null
+      ? profile.stamps_count
+      : (Boolean(profile.google_review_bonus_awarded) ? 1 : 0),
     stamps_target: settings.target_stamps || profile.stamps_target || 5,
     unlocked_rewards_count: profile.unlocked_rewards_count ?? 0,
     total_stamps_earned: profile.total_stamps_earned ?? (profile.stamps_count ?? 0),
@@ -508,14 +510,23 @@ export async function registerOrGetLoyaltyProfile(
       totalOrdersInWindow = res.totalOrdersInWindow ?? 0
     }
 
+    let profile = await getLoyaltyProfile(slug, normEmail)
+    const isProfileUncredited = !profile || (
+      (profile.stamps_count ?? 0) === 0 &&
+      (profile.total_stamps_earned ?? 0) === 0 &&
+      profile.total_points === 0
+    )
+
     // Fallback de contingencia: únicamente cuando la cuenta ya fue pagada (!hasUnpaidActiveOrders),
     // no se localizaron órdenes en memoria/BD (totalOrdersInWindow === 0) y el cliente envía lastPaidSessionTotal
+    // y el perfil aún no tiene sellos o puntos acreditados.
     if (
       retroactivePoints === 0 &&
       !hasUnpaidActiveOrders &&
       totalOrdersInWindow === 0 &&
       params.lastPaidSessionTotal &&
-      params.lastPaidSessionTotal > 0
+      params.lastPaidSessionTotal > 0 &&
+      isProfileUncredited
     ) {
       retroactivePoints = Math.max(0, Math.floor(Number(params.lastPaidSessionTotal) || 0))
     }
@@ -523,13 +534,17 @@ export async function registerOrGetLoyaltyProfile(
     const settings = await getLoyaltySettings(slug)
     const isStampsMode = settings?.mode === 'stamps'
     const targetStamps = settings?.target_stamps || 5
-    const hasOrderToCredit = Boolean(
+    const hasUncreditedOrder = Boolean(
       uncreditedOrdersToMark.length > 0 ||
-      (params.lastPaidSessionTotal && params.lastPaidSessionTotal > 0) ||
       (params.tableNumber && retroactivePoints > 0)
     )
-
-    let profile = await getLoyaltyProfile(slug, normEmail)
+    const needsFallbackOrderCredit = Boolean(
+      !hasUncreditedOrder &&
+      params.lastPaidSessionTotal &&
+      params.lastPaidSessionTotal > 0 &&
+      isProfileUncredited
+    )
+    const hasOrderToCredit = hasUncreditedOrder || needsFallbackOrderCredit
     if (profile) {
       let hasChanges = false
       if (params.name && params.name.trim() !== '' && profile.name !== normName) {
@@ -588,8 +603,14 @@ export async function registerOrGetLoyaltyProfile(
       }
 
       if (isStampsMode && (!profile.stamps_count || profile.stamps_count === 0)) {
-        if (profile.total_points > 0 || retroactivePoints > 0 || profile.google_review_bonus_awarded) {
-          profile.stamps_count = (profile.google_review_bonus_awarded && (profile.total_points > 0 || retroactivePoints > 0)) ? 2 : 1
+        const hasOrder = Boolean(
+          hasOrderToCredit ||
+          profile.total_points > 0 ||
+          retroactivePoints > 0 ||
+          (params.lastPaidSessionTotal && params.lastPaidSessionTotal > 0)
+        )
+        if (hasOrder || profile.google_review_bonus_awarded) {
+          profile.stamps_count = (profile.google_review_bonus_awarded && hasOrder) ? 2 : 1
           profile.total_stamps_earned = Math.max(profile.stamps_count, profile.total_stamps_earned || 1)
           profile.stamps_target = targetStamps
           hasChanges = true
@@ -717,6 +738,23 @@ export async function registerOrGetLoyaltyProfile(
 
         if (!error && data) {
           newProfile.id = data.id
+        } else if (error) {
+          try {
+            const { data: fallbackData } = await supabase
+              .from('loyalty_profiles')
+              .insert({
+                id: newId,
+                restaurant_slug: slug,
+                name: normName,
+                email: normEmail,
+                phone: params.phone || null,
+                total_points: initialPoints,
+                google_review_bonus_awarded: Boolean(params.claimGoogleReviewBonus),
+              })
+              .select('*')
+              .maybeSingle()
+            if (fallbackData) newProfile.id = fallbackData.id
+          } catch (_) {}
         }
 
         if (uncreditedOrdersToMark.length > 0) {
@@ -1270,7 +1308,8 @@ export async function redeemStampReward(
 export async function claimGoogleReviewBonus(
   slug: string,
   identifier: string,
-  bonusAmount: number = 50
+  bonusAmount: number = 50,
+  options?: { tableNumber?: number | string; lastPaidSessionTotal?: number }
 ): Promise<{ success: boolean; bonus_points: number; bonus_stamps?: number; new_total_points: number; profile: LoyaltyProfile; already_awarded?: boolean }> {
   const norm = (identifier || '').trim()
   const isEmail = norm.includes('@')
@@ -1300,7 +1339,12 @@ export async function claimGoogleReviewBonus(
       }
 
       let baseStamps = profile.stamps_count ?? 0
-      if (baseStamps === 0 && (profile.total_points > 0 || (profile.total_stamps_earned ?? 0) > 0)) {
+      const hasOrder = Boolean(
+        profile.total_points > 0 ||
+        (profile.total_stamps_earned ?? 0) > 0 ||
+        (options?.lastPaidSessionTotal && options.lastPaidSessionTotal > 0)
+      )
+      if (baseStamps === 0 && hasOrder) {
         baseStamps = 1
       }
       const currentStamps = baseStamps + 1

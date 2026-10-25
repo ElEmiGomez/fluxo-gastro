@@ -70,15 +70,15 @@ export function PostPaymentView({
     setSelectedRating(star)
     triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
 
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+      localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+    }
+
     if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
       try {
         await onClaimLoyaltyBonus()
       } catch {}
-    } else if (!loyaltyProfile) {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-        localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-      }
     }
 
     if (star >= 4) {
@@ -95,24 +95,27 @@ export function PostPaymentView({
     triggerHaptic(HAPTIC_PATTERNS.TAP)
     setSelectedRating(5)
     setThankYouFiveStars(true)
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+      localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+    }
+
     if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
       try {
         await onClaimLoyaltyBonus()
       } catch {}
-    } else if (!loyaltyProfile) {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-        localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-      }
     }
     window.open(directReviewLink, '_blank', 'noopener,noreferrer')
   }
 
-  const isPointsSaved = Boolean(loyaltyProfile?.email)
+  const isPointsSaved = Boolean(loyaltyProfile?.email || loyaltyProfile?.phone || loyaltyProfile?.id)
   const effectiveLoyaltyMode = loyaltyMode === 'stamps' || loyaltyProfile?.stamps_target || (loyaltyProfile?.stamps_count !== undefined && loyaltyProfile.stamps_count > 0)
     ? 'stamps'
     : loyaltyMode
-  const stampsCount = loyaltyProfile ? (loyaltyProfile.stamps_count ?? 0) : (paidTotal > 0 ? 1 : 0)
+  const orderStamp = paidTotal > 0 ? 1 : 0
+  const reviewStamp = loyaltyProfile?.google_review_bonus_awarded ? 1 : 0
+  const stampsCount = Math.max(loyaltyProfile?.stamps_count ?? 0, orderStamp + reviewStamp)
 
   return (
     <div className="w-full animate-in fade-in duration-300 space-y-3 pb-6 select-none">
@@ -170,10 +173,10 @@ export function PostPaymentView({
                   type="button"
                   onClick={onLogout}
                   title="Cerrar sesión en esta mesa"
-                  className="px-2 py-1.5 rounded-xl bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                 >
-                  <LogOut className="w-3 h-3" />
-                  <span className="hidden sm:inline">Cerrar sesión</span>
+                  <LogOut className="w-3 h-3 text-red-500" />
+                  <span>Cerrar sesión</span>
                 </button>
               )}
             </div>

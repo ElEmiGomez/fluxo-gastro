@@ -1,11 +1,12 @@
 'use client'
 
 import React from 'react'
-import { ChevronDown, Check, Bell, Award, Gift, Globe } from 'lucide-react'
+import { ChevronDown, Check, Bell, Award, Gift, Globe, LogOut } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { CallWaiterButton } from '@/components/menu/CallWaiterButton'
 import { TOP_LANGUAGES, getTranslation } from '@/lib/i18n'
 import { Restaurant } from '@/types/database.types'
+import { LoyaltyProfile } from '@/types/loyalty.types'
 
 interface MenuHeaderProps {
   restaurant: Restaurant
@@ -27,6 +28,8 @@ interface MenuHeaderProps {
   stampsCount?: number
   stampsTarget?: number
   unlockedRewardsCount?: number
+  loyaltyProfile?: LoyaltyProfile | null
+  onLogout?: () => void
   onOpenLoyaltyModal?: () => void
 }
 
@@ -45,6 +48,8 @@ export function MenuHeader({
   onLogoPointerUp,
   onLogoTouchStart,
   onLogoTouchMove,
+  loyaltyProfile,
+  onLogout,
   loyaltyPoints,
   loyaltyMode = 'stamps',
   stampsCount = 0,
@@ -195,6 +200,21 @@ export function MenuHeader({
                       </span>
                     </>
                   )}
+                </button>
+              )}
+
+              {/* Botón Cerrar Sesión del comensal en esta mesa */}
+              {loyaltyProfile && onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="p-1.5 sm:px-2 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200/90 hover:border-red-200 flex items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                  title={`Cerrar sesión de ${loyaltyProfile.name || 'comensal'} en esta mesa`}
+                >
+                  <LogOut className="w-3.5 h-3.5 text-slate-500 hover:text-red-500 flex-shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-bold hidden min-[440px]:inline">
+                    Salir
+                  </span>
                 </button>
               )}
 

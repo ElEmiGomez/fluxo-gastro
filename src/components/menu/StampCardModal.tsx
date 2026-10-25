@@ -83,16 +83,16 @@ export function StampCardModal({
 
   const handleOpenGoogleReview = async () => {
     triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+      localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
+    }
+
     if (onClaimLoyaltyBonus && !profile?.google_review_bonus_awarded) {
       try {
         await onClaimLoyaltyBonus()
       } catch (e) {
         console.warn('[StampCardModal] Error reclamando bonus:', e)
-      }
-    } else if (!profile) {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-        localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
       }
     }
     window.open(directReviewLink, '_blank', 'noopener,noreferrer')
@@ -391,10 +391,10 @@ export function StampCardModal({
                     setFormError(null)
                     onLogout()
                   }}
-                  className="text-xs font-bold text-slate-400 hover:text-red-600 flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg hover:bg-red-50 cursor-pointer"
+                  className="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200/80 flex items-center gap-1.5 transition-colors px-2.5 py-1.5 rounded-xl cursor-pointer shadow-2xs"
                   title="Cerrar sesión y desconectar cuenta de esta mesa"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-3.5 h-3.5 text-red-500" />
                   <span>Cerrar sesión</span>
                 </button>
               </div>

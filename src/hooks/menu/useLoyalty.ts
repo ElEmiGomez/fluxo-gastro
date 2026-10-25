@@ -43,19 +43,44 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
     } catch (_) {}
   }, [storageKey, slug])
 
+  const getStoredProfile = useCallback((): LoyaltyProfile | null => {
+    if (typeof window === 'undefined') return null
+    try {
+      const stored = localStorage.getItem(storageKey)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  }, [storageKey])
+
   // 1. Cargar perfil desde localStorage y refrescar desde servidor
   const fetchProfile = useCallback(async (email: string) => {
     try {
       const tableQuery = tableNumber ? `&table=${encodeURIComponent(String(tableNumber))}` : ''
-      const res = await fetch(`/api/loyalty/profile?slug=${encodeURIComponent(slug)}&email=${encodeURIComponent(email)}${tableQuery}`)
+      let lastPaidParam = ''
+      if (typeof window !== 'undefined' && tableNumber) {
+        const storedPaid = sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) ||
+          localStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) ||
+          sessionStorage.getItem(`fluxo_last_client_paid_amount_${slug}`)
+        if (storedPaid) lastPaidParam = `&lastPaidSessionTotal=${encodeURIComponent(storedPaid)}`
+      }
+      const res = await fetch(`/api/loyalty/profile?slug=${encodeURIComponent(slug)}&email=${encodeURIComponent(email)}${tableQuery}${lastPaidParam}`)
       if (!res.ok) throw new Error('Error al consultar perfil de fidelización')
       const data = await res.json()
       if (data.success && data.profile) {
-        setProfile(data.profile)
+        const cached = getStoredProfile()
+        const reconciledProfile: LoyaltyProfile = {
+          ...data.profile,
+          stamps_count: Math.max(cached?.stamps_count ?? 0, data.profile.stamps_count ?? 0),
+          total_stamps_earned: Math.max(cached?.total_stamps_earned ?? 0, data.profile.total_stamps_earned ?? 0),
+          unlocked_rewards_count: Math.max(cached?.unlocked_rewards_count ?? 0, data.profile.unlocked_rewards_count ?? 0),
+          google_review_bonus_awarded: Boolean(data.profile.google_review_bonus_awarded || cached?.google_review_bonus_awarded),
+        }
+        setProfile(reconciledProfile)
         if (data.settings) {
           setSettings(data.settings)
         }
-        saveProfileToStorage(data.profile)
+        saveProfileToStorage(reconciledProfile)
       } else {
         setProfile(null)
         saveProfileToStorage(null)
@@ -63,7 +88,7 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
     } catch (err: any) {
       console.warn('[useLoyalty] Error sincronizando perfil:', err)
     }
-  }, [slug, saveProfileToStorage, tableNumber])
+  }, [slug, saveProfileToStorage, tableNumber, getStoredProfile])
 
 
   // 2. Cargar catálogo de recompensas
@@ -80,7 +105,7 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
     }
   }, [slug])
 
-  // Escuchar evento de logout para sincronizar estado en tiempo real
+  // Escuchar evento de logout para sincronizar estado en tiempo real (mismo tab y cross-tab)
   useEffect(() => {
     if (typeof window === 'undefined') return
     const handleLogout = (e: any) => {
@@ -88,11 +113,18 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
         setProfile(null)
       }
     }
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === storageKey && !e.newValue) {
+        setProfile(null)
+      }
+    }
     window.addEventListener('fluxo_loyalty_logout', handleLogout)
+    window.addEventListener('storage', handleStorage)
     return () => {
       window.removeEventListener('fluxo_loyalty_logout', handleLogout)
+      window.removeEventListener('storage', handleStorage)
     }
-  }, [slug])
+  }, [slug, storageKey])
 
   // Efecto inicial de montaje
   useEffect(() => {
@@ -233,8 +265,13 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
       sessionStorage.removeItem('fluxo_pending_google_review_bonus')
       // Disparar evento para que otras vistas o pestañas sincronicen la desconexión
       window.dispatchEvent(new CustomEvent('fluxo_loyalty_logout', { detail: { slug } }))
+      if (tableNumber) {
+        fetch(`/api/loyalty/profile?slug=${encodeURIComponent(slug)}&table=${encodeURIComponent(String(tableNumber))}&action=leave_table`, {
+          method: 'DELETE',
+        }).catch(() => {})
+      }
     }
-  }, [storageKey, slug, saveProfileToStorage])
+  }, [storageKey, slug, saveProfileToStorage, tableNumber])
 
   // 5. Reclamar bonus de Google Maps (+50 Puntos o +1 Sello de un solo uso)
   const claimGoogleReviewBonus = async (bonusPoints: number = 50) => {
@@ -257,23 +294,41 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
 
     setError(null)
     try {
+      let effectiveLastPaid: number | undefined = undefined
+      if (typeof window !== 'undefined' && tableNumber) {
+        const stored = sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) ||
+          localStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) ||
+          sessionStorage.getItem(`fluxo_last_client_paid_amount_${slug}`)
+        if (stored) effectiveLastPaid = Number(stored)
+      }
+
       const res = await fetch('/api/loyalty/google-review-bonus', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, email: profile.email, bonusPoints }),
+        body: JSON.stringify({
+          slug,
+          email: profile.email,
+          bonusPoints,
+          tableNumber,
+          lastPaidSessionTotal: effectiveLastPaid,
+        }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'No se pudo reclamar el bonus de Google Maps')
       }
 
-      const fallbackStamps = (profile.stamps_count || 1) + 1
-      const updated: LoyaltyProfile = data.profile || {
-        ...profile,
-        total_points: data.new_total_points ?? (profile.total_points + bonusPoints),
-        available_points: Math.max(0, (data.new_total_points ?? (profile.total_points + bonusPoints)) - (profile.held_points || 0)),
-        stamps_count: typeof data.stamps_count === 'number' ? data.stamps_count : fallbackStamps,
-        total_stamps_earned: (profile.total_stamps_earned || 0) + 1,
+      const orderStamp = ((effectiveLastPaid && effectiveLastPaid > 0) || (profile.stamps_count && profile.stamps_count > 0)) ? 1 : 0
+      const fallbackStamps = Math.max((profile.stamps_count || 0) + 1, orderStamp + 1)
+      const serverStamps = typeof data.stamps_count === 'number' ? data.stamps_count : (data.profile?.stamps_count ?? fallbackStamps)
+      const finalStamps = Math.max(serverStamps, fallbackStamps)
+
+      const updated: LoyaltyProfile = {
+        ...(data.profile || profile),
+        total_points: data.new_total_points ?? data.profile?.total_points ?? (profile.total_points + bonusPoints),
+        available_points: Math.max(0, (data.new_total_points ?? data.profile?.total_points ?? (profile.total_points + bonusPoints)) - (profile.held_points || 0)),
+        stamps_count: finalStamps,
+        total_stamps_earned: Math.max((profile.total_stamps_earned || 0) + 1, finalStamps),
         google_review_bonus_awarded: true,
       }
 
@@ -283,7 +338,7 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
         sessionStorage.removeItem('fluxo_pending_google_review_bonus')
         localStorage.removeItem('fluxo_pending_google_review_bonus')
       }
-      return data
+      return { ...data, profile: updated }
     } catch (err: any) {
       setError(err.message)
       throw err
