@@ -168,9 +168,12 @@ export function MenuHeader({
               {onOpenLoyaltyModal && loyaltyMode !== 'disabled' && (
                 <button
                   type="button"
-                  onClick={onOpenLoyaltyModal}
-                  className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer ${
-                    unlockedRewardsCount > 0 || stampsCount > 0
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onOpenLoyaltyModal()
+                  }}
+                  className={`px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer ${
+                    unlockedRewardsCount > 0 || stampsCount > 0 || Boolean(loyaltyProfile)
                       ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 ring-2 ring-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-[pulse_2.5s_cubic-bezier(0.4,0,0.6,1)_infinite]'
                       : 'bg-amber-50/90 hover:bg-amber-100 text-amber-900 border border-amber-200/90'
                   }`}
@@ -183,20 +186,32 @@ export function MenuHeader({
                   {unlockedRewardsCount > 0 ? (
                     <>
                       <Gift className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                      <span className="hidden sm:inline text-[11px] font-black">¡1 Premio!</span>
+                      <span className="text-[11px] font-black truncate max-w-[120px] sm:max-w-none">
+                        {loyaltyProfile?.name
+                          ? `${loyaltyProfile.name.trim().split(/\s+/)[0]} · ¡Premio!`
+                          : '¡1 Premio!'}
+                      </span>
                     </>
                   ) : loyaltyMode === 'points' ? (
                     <>
                       <Award className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                      <span className="hidden sm:inline text-[11px] font-black">
-                        {loyaltyPoints !== undefined && loyaltyPoints !== null ? `${loyaltyPoints} pts` : 'Puntos'}
+                      <span className="text-[11px] font-black truncate max-w-[120px] sm:max-w-none">
+                        {loyaltyProfile?.name
+                          ? `${loyaltyProfile.name.trim().split(/\s+/)[0]} · ${loyaltyPoints ?? loyaltyProfile.available_points ?? 0} pts`
+                          : loyaltyPoints !== undefined && loyaltyPoints !== null
+                          ? `${loyaltyPoints} pts`
+                          : 'Puntos'}
                       </span>
                     </>
                   ) : (
                     <>
                       <Gift className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                      <span className="hidden sm:inline text-[11px] font-black">
-                        {stampsCount > 0 ? `Sellos · ${stampsCount}/${stampsTarget}` : 'Premios'}
+                      <span className="text-[11px] font-black truncate max-w-[130px] sm:max-w-none">
+                        {loyaltyProfile?.name
+                          ? `${loyaltyProfile.name.trim().split(/\s+/)[0]} · ${stampsCount}/${stampsTarget}`
+                          : stampsCount > 0
+                          ? `Sellos · ${stampsCount}/${stampsTarget}`
+                          : 'Premios'}
                       </span>
                     </>
                   )}

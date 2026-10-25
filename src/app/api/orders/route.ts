@@ -869,7 +869,7 @@ export async function PATCH(req: NextRequest) {
         targetOrderId,
         `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`,
         isStarterItem,
-        { skipBroadcast: true }
+        { skipBroadcast: false }
       )
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar entradas entregadas' }, { status: 404 })
@@ -921,14 +921,14 @@ export async function PATCH(req: NextRequest) {
         targetOrderId,
         `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`,
         isStarterItem,
-        { skipBroadcast: true }
+        { skipBroadcast: false }
       )
       const tagRes = await updateOrderCourseTags(
         slug,
         targetOrderId,
         `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`,
         isMainItem,
-        { skipBroadcast: true }
+        { skipBroadcast: false }
       )
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al marcar principales entregados' }, { status: 404 })
@@ -1055,7 +1055,7 @@ export async function PATCH(req: NextRequest) {
         targetOrderId,
         `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`,
         isDessertItem,
-        { skipBroadcast: true }
+        { skipBroadcast: false }
       )
       if (!tagRes.success) {
         return NextResponse.json({ error: tagRes.error || 'Error al entregar postres directamente' }, { status: 404 })

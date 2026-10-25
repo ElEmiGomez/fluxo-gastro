@@ -14,6 +14,7 @@ import { MOCK_RESTAURANTS, MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
 import {
   orderHasFood,
   orderHasDesserts,
+
   isOrderDessertsReady,
   orderHasActiveDesserts,
   areOrderStartersServed,
@@ -32,9 +33,12 @@ import {
   isDessertReady,
   isDessertServed,
   orderHasStarters,
+  orderHasMains,
   areOrderStartersReady,
   areOrderMainsFired,
   areOrderMainsReady,
+  areOrderMainsServed,
+  areOrderDessertsServed,
   hydrateOrderItemsWithCatalog,
   areAllKitchenCoursesCompleted,
   resolveCatalogProductForItem,
@@ -166,7 +170,7 @@ export default function KitchenKDSPage() {
           })
 
           const incomingOrders: Order[] = hydratedOrders.filter((o: Order) => {
-            if (o.status === 'cancelled' || o.status === 'paid' || o.status === 'pending_validation') {
+            if (o.status === 'cancelled' || o.status === 'paid' || o.status === 'delivered' || o.status === 'pending_validation') {
               return false
             }
 
@@ -284,7 +288,8 @@ export default function KitchenKDSPage() {
               } as Order
 
               const hasItems = Boolean(candidate.order_items && candidate.order_items.length > 0)
-              if (!hasItems || !areAllKitchenCoursesCompleted(candidate)) {
+              const isCompletedCandidate = (hasItems && areAllKitchenCoursesCompleted(candidate)) || candidate.status === 'delivered' || candidate.status === 'paid' || candidate.status === 'cancelled'
+              if (!isCompletedCandidate) {
                 map.set(candidate.id, candidate)
               }
             })
@@ -297,7 +302,7 @@ export default function KitchenKDSPage() {
                 const isMutActive = Boolean((mut && Date.now() < mut.until) || Date.now() < lockUntil)
                 const hasItems = Boolean(prevOrd.order_items && prevOrd.order_items.length > 0)
                 const isCompleted = hasItems && areAllKitchenCoursesCompleted(prevOrd)
-                const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || isCompleted
+                const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || prevOrd.status === 'delivered' || isCompleted
                 if (isMutActive || !isTerminal) {
                   map.set(prevOrd.id, prevOrd)
                 }
@@ -562,13 +567,22 @@ export default function KitchenKDSPage() {
             o.status === 'confirmed' ||
             o.status === 'preparing' ||
             o.status === 'ready' ||
-            (o.status === 'delivered' && orderHasDesserts(o) && !isOrderDessertsReady(o)))
+            (o.status === 'delivered' && orderHasDesserts(o) && !areOrderDessertsServed(o)))
       ),
     [orders]
   )
 
   const readyOrders = useMemo(
-    () => orders.filter(o => !areAllKitchenCoursesCompleted(o) && (o.status === 'ready' || areOrderStartersReady(o) || areOrderMainsReady(o) || isOrderDessertsReady(o))),
+    () =>
+      orders.filter(o => {
+        if (['cancelled', 'paid', 'pending', 'confirmed', 'delivered'].includes(o.status)) return false
+        if (areAllKitchenCoursesCompleted(o)) return false
+        const hasReadyStarters = orderHasStarters(o) && areOrderStartersReady(o) && !areOrderStartersServed(o)
+        const hasReadyMains = orderHasMains(o) && areOrderMainsReady(o) && !areOrderMainsServed(o)
+        const hasReadyDesserts = orderHasDesserts(o) && isOrderDessertsReady(o) && !areOrderDessertsServed(o)
+        const isOrderLevelReady = o.status === 'ready' && !areAllKitchenCoursesCompleted(o)
+        return hasReadyStarters || hasReadyMains || hasReadyDesserts || isOrderLevelReady
+      }),
     [orders]
   )
 

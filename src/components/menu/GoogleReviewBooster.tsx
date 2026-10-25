@@ -67,28 +67,9 @@ export function GoogleReviewBooster({
 
   const handleSelectStar = async (stars: number) => {
     setSelectedRating(stars)
-    triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+    triggerHaptic(HAPTIC_PATTERNS.TAP)
 
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-      localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-    }
-
-    if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
-      try {
-        await onClaimLoyaltyBonus()
-      } catch (e) {
-        console.warn('[GoogleReviewBooster] Error reclamando bonus:', e)
-      }
-    }
-
-    if (stars >= 4) {
-      setTimeout(() => {
-        onReviewOpened?.()
-        window.open(directReviewLink, '_blank', 'noopener,noreferrer')
-        handleDismiss()
-      }, 500)
-    } else {
+    if (stars < 4) {
       setFeedbackSent(true)
       setTimeout(() => {
         handleDismiss()
@@ -225,7 +206,6 @@ export function GoogleReviewBooster({
           onClick={async () => {
             if (typeof window !== 'undefined') {
               sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-              localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
             }
 
             if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {

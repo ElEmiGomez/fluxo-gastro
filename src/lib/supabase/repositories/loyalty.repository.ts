@@ -27,7 +27,7 @@ const globalStore = globalThis as unknown as {
 export const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
   mode: 'stamps',
   target_stamps: 5,
-  min_spend_per_stamp: 50,
+  min_spend_per_stamp: 0,
   reward_label: 'Postre o Café gratis',
   reward_category_filter: ['postres', 'bebidas'],
 }
@@ -35,8 +35,8 @@ export const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
 if (!globalStore.__GASTRO_LOYALTY_SETTINGS__) {
   globalStore.__GASTRO_LOYALTY_SETTINGS__ = {
     'burger-gourmet': { ...DEFAULT_LOYALTY_SETTINGS },
-    'taperia-casco-antigo': { ...DEFAULT_LOYALTY_SETTINGS, min_spend_per_stamp: 40 },
-    'terraza-malecon': { ...DEFAULT_LOYALTY_SETTINGS, min_spend_per_stamp: 45 },
+    'taperia-casco-antigo': { ...DEFAULT_LOYALTY_SETTINGS },
+    'terraza-malecon': { ...DEFAULT_LOYALTY_SETTINGS },
   }
 }
 
@@ -490,6 +490,8 @@ export async function registerOrGetLoyaltyProfile(
     tableNumber?: number | string
     claimGoogleReviewBonus?: boolean
     lastPaidSessionTotal?: number
+    cachedStampsCount?: number
+    cachedUnlockedRewardsCount?: number
   }
 ): Promise<LoyaltyProfile> {
   const normEmail = normalizeEmail(params.email)
@@ -552,6 +554,16 @@ export async function registerOrGetLoyaltyProfile(
         hasChanges = true
       }
 
+      if (typeof params.cachedStampsCount === 'number' && params.cachedStampsCount > (profile.stamps_count ?? 0)) {
+        profile.stamps_count = params.cachedStampsCount
+        profile.total_stamps_earned = Math.max(profile.total_stamps_earned ?? 0, params.cachedStampsCount)
+        hasChanges = true
+      }
+      if (typeof params.cachedUnlockedRewardsCount === 'number' && params.cachedUnlockedRewardsCount > (profile.unlocked_rewards_count ?? 0)) {
+        profile.unlocked_rewards_count = params.cachedUnlockedRewardsCount
+        hasChanges = true
+      }
+
       // Acreditar consumiciones previas no premiadas de esta mesa
       if (hasOrderToCredit) {
         if (isStampsMode) {
@@ -580,8 +592,8 @@ export async function registerOrGetLoyaltyProfile(
         hasChanges = true
       }
 
-      // Acreditar bonus de Google Maps pendiente si aplica
-      if (params.claimGoogleReviewBonus && !profile.google_review_bonus_awarded) {
+      // Acreditar bonus de Google Maps pendiente SOLO si el usuario pulsó explícitamente el enlace de Google Maps
+      if (params.claimGoogleReviewBonus === true && !profile.google_review_bonus_awarded) {
         if (isStampsMode) {
           const currentStamps = (profile.stamps_count || 0) + 1
           let unlockedRewards = profile.unlocked_rewards_count || 0
@@ -602,15 +614,15 @@ export async function registerOrGetLoyaltyProfile(
         hasChanges = true
       }
 
-      if (isStampsMode && (!profile.stamps_count || profile.stamps_count === 0)) {
+      if (isStampsMode && (!profile.stamps_count || profile.stamps_count === 0) && (profile.unlocked_rewards_count ?? 0) === 0) {
         const hasOrder = Boolean(
           hasOrderToCredit ||
           profile.total_points > 0 ||
           retroactivePoints > 0 ||
           (params.lastPaidSessionTotal && params.lastPaidSessionTotal > 0)
         )
-        if (hasOrder || profile.google_review_bonus_awarded) {
-          profile.stamps_count = (profile.google_review_bonus_awarded && hasOrder) ? 2 : 1
+        if (hasOrder) {
+          profile.stamps_count = (params.claimGoogleReviewBonus === true && profile.google_review_bonus_awarded) ? 2 : 1
           profile.total_stamps_earned = Math.max(profile.stamps_count, profile.total_stamps_earned || 1)
           profile.stamps_target = targetStamps
           hasChanges = true
@@ -673,17 +685,17 @@ export async function registerOrGetLoyaltyProfile(
 
     // Generar ID compatible con UUID de PostgreSQL
     const newId = crypto.randomUUID()
-    const reviewBonus = params.claimGoogleReviewBonus && !isStampsMode ? 50 : 0
+    const reviewBonus = params.claimGoogleReviewBonus === true && !isStampsMode ? 50 : 0
     const initialPoints = isStampsMode ? 0 : (retroactivePoints + reviewBonus)
-    let initialStamps = (isStampsMode && hasOrderToCredit) ? 1 : 0
+    let initialStamps = (isStampsMode && hasOrderToCredit) ? 1 : (typeof params.cachedStampsCount === 'number' ? params.cachedStampsCount : 0)
     let initialTotalStampsEarned = initialStamps
-    if (params.claimGoogleReviewBonus && isStampsMode) {
+    if (params.claimGoogleReviewBonus === true && isStampsMode && (!params.cachedStampsCount || params.cachedStampsCount < 2)) {
       initialStamps += 1
       initialTotalStampsEarned += 1
     }
-    let initialUnlockedRewards = 0
+    let initialUnlockedRewards = typeof params.cachedUnlockedRewardsCount === 'number' ? params.cachedUnlockedRewardsCount : 0
     if (initialStamps >= targetStamps) {
-      initialUnlockedRewards = Math.floor(initialStamps / targetStamps)
+      initialUnlockedRewards += Math.floor(initialStamps / targetStamps)
       initialStamps = initialStamps % targetStamps
     }
     uncreditedOrdersToMark.forEach(o => {
@@ -707,7 +719,7 @@ export async function registerOrGetLoyaltyProfile(
       stamps_target: targetStamps,
       unlocked_rewards_count: initialUnlockedRewards,
       total_stamps_earned: initialTotalStampsEarned,
-      google_review_bonus_awarded: Boolean(params.claimGoogleReviewBonus),
+      google_review_bonus_awarded: Boolean(params.claimGoogleReviewBonus === true),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }
@@ -1178,7 +1190,8 @@ export async function settleLoyaltySession(
   const settings = await getLoyaltySettings(slug)
   const finalBillAmount = Number(params.finalAmount) || totalBillPoints || 0
   const minSpend = typeof settings.min_spend_per_stamp === 'number' ? settings.min_spend_per_stamp : 0
-  const qualifiesForStamp = finalBillAmount >= minSpend
+  const hasUncreditedOrderForStamp = uncreditedOrders.length > 0 || ((totalOrdersInWindow ?? 0) === 0 && finalBillAmount > 0)
+  const qualifiesForStamp = hasUncreditedOrderForStamp && finalBillAmount >= minSpend
   let stampAwarded = false
   let stampRewardUnlockedNow = false
 
@@ -1519,7 +1532,9 @@ export async function getAllLoyaltyProfiles(
   query?: string
 ): Promise<LoyaltyProfile[]> {
   const normQuery = (query || '').trim().toLowerCase()
-  let profiles: LoyaltyProfile[] = []
+  const settings = await getLoyaltySettings(slug)
+  const targetStamps = settings.target_stamps || 5
+  const mergedMap = new Map<string, LoyaltyProfile>()
 
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
@@ -1536,22 +1551,53 @@ export async function getAllLoyaltyProfiles(
 
       const { data, error } = await q
       if (!error && Array.isArray(data)) {
-        profiles = data as LoyaltyProfile[]
+        for (const row of data) {
+          const emailKey = normalizeEmail(row.email || '')
+          if (!emailKey) continue
+          const memProf = globalStore.__GASTRO_LOYALTY_PROFILES__?.[getMemoryKey(slug, emailKey)]
+          const dbStamps = row.stamps_count !== undefined && row.stamps_count !== null ? Number(row.stamps_count) : undefined
+          const memStamps = memProf?.stamps_count
+          const resolvedStamps = Math.max(dbStamps ?? 0, memStamps ?? 0)
+          mergedMap.set(emailKey, {
+            ...(row as LoyaltyProfile),
+            stamps_count: resolvedStamps,
+            stamps_target: row.stamps_target ?? memProf?.stamps_target ?? targetStamps,
+            unlocked_rewards_count: Math.max(Number(row.unlocked_rewards_count) || 0, memProf?.unlocked_rewards_count ?? 0),
+            total_stamps_earned: Math.max(Number(row.total_stamps_earned) || 0, memProf?.total_stamps_earned ?? resolvedStamps),
+            google_review_bonus_awarded: Boolean(row.google_review_bonus_awarded || memProf?.google_review_bonus_awarded),
+          })
+        }
       }
     } catch (e) {
       console.warn('[getAllLoyaltyProfiles] Fallback a memoria:', e)
     }
   }
 
-  // Si no se obtuvieron de Supabase o estamos en fallback / tests
-  if (profiles.length === 0 && globalStore.__GASTRO_LOYALTY_PROFILES__) {
-    const all = Object.values(globalStore.__GASTRO_LOYALTY_PROFILES__).filter(
-      p => p.restaurant_slug === slug
-    )
-    profiles = all
+  // Unificar también con globalStore.__GASTRO_LOYALTY_PROFILES__ para que ningún perfil registrado en la sesión se pierda
+  if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
+    for (const p of Object.values(globalStore.__GASTRO_LOYALTY_PROFILES__)) {
+      if (p.restaurant_slug !== slug || !p.email) continue
+      const emailKey = normalizeEmail(p.email)
+      const existing = mergedMap.get(emailKey)
+      if (!existing) {
+        mergedMap.set(emailKey, {
+          ...p,
+          stamps_count: p.stamps_count ?? 0,
+          stamps_target: p.stamps_target ?? targetStamps,
+          unlocked_rewards_count: p.unlocked_rewards_count ?? 0,
+          total_stamps_earned: p.total_stamps_earned ?? (p.stamps_count ?? 0),
+        })
+      } else {
+        existing.stamps_count = Math.max(existing.stamps_count ?? 0, p.stamps_count ?? 0)
+        existing.unlocked_rewards_count = Math.max(existing.unlocked_rewards_count ?? 0, p.unlocked_rewards_count ?? 0)
+        existing.total_stamps_earned = Math.max(existing.total_stamps_earned ?? 0, p.total_stamps_earned ?? 0)
+        existing.google_review_bonus_awarded = Boolean(existing.google_review_bonus_awarded || p.google_review_bonus_awarded)
+      }
+    }
   }
 
-  // Filtrar si hay query y estamos usando memoria
+  let profiles = Array.from(mergedMap.values())
+
   if (normQuery) {
     profiles = profiles.filter(
       p =>
@@ -1570,8 +1616,8 @@ export async function getAllLoyaltyProfiles(
     }
   })
 
-  // Ordenar por puntos totales descendente
-  return computed.sort((a, b) => b.total_points - a.total_points)
+  // Ordenar por sellos y puntos totales descendente
+  return computed.sort((a, b) => ((b.stamps_count || 0) - (a.stamps_count || 0)) || (b.total_points - a.total_points))
 }
 
 /**

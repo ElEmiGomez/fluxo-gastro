@@ -246,9 +246,9 @@ export async function closeTableSession(
     }
   }
 
-  // Barrido total en memoria y Supabase de las órdenes de la mesa a 'paid' con ítems entregados
+  // Barrido total en memoria y Supabase de las órdenes de la mesa a 'paid' con ítems entregados (sin emitir table_bill_paid al liberar la mesa)
   const { sweepTableOrdersToPaid } = await import('./orders.repository')
-  await sweepTableOrdersToPaid(targetRestaurantId, slug, tableNumber)
+  await sweepTableOrdersToPaid(targetRestaurantId, slug, tableNumber, { skipBroadcast: true, preserveTimestamps: true })
 
   // 4. Liquidar puntos canjeados y acreditar puntos ganados en el sistema de fidelización
   try {

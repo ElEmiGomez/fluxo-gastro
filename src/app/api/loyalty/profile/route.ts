@@ -16,6 +16,10 @@ export async function GET(req: NextRequest) {
     const phone = searchParams.get('phone')
     const tableNumber = searchParams.get('table') || searchParams.get('tableNumber')
     const lastPaidSessionTotal = searchParams.get('lastPaidSessionTotal') || searchParams.get('lastPaid')
+    const name = searchParams.get('name')
+    const cachedStamps = searchParams.get('cachedStamps')
+    const cachedUnlocked = searchParams.get('cachedUnlocked')
+    const cachedGoogleBonus = searchParams.get('cachedGoogleBonus') === 'true'
     const targetIdentifier = (email || phone || '').trim()
 
     if (!targetIdentifier) {
@@ -26,13 +30,26 @@ export async function GET(req: NextRequest) {
     }
 
     let profile = await getLoyaltyProfile(slug, targetIdentifier)
-    if (tableNumber && profile) {
+    if (!profile && email) {
       profile = await registerOrGetLoyaltyProfile(slug, {
-        name: profile.name || 'Comensal',
+        name: name || 'Comensal',
+        email,
+        phone,
+        tableNumber: tableNumber || undefined,
+        claimGoogleReviewBonus: false,
+        lastPaidSessionTotal: lastPaidSessionTotal ? Number(lastPaidSessionTotal) : undefined,
+        cachedStampsCount: cachedStamps !== null ? Number(cachedStamps) : undefined,
+        cachedUnlockedRewardsCount: cachedUnlocked !== null ? Number(cachedUnlocked) : undefined,
+      })
+    } else if (tableNumber && profile) {
+      profile = await registerOrGetLoyaltyProfile(slug, {
+        name: profile.name || name || 'Comensal',
         email: profile.email,
         phone: profile.phone,
         tableNumber,
         lastPaidSessionTotal: lastPaidSessionTotal ? Number(lastPaidSessionTotal) : undefined,
+        cachedStampsCount: cachedStamps !== null ? Number(cachedStamps) : undefined,
+        cachedUnlockedRewardsCount: cachedUnlocked !== null ? Number(cachedUnlocked) : undefined,
       })
     }
 

@@ -1252,14 +1252,15 @@ export async function resolvePendingDessertInOrder(
 export async function sweepTableOrdersToPaid(
   restaurantId: string,
   slug: string,
-  tableNumber: number | string
+  tableNumber: number | string,
+  options?: { skipBroadcast?: boolean; preserveTimestamps?: boolean }
 ): Promise<Order[]> {
   const parsedTableNum = parseInt(String(tableNumber), 10)
   if (isNaN(parsedTableNum)) return []
 
   const targetRestaurantId = getTargetRestaurantId(restaurantId, slug)
   const catalogProducts = getServerProducts(slug)
-  const sweptMemOrders = sweepServerTableOrdersToPaid(slug, parsedTableNum)
+  const sweptMemOrders = sweepServerTableOrdersToPaid(slug, parsedTableNum, options?.preserveTimestamps)
   const sweptMap = new Map<string, Order>()
   sweptMemOrders.forEach(o => sweptMap.set(o.id, o))
 
@@ -1340,7 +1341,7 @@ export async function sweepTableOrdersToPaid(
               const hydratedOrd: Order = {
                 ...ord,
                 status: 'paid',
-                updated_at: wasOpenInDb ? nowIso : (ord.updated_at || ord.created_at || nowIso),
+                updated_at: (!options?.preserveTimestamps && wasOpenInDb) ? nowIso : (ord.updated_at || ord.created_at || nowIso),
                 notes: allServedTagsStr,
                 table_number: parsedTableNum,
                 session_token: ord.session_token || ord.table_session_id,
@@ -1357,12 +1358,14 @@ export async function sweepTableOrdersToPaid(
     }
   }
 
-  broadcastEvent({
-    type: 'table_bill_paid',
-    slug,
-    table_number: parsedTableNum,
-    tableNumber: parsedTableNum,
-  })
+  if (!options?.skipBroadcast) {
+    broadcastEvent({
+      type: 'table_bill_paid',
+      slug,
+      table_number: parsedTableNum,
+      tableNumber: parsedTableNum,
+    })
+  }
 
   return Array.from(sweptMap.values())
 }

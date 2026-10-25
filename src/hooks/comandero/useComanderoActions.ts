@@ -727,8 +727,7 @@ export function useComanderoActions({
         bc.close()
       }
 
-      setOrderSentToast(true)
-      setTimeout(() => setOrderSentToast(false), 2500)
+      // Cobro completado sin falsas alarmas de envío a cocina
     } catch (e) {
       console.error('Error charging table:', e)
     }

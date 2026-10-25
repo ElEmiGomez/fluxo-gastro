@@ -536,17 +536,31 @@ export function useMenuOrderSync({
 
         const calls: any[] = callsRes.calls || []
         const activeMicroServices = new Set<string>()
+        let hasActivePendingBillCall = false
         calls.forEach((c: any) => {
           if (
             c.table_number?.toString() === tableNumber?.toString() &&
-            c.status === 'pending' &&
-            c.call_type?.startsWith('service_')
+            c.status === 'pending'
           ) {
-            const servName = c.call_type.replace('service_', '')
-            if (servName) activeMicroServices.add(servName)
+            if (c.call_type?.startsWith('service_')) {
+              const servName = c.call_type.replace('service_', '')
+              if (servName) activeMicroServices.add(servName)
+            } else if (c.call_type?.startsWith('bill_')) {
+              hasActivePendingBillCall = true
+            }
           }
         })
         setPendingServiceCallsRef.current(activeMicroServices)
+
+        if (hasActivePendingBillCall && !hasRequestedBillRef.current) {
+          hasRequestedBillRef.current = true
+          setHasRequestedBillRef.current(true)
+          if (typeof window !== 'undefined') {
+            try {
+              sessionStorage.setItem(`fluxo_bill_requested_${slug}_${tableNumber}`, 'true')
+            } catch (_) {}
+          }
+        }
 
         const isBillPaidCall = Boolean(
           userRequestedBillTimeRef.current &&
@@ -787,6 +801,7 @@ export function useMenuOrderSync({
         setTableOrderStatus(null)
         setTableOrders([])
         setTableTotalAmount(0)
+        setHasRequestedBillRef.current(false)
         setHasRequestedBill(false)
         hasRequestedBillRef.current = false
         userRequestedBillTimeRef.current = null
@@ -803,22 +818,6 @@ export function useMenuOrderSync({
           try {
             localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
           } catch (_) {}
-          fetch('/api/tables', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ slug, table_number: tableNumber, action: 'start_session' }),
-          })
-            .then(r => r.json())
-            .then(startData => {
-              if (startData?.session_token) {
-                setSessionIdRef.current(startData.session_token)
-                setSessionId(startData.session_token)
-                try {
-                  localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, startData.session_token)
-                } catch (_) {}
-              }
-            })
-            .catch(() => {})
         }
 
         if (typeof window !== 'undefined') {
@@ -827,7 +826,9 @@ export function useMenuOrderSync({
             if (lastPaidVal) {
               sessionStorage.setItem(`fluxo_last_client_paid_amount_${slug}`, lastPaidVal)
             }
-            sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now()))
+            sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now() + 10000))
+            sessionStorage.removeItem('fluxo_pending_google_review_bonus')
+            localStorage.removeItem('fluxo_pending_google_review_bonus')
             sessionStorage.removeItem(`fluxo_active_order_ids_${slug}_${tableNumber}`)
             sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
             sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)

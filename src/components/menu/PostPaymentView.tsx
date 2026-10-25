@@ -40,7 +40,7 @@ export function PostPaymentView({
 }: PostPaymentViewProps) {
   const [selectedRating, setSelectedRating] = useState<number | null>(5)
   const [feedbackSent, setFeedbackSent] = useState<boolean>(false)
-  const [thankYouFiveStars, setThankYouFiveStars] = useState<boolean>(false)
+  const [hasClickedGoogleMapsReview, setHasClickedGoogleMapsReview] = useState<boolean>(false)
   const [storedPoints, setStoredPoints] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -66,39 +66,27 @@ export function PostPaymentView({
       ? `https://search.google.com/local/writereview?placeid=${restaurant.google_place_id}`
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((restaurant.name || 'Burger Gourmet') + ' Noia')}`)
 
-  const handleSelectStar = async (star: number) => {
+  const handleSelectStar = (star: number) => {
     setSelectedRating(star)
-    triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
-
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-      localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-    }
-
-    if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
-      try {
-        await onClaimLoyaltyBonus()
-      } catch {}
-    }
+    triggerHaptic(HAPTIC_PATTERNS.TAP)
 
     if (star >= 4) {
       setFeedbackSent(false)
-      setThankYouFiveStars(true)
-      window.open(directReviewLink, '_blank', 'noopener,noreferrer')
     } else {
-      setThankYouFiveStars(false)
       setFeedbackSent(true)
     }
   }
 
   const handleOpenGoogleMaps = async () => {
-    triggerHaptic(HAPTIC_PATTERNS.TAP)
-    setSelectedRating(5)
-    setThankYouFiveStars(true)
+    triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
+    if ((selectedRating ?? 5) < 4) {
+      setSelectedRating(5)
+    }
+    setFeedbackSent(false)
+    setHasClickedGoogleMapsReview(true)
 
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-      localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
     }
 
     if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
@@ -114,7 +102,7 @@ export function PostPaymentView({
     ? 'stamps'
     : loyaltyMode
   const orderStamp = paidTotal > 0 ? 1 : 0
-  const reviewStamp = loyaltyProfile?.google_review_bonus_awarded ? 1 : 0
+  const reviewStamp = hasClickedGoogleMapsReview && loyaltyProfile?.google_review_bonus_awarded ? 1 : 0
   const stampsCount = Math.max(loyaltyProfile?.stamps_count ?? 0, orderStamp + reviewStamp)
 
   return (
@@ -209,7 +197,7 @@ export function PostPaymentView({
                 Google Maps
               </span>
               <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-100 text-amber-800">
-                {loyaltyProfile?.google_review_bonus_awarded
+                {hasClickedGoogleMapsReview || loyaltyProfile?.google_review_bonus_awarded
                   ? 'Reseña 5★'
                   : effectiveLoyaltyMode === 'stamps'
                   ? '+1 Sello Extra'
@@ -223,7 +211,7 @@ export function PostPaymentView({
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed">
-          {loyaltyProfile?.google_review_bonus_awarded
+          {hasClickedGoogleMapsReview || loyaltyProfile?.google_review_bonus_awarded
             ? 'Tu valoración de 5 estrellas en Google Maps nos ayuda muchísimo y apoya directamente a nuestro equipo de sala y cocina.'
             : `Tu valoración de 5 estrellas en Google Maps nos ayuda muchísimo y te regala ${
                 effectiveLoyaltyMode === 'stamps'
@@ -254,7 +242,7 @@ export function PostPaymentView({
           ))}
         </div>
 
-        {(thankYouFiveStars || loyaltyProfile?.google_review_bonus_awarded) ? (
+        {hasClickedGoogleMapsReview ? (
           <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-extrabold flex items-center gap-2 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
             <span>
@@ -278,7 +266,7 @@ export function PostPaymentView({
         >
           <Star className="w-4 h-4 fill-slate-950 text-slate-950" />
           <span>
-            {loyaltyProfile?.google_review_bonus_awarded
+            {hasClickedGoogleMapsReview || loyaltyProfile?.google_review_bonus_awarded
               ? '⭐ Valorar con 5 estrellas en Google Maps'
               : effectiveLoyaltyMode === 'stamps'
               ? '⭐ Valóranos y gana +1 sello extra'

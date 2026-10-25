@@ -36,6 +36,17 @@ export function BillModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [splitCount, setSplitCount] = useState(1)
+  const closeTimerRef = React.useRef<NodeJS.Timeout | null>(null)
+
+  const handleModalClose = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+    setBillRequested(null)
+    setIsSubmitting(false)
+    onClose()
+  }
 
   const consumedItems = React.useMemo(() => {
     return (tableOrders || []).flatMap((o: any) => o.order_items || [])
@@ -75,7 +86,7 @@ export function BillModal({
       onBillRequested?.()
       setBillRequested(paymentMethod)
 
-      setTimeout(() => {
+      closeTimerRef.current = setTimeout(() => {
         setBillRequested(null)
         setIsSubmitting(false)
         onClose()
@@ -102,7 +113,7 @@ export function BillModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleModalClose}
             aria-label="Cerrar solicitud de cuenta"
             className="w-8 h-8 rounded-full bg-white/10 text-white hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
           >
@@ -195,7 +206,11 @@ export function BillModal({
           )}
 
           {/* ACCESO RÁPIDO A SOBREMESA (CAFÉ & POSTRE) */}
-          {onOpenSobremesa && !hasPendingDesserts && (
+          {onOpenSobremesa && !hasPendingDesserts && !consumedItems.some((item: any) => {
+            const cat = (item.category_name || item.category || item.product?.category_name || '').toLowerCase();
+            const name = (item.product?.name || item.name || '').toLowerCase();
+            return cat.includes('postre') || cat.includes('caf') || cat.includes('dessert') || name.includes('postre') || name.includes('caf') || name.includes('tarta') || name.includes('volcán') || name.includes('volcan');
+          }) && (
             <div className="p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 rounded-2xl flex items-center justify-between gap-2.5 shadow-2xs">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-xl flex-shrink-0">☕🍰</span>

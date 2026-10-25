@@ -556,7 +556,11 @@ export function attendServerServiceCall(slug: string, callId: string): ServiceCa
   return updated
 }
 
-export function sweepServerTableOrdersToPaid(slug: string, tableNumber: string | number): Order[] {
+export function sweepServerTableOrdersToPaid(
+  slug: string,
+  tableNumber: string | number,
+  preserveTimestamps?: boolean
+): Order[] {
   const tableNumStr = String(tableNumber)
   if (!globalStore.__GASTRO_ORDERS__?.[slug]) {
     return []
@@ -618,12 +622,12 @@ export function sweepServerTableOrdersToPaid(slug: string, tableNumber: string |
       ...o,
       status: 'paid',
       version: wasAlreadyPaid ? (o.version || 1) : (o.version || 1) + 1,
-      updated_at: wasAlreadyPaid ? (o.updated_at || o.created_at || nowIso) : nowIso,
+      updated_at: (wasAlreadyPaid || preserveTimestamps) ? (o.updated_at || o.created_at || nowIso) : nowIso,
       notes: appendTags((o as any).notes),
       order_items: updatedItems,
     }
     sweptOrders.push(updatedOrder)
-    if (!wasAlreadyPaid) {
+    if (!wasAlreadyPaid && !preserveTimestamps) {
       newlyTransitionedOrders.push(updatedOrder)
     }
     return updatedOrder

@@ -812,7 +812,7 @@ export function isMainFired(item: OrderItem, parentOrder?: any): boolean {
 }
 
 export function areOrderMainsFired(order: Order): boolean {
-  if (order.status === 'paid') return true
+  if (order.status === 'paid' || (order.status as string) === 'delivered') return true
   const mains = (order.order_items || []).filter(isMainItem)
   if (mains.length === 0) return true
   // Si la comanda no tiene entrantes, los principales se consideran marchados de inicio
@@ -850,7 +850,7 @@ export function areOrderMainsServed(order: Order): boolean {
 }
 
 export function areOrderDessertsServed(order: Order): boolean {
-  if (order.status === 'paid') return true
+  if (order.status === 'paid' || (order.status as string) === 'delivered') return true
   if ((order as any).notes?.includes(TAG_DESSERT_SERVED)) return true
   const desserts = (order.order_items || []).filter(isDessertItem)
   if (desserts.length === 0) return true
@@ -977,9 +977,9 @@ export function orderHasPendingChoiceDesserts(order: Order): boolean {
  */
 export function areAllOrderCoursesDelivered(order: Order): boolean {
   if (!order) return false
-  if (order.status === 'paid') return true
+  if (order.status === 'paid' || (order.status as string) === 'delivered') return true
   const items = (order.order_items || []).filter(it => !isPackHeaderItem(it))
-  if (items.length === 0) return order.status === 'delivered'
+  if (items.length === 0) return false
 
   const hasDrinks = orderHasDrinks(order)
   const drinksDone =
@@ -1020,7 +1020,7 @@ export function areAllOrderCoursesDelivered(order: Order): boolean {
  */
 export function areAllKitchenCoursesCompleted(order: Order): boolean {
   if (!order) return true
-  if (['cancelled', 'paid'].includes(order.status)) return true
+  if (['cancelled', 'paid', 'delivered'].includes(order.status)) return true
   if (isDrinkOnlyOrder(order)) return true
 
   const items = order.order_items || []

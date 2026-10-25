@@ -34,8 +34,15 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
   const [isTablePaid, setIsTablePaid] = useState<boolean>(() => readPaidLockFromStorage(slug, tableNumber))
   const [isPaidBannerDismissed, setIsPaidBannerDismissed] = useState<boolean>(false)
   const [isReviewBoosterDismissed, setIsReviewBoosterDismissed] = useState<boolean>(false)
-  const [hasRequestedBill, setHasRequestedBill] = useState<boolean>(false)
-  const hasRequestedBillRef = useRef<boolean>(false)
+  const [hasRequestedBill, setHasRequestedBill] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      return !readPaidLockFromStorage(slug, initialTable) && sessionStorage.getItem(`fluxo_bill_requested_${slug}_${initialTable}`) === 'true'
+    } catch {
+      return false
+    }
+  })
+  const hasRequestedBillRef = useRef<boolean>(hasRequestedBill)
   const userRequestedBillTimeRef = useRef<number | null>(null)
 
   const [pendingServiceCalls, setPendingServiceCalls] = useState<Set<string>>(new Set())
@@ -51,6 +58,8 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
     userRequestedBillTimeRef.current = null
     if (typeof window !== 'undefined') {
       try {
+        sessionStorage.removeItem('fluxo_pending_google_review_bonus')
+        localStorage.removeItem('fluxo_pending_google_review_bonus')
         sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_review_dismissed_${slug}`)
@@ -77,13 +86,19 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
   const resetPaidOrderSession = useCallback(() => {
     setIsOrderPaid(false)
     setIsTablePaid(false)
+    setHasRequestedBill(false)
+    hasRequestedBillRef.current = false
+    userRequestedBillTimeRef.current = null
     if (typeof window !== 'undefined') {
       try {
         const lastPaidVal = sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
         if (lastPaidVal) {
           sessionStorage.setItem(`fluxo_last_client_paid_amount_${slug}`, lastPaidVal)
         }
-        sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now()))
+        sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now() + 10000))
+        sessionStorage.removeItem('fluxo_pending_google_review_bonus')
+        localStorage.removeItem('fluxo_pending_google_review_bonus')
+        sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_active_order_ids_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_lock_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_table_paid_lock_${slug}_${tableNumber}`)
@@ -144,13 +159,17 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
         if (hasLockedPaid) {
           setIsOrderPaid(true)
           setIsTablePaid(true)
+          sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
         } else {
           setIsOrderPaid(false)
           setIsTablePaid(false)
           sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
           localStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
+          if (sessionStorage.getItem(`fluxo_bill_requested_${slug}_${tableNumber}`) === 'true') {
+            hasRequestedBillRef.current = true
+            setHasRequestedBill(true)
+          }
         }
-        sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
       } catch {}
 
@@ -243,21 +262,6 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
           try {
             localStorage.removeItem(`gastro_session_${slug}_${tableNumber}`)
           } catch (_) {}
-          fetch('/api/tables', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ slug, table_number: tableNumber, action: 'start_session' }),
-          })
-            .then(r => r.json())
-            .then(startData => {
-              if (startData?.session_token) {
-                setSessionId(startData.session_token)
-                try {
-                  localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, startData.session_token)
-                } catch (_) {}
-              }
-            })
-            .catch(() => {})
         }
       }
     }

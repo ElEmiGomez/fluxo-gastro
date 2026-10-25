@@ -929,17 +929,19 @@ export function ComanderoTableDetailPanel({
               <span className="truncate">Transferir</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                onOpenFreeTableModal(selectedTable.table_number)
-              }}
-              className="h-11 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-              title={tablePendingAmount > 0 ? `Cobrar ${tablePendingAmount.toFixed(2)} €` : 'Liberar mesa'}
-            >
-              <CreditCard className="w-4 h-4 text-white flex-shrink-0" />
-              <span className="truncate">{tablePendingAmount > 0 ? 'Cobrar Cuenta' : 'Liberar Mesa'}</span>
-            </button>
+            {(!((tableStatus === 'free' || !tableStatus) && tableActiveOrders.length === 0 && tablePaidOrders.length === 0 && validationOrders.length === 0) || tablePendingAmount > 0) && (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenFreeTableModal(selectedTable.table_number)
+                }}
+                className="h-11 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
+                title={tablePendingAmount > 0 ? `Cobrar ${tablePendingAmount.toFixed(2)} €` : 'Liberar mesa'}
+              >
+                <CreditCard className="w-4 h-4 text-white flex-shrink-0" />
+                <span className="truncate">{tablePendingAmount > 0 ? 'Cobrar Cuenta' : 'Liberar Mesa'}</span>
+              </button>
+            )}
           </div>
         )}
 

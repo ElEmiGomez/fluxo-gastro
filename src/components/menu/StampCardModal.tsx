@@ -85,7 +85,6 @@ export function StampCardModal({
     triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('fluxo_pending_google_review_bonus', 'true')
-      localStorage.setItem('fluxo_pending_google_review_bonus', 'true')
     }
 
     if (onClaimLoyaltyBonus && !profile?.google_review_bonus_awarded) {
