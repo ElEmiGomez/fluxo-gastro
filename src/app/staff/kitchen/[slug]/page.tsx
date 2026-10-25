@@ -130,13 +130,22 @@ export default function KitchenKDSPage() {
   const fetchServerOrders = useCallback(async () => {
     const reqId = ++fetchRequestIdRef.current
     try {
-      const res = await fetch(`/api/orders?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' })
+      const res = await fetch(`/api/orders?slug=${slug}&role=kitchen&_t=${Date.now()}`, { cache: 'no-store' })
       if (reqId !== fetchRequestIdRef.current) {
         return // Descartar respuesta desactualizada si ya se disparó una petición más reciente
       }
       if (res.ok) {
         const data = await res.json()
         if (reqId !== fetchRequestIdRef.current) return
+
+        if (Array.isArray(data.terminal_order_ids)) {
+          data.terminal_order_ids.forEach((id: string) => {
+            prevOrdersMapRef.current.delete(id)
+            recentMutationsRef.current.delete(id)
+            mutationLockUntilRef.current.delete(id)
+          })
+        }
+
         if (Array.isArray(data.orders)) {
           const rawOrders: Order[] = data.orders || []
           const hydratedOrders: Order[] = rawOrders.map((o: Order) => {
@@ -298,6 +307,14 @@ export default function KitchenKDSPage() {
             // Preservar comandas activas previas que la red o un GET omitió temporalmente (Zero-Flicker Invariant)
             prev.forEach(prevOrd => {
               if (!map.has(prevOrd.id)) {
+                // Si el servidor reporta la orden como terminal, descartarla de inmediato
+                if (Array.isArray(data.terminal_order_ids) && data.terminal_order_ids.includes(prevOrd.id)) {
+                  prevOrdersMapRef.current.delete(prevOrd.id)
+                  recentMutationsRef.current.delete(prevOrd.id)
+                  mutationLockUntilRef.current.delete(prevOrd.id)
+                  return
+                }
+
                 // 1. Verificar si el servidor ya conoce esta orden y la marcó finalizada/entregada
                 const serverMatch = rawOrders.find(r => r.id === prevOrd.id)
                 if (serverMatch) {
@@ -328,7 +345,11 @@ export default function KitchenKDSPage() {
                   return
                 }
 
-                if (isMutActive || !isTerminal) {
+                const timeSinceCreated = Date.now() - new Date(prevOrd.created_at || 0).getTime()
+                const isVeryRecent = !isNaN(timeSinceCreated) && timeSinceCreated < 15000
+
+                // Preservar por zero-flicker únicamente si hay mutación local activa o fue creada muy recientemente (<15s)
+                if (isMutActive || (isVeryRecent && !isTerminal)) {
                   map.set(prevOrd.id, prevOrd)
                 }
               }
@@ -493,7 +514,9 @@ export default function KitchenKDSPage() {
       if (
         event.type === 'order_delivered' ||
         event.type === 'course_delivered' ||
-        event.status === 'delivered'
+        event.status === 'delivered' ||
+        event.action === 'deliver_desserts_direct' ||
+        event.action === 'deliver_desserts'
       ) {
         if (event.orderId) {
           const isDone =

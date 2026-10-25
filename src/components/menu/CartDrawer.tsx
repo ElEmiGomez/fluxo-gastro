@@ -228,8 +228,8 @@ export function CartDrawer({
       const weight = item.weight_grams || (notesWeightMatch ? Number(notesWeightMatch[1]) : undefined)
       const prodPrice = isFree
         ? 0
-        : (prod.price_type === 'weight' && weight && rawPrice > 20)
-        ? Number(((rawPrice * weight) / (prod.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+        : (prod.price_type === 'weight' && (prod as any).base_price_per_unit && weight && rawPrice === (prod as any).base_price_per_unit)
+        ? Number((((prod as any).base_price_per_unit * weight) / (prod.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
         : rawPrice
       return {
         ...item,
@@ -354,12 +354,28 @@ export function CartDrawer({
         items: validCart.map(item => {
           const rawId = String(item.product?.id || (item as any).product_id || (item as any).id || '').trim()
           const canonicalId = resolveCanonicalProductId(rawId) || rawId
+
+          const pills = Array.isArray(item.selectedPills) ? item.selectedPills.filter(Boolean) : []
+          const weightStr = item.weight_grams ? `${item.weight_grams}g` : ''
+          const hasWeightInPills = Boolean(weightStr && pills.some(p => p.toLowerCase().includes(weightStr.toLowerCase())))
+
+          const noteParts: string[] = []
+          if (item.is_complimentary) noteParts.push('[🎁 INVITACIÓN DE LA CASA]')
+          if (item.weight_grams && !hasWeightInPills) noteParts.push(`${item.weight_grams}g`)
+          pills.forEach(p => {
+            if (!noteParts.includes(p)) noteParts.push(p)
+          })
+          if (item.notes && !noteParts.includes(item.notes.trim())) {
+            noteParts.push(item.notes.trim())
+          }
+          const formattedNotes = noteParts.join(' · ') || null
+
           return {
             product_id: canonicalId,
             name: item.product?.name || (item as any).name || '',
             price: Number(item.product?.price ?? (item as any).price ?? 0),
             quantity: item.quantity,
-            notes: item.notes || (item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : null),
+            notes: formattedNotes,
             course: item.course,
             is_complimentary: item.is_complimentary,
             weight_grams: item.weight_grams,

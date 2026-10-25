@@ -7,6 +7,7 @@ import { PendingServiceCall } from '@/types/comandero.types'
 import {
   isDessertItem,
   isDessertReady,
+  isDessertServed,
   isStarterItem,
   isMainItem,
   TAG_STARTER_READY,
@@ -145,13 +146,22 @@ export function useComanderoActions({
     attendedValidationOrderIdsRef.current.add(orderId)
     const targetOrder = serverOrders.find(o => o.id === orderId)
     const deliveredOrder: Order | undefined = targetOrder
-      ? { ...targetOrder, status: 'delivered' }
+      ? {
+          ...targetOrder,
+          status: 'delivered',
+          order_items: (targetOrder.order_items || []).map((it: any) => ({
+            ...it,
+            course_status: 'delivered',
+            kitchen_status: 'delivered',
+            status: 'delivered',
+          })),
+        }
       : undefined
 
     lockOrderMutation(orderId, { order: deliveredOrder, status: 'delivered' })
 
     setServerOrders(prev =>
-      prev.map(o => (o.id === orderId ? { ...o, status: 'delivered' } : o))
+      prev.map(o => (o.id === orderId && deliveredOrder ? deliveredOrder : o))
     )
     if (tableNum && readyOrderAlert?.toString() === tableNum.toString()) {
       setReadyOrderAlert(null)
@@ -645,7 +655,7 @@ export function useComanderoActions({
     )
     const dessertOrders = tableOrders.filter(o => {
       const desserts = (o.order_items || []).filter(isDessertItem)
-      return desserts.length > 0 && desserts.some(d => !isDessertReady(d))
+      return desserts.length > 0 && desserts.some(d => !isDessertServed(d))
     })
     const dessertOrderIds = new Set(dessertOrders.map(o => o.id))
     dessertOrders.forEach(o => {
@@ -999,8 +1009,8 @@ export function useComanderoActions({
     const rawTotal = cart.reduce((sum, item) => {
       if (item.is_complimentary) return sum
       const rawPrice = Number(item.product.price || 0)
-      const price = item.product.price_type === 'weight' && item.weight_grams && rawPrice > 20
-        ? Number(((rawPrice * item.weight_grams) / (item.product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+      const price = (item.product.price_type === 'weight' && (item.product as any).base_price_per_unit && item.weight_grams && rawPrice === (item.product as any).base_price_per_unit)
+        ? Number((((item.product as any).base_price_per_unit * item.weight_grams) / (item.product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
         : rawPrice
       return sum + price * item.quantity
     }, 0)
@@ -1010,16 +1020,24 @@ export function useComanderoActions({
     try {
       const formattedItems = cart.map(item => {
         const rawPrice = Number(item.product.price || 0)
-        const effectivePrice = item.product.price_type === 'weight' && item.weight_grams && rawPrice > 20
-          ? Number(((rawPrice * item.weight_grams) / (item.product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+        const effectivePrice = (item.product.price_type === 'weight' && (item.product as any).base_price_per_unit && item.weight_grams && rawPrice === (item.product as any).base_price_per_unit)
+          ? Number((((item.product as any).base_price_per_unit * item.weight_grams) / (item.product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
           : rawPrice
 
-        const formattedNotes = [
-          item.is_complimentary ? '[🎁 INVITACIÓN DE LA CASA]' : '',
-          item.weight_grams ? `[⚖️ ${item.weight_grams}g]` : '',
-          item.selectedPills && item.selectedPills.length > 0 ? `[${item.selectedPills.join(', ')}]` : '',
-          item.notes ? item.notes : '',
-        ].filter(Boolean).join(' ')
+        const pills = Array.isArray(item.selectedPills) ? item.selectedPills.filter(Boolean) : []
+        const weightStr = item.weight_grams ? `${item.weight_grams}g` : ''
+        const hasWeightInPills = Boolean(weightStr && pills.some(p => p.toLowerCase().includes(weightStr.toLowerCase())))
+
+        const noteParts: string[] = []
+        if (item.is_complimentary) noteParts.push('[🎁 INVITACIÓN DE LA CASA]')
+        if (item.weight_grams && !hasWeightInPills) noteParts.push(`${item.weight_grams}g`)
+        pills.forEach(p => {
+          if (!noteParts.includes(p)) noteParts.push(p)
+        })
+        if (item.notes && !noteParts.includes(item.notes.trim())) {
+          noteParts.push(item.notes.trim())
+        }
+        const formattedNotes = noteParts.join(' · ')
 
         return {
           product_id: item.product.id,
@@ -1087,7 +1105,13 @@ export function useComanderoActions({
         const updatedItems = hydrateOrderItemsWithCatalog(
           (o.order_items || []).map(it => {
             if (isStarterItem(it)) {
-              return { ...it, notes: mergeItemNotes(it.notes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`) }
+              return {
+                ...it,
+                notes: mergeItemNotes(it.notes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`),
+                course_status: 'delivered',
+                kitchen_status: 'delivered',
+                status: 'delivered',
+              }
             }
             return it
           }),
@@ -1096,7 +1120,7 @@ export function useComanderoActions({
         )
         const updatedOrderNotes = mergeItemNotes((o as any).notes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`)
         const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
-        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : 'preparing'
+        const nextStatus: OrderStatus = (areAllKitchenCoursesCompleted(candidate) || areAllOrderCoursesDelivered(candidate)) ? 'delivered' : 'preparing'
         const updated: Order = { ...candidate, status: nextStatus }
         updatedOrderForRef = updated
         return updated
@@ -1165,17 +1189,28 @@ export function useComanderoActions({
         if (o.id !== orderId) return o
         const updatedItems = hydrateOrderItemsWithCatalog(
           (o.order_items || []).map(it => {
-            if (isMainItem(it)) {
-              return { ...it, notes: mergeItemNotes(it.notes, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`) }
+            if (isMainItem(it) || isStarterItem(it)) {
+              return {
+                ...it,
+                notes: isMainItem(it)
+                  ? mergeItemNotes(it.notes, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`)
+                  : mergeItemNotes(it.notes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`),
+                course_status: 'delivered',
+                kitchen_status: 'delivered',
+                status: 'delivered',
+              }
             }
             return it
           }),
           products,
           o.order_items
         )
-        const updatedOrderNotes = mergeItemNotes((o as any).notes, `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`)
+        const updatedOrderNotes = mergeItemNotes(
+          mergeItemNotes((o as any).notes, `${TAG_STARTER_READY} ${TAG_STARTER_SERVED}`),
+          `${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED}`
+        )
         const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
-        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : 'preparing'
+        const nextStatus: OrderStatus = (areAllKitchenCoursesCompleted(candidate) || areAllOrderCoursesDelivered(candidate)) ? 'delivered' : 'preparing'
         const updated: Order = { ...candidate, status: nextStatus }
         updatedOrderForRef = updated
         return updated
@@ -1315,7 +1350,13 @@ export function useComanderoActions({
             if (isDessertItem(it)) {
               currentNotes = mergeItemNotes(currentNotes, `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`)
             }
-            return { ...it, notes: currentNotes }
+            return {
+              ...it,
+              notes: currentNotes,
+              course_status: 'delivered',
+              kitchen_status: 'delivered',
+              status: 'delivered',
+            }
           }),
           products,
           o.order_items
@@ -1325,7 +1366,7 @@ export function useComanderoActions({
           `${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
         )
         const candidate: Order = { ...o, notes: updatedOrderNotes, order_items: updatedItems }
-        const nextStatus: OrderStatus = areAllOrderCoursesDelivered(candidate) ? 'delivered' : 'preparing'
+        const nextStatus: OrderStatus = (areAllKitchenCoursesCompleted(candidate) || areAllOrderCoursesDelivered(candidate)) ? 'delivered' : 'preparing'
         const updated: Order = { ...candidate, status: nextStatus }
         updatedOrderForRef = updated
         return updated

@@ -25,6 +25,19 @@ assert(routeTsContent.includes('computedWeightPrice'), 'route.ts must calculate 
 assert(routeTsContent.includes('divisor = catalogProduct.price_unit === \'kg\' ? 1000 : 100'), 'route.ts must use proper divisor')
 console.log('✅ PASS: Server-side route.ts has weight verification for items.')
 
+// Check that the fatal hack 'rawPrice > 20' is eradicated across all files
+const filesToCheckNoHack = [
+  'src/app/menu/[slug]/page.tsx',
+  'src/app/staff/comandero/[slug]/page.tsx',
+  'src/components/menu/CartDrawer.tsx',
+  'src/hooks/comandero/useComanderoActions.ts',
+]
+filesToCheckNoHack.forEach(f => {
+  const content = fs.readFileSync(path.resolve(f), 'utf-8')
+  assert(!content.includes('> 20'), `Fatal bug regression: ${f} must NOT contain '> 20' weight price hack!`)
+})
+console.log('✅ PASS: Fatal hack \'> 20\' completely eradicated from all frontend and cart files.')
+
 // 2. Test Meat Modal Deduplication
 console.log('\n[2/3] Testing Meat Modal Deduplication in ProductModifierModal.tsx...')
 const modalPath = path.resolve('src/components/comandero/ProductModifierModal.tsx')
@@ -51,14 +64,19 @@ assert(syncChannelContent.includes('localStorage.setItem'), 'sync-channel.ts mus
 const kdsPath = path.resolve('src/app/staff/kitchen/[slug]/page.tsx')
 const kdsContent = fs.readFileSync(kdsPath, 'utf-8')
 assert(kdsContent.includes('subscribeFluxoSync'), 'KDS must subscribe to subscribeFluxoSync')
+assert(kdsContent.includes('role=kitchen'), 'KDS must pass role=kitchen to /api/orders')
 assert(kdsContent.includes('table_freed') && kdsContent.includes('table_paid'), 'KDS must handle table_freed and table_paid events')
 assert(kdsContent.includes('course_delivered') || kdsContent.includes('order_delivered'), 'KDS must handle delivery events')
 assert(kdsContent.includes('serverMatch.status === \'delivered\''), 'KDS zero-flicker reconciliation must respect server delivered status')
 
-// Check KitchenTicket.tsx
-const ticketPath = path.resolve('src/components/kitchen/KitchenTicket.tsx')
-const ticketContent = fs.readFileSync(ticketPath, 'utf-8')
-assert(ticketContent.includes('areAllKitchenCoursesCompleted(o)'), 'KitchenTicket must filter out completed kitchen orders')
+// Check API orders route.ts has kitchen role filter
+assert(routeTsContent.includes('isKitchenRole'), 'route.ts must filter orders when role=kitchen')
+assert(routeTsContent.includes('terminal_order_ids'), 'route.ts must return terminal_order_ids')
+
+// Check course-utils.ts checks course_status
+const courseUtilsPath = path.resolve('src/lib/course-utils.ts')
+const courseUtilsContent = fs.readFileSync(courseUtilsPath, 'utf-8')
+assert(courseUtilsContent.includes('course_status === \'delivered\''), 'course-utils.ts must check course_status === delivered')
 
 // Check Comandero actions
 const comanderoActionsPath = path.resolve('src/hooks/comandero/useComanderoActions.ts')

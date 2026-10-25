@@ -138,6 +138,7 @@ export interface OrderItem {
   order_id?: string
   product_id: string
   quantity: number
+  price?: number
   notes: string | null // Modificadores rápidos + aclaración libre ("Puré | Sin tomate")
   product?: Product
   course?: CourseType // 'first' (1º marchando), 'second' (2º en espera), 'dessert', 'drink'
@@ -147,6 +148,9 @@ export interface OrderItem {
   is_pack_header?: boolean // Línea cabecera del pack/menú que lleva el precio fijado
   is_pack_component?: boolean // Sub-ítem desglosado incluido a 0,00 €
   pack_id?: string // Identificador único del pack
+  course_status?: 'pending' | 'preparing' | 'ready' | 'delivered'
+  kitchen_status?: 'pending' | 'preparing' | 'ready' | 'delivered'
+  status?: OrderStatus
 }
 
 export interface CartItem {

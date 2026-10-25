@@ -30,6 +30,8 @@ import {
   enforceMonotonicItemNotes,
   isPackHeaderItem,
   orderHasActiveDesserts,
+  areAllKitchenCoursesCompleted,
+  areAllOrderCoursesDelivered,
 } from '@/lib/course-utils'
 
 const isUuid = (val?: string | null): boolean =>
@@ -957,6 +959,8 @@ export async function updateOrderCourseTags(
     (order as any).notes
   )
 
+  const isDeliveredTag = tagsToApply.some(t => t.includes('SERVID'))
+
   const rawUpdatedItems: OrderItem[] = baseHydratedItems.map(it => {
     if (itemFilter(it)) {
       let currentNotes = it.notes || ''
@@ -968,11 +972,31 @@ export async function updateOrderCourseTags(
       return {
         ...it,
         notes: enforceMonotonicItemNotes(currentNotes),
+        ...(isDeliveredTag
+          ? {
+              course_status: 'delivered' as const,
+              kitchen_status: 'delivered' as const,
+              status: 'delivered' as const,
+            }
+          : {}),
       }
     }
+    const alreadyDelivered = Boolean(
+      it.course_status === 'delivered' ||
+      it.kitchen_status === 'delivered' ||
+      it.status === 'delivered' ||
+      it.notes?.includes('SERVID')
+    )
     return {
       ...it,
       notes: enforceMonotonicItemNotes(it.notes),
+      ...(alreadyDelivered
+        ? {
+            course_status: 'delivered' as const,
+            kitchen_status: 'delivered' as const,
+            status: 'delivered' as const,
+          }
+        : {}),
     }
   })
 
@@ -1072,11 +1096,29 @@ export async function updateOrderCourseTags(
     }
   }
 
-  const updatedOrder: Order = {
+  const candidate: Order = {
     ...order,
     notes: updatedOrderNotes,
     order_items: updatedItems,
   }
+  const isAllKitchenDone = areAllKitchenCoursesCompleted(candidate)
+  const isAllOrderDone = areAllOrderCoursesDelivered(candidate)
+  const nextStatus: OrderStatus =
+    (isAllKitchenDone || isAllOrderDone) && order.status !== 'paid' && order.status !== 'cancelled'
+      ? 'delivered'
+      : order.status
+
+  const updatedOrder: Order = {
+    ...candidate,
+    status: nextStatus,
+  }
+
+  if (hasSupabase && nextStatus === 'delivered' && order.status !== 'delivered' && isUuid(orderId)) {
+    try {
+      await supabase.from('orders').update({ status: 'delivered' }).eq('id', orderId)
+    } catch (_) {}
+  }
+
   saveCachedOrderItems(orderId, updatedItems)
   addServerOrder(slug, updatedOrder, true)
 

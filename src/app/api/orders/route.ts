@@ -58,6 +58,7 @@ import {
   areOrderMainsServed,
   areOrderDessertsServed,
   areAllOrderCoursesDelivered,
+  areAllKitchenCoursesCompleted,
   orderHasPendingDesserts,
   isDrinkOnlyOrder,
   hydrateOrderItemsWithCatalog,
@@ -226,9 +227,31 @@ export async function GET(req: NextRequest) {
 
     const pausedProductIds = Array.from(pausedIdsSet)
 
+    const terminalOrderIds = returnedOrders
+      .filter(
+        o =>
+          ['cancelled', 'paid', 'delivered'].includes(o.status) ||
+          areAllKitchenCoursesCompleted(o) ||
+          isDrinkOnlyOrder(o)
+      )
+      .map(o => o.id)
+
+    const isKitchenRole = searchParams.get('role') === 'kitchen' || searchParams.get('source') === 'kitchen'
+    if (isKitchenRole) {
+      returnedOrders = returnedOrders.filter(o => {
+        if (['cancelled', 'paid', 'delivered'].includes(o.status)) return false
+        if (areAllKitchenCoursesCompleted(o)) return false
+        if (isDrinkOnlyOrder(o)) return false
+        const tNum = Number(o.table_number || o.table?.table_number)
+        if (!isNaN(tNum) && tablesWithRecentPaid.has(tNum)) return false
+        return true
+      })
+    }
+
     return NextResponse.json(
       {
         orders: returnedOrders,
+        terminal_order_ids: terminalOrderIds,
         paused_product_ids: pausedProductIds,
         product_availability: productAvailability,
       },
@@ -599,6 +622,7 @@ export async function POST(req: NextRequest) {
         order_id: '',
         product_id: canonicalProdId,
         quantity,
+        price: itemPriceToCharge,
         notes: sanitizedNotes || null,
         product: {
           ...catalogProduct,

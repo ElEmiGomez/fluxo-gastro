@@ -327,8 +327,12 @@ function DinerMenuContent() {
     if (e) e.stopPropagation()
     if (isInSituAdmin) return
 
-    if (delta > 0 && isPromoProduct(product)) {
-      setCustomizingPromoProduct(product)
+    if (delta > 0 && (isPromoProduct(product) || product.price_type === 'weight')) {
+      if (isPromoProduct(product)) {
+        setCustomizingPromoProduct(product)
+      } else {
+        setCustomizingProduct(product)
+      }
       return
     }
 
@@ -379,13 +383,9 @@ function DinerMenuContent() {
     weightGrams?: number
   ) => {
     triggerHaptic(HAPTIC_PATTERNS.ADD_CART)
-    const effectiveUnitPrice = product.price_type === 'weight' && weightGrams && product.price > 20
-      ? Number(((product.price * weightGrams) / (product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
-      : product.price
-
     const customizedProduct: Product = {
       ...product,
-      price: effectiveUnitPrice,
+      price: product.price,
     }
 
     setCart(prev => {

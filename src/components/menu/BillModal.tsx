@@ -56,7 +56,14 @@ export function BillModal({
     if (typeof totalAmount === 'number' && totalAmount > 0) return totalAmount
     const sum = consumedItems.reduce((acc: number, item: any) => {
       if (item.is_complimentary) return acc
-      const price = Number(item.unit_price || item.product?.price || item.price || 0)
+      const prod = item.product || {}
+      const rawPrice = Number(item.unit_price || item.price || prod.price || 0)
+      const basePerUnit = (prod as any).base_price_per_unit || (prod.price_type === 'weight' ? prod.price : undefined)
+      const weight = item.weight_grams || (item.notes?.match(/(\d+)\s*g/i)?.[1] ? Number(item.notes.match(/(\d+)\s*g/i)[1]) : undefined)
+      let price = rawPrice
+      if (prod.price_type === 'weight' && basePerUnit && weight && rawPrice === basePerUnit) {
+        price = Number(((basePerUnit * weight) / (prod.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+      }
       return acc + price * (Number(item.quantity) || 1)
     }, 0)
     return sum > 0 ? sum : 0

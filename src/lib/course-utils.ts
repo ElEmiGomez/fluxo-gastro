@@ -415,10 +415,13 @@ export function hydrateOrderItemsWithCatalog(
         ? it.course
         : getItemCourse({ ...it, product: resolvedProd, notes: effectiveNotes })
 
+    const effectivePrice = typeof it.price === 'number' && it.price >= 0 ? it.price : (resolvedProd?.price ?? 0)
+
     return {
       ...it,
+      price: effectivePrice,
       product_id: it.product_id || resolvedProd?.id,
-      product: resolvedProd,
+      product: resolvedProd ? { ...resolvedProd, price: effectivePrice } : resolvedProd,
       notes: effectiveNotes,
       course: effectiveCourse,
     } as OrderItem
@@ -638,6 +641,13 @@ export function isStarterReady(item: OrderItem, parentOrder?: any): boolean {
 }
 
 export function isStarterServed(item: OrderItem, parentOrder?: any): boolean {
+  if (
+    (item as any)?.course_status === 'delivered' ||
+    (item as any)?.kitchen_status === 'delivered' ||
+    (item as any)?.status === 'delivered'
+  ) {
+    return true
+  }
   if (item?.notes && item.notes.includes(TAG_STARTER_SERVED)) return true
   if (parentOrder && typeof parentOrder === 'object') {
     if (parentOrder.notes?.includes(TAG_STARTER_SERVED)) return true
@@ -677,6 +687,13 @@ export function isMainReady(item: OrderItem, parentOrder?: any): boolean {
 }
 
 export function isMainServed(item: OrderItem, parentOrder?: any): boolean {
+  if (
+    (item as any)?.course_status === 'delivered' ||
+    (item as any)?.kitchen_status === 'delivered' ||
+    (item as any)?.status === 'delivered'
+  ) {
+    return true
+  }
   if (item?.notes && item.notes.includes(TAG_MAIN_SERVED)) return true
   if (typeof parentOrder === 'string' && (parentOrder.includes(TAG_MAIN_SERVED) || parentOrder.includes(TAG_DESSERT_FIRED) || parentOrder.includes(TAG_DESSERT_SERVED))) return true
   if (parentOrder && typeof parentOrder === 'object') {
@@ -695,6 +712,13 @@ export function isMainServed(item: OrderItem, parentOrder?: any): boolean {
 }
 
 export function isDessertServed(item: OrderItem, parentOrder?: any): boolean {
+  if (
+    (item as any)?.course_status === 'delivered' ||
+    (item as any)?.kitchen_status === 'delivered' ||
+    (item as any)?.status === 'delivered'
+  ) {
+    return true
+  }
   if (typeof parentOrder === 'string' && (parentOrder.includes(TAG_DESSERT_SERVED) || parentOrder.includes('[POSTRE: SERVIDO]') || parentOrder.includes('[POSTRE:SERVIDO]'))) return true
   if (
     item?.notes &&
@@ -991,25 +1015,19 @@ export function areAllOrderCoursesDelivered(order: Order): boolean {
   const startersDone =
     !hasStarters ||
     Boolean((order as any).notes?.includes(TAG_STARTER_SERVED)) ||
-    items.filter(isStarterItem).every(it => Boolean(it.notes?.includes(TAG_STARTER_SERVED)))
+    items.filter(isStarterItem).every(it => isStarterServed(it, order))
 
   const hasMains = orderHasMains(order)
   const mainsDone =
     !hasMains ||
     Boolean((order as any).notes?.includes(TAG_MAIN_SERVED)) ||
-    items.filter(isMainItem).every(it => Boolean(it.notes?.includes(TAG_MAIN_SERVED)))
+    items.filter(isMainItem).every(it => isMainServed(it, order))
 
   const hasDesserts = orderHasDesserts(order)
   const dessertsDone =
     !hasDesserts ||
     Boolean((order as any).notes?.includes(TAG_DESSERT_SERVED)) ||
-    items.filter(isDessertItem).every(it =>
-      Boolean(
-        it.notes?.includes(TAG_DESSERT_SERVED) ||
-          it.notes?.includes('[POSTRE: SERVIDO]') ||
-          it.notes?.includes('[POSTRE:SERVIDO]')
-      )
-    )
+    items.filter(isDessertItem).every(it => isDessertServed(it, order))
 
   return drinksDone && startersDone && mainsDone && dessertsDone
 }

@@ -106,10 +106,11 @@ export function ProductModifierModal({
     )
   }
 
+  const basePricePerKg = (product as any).base_price_per_unit ?? product.price
   const unitOrWeightPrice = (isStaff && isComplimentary)
     ? 0
     : product.price_type === 'weight'
-    ? Number(((product.price * weightGrams) / (product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
+    ? Number(((basePricePerKg * weightGrams) / (product.price_unit === 'kg' ? 1000 : 100)).toFixed(2))
     : product.price
 
   const subtotal = Number((unitOrWeightPrice * quantity).toFixed(2))
@@ -128,7 +129,9 @@ export function ProductModifierModal({
     const customizedProduct: Product = {
       ...product,
       price: unitOrWeightPrice,
-    }
+      original_price: product.original_price ?? basePricePerKg,
+      ...(product.price_type === 'weight' ? { base_price_per_unit: basePricePerKg } : {}),
+    } as any
 
     onConfirm(
       customizedProduct,
