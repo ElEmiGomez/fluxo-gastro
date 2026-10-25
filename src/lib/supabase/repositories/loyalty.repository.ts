@@ -27,7 +27,7 @@ const globalStore = globalThis as unknown as {
 export const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
   mode: 'stamps',
   target_stamps: 5,
-  min_spend_per_stamp: 0,
+  min_spend_per_stamp: 50,
   reward_label: 'Postre o Café gratis',
   reward_category_filter: ['postres', 'bebidas'],
 }
@@ -35,8 +35,8 @@ export const DEFAULT_LOYALTY_SETTINGS: LoyaltySettings = {
 if (!globalStore.__GASTRO_LOYALTY_SETTINGS__) {
   globalStore.__GASTRO_LOYALTY_SETTINGS__ = {
     'burger-gourmet': { ...DEFAULT_LOYALTY_SETTINGS },
-    'taperia-casco-antigo': { ...DEFAULT_LOYALTY_SETTINGS },
-    'terraza-malecon': { ...DEFAULT_LOYALTY_SETTINGS },
+    'taperia-casco-antigo': { ...DEFAULT_LOYALTY_SETTINGS, min_spend_per_stamp: 40 },
+    'terraza-malecon': { ...DEFAULT_LOYALTY_SETTINGS, min_spend_per_stamp: 45 },
   }
 }
 
@@ -195,24 +195,47 @@ function computeHeldPointsForProfile(profileId: string, slug: string): number {
 /**
  * 1. OBTENER PERFIL DE FIDELIZACIÓN (CON SALDO RETENIDO CALCULADO)
  */
-export async function getLoyaltyProfile(slug: string, email: string): Promise<LoyaltyProfile | null> {
-  const normEmail = normalizeEmail(email)
-  if (!normEmail) return null
+/**
+ * 1. OBTENER PERFIL DE FIDELIZACIÓN (CON SALDO RETENIDO CALCULADO)
+ */
+export async function getLoyaltyProfile(slug: string, identifier: string): Promise<LoyaltyProfile | null> {
+  const norm = (identifier || '').trim()
+  if (!norm) return null
 
-  const memKey = getMemoryKey(slug, normEmail)
+  const isEmail = norm.includes('@')
+  const normEmail = isEmail ? normalizeEmail(norm) : ''
+  const normPhone = !isEmail ? norm.replace(/\s+/g, '') : ''
+  const memKey = isEmail ? getMemoryKey(slug, normEmail) : `${slug}:phone:${normPhone}`
+
   let profile = globalStore.__GASTRO_LOYALTY_PROFILES__?.[memKey] || null
+
+  if (!profile && globalStore.__GASTRO_LOYALTY_PROFILES__) {
+    profile = Object.values(globalStore.__GASTRO_LOYALTY_PROFILES__).find(p =>
+      p.restaurant_slug === slug && (
+        (isEmail && normalizeEmail(p.email) === normEmail) ||
+        (!isEmail && (p.phone?.replace(/\s+/g, '') === normPhone || p.id === norm))
+      )
+    ) || null
+  }
 
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('loyalty_profiles')
         .select('*')
         .eq('restaurant_slug', slug)
-        .eq('email', normEmail)
-        .maybeSingle()
+
+      if (isEmail) {
+        query = query.eq('email', normEmail)
+      } else {
+        query = query.eq('phone', normPhone)
+      }
+
+      const { data, error } = await query.maybeSingle()
 
       if (!error && data) {
+        const prevMem = profile || (globalStore.__GASTRO_LOYALTY_PROFILES__?.[memKey])
         profile = {
           id: data.id,
           restaurant_slug: data.restaurant_slug,
@@ -223,11 +246,28 @@ export async function getLoyaltyProfile(slug: string, email: string): Promise<Lo
           held_points: 0,
           available_points: Number(data.total_points) || 0,
           google_review_bonus_awarded: Boolean(data.google_review_bonus_awarded),
+          stamps_count: data.stamps_count !== undefined && data.stamps_count !== null
+            ? Number(data.stamps_count)
+            : (prevMem?.stamps_count !== undefined
+                ? prevMem.stamps_count
+                : (Boolean(data.google_review_bonus_awarded) ? 1 : 0)),
+          stamps_target: data.stamps_target !== undefined && data.stamps_target !== null
+            ? Number(data.stamps_target)
+            : (prevMem?.stamps_target ?? 5),
+          unlocked_rewards_count: data.unlocked_rewards_count !== undefined && data.unlocked_rewards_count !== null
+            ? Number(data.unlocked_rewards_count)
+            : (prevMem?.unlocked_rewards_count ?? 0),
+          total_stamps_earned: data.total_stamps_earned !== undefined && data.total_stamps_earned !== null
+            ? Number(data.total_stamps_earned)
+            : (prevMem?.total_stamps_earned ?? (data.stamps_count ? Number(data.stamps_count) : 0)),
           created_at: data.created_at,
           updated_at: data.updated_at,
         }
         if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
-          globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = profile
+          globalStore.__GASTRO_LOYALTY_PROFILES__[getMemoryKey(slug, data.email)] = profile
+          if (data.phone) {
+            globalStore.__GASTRO_LOYALTY_PROFILES__[`${slug}:phone:${data.phone.replace(/\s+/g, '')}`] = profile
+          }
         }
       }
     } catch (e) {
@@ -245,10 +285,10 @@ export async function getLoyaltyProfile(slug: string, email: string): Promise<Lo
     ...profile,
     held_points: held,
     available_points: available,
-    stamps_count: profile.stamps_count ?? 0,
-    stamps_target: settings.target_stamps || 5,
+    stamps_count: profile.stamps_count ?? (Boolean(profile.google_review_bonus_awarded) ? 1 : 0),
+    stamps_target: settings.target_stamps || profile.stamps_target || 5,
     unlocked_rewards_count: profile.unlocked_rewards_count ?? 0,
-    total_stamps_earned: profile.total_stamps_earned ?? 0,
+    total_stamps_earned: profile.total_stamps_earned ?? (profile.stamps_count ?? 0),
   }
 }
 
@@ -547,22 +587,27 @@ export async function registerOrGetLoyaltyProfile(
         hasChanges = true
       }
 
-      if (isStampsMode && (!profile.stamps_count || profile.stamps_count === 0) && (profile.total_points > 0 || retroactivePoints > 0)) {
-        profile.stamps_count = 1
-        profile.total_stamps_earned = Math.max(1, profile.total_stamps_earned || 1)
-        profile.stamps_target = targetStamps
-        hasChanges = true
+      if (isStampsMode && (!profile.stamps_count || profile.stamps_count === 0)) {
+        if (profile.total_points > 0 || retroactivePoints > 0 || profile.google_review_bonus_awarded) {
+          profile.stamps_count = (profile.google_review_bonus_awarded && (profile.total_points > 0 || retroactivePoints > 0)) ? 2 : 1
+          profile.total_stamps_earned = Math.max(profile.stamps_count, profile.total_stamps_earned || 1)
+          profile.stamps_target = targetStamps
+          hasChanges = true
+        }
       }
 
       if (hasChanges) {
         profile.updated_at = new Date().toISOString()
         if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
           globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = profile
+          if (profile.phone) {
+            globalStore.__GASTRO_LOYALTY_PROFILES__[`${slug}:phone:${profile.phone.replace(/\s+/g, '')}`] = profile
+          }
         }
         const supabase = createServerClient()
         if (supabase && isSupabaseConfigured()) {
           try {
-            await supabase
+            const { error: updateErr } = await supabase
               .from('loyalty_profiles')
               .update({
                 name: profile.name,
@@ -574,6 +619,18 @@ export async function registerOrGetLoyaltyProfile(
                 updated_at: new Date().toISOString(),
               })
               .match({ restaurant_slug: slug, email: normEmail })
+
+            if (updateErr) {
+              await supabase
+                .from('loyalty_profiles')
+                .update({
+                  name: profile.name,
+                  total_points: profile.total_points,
+                  google_review_bonus_awarded: profile.google_review_bonus_awarded,
+                  updated_at: new Date().toISOString(),
+                })
+                .match({ restaurant_slug: slug, email: normEmail })
+            }
 
             if (uncreditedOrdersToMark.length > 0) {
               await supabase
@@ -1082,8 +1139,8 @@ export async function settleLoyaltySession(
   // 4. Lógica de Cartilla de Sellos por Compras
   const settings = await getLoyaltySettings(slug)
   const finalBillAmount = Number(params.finalAmount) || totalBillPoints || 0
-  const minSpend = (settings.min_spend_per_stamp && settings.min_spend_per_stamp !== 50) ? settings.min_spend_per_stamp : 0
-  const qualifiesForStamp = (finalBillAmount > 0 || totalBillPoints > 0 || uncreditedOrders.length > 0) && finalBillAmount >= minSpend
+  const minSpend = typeof settings.min_spend_per_stamp === 'number' ? settings.min_spend_per_stamp : 0
+  const qualifiesForStamp = finalBillAmount >= minSpend
   let stampAwarded = false
   let stampRewardUnlockedNow = false
 
@@ -1212,21 +1269,25 @@ export async function redeemStampReward(
  */
 export async function claimGoogleReviewBonus(
   slug: string,
-  email: string,
+  identifier: string,
   bonusAmount: number = 50
-): Promise<{ success: boolean; bonus_points: number; new_total_points: number; profile: LoyaltyProfile; already_awarded?: boolean }> {
-  const normEmail = normalizeEmail(email)
-  const memKey = getMemoryKey(slug, normEmail)
+): Promise<{ success: boolean; bonus_points: number; bonus_stamps?: number; new_total_points: number; profile: LoyaltyProfile; already_awarded?: boolean }> {
+  const norm = (identifier || '').trim()
+  const isEmail = norm.includes('@')
+  const normEmail = isEmail ? normalizeEmail(norm) : ''
+  const normPhone = !isEmail ? norm.replace(/\s+/g, '') : ''
+  const memKey = isEmail ? getMemoryKey(slug, normEmail) : `${slug}:phone:${normPhone}`
 
   return withProfileLock(memKey, async () => {
     const settings = await getLoyaltySettings(slug)
-    const isStampsMode = settings?.mode === 'stamps'
-    const targetStamps = settings?.target_stamps || 5
+    const profile = await getLoyaltyProfile(slug, norm)
+    if (!profile) throw new Error('Perfil de comensal no encontrado.')
+
+    const isStampsMode = settings?.mode === 'stamps' || (profile.stamps_target !== undefined && profile.stamps_target > 0) || (profile.stamps_count !== undefined && profile.stamps_count > 0)
+    const targetStamps = settings?.target_stamps || profile.stamps_target || 5
 
     // En modo cartilla de sellos, otorgar +1 sello directamente
     if (isStampsMode) {
-      const profile = await getLoyaltyProfile(slug, normEmail)
-      if (!profile) throw new Error('Perfil de comensal no encontrado.')
       if (profile.google_review_bonus_awarded) {
         return {
           success: true,
@@ -1238,7 +1299,11 @@ export async function claimGoogleReviewBonus(
         }
       }
 
-      const currentStamps = (profile.stamps_count || 0) + 1
+      let baseStamps = profile.stamps_count ?? 0
+      if (baseStamps === 0 && (profile.total_points > 0 || (profile.total_stamps_earned ?? 0) > 0)) {
+        baseStamps = 1
+      }
+      const currentStamps = baseStamps + 1
       let unlockedRewards = profile.unlocked_rewards_count || 0
       let newStamps = currentStamps
       if (currentStamps >= targetStamps) {
@@ -1249,18 +1314,21 @@ export async function claimGoogleReviewBonus(
       profile.stamps_count = newStamps
       profile.stamps_target = targetStamps
       profile.unlocked_rewards_count = unlockedRewards
-      profile.total_stamps_earned = (profile.total_stamps_earned || 0) + 1
+      profile.total_stamps_earned = Math.max(currentStamps, (profile.total_stamps_earned || 0) + 1)
       profile.google_review_bonus_awarded = true
       profile.updated_at = new Date().toISOString()
 
       if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
-        globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = profile
+        globalStore.__GASTRO_LOYALTY_PROFILES__[getMemoryKey(slug, profile.email)] = profile
+        if (profile.phone) {
+          globalStore.__GASTRO_LOYALTY_PROFILES__[`${slug}:phone:${profile.phone.replace(/\s+/g, '')}`] = profile
+        }
       }
 
       const supabase = createServerClient()
       if (supabase && isSupabaseConfigured()) {
         try {
-          await supabase
+          const { error: updateErr } = await supabase
             .from('loyalty_profiles')
             .update({
               stamps_count: newStamps,
@@ -1271,6 +1339,16 @@ export async function claimGoogleReviewBonus(
               updated_at: new Date().toISOString(),
             })
             .match({ restaurant_slug: slug, email: profile.email })
+
+          if (updateErr) {
+            await supabase
+              .from('loyalty_profiles')
+              .update({
+                google_review_bonus_awarded: true,
+                updated_at: new Date().toISOString(),
+              })
+              .match({ restaurant_slug: slug, email: profile.email })
+          }
         } catch (e) {
           console.warn('[claimGoogleReviewBonus:stamps] Error guardando en Supabase:', e)
         }
@@ -1336,31 +1414,31 @@ export async function claimGoogleReviewBonus(
     }
 
     // Fallback local en memoria serializado por mutex
-    const profile = await getLoyaltyProfile(slug, normEmail)
-    if (!profile) {
+    const localProfile = profile || (await getLoyaltyProfile(slug, normEmail))
+    if (!localProfile) {
       throw new Error('Perfil de comensal no encontrado.')
     }
 
-    if (profile.google_review_bonus_awarded) {
+    if (localProfile.google_review_bonus_awarded) {
       return {
         success: true,
         bonus_points: 0,
-        new_total_points: profile.total_points,
+        new_total_points: localProfile.total_points,
         already_awarded: true,
-        profile,
+        profile: localProfile,
       }
     }
 
     const bonusPoints = Number(bonusAmount) > 0 ? Number(bonusAmount) : 50
-    const newTotal = profile.total_points + bonusPoints
-    profile.total_points = newTotal
-    profile.available_points = Math.max(0, newTotal - (profile.held_points || 0))
-    profile.google_review_bonus_awarded = true
-    profile.updated_at = new Date().toISOString()
+    const newTotal = localProfile.total_points + bonusPoints
+    localProfile.total_points = newTotal
+    localProfile.available_points = Math.max(0, newTotal - (localProfile.held_points || 0))
+    localProfile.google_review_bonus_awarded = true
+    localProfile.updated_at = new Date().toISOString()
 
     // Actualizar en memoria global
     if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
-      globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = profile
+      globalStore.__GASTRO_LOYALTY_PROFILES__[memKey] = localProfile
     }
 
     if (supabase && isSupabaseConfigured()) {
@@ -1372,13 +1450,13 @@ export async function claimGoogleReviewBonus(
             google_review_bonus_awarded: true,
             updated_at: new Date().toISOString(),
           })
-          .match({ restaurant_slug: slug, email: profile.email })
+          .match({ restaurant_slug: slug, email: localProfile.email })
       } catch (e) {
         console.warn('[claimGoogleReviewBonus] Guardado en memoria:', e)
       }
     }
 
-    const updatedProfile = (await getLoyaltyProfile(slug, normEmail)) || profile
+    const updatedProfile = (await getLoyaltyProfile(slug, normEmail)) || localProfile
 
     return {
       success: true,

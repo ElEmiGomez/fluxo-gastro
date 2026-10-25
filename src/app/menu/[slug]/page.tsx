@@ -689,6 +689,7 @@ function DinerMenuContent() {
           loyaltyProfile={loyalty.profile}
           onClaimLoyaltyBonus={loyalty.claimGoogleReviewBonus}
           onOpenLoyaltyModal={() => loyalty.setIsModalOpen(true)}
+          onLogout={loyalty.logout}
           hasPendingDessertChoice={hasPendingDessertChoice}
           onOpenDessertSelector={() => setIsQuickDessertModalOpen(true)}
           hasPendingDesserts={hasPendingDesserts}

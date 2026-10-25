@@ -58,6 +58,7 @@ interface MenuLiveTrackerProps {
   loyaltyProfile?: LoyaltyProfile | null
   onClaimLoyaltyBonus?: () => void
   onOpenLoyaltyModal?: () => void
+  onLogout?: () => void
   hasPendingDessertChoice?: boolean
   onOpenDessertSelector?: () => void
   hasPendingDesserts?: boolean
@@ -86,6 +87,7 @@ export function MenuLiveTracker({
   loyaltyProfile,
   onClaimLoyaltyBonus,
   onOpenLoyaltyModal,
+  onLogout,
   hasPendingDessertChoice = false,
   onOpenDessertSelector,
   hasPendingDesserts = false,
@@ -589,6 +591,7 @@ export function MenuLiveTracker({
             onOpenLoyaltyModal={onOpenLoyaltyModal}
             onClaimLoyaltyBonus={onClaimLoyaltyBonus}
             onResetTableSession={onResetTableSession}
+            onLogout={onLogout}
           />
         </div>
       )}

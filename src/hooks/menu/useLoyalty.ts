@@ -18,6 +18,31 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
 
   const storageKey = `fluxo_loyalty_user_${slug}`
 
+  const saveProfileToStorage = useCallback((p: LoyaltyProfile | null) => {
+    if (typeof window === 'undefined') return
+    try {
+      if (p && p.email) {
+        localStorage.setItem(storageKey, JSON.stringify({
+          id: p.id,
+          restaurant_slug: p.restaurant_slug || slug,
+          email: p.email,
+          name: p.name,
+          phone: p.phone,
+          total_points: p.total_points,
+          available_points: p.available_points,
+          held_points: p.held_points,
+          stamps_count: p.stamps_count,
+          stamps_target: p.stamps_target,
+          unlocked_rewards_count: p.unlocked_rewards_count,
+          total_stamps_earned: p.total_stamps_earned,
+          google_review_bonus_awarded: p.google_review_bonus_awarded,
+        }))
+      } else {
+        localStorage.removeItem(storageKey)
+      }
+    } catch (_) {}
+  }, [storageKey, slug])
+
   // 1. Cargar perfil desde localStorage y refrescar desde servidor
   const fetchProfile = useCallback(async (email: string) => {
     try {
@@ -30,19 +55,15 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
         if (data.settings) {
           setSettings(data.settings)
         }
-        try {
-          localStorage.setItem(storageKey, JSON.stringify({ email: data.profile.email, name: data.profile.name }))
-        } catch (_) {}
+        saveProfileToStorage(data.profile)
       } else {
         setProfile(null)
-        try {
-          localStorage.removeItem(storageKey)
-        } catch (_) {}
+        saveProfileToStorage(null)
       }
     } catch (err: any) {
       console.warn('[useLoyalty] Error sincronizando perfil:', err)
     }
-  }, [slug, storageKey, tableNumber])
+  }, [slug, saveProfileToStorage, tableNumber])
 
 
   // 2. Cargar catálogo de recompensas
@@ -59,6 +80,20 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
     }
   }, [slug])
 
+  // Escuchar evento de logout para sincronizar estado en tiempo real
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleLogout = (e: any) => {
+      if (!e.detail?.slug || e.detail.slug === slug) {
+        setProfile(null)
+      }
+    }
+    window.addEventListener('fluxo_loyalty_logout', handleLogout)
+    return () => {
+      window.removeEventListener('fluxo_loyalty_logout', handleLogout)
+    }
+  }, [slug])
+
   // Efecto inicial de montaje
   useEffect(() => {
     let isMounted = true
@@ -70,6 +105,24 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
         if (stored) {
           const parsed = JSON.parse(stored)
           if (parsed.email) {
+            // Hidratación optimista para evitar saltos visuales al recargar
+            setProfile((prev) => prev || ({
+              id: parsed.id || 'stored-session',
+              restaurant_slug: parsed.restaurant_slug || slug,
+              email: parsed.email,
+              name: parsed.name || '',
+              phone: parsed.phone,
+              total_points: parsed.total_points ?? 0,
+              available_points: parsed.available_points ?? 0,
+              held_points: parsed.held_points ?? 0,
+              stamps_count: parsed.stamps_count ?? 0,
+              stamps_target: parsed.stamps_target ?? 5,
+              unlocked_rewards_count: parsed.unlocked_rewards_count ?? 0,
+              total_stamps_earned: parsed.total_stamps_earned ?? 0,
+              google_review_bonus_awarded: Boolean(parsed.google_review_bonus_awarded),
+              created_at: '',
+              updated_at: '',
+            }))
             await fetchProfile(parsed.email)
           }
         }
@@ -148,8 +201,8 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
       }
 
       setProfile(data.profile)
+      saveProfileToStorage(data.profile)
       if (typeof window !== 'undefined') {
-        localStorage.setItem(storageKey, JSON.stringify({ email: data.profile.email, name: data.profile.name }))
         if (tableNumber && effectiveLastPaid) {
           sessionStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
           localStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
@@ -168,15 +221,22 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
     }
   }
 
-  // 4. Cerrar sesión / Desconectar
-  const logout = () => {
+  // 4. Cerrar sesión / Desconectar comensal de esta mesa
+  const logout = useCallback(() => {
     setProfile(null)
+    saveProfileToStorage(null)
     if (typeof window !== 'undefined') {
       localStorage.removeItem(storageKey)
+      localStorage.removeItem(`fluxo_client_phone_${slug}`)
+      sessionStorage.removeItem(`fluxo_client_phone_${slug}`)
+      localStorage.removeItem('fluxo_pending_google_review_bonus')
+      sessionStorage.removeItem('fluxo_pending_google_review_bonus')
+      // Disparar evento para que otras vistas o pestañas sincronicen la desconexión
+      window.dispatchEvent(new CustomEvent('fluxo_loyalty_logout', { detail: { slug } }))
     }
-  }
+  }, [storageKey, slug, saveProfileToStorage])
 
-  // 5. Reclamar bonus de Google Maps (+50 Puntos de un solo uso o configurable)
+  // 5. Reclamar bonus de Google Maps (+50 Puntos o +1 Sello de un solo uso)
   const claimGoogleReviewBonus = async (bonusPoints: number = 50) => {
     if (profile?.google_review_bonus_awarded) {
       if (typeof window !== 'undefined') {
@@ -207,16 +267,19 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
         throw new Error(data.error || 'No se pudo reclamar el bonus de Google Maps')
       }
 
-      const updated = data.profile || {
+      const fallbackStamps = (profile.stamps_count || 1) + 1
+      const updated: LoyaltyProfile = data.profile || {
         ...profile,
-        total_points: data.new_total_points,
-        available_points: Math.max(0, data.new_total_points - (profile.held_points || 0)),
+        total_points: data.new_total_points ?? (profile.total_points + bonusPoints),
+        available_points: Math.max(0, (data.new_total_points ?? (profile.total_points + bonusPoints)) - (profile.held_points || 0)),
+        stamps_count: typeof data.stamps_count === 'number' ? data.stamps_count : fallbackStamps,
+        total_stamps_earned: (profile.total_stamps_earned || 0) + 1,
         google_review_bonus_awarded: true,
       }
 
       setProfile(updated)
+      saveProfileToStorage(updated)
       if (typeof window !== 'undefined') {
-        localStorage.setItem(storageKey, JSON.stringify({ email: updated.email, name: updated.name }))
         sessionStorage.removeItem('fluxo_pending_google_review_bonus')
         localStorage.removeItem('fluxo_pending_google_review_bonus')
       }
@@ -246,11 +309,17 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
       }
       if (data.profile) {
         setProfile(data.profile)
+        saveProfileToStorage(data.profile)
       } else {
-        setProfile(prev => prev ? {
-          ...prev,
-          unlocked_rewards_count: data.remaining_rewards ?? Math.max(0, (prev.unlocked_rewards_count || 1) - 1)
-        } : null)
+        setProfile(prev => {
+          if (!prev) return null
+          const updated = {
+            ...prev,
+            unlocked_rewards_count: data.remaining_rewards ?? Math.max(0, (prev.unlocked_rewards_count || 1) - 1)
+          }
+          saveProfileToStorage(updated)
+          return updated
+        })
       }
       return data
     } catch (err: any) {

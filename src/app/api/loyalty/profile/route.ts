@@ -13,20 +13,22 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
     const email = searchParams.get('email')
+    const phone = searchParams.get('phone')
     const tableNumber = searchParams.get('table') || searchParams.get('tableNumber')
+    const targetIdentifier = (email || phone || '').trim()
 
-    if (!email) {
+    if (!targetIdentifier) {
       return NextResponse.json(
-        { success: false, error: 'Email requerido para consultar fidelización' },
+        { success: false, error: 'Email o teléfono requerido para consultar fidelización' },
         { status: 400 }
       )
     }
 
-    let profile = await getLoyaltyProfile(slug, email)
+    let profile = await getLoyaltyProfile(slug, targetIdentifier)
     if (tableNumber && profile) {
       profile = await registerOrGetLoyaltyProfile(slug, {
         name: profile.name || 'Comensal',
-        email,
+        email: profile.email,
         phone: profile.phone,
         tableNumber,
       })

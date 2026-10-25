@@ -384,12 +384,18 @@ export function StampCardModal({
                 </div>
                 <button
                   type="button"
-                  onClick={onLogout}
-                  className="text-xs font-bold text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg hover:bg-slate-100 cursor-pointer"
-                  title="Cambiar de cuenta"
+                  onClick={() => {
+                    setName('')
+                    setEmail('')
+                    setPhone('')
+                    setFormError(null)
+                    onLogout()
+                  }}
+                  className="text-xs font-bold text-slate-400 hover:text-red-600 flex items-center gap-1 transition-colors px-2.5 py-1 rounded-lg hover:bg-red-50 cursor-pointer"
+                  title="Cerrar sesión y desconectar cuenta de esta mesa"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Salir</span>
+                  <span>Cerrar sesión</span>
                 </button>
               </div>
 

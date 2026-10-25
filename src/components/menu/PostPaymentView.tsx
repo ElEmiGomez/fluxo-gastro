@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   RotateCcw,
   HeartHandshake,
+  LogOut,
 } from 'lucide-react'
 import { triggerHaptic, HAPTIC_PATTERNS } from '@/lib/haptic'
 import { LoyaltyProfile } from '@/types/loyalty.types'
@@ -23,6 +24,7 @@ interface PostPaymentViewProps {
   onOpenLoyaltyModal?: () => void
   onClaimLoyaltyBonus?: () => void
   onResetTableSession?: () => void
+  onLogout?: () => void
 }
 
 export function PostPaymentView({
@@ -34,6 +36,7 @@ export function PostPaymentView({
   onOpenLoyaltyModal,
   onClaimLoyaltyBonus,
   onResetTableSession,
+  onLogout,
 }: PostPaymentViewProps) {
   const [selectedRating, setSelectedRating] = useState<number | null>(5)
   const [feedbackSent, setFeedbackSent] = useState<boolean>(false)
@@ -63,13 +66,13 @@ export function PostPaymentView({
       ? `https://search.google.com/local/writereview?placeid=${restaurant.google_place_id}`
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((restaurant.name || 'Burger Gourmet') + ' Noia')}`)
 
-  const handleSelectStar = (star: number) => {
+  const handleSelectStar = async (star: number) => {
     setSelectedRating(star)
     triggerHaptic(HAPTIC_PATTERNS.SUCCESS)
 
     if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
       try {
-        onClaimLoyaltyBonus()
+        await onClaimLoyaltyBonus()
       } catch {}
     } else if (!loyaltyProfile) {
       if (typeof window !== 'undefined') {
@@ -88,13 +91,13 @@ export function PostPaymentView({
     }
   }
 
-  const handleOpenGoogleMaps = () => {
+  const handleOpenGoogleMaps = async () => {
     triggerHaptic(HAPTIC_PATTERNS.TAP)
     setSelectedRating(5)
     setThankYouFiveStars(true)
     if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
       try {
-        onClaimLoyaltyBonus()
+        await onClaimLoyaltyBonus()
       } catch {}
     } else if (!loyaltyProfile) {
       if (typeof window !== 'undefined') {
@@ -109,7 +112,7 @@ export function PostPaymentView({
   const effectiveLoyaltyMode = loyaltyMode === 'stamps' || loyaltyProfile?.stamps_target || (loyaltyProfile?.stamps_count !== undefined && loyaltyProfile.stamps_count > 0)
     ? 'stamps'
     : loyaltyMode
-  const stampsCount = (loyaltyProfile?.stamps_count && loyaltyProfile.stamps_count > 0) ? loyaltyProfile.stamps_count : 1
+  const stampsCount = loyaltyProfile ? (loyaltyProfile.stamps_count ?? 0) : (paidTotal > 0 ? 1 : 0)
 
   return (
     <div className="w-full animate-in fade-in duration-300 space-y-3 pb-6 select-none">
@@ -141,21 +144,39 @@ export function PostPaymentView({
           <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between gap-2 mt-1">
             <div className="flex items-center gap-2 min-w-0">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span className="truncate">
-                {effectiveLoyaltyMode === 'stamps'
-                  ? `✓ Sellos guardados en tu cartilla (${stampsCount} ${stampsCount === 1 ? 'sello acumulado' : 'sellos acumulados'})`
-                  : `✓ Puntos guardados en tu cuenta (${loyaltyProfile?.available_points ?? storedPoints} pts acumulados)`}
-              </span>
+              <div className="min-w-0">
+                <span className="truncate block">
+                  {effectiveLoyaltyMode === 'stamps'
+                    ? `✓ Sellos guardados en tu cartilla (${stampsCount} ${stampsCount === 1 ? 'sello acumulado' : 'sellos acumulados'})`
+                    : `✓ Puntos guardados en tu cuenta (${loyaltyProfile?.available_points ?? storedPoints} pts acumulados)`}
+                </span>
+                <span className="text-[10px] text-emerald-700/80 font-semibold truncate block">
+                  {loyaltyProfile?.name ? `${loyaltyProfile.name} · ${loyaltyProfile.email || loyaltyProfile.phone}` : (loyaltyProfile?.email || loyaltyProfile?.phone)}
+                </span>
+              </div>
             </div>
-            {onOpenLoyaltyModal && (
-              <button
-                type="button"
-                onClick={onOpenLoyaltyModal}
-                className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black flex-shrink-0 cursor-pointer transition-colors"
-              >
-                {effectiveLoyaltyMode === 'stamps' ? 'Ver Cartilla' : 'Ver Premios'}
-              </button>
-            )}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {onOpenLoyaltyModal && (
+                <button
+                  type="button"
+                  onClick={onOpenLoyaltyModal}
+                  className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black cursor-pointer transition-colors shadow-xs"
+                >
+                  {effectiveLoyaltyMode === 'stamps' ? 'Ver Cartilla' : 'Ver Premios'}
+                </button>
+              )}
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  title="Cerrar sesión en esta mesa"
+                  className="px-2 py-1.5 rounded-xl bg-white hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 hover:border-red-200 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <LogOut className="w-3 h-3" />
+                  <span className="hidden sm:inline">Cerrar sesión</span>
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <button
@@ -246,6 +267,17 @@ export function PostPaymentView({
           </div>
         ) : null}
 
+        {loyaltyProfile?.google_review_bonus_awarded && (
+          <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>
+              {effectiveLoyaltyMode === 'stamps'
+                ? '✓ Sello extra por reseña de Google Maps (+1 sello) guardado en tu cartilla'
+                : '✓ Bonus por reseña de Google Maps (+50 pts) guardado en tu cuenta'}
+            </span>
+          </div>
+        )}
+
         {/* Botón de Google Maps */}
         <button
           type="button"
@@ -264,9 +296,19 @@ export function PostPaymentView({
         </button>
       </div>
 
-      {/* Pie de Pantalla Discreto: Iniciar un nuevo pedido en esta mesa */}
-      {onResetTableSession && (
-        <div className="text-center pt-2">
+      {/* Pie de Pantalla Discreto: Desconectar cuenta y/o Iniciar un nuevo pedido */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
+        {onLogout && isPointsSaved && (
+          <button
+            type="button"
+            onClick={onLogout}
+            className="text-[11px] font-bold text-slate-400 hover:text-red-600 hover:underline transition-colors cursor-pointer inline-flex items-center gap-1.5"
+          >
+            <LogOut className="w-3 h-3" />
+            <span>Desconectar cuenta de {loyaltyProfile?.name || 'cliente'} de esta mesa</span>
+          </button>
+        )}
+        {onResetTableSession && (
           <button
             type="button"
             onClick={onResetTableSession}
@@ -275,8 +317,8 @@ export function PostPaymentView({
             <RotateCcw className="w-3 h-3" />
             <span>Iniciar un nuevo pedido en esta mesa</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
