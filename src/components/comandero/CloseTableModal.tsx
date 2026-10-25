@@ -89,29 +89,41 @@ export function CloseTableModal({
         !['cancelled', 'paid'].includes(o.status)
     )
 
+    const nonCancelled = serverOrders.filter(
+      o =>
+        (o.table_number?.toString() === tableNumber.toString() ||
+          o.table?.table_number?.toString() === tableNumber.toString()) &&
+        o.status !== 'cancelled'
+    )
+
+    const targetOrders = filtered.length > 0 ? filtered : nonCancelled
+
     let raw = 0
     let items = 0
 
-    filtered.forEach(ord => {
+    targetOrders.forEach(ord => {
+      let ordSum = 0
       if (ord.order_items && ord.order_items.length > 0) {
         ord.order_items.forEach(item => {
           if (!item.is_complimentary) {
-            const price = item.product?.price || 0
-            raw += (item.quantity || 1) * price
+            const price = item.product?.price ?? (item as any).unit_price ?? (item as any).price ?? 0
+            ordSum += (item.quantity || 1) * price
             items += item.quantity || 1
           }
         })
-      } else if (ord.total_amount) {
-        raw += Number(ord.total_amount) || 0
+      }
+      if (ordSum === 0 && ord.total_amount) {
+        ordSum = Number(ord.total_amount) || 0
         items += 1
       }
+      raw += ordSum
     })
 
     const discount = discountPercentage > 0 ? raw * (discountPercentage / 100) : 0
     const final = Math.max(0, raw - discount)
 
     return {
-      tableOrders: filtered,
+      tableOrders: targetOrders,
       rawTotal: raw,
       discountAmount: discount,
       finalAmount: final,
@@ -263,16 +275,21 @@ export function CloseTableModal({
               </span>
             </button>
 
-            {finalAmount > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowUnpaidWarning(true)}
-                disabled={isSubmitting}
-                className="w-full py-1.5 text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline transition-colors cursor-pointer text-center block"
-              >
-                Liberar mesa sin cobrar (Invitación / Descarte)
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (finalAmount > 0) {
+                  setShowUnpaidWarning(true)
+                } else {
+                  setIsSubmitting(true)
+                  onConfirm(tableNumber, 'cash', 0, Math.max(1, tableOrders.length))
+                }
+              }}
+              disabled={isSubmitting}
+              className="w-full py-1.5 text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline transition-colors cursor-pointer text-center block"
+            >
+              Liberar mesa sin cobrar (Invitación / Descarte)
+            </button>
 
             <button
               type="button"

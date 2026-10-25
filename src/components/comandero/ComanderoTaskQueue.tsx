@@ -90,7 +90,11 @@ export function ComanderoTaskQueue({
         {/* Grilla de Avisos y Solicitudes de Cuenta */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
           {activePendingCalls.map(call => {
-            const isBill = call.text.toLowerCase().includes('cuenta')
+            const isBill = Boolean(
+              call.call_type?.startsWith('bill') ||
+              call.call_type?.includes('bill') ||
+              call.text?.toLowerCase().includes('cuenta')
+            )
             return (
               <div
                 key={call.id}

@@ -50,6 +50,7 @@ export function useComanderoData(slug: string) {
   const tableStatusesFingerRef = useRef<string>('')
   const prevOrdersMapRef = useRef<Map<string, Order>>(new Map())
   const attendedValidationOrderIdsRef = useRef<Set<string>>(new Set())
+  const freedTableNumbersRef = useRef<Map<string | number, number>>(new Map())
 
   // Lock de mutación en vuelo de al menos 2500ms por orden para bloquear respuestas GET antiguas
   const mutationLockUntilRef = useRef<Map<string, number>>(new Map())
@@ -198,8 +199,29 @@ export function useComanderoData(slug: string) {
       const prevMap = new Map(currentOrders.map(o => [o.id, o]))
       const map = new Map<string, Order>()
 
+      const sessionsData = tablesRes.sessions || {}
+      Object.entries(sessionsData).forEach(([tblNum, sessionData]: [string, any]) => {
+        if (sessionData?.status === 'free') {
+          freedTableNumbersRef.current.set(tblNum, Date.now())
+          freedTableNumbersRef.current.set(Number(tblNum), Date.now())
+        }
+      })
+
       incomingOrders.forEach(ord => {
         if (ord.status === 'cancelled') return
+
+        const tblNum = ord.table?.table_number || ord.table_number
+        const tblStr = tblNum ? tblNum.toString() : ''
+        const isTableFreed = Boolean(tblStr && (freedTableNumbersRef.current.has(tblStr) || freedTableNumbersRef.current.has(Number(tblStr))))
+
+        if (isTableFreed && ord.status !== 'paid') {
+          freedTableNumbersRef.current.delete(tblStr)
+          freedTableNumbersRef.current.delete(Number(tblStr))
+        } else if (isTableFreed && ord.status === 'paid') {
+          prevOrdersMapRef.current.delete(ord.id)
+          return
+        }
+
         const existing = prevMap.get(ord.id) || prevOrdersMapRef.current.get(ord.id)
         const recentMut = recentMutationsRef.current.get(ord.id)
         const lockUntil = mutationLockUntilRef.current.get(ord.id) || 0
@@ -282,8 +304,12 @@ export function useComanderoData(slug: string) {
         if (!map.has(prevOrd.id)) {
           const isCancelled = prevOrd.status === 'cancelled'
           const isHandledLocally = attendedValidationOrderIdsRef.current.has(prevOrd.id)
-          if (!isCancelled && !isHandledLocally) {
+          const pTbl = prevOrd.table_number?.toString() || prevOrd.table?.table_number?.toString()
+          const isTableFreed = Boolean(pTbl && (freedTableNumbersRef.current.has(pTbl) || freedTableNumbersRef.current.has(Number(pTbl))))
+          if (!isCancelled && !isHandledLocally && !(isTableFreed && prevOrd.status === 'paid')) {
             map.set(prevOrd.id, prevOrd)
+          } else if (isTableFreed && prevOrd.status === 'paid') {
+            prevOrdersMapRef.current.delete(prevOrd.id)
           }
         }
       })
@@ -403,7 +429,7 @@ export function useComanderoData(slug: string) {
 
       const sessions = tablesRes.sessions || {}
       Object.entries(sessions).forEach(([tblNum, sessionData]: [string, any]) => {
-        if (sessionData && sessionData.status === 'active') {
+        if (sessionData && (sessionData.status === 'active' || sessionData.status === 'busy')) {
           if (!statusMap[tblNum] && !statusMap[Number(tblNum)]) {
             statusMap[tblNum] = 'busy'
             statusMap[Number(tblNum)] = 'busy'
@@ -417,6 +443,18 @@ export function useComanderoData(slug: string) {
               dwellMap[String(tblNum)] = sessionMs
             }
           }
+        } else if (sessionData && sessionData.status === 'free') {
+          statusMap[tblNum] = 'free'
+          statusMap[Number(tblNum)] = 'free'
+          statusMap[String(tblNum)] = 'free'
+        }
+      })
+
+      freedTableNumbersRef.current.forEach((_, freedTbl) => {
+        if (statusMap[freedTbl] !== 'calling') {
+          statusMap[freedTbl] = 'free'
+          statusMap[Number(freedTbl)] = 'free'
+          statusMap[String(freedTbl)] = 'free'
         }
       })
 
@@ -573,12 +611,46 @@ export function useComanderoData(slug: string) {
 
     loadInitialData()
 
+    const handleTableFreedEvent = (tblNum: string | number) => {
+      if (!tblNum) return
+      const sKey = String(tblNum)
+      const nKey = Number(tblNum)
+      freedTableNumbersRef.current.set(sKey, Date.now())
+      freedTableNumbersRef.current.set(nKey, Date.now())
+
+      prevOrdersMapRef.current.forEach((ord, id) => {
+        const oTbl = ord.table_number?.toString() || ord.table?.table_number?.toString()
+        if (oTbl === sKey) {
+          prevOrdersMapRef.current.delete(id)
+        }
+      })
+
+      setServerOrdersState(prev => prev.filter(o => {
+        const oTbl = o.table_number?.toString() || o.table?.table_number?.toString()
+        return oTbl !== sKey
+      }))
+
+      setTableStatuses(prev => ({
+        ...prev,
+        [tblNum]: 'free' as TableStatusType,
+        [sKey]: 'free' as TableStatusType,
+        [nKey]: 'free' as TableStatusType,
+      }))
+    }
+
     let menuBc: BroadcastChannel | null = null
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         menuBc = new BroadcastChannel('fluxo_menu_channel')
         menuBc.onmessage = (event) => {
           const { type, slug: evtSlug, productId, isAvailable } = event.data || {}
+          if (type === 'table_freed' && (!evtSlug || evtSlug === slug)) {
+            const freedTbl = event.data?.tableNumber
+            if (freedTbl) {
+              handleTableFreedEvent(freedTbl)
+            }
+            return
+          }
           if (type === 'menu_updated' && (!evtSlug || evtSlug === slug)) {
             if (productId && isAvailable !== undefined) {
               const canonical = resolveCanonicalProductId(productId) || productId
@@ -645,6 +717,12 @@ export function useComanderoData(slug: string) {
     }
     window.addEventListener('fluxo_menu_updated', handleMenuUpdated)
 
+    const handleFluxoTableFreed = (e: any) => {
+      const tblNum = e?.detail?.tableNumber
+      if (tblNum) handleTableFreedEvent(tblNum)
+    }
+    window.addEventListener('fluxo_table_freed', handleFluxoTableFreed)
+
     return () => {
       if (realtimeChannel && supabase) {
         supabase.removeChannel(realtimeChannel)
@@ -657,6 +735,7 @@ export function useComanderoData(slug: string) {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleVisibilityChange)
       window.removeEventListener('fluxo_menu_updated', handleMenuUpdated)
+      window.removeEventListener('fluxo_table_freed', handleFluxoTableFreed)
     }
   }, [slug, syncServerData])
 
@@ -686,5 +765,7 @@ export function useComanderoData(slug: string) {
     recentTogglesRef,
     recentMutationsRef,
     mutationLockUntilRef,
+    freedTableNumbersRef,
+    prevOrdersMapRef,
   }
 }

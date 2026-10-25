@@ -185,7 +185,9 @@ export function ComanderoModals({
         serverOrders={serverOrders}
         discountPercentage={tableDiscount}
         onConfirm={(tblNum, paymentMethod, finalAmount, ordersCount) => {
-          if (onExecuteChargeTable) {
+          if (finalAmount === 0) {
+            onExecuteCloseAndFreeTable(tblNum, paymentMethod, finalAmount, ordersCount)
+          } else if (onExecuteChargeTable) {
             onExecuteChargeTable(tblNum, paymentMethod, finalAmount, ordersCount)
           } else {
             onExecuteCloseAndFreeTable(tblNum, paymentMethod, finalAmount, ordersCount)

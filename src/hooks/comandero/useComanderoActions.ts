@@ -43,6 +43,8 @@ interface UseComanderoActionsParams {
   setReadyOrderAlert: (val: string | number | null) => void
   recentMutationsRef: React.MutableRefObject<Map<string, { status?: OrderStatus; order?: Order; until: number }>>
   mutationLockUntilRef?: React.MutableRefObject<Map<string, number>>
+  freedTableNumbersRef?: React.MutableRefObject<Map<string | number, number>>
+  prevOrdersMapRef?: React.MutableRefObject<Map<string, Order>>
 }
 
 const MUTATION_LOCK_MS = 4500
@@ -86,6 +88,8 @@ export function useComanderoActions({
   setReadyOrderAlert,
   recentMutationsRef,
   mutationLockUntilRef,
+  freedTableNumbersRef,
+  prevOrdersMapRef,
 }: UseComanderoActionsParams) {
   const [validatingOrderIds, setValidatingOrderIds] = useState<Set<string>>(new Set())
   const [deliveringOrderIds, setDeliveringOrderIds] = useState<Set<string>>(new Set())
@@ -724,12 +728,36 @@ export function useComanderoActions({
     ordersCount?: number
   ) => {
     // Actualización optimista inmediata en 1 toque
+    const sTableNum = tableNum.toString()
+    const nTableNum = Number(tableNum)
+    freedTableNumbersRef?.current?.set(sTableNum, Date.now())
+    freedTableNumbersRef?.current?.set(nTableNum, Date.now())
+
+    if (prevOrdersMapRef?.current) {
+      prevOrdersMapRef.current.forEach((ord, id) => {
+        const oTbl = ord.table_number?.toString() || ord.table?.table_number?.toString()
+        if (oTbl === sTableNum) {
+          prevOrdersMapRef.current.delete(id)
+        }
+      })
+    }
+
     setSelectedTable(null)
-    setTableStatuses(prev => ({ ...prev, [tableNum]: 'free' as TableStatusType }))
-    setServerOrders(prev => prev.filter(o => o.table_number?.toString() !== tableNum.toString()))
+    setTableStatuses(prev => ({
+      ...prev,
+      [tableNum]: 'free' as TableStatusType,
+      [sTableNum]: 'free' as TableStatusType,
+      [nTableNum]: 'free' as TableStatusType,
+    }))
+    setServerOrders(prev => prev.filter(o => {
+      const oTbl = o.table_number?.toString() || o.table?.table_number?.toString()
+      return oTbl !== sTableNum
+    }))
     setTableCarts(prev => {
       const next = { ...prev }
       delete next[tableNum]
+      delete next[sTableNum]
+      delete next[nTableNum]
       return next
     })
 

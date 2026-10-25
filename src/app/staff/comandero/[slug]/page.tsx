@@ -59,6 +59,8 @@ export default function WaiterComanderoPage() {
     recentTogglesRef,
     recentMutationsRef,
     mutationLockUntilRef,
+    freedTableNumbersRef,
+    prevOrdersMapRef,
   } = useComanderoData(slug)
 
   // 2. Carritos y configuración aislada por mesa
@@ -290,6 +292,8 @@ export default function WaiterComanderoPage() {
     setReadyOrderAlert,
     recentMutationsRef,
     mutationLockUntilRef,
+    freedTableNumbersRef,
+    prevOrdersMapRef,
   })
 
   // Añadir ítem configurado al carrito de la mesa
@@ -504,6 +508,7 @@ export default function WaiterComanderoPage() {
           {selectedTable && (
             <ComanderoTableDetailPanel
               selectedTable={selectedTable}
+              tableStatus={tableStatuses[selectedTable.table_number] || tableStatuses[selectedTable.table_number.toString()] || 'free'}
               pendingCalls={pendingCalls}
               serverOrders={serverOrders}
               deliveringOrderIds={deliveringOrderIds}

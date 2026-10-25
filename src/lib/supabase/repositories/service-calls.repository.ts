@@ -139,52 +139,6 @@ export async function attendServiceCall(
     callId,
     call: attendedCall,
     table_number: attendedCall?.table_number,
-    is_bill: attendedCall?.call_type ? attendedCall.call_type.startsWith('bill_') : false,
+    is_bill: attendedCall?.call_type ? (attendedCall.call_type.startsWith('bill') || attendedCall.call_type.includes('bill')) : false,
   })
-
-  // Si la llamada atendida era de cobro / cuenta, emitir table_bill_paid y marcar órdenes de mesa como paid
-  if (attendedCall && attendedCall.call_type && attendedCall.call_type.startsWith('bill_')) {
-    const tableNum = Number(attendedCall.table_number)
-    const tableNumStr = String(tableNum)
-    const memOrders = (globalThis as any).__GASTRO_ORDERS__?.[slug] || []
-    let billAmount = 0
-    memOrders.forEach((o: any) => {
-      const isThisTable =
-        o.table_number?.toString() === tableNumStr ||
-        o.table?.table_number?.toString() === tableNumStr
-      if (isThisTable && o.status !== 'cancelled') {
-        if (o.status !== 'paid') {
-          billAmount += Number(o.total_amount) || 0
-        }
-        o.status = 'paid'
-        o.version = (o.version || 1) + 1
-        o.updated_at = new Date().toISOString()
-      }
-    })
-
-    const targetRestaurantId = getTargetRestaurantId(attendedCall?.restaurant_id, slug)
-    try {
-      const { sweepTableOrdersToPaid } = await import('./orders.repository')
-      await sweepTableOrdersToPaid(targetRestaurantId, slug, tableNum)
-    } catch (err) {
-      console.warn('Error sweeping table orders as paid on bill attended:', err)
-    }
-
-    try {
-      const { settleLoyaltySession } = await import('./loyalty.repository')
-      await settleLoyaltySession(slug, {
-        tableNumber: tableNum,
-        finalAmount: billAmount,
-      })
-    } catch (loyaltyErr) {
-      console.warn('Error settling loyalty session on bill attended:', loyaltyErr)
-    }
-
-    broadcastEvent({
-      type: 'table_bill_paid',
-      slug,
-      table_number: tableNum,
-      callId,
-    })
-  }
 }

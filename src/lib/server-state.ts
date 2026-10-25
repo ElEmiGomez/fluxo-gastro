@@ -550,18 +550,8 @@ export function attendServerServiceCall(slug: string, callId: string): ServiceCa
     callId,
     call: attendedCall,
     table_number: attendedCall?.table_number,
-    is_bill: attendedCall?.call_type.startsWith('bill_') || false,
+    is_bill: attendedCall?.call_type ? (attendedCall.call_type.startsWith('bill') || attendedCall.call_type.includes('bill')) : false,
   })
-
-  if (attendedCall && attendedCall.call_type.startsWith('bill_')) {
-    sweepServerTableOrdersToPaid(slug, attendedCall.table_number)
-    broadcastEvent({
-      type: 'table_bill_paid',
-      slug,
-      table_number: attendedCall.table_number,
-      callId,
-    })
-  }
 
   return updated
 }

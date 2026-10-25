@@ -19,6 +19,7 @@ import {
   ChefHat,
 } from 'lucide-react'
 import { Table, Order } from '@/types/database.types'
+import { TableStatusType } from './TableSelector'
 import { formatCurrency } from '@/lib/utils'
 import { PendingServiceCall, PreviousDrinkItem } from '@/types/comandero.types'
 import {
@@ -50,6 +51,7 @@ import {
 
 interface ComanderoTableDetailPanelProps {
   selectedTable: Table
+  tableStatus?: TableStatusType
   pendingCalls: PendingServiceCall[]
   serverOrders: Order[]
   deliveringOrderIds: Set<string>
@@ -96,6 +98,7 @@ function getItemRealProductName(item: any, fallbackLabel: string): string {
 
 export function ComanderoTableDetailPanel({
   selectedTable,
+  tableStatus,
   pendingCalls,
   serverOrders,
   deliveringOrderIds,
@@ -146,7 +149,7 @@ export function ComanderoTableDetailPanel({
     )
   }, [serverOrders, selectedTable])
 
-  const isPaidSobremesa = tableActiveOrders.length === 0 && validationOrders.length === 0 && tablePaidOrders.length > 0
+  const isPaidSobremesa = tableStatus !== 'free' && tableActiveOrders.length === 0 && validationOrders.length === 0 && tablePaidOrders.length > 0
 
   // 1. Todas las bebidas de esta mesa (para visibilidad completa permanente en sala)
   const tableAllDrinks = React.useMemo(() => {
@@ -270,16 +273,19 @@ export function ComanderoTableDetailPanel({
     )
     let sum = 0
     tableOrders.forEach(ord => {
+      let ordSum = 0
       if (ord.order_items && ord.order_items.length > 0) {
         ord.order_items.forEach(it => {
           if (!it.is_complimentary) {
-            const unitPrice = it.product?.price ?? resolveCatalogProductForItem(it)?.price ?? 0
-            sum += (it.quantity || 1) * unitPrice
+            const unitPrice = it.product?.price ?? (it as any).unit_price ?? (it as any).price ?? resolveCatalogProductForItem(it)?.price ?? 0
+            ordSum += (it.quantity || 1) * unitPrice
           }
         })
-      } else if (ord.total_amount) {
-        sum += Number(ord.total_amount) || 0
       }
+      if (ordSum === 0 && ord.total_amount) {
+        ordSum = Number(ord.total_amount) || 0
+      }
+      sum += ordSum
     })
     const discount = tableDiscount > 0 ? sum * (tableDiscount / 100) : 0
     return Math.max(0, sum - discount)
@@ -321,27 +327,45 @@ export function ComanderoTableDetailPanel({
           </div>
 
           <div className="space-y-1.5">
-            {tableCalls.map(call => (
-              <div
-                key={call.id}
-                className="bg-white p-2.5 rounded-xl border border-amber-200 flex items-center justify-between gap-2 shadow-xs"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Bell className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <span className="text-xs font-extrabold text-slate-900 truncate">
-                    {call.text}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onAttendCall(call.id)}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1 shadow-xs transition-transform active:scale-95 flex-shrink-0 cursor-pointer"
+            {tableCalls.map(call => {
+              const isBill = Boolean(
+                call.call_type?.startsWith('bill') ||
+                call.call_type?.includes('bill') ||
+                call.text?.toLowerCase().includes('cuenta')
+              )
+              return (
+                <div
+                  key={call.id}
+                  className="bg-white p-2.5 rounded-xl border border-amber-200 flex items-center justify-between gap-2 shadow-xs"
                 >
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>Atendido</span>
-                </button>
-              </div>
-            ))}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Bell className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-xs font-extrabold text-slate-900 truncate">
+                      {call.text}
+                    </span>
+                  </div>
+                  {isBill ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenFreeTableModal(selectedTable.table_number)}
+                      className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-black flex items-center gap-1 shadow-xs transition-transform active:scale-95 flex-shrink-0 cursor-pointer"
+                    >
+                      <Receipt className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Cobrar Cuenta</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onAttendCall(call.id)}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1 shadow-xs transition-transform active:scale-95 flex-shrink-0 cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Atendido</span>
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -890,13 +914,7 @@ export function ComanderoTableDetailPanel({
             <button
               type="button"
               onClick={() => {
-                if (tablePendingAmount > 0) {
-                  onOpenFreeTableModal(selectedTable.table_number)
-                } else if (onExecuteFreeTableDirect) {
-                  onExecuteFreeTableDirect(selectedTable.table_number)
-                } else {
-                  onOpenFreeTableModal(selectedTable.table_number)
-                }
+                onOpenFreeTableModal(selectedTable.table_number)
               }}
               className="h-11 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
               title={tablePendingAmount > 0 ? `Cobrar ${tablePendingAmount.toFixed(2)} €` : 'Liberar mesa'}

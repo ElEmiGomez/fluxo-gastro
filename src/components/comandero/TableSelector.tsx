@@ -378,7 +378,7 @@ export function TableSelector({
                     o.table?.table_number?.toString() === selectedTable.toString()) &&
                   o.status === 'paid'
               )
-              const isSelectedSobremesa = activeForSelected.length === 0 && paidForSelected.length > 0
+              const isSelectedSobremesa = currentStatus !== 'free' && activeForSelected.length === 0 && paidForSelected.length > 0
 
               return (
             <div className="flex items-center gap-1.5">
@@ -464,7 +464,7 @@ export function TableSelector({
                     o.table?.table_number?.toString() === table.table_number.toString()) &&
                   o.status === 'paid'
               )
-              const isPaidSobremesa = activeTableOrders.length === 0 && paidTableOrders.length > 0
+              const isPaidSobremesa = status !== 'free' && activeTableOrders.length === 0 && paidTableOrders.length > 0
 
               // Llamadas activas de esta mesa
               const tableCall = (pendingCalls || []).find(
