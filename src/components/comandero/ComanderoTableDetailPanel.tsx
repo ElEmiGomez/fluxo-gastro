@@ -285,7 +285,6 @@ export function ComanderoTableDetailPanel({
     return Math.max(0, sum - discount)
   }, [serverOrders, selectedTable, tableDiscount])
 
-  const [showZeroBalanceConfirm, setShowZeroBalanceConfirm] = React.useState(false)
 
   return (
     <div className="max-w-7xl mx-auto w-full px-3 pt-3 space-y-2.5">
@@ -893,66 +892,18 @@ export function ComanderoTableDetailPanel({
               onClick={() => {
                 if (tablePendingAmount > 0) {
                   onOpenFreeTableModal(selectedTable.table_number)
+                } else if (onExecuteFreeTableDirect) {
+                  onExecuteFreeTableDirect(selectedTable.table_number)
                 } else {
-                  setShowZeroBalanceConfirm(true)
+                  onOpenFreeTableModal(selectedTable.table_number)
                 }
               }}
               className="h-11 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-              title={tablePendingAmount > 0 ? `Cobrar ${tablePendingAmount.toFixed(2)} €` : 'Liberar mesa sin consumo'}
+              title={tablePendingAmount > 0 ? `Cobrar ${tablePendingAmount.toFixed(2)} €` : 'Liberar mesa'}
             >
               <CreditCard className="w-4 h-4 text-white flex-shrink-0" />
               <span className="truncate">{tablePendingAmount > 0 ? 'Cobrar Cuenta' : 'Liberar Mesa'}</span>
             </button>
-          </div>
-        )}
-
-        {/* Modal de Confirmación en 2 Toques para Liberar Mesa Sin Cobro Pendiente (0 €) */}
-        {showZeroBalanceConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in select-none">
-            <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-200">
-              <div className="flex items-center gap-2 text-slate-900">
-                <div className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-700 flex-shrink-0">
-                  <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block leading-tight">
-                    Mesa al día · 0,00 € pendiente
-                  </span>
-                  <h3 className="text-base font-black text-slate-900 leading-tight">
-                    ¿Confirmas liberar la Mesa #{selectedTable.table_number}?
-                  </h3>
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-600 font-medium leading-relaxed">
-                La mesa pasará inmediatamente a estar <strong>Libre</strong> para recibir a los siguientes comensales.
-              </p>
-
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowZeroBalanceConfirm(false)
-                    if (onExecuteFreeTableDirect) {
-                      onExecuteFreeTableDirect(selectedTable.table_number)
-                    } else {
-                      onOpenFreeTableModal(selectedTable.table_number)
-                    }
-                  }}
-                  className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition-all cursor-pointer"
-                >
-                  Sí, Confirmar y Liberar Mesa #{selectedTable.table_number}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowZeroBalanceConfirm(false)}
-                  className="w-full py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
           </div>
         )}
 

@@ -723,6 +723,27 @@ export function useComanderoActions({
     finalAmount?: number,
     ordersCount?: number
   ) => {
+    // Actualización optimista inmediata en 1 toque
+    setSelectedTable(null)
+    setTableStatuses(prev => ({ ...prev, [tableNum]: 'free' as TableStatusType }))
+    setServerOrders(prev => prev.filter(o => o.table_number?.toString() !== tableNum.toString()))
+    setTableCarts(prev => {
+      const next = { ...prev }
+      delete next[tableNum]
+      return next
+    })
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('fluxo_table_freed', { detail: { tableNumber: tableNum } }))
+      if ('BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('fluxo_menu_channel')
+          bc.postMessage({ type: 'table_freed', slug, tableNumber: tableNum })
+          bc.close()
+        } catch (_) {}
+      }
+    }
+
     try {
       await fetch('/api/tables', {
         method: 'POST',
@@ -738,29 +759,10 @@ export function useComanderoActions({
         }),
       })
 
-      setTableCarts(prev => {
-        const next = { ...prev }
-        delete next[tableNum]
-        return next
-      })
-
-      setSelectedTable(null)
-
-      window.dispatchEvent(new CustomEvent('fluxo_table_freed', { detail: { tableNumber: tableNum } }))
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        const bc = new BroadcastChannel('fluxo_menu_channel')
-        bc.postMessage({ type: 'table_freed', slug, tableNumber: tableNum })
-        bc.close()
-      }
-
       const tableCalls = pendingCalls.filter(c => c.table_number.toString() === tableNum.toString())
       for (const c of tableCalls) {
         await handleAttendCall(c.id)
       }
-
-      setServerOrders(prev => prev.filter(o => o.table_number?.toString() !== tableNum.toString()))
-      setTableCarts(prev => ({ ...prev, [tableNum]: [] }))
-      setTableStatuses(prev => ({ ...prev, [tableNum]: 'free' as TableStatusType }))
     } catch (e) {
       console.error('Error freeing table:', e)
     }

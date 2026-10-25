@@ -779,8 +779,11 @@ export function orderHasMains(order: Order): boolean {
 }
 
 export function areOrderStartersReady(order: Order): boolean {
+  if (['cancelled', 'paid', 'pending_validation', 'pending'].includes(order.status) && !(order as any).notes?.includes(TAG_STARTER_READY)) {
+    return false
+  }
   const starters = (order.order_items || []).filter(isStarterItem)
-  if (starters.length === 0) return true
+  if (starters.length === 0) return false
   if ((order as any).notes?.includes(TAG_STARTER_READY) || (order as any).notes?.includes(TAG_STARTER_SERVED)) {
     return true
   }
@@ -827,8 +830,11 @@ export function areOrderMainsFired(order: Order): boolean {
 }
 
 export function areOrderMainsReady(order: Order): boolean {
+  if (['cancelled', 'paid', 'pending_validation', 'pending'].includes(order.status) && !(order as any).notes?.includes(TAG_MAIN_READY)) {
+    return false
+  }
   const mains = (order.order_items || []).filter(isMainItem)
-  if (mains.length === 0) return true
+  if (mains.length === 0) return false
   if ((order as any).notes?.includes(TAG_MAIN_READY) || (order as any).notes?.includes(TAG_MAIN_SERVED)) {
     return true
   }
@@ -1160,11 +1166,14 @@ export function isOrderFoodReady(order: Order): boolean {
  * Retorna true si todos los postres de la orden fueron marcados listos por cocina.
  */
 export function isOrderDessertsReady(order: Order): boolean {
+  if (['cancelled', 'paid', 'pending_validation', 'pending'].includes(order.status) && !(order as any).notes?.includes(TAG_DESSERT_READY)) {
+    return false
+  }
   if ((order as any).notes?.includes(TAG_DESSERT_READY) || (order as any).notes?.includes(TAG_DESSERT_SERVED)) {
     return true
   }
   const desserts = (order.order_items || []).filter(isDessertItem)
-  if (desserts.length === 0) return true
+  if (desserts.length === 0) return false
   return desserts.every(isDessertReady)
 }
 

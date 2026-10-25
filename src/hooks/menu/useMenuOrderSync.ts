@@ -381,7 +381,7 @@ export function useMenuOrderSync({
             }
           } else if (prevOrd?.status === 'paid' && ord.status !== 'paid') {
             effectiveStatus = 'paid'
-          } else if (prevOrd?.status === 'ready' && (ord.status === 'pending_validation' || ord.status === 'pending' || (ord.status === 'preparing' && !areOrderStartersServed(hydratedOrd) && !areOrderMainsFired(hydratedOrd) && !orderHasActiveDesserts(hydratedOrd)))) {
+          } else if (prevOrd?.status === 'ready' && ord.id === prevOrd?.id && hasProgression && (ord.status === 'pending_validation' || (ord.status === 'preparing' && !areOrderStartersServed(hydratedOrd) && !areOrderMainsFired(hydratedOrd) && !orderHasActiveDesserts(hydratedOrd)))) {
             effectiveStatus = 'ready'
           } else if (prevOrd?.status === 'preparing' && (ord.status === 'pending' || ord.status === 'pending_validation')) {
             effectiveStatus = 'preparing'
@@ -529,7 +529,6 @@ export function useMenuOrderSync({
           setTableOrderStatus(null)
           setTableOrders([])
           setTableTotalAmount(0)
-          setCartRef.current([])
           if (!hasSavedPaidFlag) {
             setIsTablePaidRef.current(false)
           }
@@ -549,7 +548,6 @@ export function useMenuOrderSync({
               sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
               sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
               sessionStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
-              localStorage.removeItem(`fluxo_cart_${slug}_${tableNumber}`)
               if (thisTableSession?.session_id) {
                 localStorage.setItem(`gastro_session_${slug}_${tableNumber}`, thisTableSession.session_id)
               }
@@ -750,7 +748,6 @@ export function useMenuOrderSync({
               }
               hasHadActiveOrderInThisSessionRef.current = false
               prevTableOrdersMapRef.current.clear()
-              setCartRef.current([])
               setTableOrderStatus(null)
               setTableOrders([])
               setTableTotalAmount(0)
@@ -843,7 +840,6 @@ export function useMenuOrderSync({
 
         hasHadActiveOrderInThisSessionRef.current = false
         prevTableOrdersMapRef.current.clear()
-        setCartRef.current([])
         setTableOrderStatus(null)
         setTableOrders([])
         setTableTotalAmount(0)
@@ -858,7 +854,6 @@ export function useMenuOrderSync({
             sessionStorage.removeItem(`fluxo_table_paid_${slug}_${tableNumber}`)
             sessionStorage.removeItem(`fluxo_paid_banner_dismissed_${slug}_${tableNumber}`)
             sessionStorage.removeItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
-            localStorage.removeItem(`fluxo_cart_${slug}_${tableNumber}`)
           } catch (_) {}
         }
       }

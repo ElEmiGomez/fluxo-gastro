@@ -1267,8 +1267,9 @@ export async function PATCH(req: NextRequest) {
           }
         }
       }
+      // Mantener status pending validado para que sala/barra gestione el pase sin adelantar listo al cliente
       if (currentOrd?.order_items && currentOrd.order_items.length > 0 && isDrinkOnlyOrder(currentOrd.order_items)) {
-        targetStatus = 'ready'
+        targetStatus = 'pending'
       }
     }
 

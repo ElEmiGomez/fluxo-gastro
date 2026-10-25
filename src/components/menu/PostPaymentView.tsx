@@ -7,7 +7,6 @@ import {
   ExternalLink,
   Award,
   CheckCircle2,
-  Receipt,
   RotateCcw,
   HeartHandshake,
 } from 'lucide-react'
@@ -100,7 +99,61 @@ export function PostPaymentView({
 
   return (
     <div className="w-full animate-in fade-in duration-300 space-y-3 pb-6 select-none">
-      {/* 1. Bloque Prioritario — Valorar en Google Maps (⭐⭐⭐⭐⭐) */}
+      {/* BLOQUE 1: Agradecimiento por la visita y Club de Premios / Puntos (Estética de tarjeta blanca y esmeralda) */}
+      <div className="overflow-hidden rounded-3xl bg-white border border-emerald-200 shadow-md p-4 sm:p-5 space-y-3">
+        <div className="flex items-start gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-sm">
+            <Award className="w-6 h-6 text-white stroke-[2.2]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                MESA #{tableNumber} &middot; PAGO CONFIRMADO
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            </div>
+            <h3 className="text-sm sm:text-base font-black text-slate-900 leading-tight mt-0.5">
+              ✅ ¡Cuenta pagada! Muchas gracias por tu visita
+            </h3>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              {loyaltyMode === 'stamps'
+                ? '¡Sumaste +1 sello con tu comanda! Completa tu cartilla digital para canjear invitaciones y recompensas.'
+                : `¡Sumaste +${storedPoints} puntos con tu comanda! Acumula puntos en cada visita y canjéalos por premios exclusivos.`}
+            </p>
+          </div>
+        </div>
+
+        {isPointsSaved ? (
+          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between gap-2 mt-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span className="truncate">
+                ✓ Puntos guardados en tu cuenta ({loyaltyProfile?.available_points ?? storedPoints} pts acumulados)
+              </span>
+            </div>
+            {onOpenLoyaltyModal && (
+              <button
+                type="button"
+                onClick={onOpenLoyaltyModal}
+                className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black flex-shrink-0 cursor-pointer transition-colors"
+              >
+                Ver Premios
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpenLoyaltyModal}
+            className="w-full py-3 px-4 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-700/20 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-300" />
+            <span>🎁 Unirme al Club de Premios / Guardar mis puntos</span>
+          </button>
+        )}
+      </div>
+
+      {/* BLOQUE 2: Valoración en Google Maps con 5 Estrellas (Independiente y separado) */}
       <div className="overflow-hidden rounded-3xl bg-white border border-amber-200 shadow-md p-4 sm:p-5 space-y-3.5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 font-black shadow-sm">
@@ -122,7 +175,7 @@ export function PostPaymentView({
         </div>
 
         <p className="text-xs text-slate-600 leading-relaxed">
-          Tu reseña en Google Maps nos ayuda muchísimo a seguir mejorando y apoya directamente a nuestro equipo de sala y cocina.
+          Tu valoración de 5 estrellas en Google Maps nos ayuda muchísimo y apoya directamente a nuestro equipo de sala y cocina.
         </p>
 
         {/* Estrellas Interactivas */}
@@ -159,73 +212,19 @@ export function PostPaymentView({
           </div>
         ) : null}
 
-        {/* Botón Principal Llamativo: Valorar en Google Maps */}
+        {/* Botón de Google Maps */}
         <button
           type="button"
           onClick={handleOpenGoogleMaps}
           className="w-full py-3 px-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-amber-400/20 cursor-pointer"
         >
           <Star className="w-4 h-4 fill-slate-950 text-slate-950" />
-          <span>⭐ Valorar en Google Maps</span>
+          <span>⭐ Valorar con 5 estrellas en Google Maps</span>
           <ExternalLink className="w-3.5 h-3.5 text-slate-800" />
         </button>
       </div>
 
-      {/* 3. Bloque Integrado — Club de Premios / Fidelización */}
-      <div className="overflow-hidden rounded-3xl bg-white border border-emerald-200 shadow-md p-4 sm:p-5 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 font-black shadow-sm">
-            <Award className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 block">
-              Club de Premios &middot; {restaurant.name}
-            </span>
-            <h4 className="text-sm font-extrabold text-slate-900 leading-tight">
-              {loyaltyMode === 'stamps'
-                ? '🎁 ¡Sumaste +1 sello con tu comanda!'
-                : `🎁 ¡Sumaste +${storedPoints} puntos con tu comanda!`}
-            </h4>
-          </div>
-        </div>
-
-        <p className="text-xs text-slate-600 leading-relaxed">
-          {loyaltyMode === 'stamps'
-            ? 'Completa tu cartilla digital para canjear invitaciones, postres y cafés en tus próximas visitas.'
-            : 'Acumula puntos en cada visita y canjéalos por platos, bebidas y recompensas exclusivas.'}
-        </p>
-
-        {isPointsSaved ? (
-          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span className="truncate">
-                ✓ Puntos guardados en tu cuenta ({loyaltyProfile?.available_points ?? storedPoints} pts acumulados)
-              </span>
-            </div>
-            {onOpenLoyaltyModal && (
-              <button
-                type="button"
-                onClick={onOpenLoyaltyModal}
-                className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black flex-shrink-0 cursor-pointer transition-colors"
-              >
-                Ver Premios
-              </button>
-            )}
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onOpenLoyaltyModal}
-            className="w-full py-2.5 px-4 rounded-2xl bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm shadow-emerald-700/20 cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-emerald-300" />
-            <span>Unirme a Premios / Guardar mis puntos</span>
-          </button>
-        )}
-      </div>
-
-      {/* 4. Pie de Pantalla Discreto: Iniciar un nuevo pedido en esta mesa */}
+      {/* Pie de Pantalla Discreto: Iniciar un nuevo pedido en esta mesa */}
       {onResetTableSession && (
         <div className="text-center pt-2">
           <button

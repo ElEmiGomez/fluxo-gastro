@@ -128,8 +128,9 @@ export function MenuLiveTracker({
   const areStartersReady =
     hasStarters &&
     !areStartersServed &&
-    (((tableOrders || []).length > 0 && (tableOrders || []).some(areOrderStartersReady)) ||
-      starters.every(it => isStarterReady(it, getParentOrder(it))))
+    !['pending_validation', 'pending'].includes(tableOrderStatus || '') &&
+    (((tableOrders || []).length > 0 && (tableOrders || []).some(o => (o.order_items || []).some(isStarterItem) && areOrderStartersReady(o))) ||
+      starters.some(it => isStarterReady(it, getParentOrder(it))))
 
   const areStartersCooking =
     hasStarters &&
@@ -145,8 +146,9 @@ export function MenuLiveTracker({
   const areMainsReady =
     hasMains &&
     !areMainsServed &&
-    (((tableOrders || []).length > 0 && (tableOrders || []).some(areOrderMainsReady)) ||
-      mains.every(it => isMainReady(it, getParentOrder(it))))
+    !['pending_validation', 'pending'].includes(tableOrderStatus || '') &&
+    (((tableOrders || []).length > 0 && (tableOrders || []).some(o => (o.order_items || []).some(isMainItem) && areOrderMainsReady(o))) ||
+      mains.some(it => isMainReady(it, getParentOrder(it))))
 
   const areMainsFired =
     (tableOrders || []).some(areOrderMainsFired) ||
@@ -172,8 +174,9 @@ export function MenuLiveTracker({
   const areDessertsReady =
     hasDesserts &&
     !areDessertsServed &&
-    (((tableOrders || []).length > 0 && (tableOrders || []).some(isOrderDessertsReady)) ||
-      desserts.every(it => isDessertReady(it, getParentOrder(it))))
+    !['pending_validation', 'pending'].includes(tableOrderStatus || '') &&
+    (((tableOrders || []).length > 0 && (tableOrders || []).some(o => (o.order_items || []).some(isDessertItem) && isOrderDessertsReady(o))) ||
+      desserts.some(it => isDessertReady(it, getParentOrder(it))))
 
   const areDessertsCooking =
     hasDesserts &&
@@ -201,6 +204,7 @@ export function MenuLiveTracker({
 
   const hasAnyPhaseReadyToServe =
     !isAllDelivered &&
+    !['pending_validation', 'pending'].includes(tableOrderStatus || '') &&
     (tableOrderStatus === 'ready' ||
       (areStartersReady && !areStartersServed) ||
       (areMainsReady && !areMainsServed) ||
@@ -575,60 +579,7 @@ export function MenuLiveTracker({
 
       {/* 3. Vista cuando la mesa ya ha sido cobrada (Post-Payment / Fidelización / Google Maps) */}
       {isPaidActive && (
-        <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300 space-y-3">
-          {/* Banner Esmeralda Principal: MESA #X · PAGO CONFIRMADO con Doble Botón */}
-          <div className="p-4 bg-emerald-950 text-white rounded-3xl border border-emerald-600/50 shadow-lg space-y-3.5">
-            <div className="flex items-start gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-emerald-500 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-md">
-                <CheckCircle2 className="w-6 h-6 text-slate-950 stroke-[2.5]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                    MESA #{tableNumber} &middot; PAGO CONFIRMADO
-                  </span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                </div>
-                <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight mt-0.5">
-                  ✅ ¡Cuenta pagada! Muchas gracias por tu visita
-                </h3>
-                <p className="text-[11px] text-emerald-300/90 mt-0.5 leading-snug">
-                  Esperamos que hayas disfrutado de tu experiencia. ¡Tu opinión y fidelidad tienen premio!
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
-              <button
-                type="button"
-                onClick={() => {
-                  const googleReviewUrl =
-                    restaurant?.google_review_url ||
-                    (restaurant?.google_place_id
-                      ? `https://search.google.com/local/writereview?placeid=${restaurant.google_place_id}`
-                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((restaurant?.name || 'Burger Gourmet') + ' Noia')}`)
-                  if (onClaimLoyaltyBonus && !loyaltyProfile?.google_review_bonus_awarded) {
-                    try {
-                      onClaimLoyaltyBonus()
-                    } catch {}
-                  }
-                  window.open(googleReviewUrl, '_blank', 'noopener,noreferrer')
-                }}
-                className="w-full py-2.5 px-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md shadow-amber-400/20 cursor-pointer"
-              >
-                <span>⭐ Valorar en Google Maps</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={onOpenLoyaltyModal}
-                className="w-full py-2.5 px-3.5 rounded-2xl bg-white hover:bg-emerald-50 text-emerald-950 font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-md cursor-pointer"
-              >
-                <span>🎁 Unirme al Club de Premios</span>
-              </button>
-            </div>
-          </div>
-
+        <div className="max-w-2xl mx-auto px-3.5 pt-3 w-full animate-in fade-in duration-300">
           <PostPaymentView
             restaurant={restaurant}
             tableNumber={tableNumber}
