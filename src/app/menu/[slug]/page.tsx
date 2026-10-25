@@ -222,12 +222,24 @@ function DinerMenuContent() {
     handleTableMarkedPaid,
   })
 
-  // Refrescar saldo de fidelización automáticamente cuando se completa el pago de la cuenta
+  // Refrescar saldo de fidelización automáticamente cuando se completa el pago de la cuenta o se libera la mesa
   useEffect(() => {
     if (isTablePaid) {
       loyalty.refresh()
     }
   }, [isTablePaid])
+
+  useEffect(() => {
+    const handleLoyaltyRefresh = () => {
+      loyalty.refresh()
+    }
+    window.addEventListener('fluxo_loyalty_refresh', handleLoyaltyRefresh)
+    window.addEventListener('fluxo_table_freed', handleLoyaltyRefresh)
+    return () => {
+      window.removeEventListener('fluxo_loyalty_refresh', handleLoyaltyRefresh)
+      window.removeEventListener('fluxo_table_freed', handleLoyaltyRefresh)
+    }
+  }, [loyalty])
 
   // 6. Persistencia y recuperación del carrito en localStorage
   useEffect(() => {

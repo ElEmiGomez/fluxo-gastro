@@ -230,10 +230,6 @@ export function useMenuOrderSync({
     }
 
     const stopPollingAndLockPaid = (paidSnapshot?: { total?: number; points?: number }) => {
-      if (pollInterval) {
-        clearInterval(pollInterval)
-        pollInterval = null
-      }
       if (debounceTimer) {
         clearTimeout(debounceTimer)
         debounceTimer = null
@@ -309,11 +305,6 @@ export function useMenuOrderSync({
           fetch(`/api/service-calls?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ calls: [] })),
           fetch(`/api/tables?slug=${slug}&_t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).catch(() => ({ sessions: {} })),
         ])
-
-        if (isPaidLockActive()) {
-          stopPollingAndLockPaid()
-          return
-        }
 
         if (ordersRes?.product_availability) {
           setProductsRef.current(prev => {
@@ -518,12 +509,9 @@ export function useMenuOrderSync({
 
         if (hasSavedPaidFlag) {
           if (isTableExplicitlyFreed) {
-            resetPaidOrderSessionRef.current?.()
-            setIsTablePaidRef.current(false)
-            setIsTablePaid(false)
-            setIsOrderPaidRef.current?.(false)
+            handleLocalTableFreed({ detail: { tableNumber, new_session_id: thisTableSession?.session_id } })
+            return
           } else {
-            stopPollingAndLockPaid()
             return
           }
         }
@@ -716,18 +704,13 @@ export function useMenuOrderSync({
           triggerDebouncedCheck()
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'table_sessions' }, (payload: any) => {
-          if (isPaidLockActive()) return
           const newSession = payload?.new
           const matchesTable = newSession && newSession.table_number?.toString() === tableNumber?.toString()
           if (matchesTable && (newSession.status === 'closed' || newSession.status === 'free')) {
-            if (hasRequestedBillRef.current || userRequestedBillTimeRef.current || hasActiveSessionHistory() || isPaidLockActive()) {
-              stopPollingAndLockPaid()
-              return
-            } else {
-              handleLocalTableFreed({ detail: { tableNumber } })
-              return
-            }
+            handleLocalTableFreed({ detail: { tableNumber, new_session_id: newSession.session_token || newSession.session_id } })
+            return
           }
+          if (isPaidLockActive()) return
           triggerDebouncedCheck()
         })
         .subscribe()
@@ -798,13 +781,6 @@ export function useMenuOrderSync({
     }
 
     pollInterval = setInterval(() => {
-      if (isPaidLockActive()) {
-        if (pollInterval) {
-          clearInterval(pollInterval)
-          pollInterval = null
-        }
-        return
-      }
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
         return
       }
@@ -842,6 +818,10 @@ export function useMenuOrderSync({
 
         if (typeof window !== 'undefined') {
           try {
+            const lastPaidVal = sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
+            if (lastPaidVal) {
+              sessionStorage.setItem(`fluxo_last_client_paid_amount_${slug}`, lastPaidVal)
+            }
             sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now()))
             sessionStorage.removeItem(`fluxo_active_order_ids_${slug}_${tableNumber}`)
             sessionStorage.removeItem(`fluxo_bill_requested_${slug}_${tableNumber}`)
@@ -854,6 +834,11 @@ export function useMenuOrderSync({
             localStorage.removeItem(`fluxo_cart_${slug}_${tableNumber}`)
           } catch (_) {}
         }
+
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('fluxo_loyalty_refresh', { detail: { tableNumber } }))
+        }
+        loadDataRef.current?.()
       }
     }
 
@@ -896,7 +881,6 @@ export function useMenuOrderSync({
     window.addEventListener('table_bill_paid', handleLocalTableBillPaid)
 
     const handleVisibilityChange = () => {
-      if (isPaidLockActive()) return
       if (document.visibilityState === 'visible') {
         checkOrderStatus()
       }

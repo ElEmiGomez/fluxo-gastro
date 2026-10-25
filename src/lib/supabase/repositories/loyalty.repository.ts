@@ -547,6 +547,13 @@ export async function registerOrGetLoyaltyProfile(
         hasChanges = true
       }
 
+      if (isStampsMode && (!profile.stamps_count || profile.stamps_count === 0) && (profile.total_points > 0 || retroactivePoints > 0)) {
+        profile.stamps_count = 1
+        profile.total_stamps_earned = Math.max(1, profile.total_stamps_earned || 1)
+        profile.stamps_target = targetStamps
+        hasChanges = true
+      }
+
       if (hasChanges) {
         profile.updated_at = new Date().toISOString()
         if (globalStore.__GASTRO_LOYALTY_PROFILES__) {
@@ -1076,7 +1083,7 @@ export async function settleLoyaltySession(
   const settings = await getLoyaltySettings(slug)
   const finalBillAmount = Number(params.finalAmount) || totalBillPoints || 0
   const minSpend = (settings.min_spend_per_stamp && settings.min_spend_per_stamp !== 50) ? settings.min_spend_per_stamp : 0
-  const qualifiesForStamp = finalBillAmount > 0 && finalBillAmount >= minSpend
+  const qualifiesForStamp = (finalBillAmount > 0 || totalBillPoints > 0 || uncreditedOrders.length > 0) && finalBillAmount >= minSpend
   let stampAwarded = false
   let stampRewardUnlockedNow = false
 

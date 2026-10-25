@@ -106,7 +106,10 @@ export function PostPaymentView({
   }
 
   const isPointsSaved = Boolean(loyaltyProfile?.email)
-  const stampsCount = loyaltyProfile?.stamps_count ?? 1
+  const effectiveLoyaltyMode = loyaltyMode === 'stamps' || loyaltyProfile?.stamps_target || (loyaltyProfile?.stamps_count !== undefined && loyaltyProfile.stamps_count > 0)
+    ? 'stamps'
+    : loyaltyMode
+  const stampsCount = (loyaltyProfile?.stamps_count && loyaltyProfile.stamps_count > 0) ? loyaltyProfile.stamps_count : 1
 
   return (
     <div className="w-full animate-in fade-in duration-300 space-y-3 pb-6 select-none">
@@ -127,7 +130,7 @@ export function PostPaymentView({
               ✅ ¡Cuenta pagada! Muchas gracias por tu visita
             </h3>
             <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-              {loyaltyMode === 'stamps'
+              {effectiveLoyaltyMode === 'stamps'
                 ? '¡Sumaste +1 sello con tu comanda! Completa tu cartilla digital para canjear invitaciones y recompensas.'
                 : `¡Sumaste +${storedPoints} puntos con tu comanda! Acumula puntos en cada visita y canjéalos por premios exclusivos.`}
             </p>
@@ -139,7 +142,7 @@ export function PostPaymentView({
             <div className="flex items-center gap-2 min-w-0">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
               <span className="truncate">
-                {loyaltyMode === 'stamps'
+                {effectiveLoyaltyMode === 'stamps'
                   ? `✓ Sellos guardados en tu cartilla (${stampsCount} ${stampsCount === 1 ? 'sello acumulado' : 'sellos acumulados'})`
                   : `✓ Puntos guardados en tu cuenta (${loyaltyProfile?.available_points ?? storedPoints} pts acumulados)`}
               </span>
@@ -150,7 +153,7 @@ export function PostPaymentView({
                 onClick={onOpenLoyaltyModal}
                 className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black flex-shrink-0 cursor-pointer transition-colors"
               >
-                {loyaltyMode === 'stamps' ? 'Ver Cartilla' : 'Ver Premios'}
+                {effectiveLoyaltyMode === 'stamps' ? 'Ver Cartilla' : 'Ver Premios'}
               </button>
             )}
           </div>
@@ -162,7 +165,7 @@ export function PostPaymentView({
           >
             <Sparkles className="w-4 h-4 text-emerald-300" />
             <span>
-              {loyaltyMode === 'stamps'
+              {effectiveLoyaltyMode === 'stamps'
                 ? '🎁 Unirme a la Cartilla de Sellos / Guardar mis sellos'
                 : '🎁 Unirme al Club de Premios / Guardar mis puntos'}
             </span>
@@ -184,7 +187,7 @@ export function PostPaymentView({
               <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-100 text-amber-800">
                 {loyaltyProfile?.google_review_bonus_awarded
                   ? 'Reseña 5★'
-                  : loyaltyMode === 'stamps'
+                  : effectiveLoyaltyMode === 'stamps'
                   ? '+1 Sello Extra'
                   : '+50 Puntos'}
               </span>
@@ -199,7 +202,7 @@ export function PostPaymentView({
           {loyaltyProfile?.google_review_bonus_awarded
             ? 'Tu valoración de 5 estrellas en Google Maps nos ayuda muchísimo y apoya directamente a nuestro equipo de sala y cocina.'
             : `Tu valoración de 5 estrellas en Google Maps nos ayuda muchísimo y te regala ${
-                loyaltyMode === 'stamps'
+                effectiveLoyaltyMode === 'stamps'
                   ? '+1 sello extra en tu cartilla digital'
                   : '+50 puntos extra para canjear platos gratis'
               }.`}
@@ -231,7 +234,7 @@ export function PostPaymentView({
           <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-extrabold flex items-center gap-2 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
             <span>
-              {loyaltyMode === 'stamps'
+              {effectiveLoyaltyMode === 'stamps'
                 ? '¡Gracias por tus 5 estrellas! Sumaste +1 sello extra a tu cartilla.'
                 : '¡Gracias por tus 5 estrellas! Sumaste +50 puntos extra.'}
             </span>
@@ -253,7 +256,7 @@ export function PostPaymentView({
           <span>
             {loyaltyProfile?.google_review_bonus_awarded
               ? '⭐ Valorar con 5 estrellas en Google Maps'
-              : loyaltyMode === 'stamps'
+              : effectiveLoyaltyMode === 'stamps'
               ? '⭐ Valóranos y gana +1 sello extra'
               : '⭐ Valóranos en Google (+50 pts)'}
           </span>

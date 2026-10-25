@@ -179,21 +179,22 @@ export async function closeTableSession(
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
-      if (calculatedAmount === undefined || calculatedAmount === null || calculatedCount === undefined || calculatedCount === null) {
-        const { data: activeOrders } = await supabase
+      if (!calculatedAmount || calculatedAmount <= 0 || !calculatedCount || calculatedCount <= 0) {
+        const windowStart = new Date(Date.now() - 120 * 60 * 1000).toISOString()
+        const { data: recentOrders } = await supabase
           .from('orders')
           .select('id, total_amount')
           .eq('restaurant_id', targetRestaurantId)
           .eq('table_number', tableNumber)
           .neq('status', 'cancelled')
-          .neq('status', 'paid')
+          .gte('created_at', windowStart)
 
-        if (activeOrders && activeOrders.length > 0) {
-          if (calculatedAmount === undefined || calculatedAmount === null) {
-            calculatedAmount = activeOrders.reduce((acc: number, o: { total_amount?: number | string | null }) => acc + (Number(o.total_amount) || 0), 0)
+        if (recentOrders && recentOrders.length > 0) {
+          if (!calculatedAmount || calculatedAmount <= 0) {
+            calculatedAmount = recentOrders.reduce((acc: number, o: { total_amount?: number | string | null }) => acc + (Number(o.total_amount) || 0), 0)
           }
-          if (calculatedCount === undefined || calculatedCount === null) {
-            calculatedCount = activeOrders.length
+          if (!calculatedCount || calculatedCount <= 0) {
+            calculatedCount = recentOrders.length
           }
         }
       }
@@ -251,7 +252,18 @@ export async function closeTableSession(
 
   // 4. Liquidar puntos canjeados y acreditar puntos ganados en el sistema de fidelización
   try {
-    const finalBillAmount = Number(calculatedAmount) || 0
+    let finalBillAmount = Number(calculatedAmount) || 0
+    if (finalBillAmount <= 0) {
+      const globalStore = globalThis as unknown as { __GASTRO_ORDERS__?: Record<string, any[]> }
+      const memOrders = globalStore.__GASTRO_ORDERS__?.[slug] || []
+      const matching = memOrders.filter((o: any) => {
+        const oTbl = Number(o.table_number || o.table?.table_number)
+        return oTbl === Number(tableNumber) && o.status !== 'cancelled'
+      })
+      if (matching.length > 0) {
+        finalBillAmount = matching.reduce((sum: number, o: any) => sum + (Number(o.total_amount) || 0), 0)
+      }
+    }
     await settleLoyaltySession(slug, {
       tableNumber,
       finalAmount: finalBillAmount,

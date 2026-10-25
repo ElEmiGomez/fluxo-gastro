@@ -119,9 +119,11 @@ export function useLoyalty({ slug, tableNumber }: UseLoyaltyOptions) {
             if (parsed.total) effectiveLastPaid = Number(parsed.total)
           } catch {}
         }
-        const isPaidSession = sessionStorage.getItem(`fluxo_table_paid_${slug}_${tableNumber}`) === 'true' || Boolean(paidOrderData)
+        const isPaidSession = sessionStorage.getItem(`fluxo_table_paid_${slug}_${tableNumber}`) === 'true' || Boolean(paidOrderData) || Boolean(sessionStorage.getItem(`fluxo_last_client_paid_amount_${slug}`))
         if (isPaidSession) {
-          const stored = sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) || localStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
+          const stored = sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) ||
+            localStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`) ||
+            sessionStorage.getItem(`fluxo_last_client_paid_amount_${slug}`)
           if (stored) effectiveLastPaid = Number(stored)
         }
       }

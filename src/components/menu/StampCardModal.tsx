@@ -72,7 +72,7 @@ export function StampCardModal({
   const targetStamps = settings?.target_stamps || profile?.stamps_target || 5
   const currentStamps = profile?.stamps_count ?? 0
   const unlockedRewards = profile?.unlocked_rewards_count ?? 0
-  const minSpend = settings?.min_spend_per_stamp || 50
+  const minSpend = typeof settings?.min_spend_per_stamp === 'number' && settings.min_spend_per_stamp > 0 ? settings.min_spend_per_stamp : 0
   const rewardLabel = settings?.reward_label || 'Postre o Café gratis'
 
   const directReviewLink =
@@ -201,7 +201,11 @@ export function StampCardModal({
                       Activa tu Cartilla Digital de Sellos
                     </h3>
                     <p className="text-xs text-amber-900/90 leading-relaxed">
-                      Suma 1 sello cada vez que tu mesa pague una cuenta de <strong>{minSpend} €</strong> o más.
+                      {minSpend > 0 ? (
+                        <>Suma 1 sello cada vez que tu mesa pague una cuenta de <strong>{minSpend} €</strong> o más.</>
+                      ) : (
+                        <>Suma 1 sello con cada visita o comanda pagada en tu mesa.</>
+                      )}{' '}
                       Al llegar a <strong>{targetStamps} visitas</strong>, recibirás un <strong>{rewardLabel}</strong> en tu siguiente visita.
                     </p>
                   </div>
@@ -436,7 +440,7 @@ export function StampCardModal({
                         Tarjeta de {targetStamps} Visitas
                       </h4>
                       <span className="text-[10px] text-amber-800/80 font-medium">
-                        Consumo mín. {minSpend} € por cuenta
+                        {minSpend > 0 ? `Consumo mín. ${minSpend} € por cuenta` : '1 sello por comanda pagada'}
                       </span>
                     </div>
                   </div>
@@ -558,7 +562,13 @@ export function StampCardModal({
                   <span>¿Cómo funciona tu cartilla?</span>
                 </div>
                 <ul className="text-[11px] text-slate-600 space-y-1 pl-4 list-disc leading-relaxed">
-                  <li>Cada vez que pagues una cuenta superior a <strong>{minSpend} €</strong>, sumas 1 sello.</li>
+                  <li>
+                    {minSpend > 0 ? (
+                      <>Cada vez que pagues una cuenta superior a <strong>{minSpend} €</strong>, sumas 1 sello.</>
+                    ) : (
+                      <>Suma 1 sello con cada visita o comanda pagada en tu mesa.</>
+                    )}
+                  </li>
                   <li>Al completar los <strong>{targetStamps} sellos</strong>, tu regalo se activará automáticamente a partir de tu <strong>siguiente visita</strong>.</li>
                   <li>El premio es válido para canjear en mesa por <strong>{rewardLabel}</strong>.</li>
                 </ul>

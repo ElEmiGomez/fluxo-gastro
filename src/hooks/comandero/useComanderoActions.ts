@@ -765,6 +765,17 @@ export function useComanderoActions({
       return next
     })
 
+    const tableOrdersList = (serverOrders || []).filter(o => {
+      const oTbl = o.table_number?.toString() || o.table?.table_number?.toString()
+      return oTbl === sTableNum && o.status !== 'cancelled'
+    })
+    const effectiveAmount = (typeof finalAmount === 'number' && finalAmount > 0)
+      ? finalAmount
+      : tableOrdersList.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0)
+    const effectiveCount = (typeof ordersCount === 'number' && ordersCount > 0)
+      ? ordersCount
+      : tableOrdersList.length
+
     // Emitir inmediatamente evento local y BroadcastChannel para liberar el menú en pantalla de comensales concurrentes
     if (typeof window !== 'undefined') {
       try {
@@ -785,8 +796,8 @@ export function useComanderoActions({
           table_number: tableNum,
           action: 'free',
           payment_method: paymentMethod,
-          final_amount: finalAmount,
-          orders_count: ordersCount,
+          final_amount: effectiveAmount,
+          orders_count: effectiveCount,
         }),
       })
 

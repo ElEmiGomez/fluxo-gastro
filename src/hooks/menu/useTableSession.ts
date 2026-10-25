@@ -79,6 +79,10 @@ export function useTableSession({ slug, initialTable, urlSession }: UseTableSess
     setIsTablePaid(false)
     if (typeof window !== 'undefined') {
       try {
+        const lastPaidVal = sessionStorage.getItem(`fluxo_last_paid_total_${slug}_${tableNumber}`)
+        if (lastPaidVal) {
+          sessionStorage.setItem(`fluxo_last_client_paid_amount_${slug}`, lastPaidVal)
+        }
         sessionStorage.setItem(`fluxo_paid_dismissed_${slug}_${tableNumber}`, String(Date.now()))
         sessionStorage.removeItem(`fluxo_active_order_ids_${slug}_${tableNumber}`)
         sessionStorage.removeItem(`fluxo_paid_lock_${slug}_${tableNumber}`)
