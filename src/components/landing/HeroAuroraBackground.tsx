@@ -2,10 +2,9 @@ import React from 'react'
 
 /**
  * HeroAuroraBackground
- * Fondo dinámico de alta gama estilo Aurora B2B para la cabecera (Hero).
- * Luz ambiental perfectamente centrada detrás del titular y las acciones principales.
- * Implementado con orbes fluidos acelerados por GPU mediante CSS puro.
- * Diseñado para 60 FPS estables, cero consumo de JavaScript y respeto a prefers-reduced-motion.
+ * Fondo de iluminación 100% centrado para el Hero.
+ * Diseñado simétrico respecto al eje horizontal medio (X = 50%),
+ * iluminando directamente el titular y los botones principales.
  */
 export function HeroAuroraBackground() {
   return (
@@ -13,42 +12,31 @@ export function HeroAuroraBackground() {
       className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0" 
       aria-hidden="true"
     >
-      {/* ── 1. SPOTLIGHT PRINCIPAL CENTRADO (Corona de luz directa detrás del titular) ── */}
+      {/* ── 1. SPOTLIGHT PRINCIPAL CENTRADO (Corona elíptica en el centro exacto) ── */}
       <div 
-        className="absolute top-[4%] sm:top-[2%] left-1/2 -translate-x-1/2 
-                   w-[650px] sm:w-[950px] lg:w-[1150px] h-[380px] sm:h-[480px] rounded-full 
-                   bg-gradient-to-b from-cyan-500/22 via-blue-600/15 to-transparent 
-                   blur-[100px] sm:blur-[140px] pointer-events-none" 
+        className="absolute top-[0%] sm:top-[2%] left-1/2 -translate-x-1/2 
+                   w-[700px] sm:w-[950px] lg:w-[1100px] h-[440px] sm:h-[540px] rounded-full 
+                   bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-400/25 via-blue-600/15 to-transparent 
+                   blur-[100px] sm:blur-[135px] pointer-events-none" 
       />
 
-      {/* ── 2. ORBE FLUIDO OESTE (Cian vibrante centrado en el eje izquierdo del titular) ── */}
-      <div className="absolute top-[8%] sm:top-[6%] left-1/2 -translate-x-1/2 -ml-24 sm:-ml-40 w-[420px] sm:w-[560px] h-[300px] sm:h-[380px]">
-        <div 
-          className="w-full h-full rounded-full 
-                     bg-gradient-to-tr from-cyan-400/25 via-blue-500/15 to-transparent 
-                     blur-[85px] sm:blur-[120px] animate-aurora-drift-1 gpu-layer" 
-        />
-      </div>
+      {/* ── 2. NÚCLEO VIBRANTE CENTRADO (Luz viva justo detrás del texto principal) ── */}
+      <div 
+        className="absolute top-[8%] sm:top-[6%] left-1/2 -translate-x-1/2 
+                   w-[440px] sm:w-[620px] h-[300px] sm:h-[380px] rounded-full 
+                   bg-gradient-to-b from-cyan-400/30 via-blue-500/15 to-transparent 
+                   blur-[75px] sm:blur-[105px] pointer-events-none" 
+      />
 
-      {/* ── 3. ORBE FLUIDO ESTE (Azul Cobalto & Índigo centrado en el eje derecho del titular) ── */}
-      <div className="absolute top-[10%] sm:top-[8%] left-1/2 -translate-x-1/2 ml-24 sm:ml-40 w-[440px] sm:w-[580px] h-[320px] sm:h-[400px]">
-        <div 
-          className="w-full h-full rounded-full 
-                     bg-gradient-to-bl from-blue-600/25 via-indigo-600/15 to-transparent 
-                     blur-[95px] sm:blur-[130px] animate-aurora-drift-2 gpu-layer" 
-        />
-      </div>
+      {/* ── 3. RESPLANDOR CENTRADO INFERIOR (Equilibrio detrás de los botones de acción) ── */}
+      <div 
+        className="absolute top-[48%] sm:top-[45%] left-1/2 -translate-x-1/2 
+                   w-[500px] sm:w-[720px] h-[220px] sm:h-[280px] rounded-full 
+                   bg-gradient-to-r from-blue-600/15 via-cyan-400/20 to-blue-600/15 
+                   blur-[85px] sm:blur-[115px] pointer-events-none" 
+      />
 
-      {/* ── 4. ORBE FLUIDO BASE (Acento Esmeralda / Cian detrás de los botones de acción) ── */}
-      <div className="absolute top-[48%] sm:top-[46%] left-1/2 -translate-x-1/2 w-[480px] sm:w-[680px] h-[240px] sm:h-[320px]">
-        <div 
-          className="w-full h-full rounded-full 
-                     bg-gradient-to-r from-cyan-500/15 via-emerald-500/12 to-transparent 
-                     blur-[90px] sm:blur-[125px] animate-aurora-drift-3 gpu-layer" 
-        />
-      </div>
-
-      {/* ── 5. MÁSCARAS DE TRANSICIÓN SUAVES (Integración con el fondo Slate-900) ── */}
+      {/* ── 4. MÁSCARAS DE TRANSICIÓN VERTICAL SUAVES (Integración con el fondo Slate-900) ── */}
       {/* Máscara inferior suave hacia la siguiente sección */}
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent" />
       
