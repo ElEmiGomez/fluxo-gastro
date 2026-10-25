@@ -621,7 +621,7 @@ export function useComanderoActions({
   // Cobrar cuenta de la mesa (Paso 1: Cobro y paso a Sobremesa / Encuesta / Fidelización)
   const handleChargeTable = async (
     tableNum: number | string,
-    paymentMethod: 'card' | 'cash' = 'card',
+    paymentMethod: 'card' | 'cash' | 'mixed' = 'card',
     finalAmount?: number
   ) => {
     try {
@@ -723,15 +723,19 @@ export function useComanderoActions({
   // Marcar mesa como cobrada y liberarla
   const executeCloseAndFreeTable = async (
     tableNum: number | string,
-    paymentMethod: 'card' | 'cash' = 'card',
+    paymentMethod: 'card' | 'cash' | 'mixed' = 'card',
     finalAmount?: number,
     ordersCount?: number
   ) => {
     // Actualización optimista inmediata en 1 toque
     const sTableNum = tableNum.toString()
     const nTableNum = Number(tableNum)
-    freedTableNumbersRef?.current?.set(sTableNum, Date.now())
-    freedTableNumbersRef?.current?.set(nTableNum, Date.now())
+    const nowTs = Date.now()
+    freedTableNumbersRef?.current?.set(sTableNum, nowTs)
+    freedTableNumbersRef?.current?.set(nTableNum, nowTs)
+    if (mutationLockUntilRef?.current) {
+      mutationLockUntilRef.current.set(`table_free_${sTableNum}`, nowTs + 10000)
+    }
 
     if (prevOrdersMapRef?.current) {
       prevOrdersMapRef.current.forEach((ord, id) => {
@@ -760,17 +764,6 @@ export function useComanderoActions({
       delete next[nTableNum]
       return next
     })
-
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('fluxo_table_freed', { detail: { tableNumber: tableNum } }))
-      if ('BroadcastChannel' in window) {
-        try {
-          const bc = new BroadcastChannel('fluxo_menu_channel')
-          bc.postMessage({ type: 'table_freed', slug, tableNumber: tableNum })
-          bc.close()
-        } catch (_) {}
-      }
-    }
 
     try {
       await fetch('/api/tables', {

@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect } from 'react'
-import { X, CreditCard, Banknote, Receipt, CheckCircle2, Sparkles, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { X, CreditCard, Banknote, Smartphone, Receipt, CheckCircle2, Sparkles, ShieldCheck, Gift, Check, AlertTriangle } from 'lucide-react'
 import { Order } from '@/types/database.types'
 import { PendingServiceCall } from '@/types/comandero.types'
 
@@ -14,7 +14,7 @@ interface CloseTableModalProps {
   discountPercentage?: number
   onConfirm: (
     tableNumber: number | string,
-    paymentMethod: 'card' | 'cash',
+    paymentMethod: 'card' | 'cash' | 'mixed',
     finalAmount: number,
     ordersCount: number
   ) => void
@@ -29,9 +29,9 @@ export function CloseTableModal({
   discountPercentage = 0,
   onConfirm,
 }: CloseTableModalProps) {
-  const [selectedMethod, setSelectedMethod] = useState<'card' | 'cash'>('card')
+  const [selectedMethod, setSelectedMethod] = useState<'card' | 'cash' | 'mixed'>('card')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showUnpaidWarning, setShowUnpaidWarning] = useState(false)
+  const [showInviteConfirmation, setShowInviteConfirmation] = useState(false)
 
   // 1. Inferencia Inteligente del Método de Pago (Smart Default)
   const { detectedMethod, hasDinerRequest, dinerRequestText } = useMemo(() => {
@@ -72,7 +72,7 @@ export function CloseTableModal({
     if (isOpen) {
       setSelectedMethod(detectedMethod)
       setIsSubmitting(false)
-      setShowUnpaidWarning(false)
+      setShowInviteConfirmation(false)
     }
   }, [isOpen, detectedMethod])
 
@@ -212,45 +212,60 @@ export function CloseTableModal({
               )}
             </div>
 
-            {/* Selector Rápido de 1 Toque (Tarjeta vs Efectivo) */}
-            <div className="grid grid-cols-2 gap-2.5">
+            {/* Selector Rápido de Método: Tarjeta, Efectivo, u Otro / Mixto */}
+            <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedMethod('card')}
-                className={`p-3 rounded-2xl border-2 font-black text-xs flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`p-2.5 rounded-2xl border-2 font-black text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                   selectedMethod === 'card'
                     ? 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-300'
                     : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                 }`}
               >
-                <CreditCard className={`w-5 h-5 ${selectedMethod === 'card' ? 'text-white' : 'text-blue-600'}`} />
-                <span>💳 Tarjeta</span>
+                <CreditCard className={`w-4 h-4 ${selectedMethod === 'card' ? 'text-white' : 'text-blue-600'}`} />
+                <span className="truncate">💳 Tarjeta</span>
                 {detectedMethod === 'card' && hasDinerRequest && (
-                  <span className="text-[9px] opacity-90 font-medium">Pre-seleccionado</span>
+                  <span className="text-[8px] opacity-90 font-medium">Sugerido</span>
                 )}
               </button>
 
               <button
                 type="button"
                 onClick={() => setSelectedMethod('cash')}
-                className={`p-3 rounded-2xl border-2 font-black text-xs flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`p-2.5 rounded-2xl border-2 font-black text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                   selectedMethod === 'cash'
                     ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-300'
                     : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                 }`}
               >
-                <Banknote className={`w-5 h-5 ${selectedMethod === 'cash' ? 'text-white' : 'text-emerald-600'}`} />
-                <span>💵 Efectivo</span>
+                <Banknote className={`w-4 h-4 ${selectedMethod === 'cash' ? 'text-white' : 'text-emerald-600'}`} />
+                <span className="truncate">💵 Efectivo</span>
                 {detectedMethod === 'cash' && hasDinerRequest && (
-                  <span className="text-[9px] opacity-90 font-medium">Pre-seleccionado</span>
+                  <span className="text-[8px] opacity-90 font-medium">Sugerido</span>
                 )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedMethod('mixed')}
+                className={`p-2.5 rounded-2xl border-2 font-black text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                  selectedMethod === 'mixed'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-md ring-2 ring-purple-300'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                }`}
+              >
+                <Smartphone className={`w-4 h-4 ${selectedMethod === 'mixed' ? 'text-white' : 'text-purple-600'}`} />
+                <span className="truncate">📱 Otro / Mixto</span>
               </button>
             </div>
 
             <p className="text-[11px] text-slate-500 text-center font-medium">
               {selectedMethod === 'card'
                 ? 'Cobro mediante datáfono / TPV inalámbrico.'
-                : 'Cobro en metálico en mesa.'}
+                : selectedMethod === 'cash'
+                ? 'Cobro en metálico en mesa.'
+                : 'Cobro mediante Bizum, transferencia o pago mixto.'}
             </p>
           </div>
 
@@ -262,34 +277,42 @@ export function CloseTableModal({
               disabled={isSubmitting}
               onClick={handleConfirm}
               className={`w-full py-3.5 px-4 rounded-2xl text-xs font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer disabled:opacity-50 ${
-                selectedMethod === 'cash'
+                finalAmount === 0
                   ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                  : selectedMethod === 'cash'
+                  ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                  : selectedMethod === 'mixed'
+                  ? 'bg-purple-600 hover:bg-purple-500 shadow-purple-600/30'
                   : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
               <span>
                 {isSubmitting
-                  ? 'Cobrando cuenta...'
-                  : `Cobrar ${finalAmount.toFixed(2)} € (${selectedMethod === 'card' ? 'Tarjeta' : 'Efectivo'})`}
+                  ? 'Procesando...'
+                  : finalAmount === 0
+                  ? 'Liberar Mesa (Cuenta a 0,00 €)'
+                  : `Cobrar ${finalAmount.toFixed(2)} € (${
+                      selectedMethod === 'card'
+                        ? 'Tarjeta'
+                        : selectedMethod === 'cash'
+                        ? 'Efectivo'
+                        : 'Otro / Mixto'
+                    })`}
               </span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (finalAmount > 0) {
-                  setShowUnpaidWarning(true)
-                } else {
-                  setIsSubmitting(true)
-                  onConfirm(tableNumber, 'cash', 0, Math.max(1, tableOrders.length))
-                }
-              }}
-              disabled={isSubmitting}
-              className="w-full py-1.5 text-[11px] font-bold text-rose-600 hover:text-rose-800 hover:underline transition-colors cursor-pointer text-center block"
-            >
-              Liberar mesa sin cobrar (Invitación / Descarte)
-            </button>
+            {finalAmount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowInviteConfirmation(true)}
+                disabled={isSubmitting}
+                className="w-full py-2.5 px-3 rounded-2xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-950 font-black text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+              >
+                <Gift className="w-4 h-4 text-amber-600 stroke-[2.5]" />
+                <span>🎁 Dejar que la casa invite (0,00 €)</span>
+              </button>
+            )}
 
             <button
               type="button"
@@ -303,45 +326,34 @@ export function CloseTableModal({
         </div>
       </div>
 
-      {/* MODAL DE ADVERTENCIA ROJA: LIBERACIÓN SIN COBRO */}
-      {showUnpaidWarning && (
+      {/* MODAL DE CONFIRMACIÓN: DEJAR QUE LA CASA INVITE */}
+      {showInviteConfirmation && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in select-none">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border-2 border-rose-500 space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-2.5 text-rose-600">
-              <div className="p-2.5 rounded-2xl bg-rose-100 text-rose-600 flex-shrink-0">
-                <AlertTriangle className="w-6 h-6 stroke-[2.5]" />
+          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border-2 border-amber-400 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2.5 text-amber-600">
+              <div className="p-2.5 rounded-2xl bg-amber-100 text-amber-600 flex-shrink-0">
+                <Gift className="w-6 h-6 stroke-[2.5]" />
               </div>
               <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 block leading-tight">
-                  Atención · Pérdida de Ingreso
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 block leading-tight">
+                  Cortesía del Restaurante
                 </span>
                 <h3 className="text-base font-black text-slate-900 leading-tight">
-                  Mesa #{tableNumber} tiene saldo
+                  Mesa #{tableNumber} · Invitación
                 </h3>
               </div>
             </div>
 
-            <div className="p-3.5 bg-rose-50 rounded-2xl border border-rose-200 text-xs text-rose-950 space-y-1.5 font-medium leading-relaxed">
-              <p className="font-extrabold text-sm text-rose-700">
-                ⚠️ Esta mesa tiene {finalAmount.toFixed(2)} € sin cobrar.
+            <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-950 space-y-1.5 font-medium leading-relaxed">
+              <p className="font-extrabold text-sm text-amber-800">
+                Total de la mesa: {finalAmount.toFixed(2)} €
               </p>
               <p>
-                ¿Estás seguro de que deseas liberarla <strong>SIN cobrar</strong> y vaciar la sesión?
-              </p>
-              <p className="text-[11px] text-rose-600 font-bold">
-                Este importe NO se sumará a la caja diaria del restaurante.
+                ¿Confirmas invitar la cuenta por cortesía de la casa? La mesa quedará liberada a <strong>0,00 €</strong> sin importe cobrado en caja.
               </p>
             </div>
 
             <div className="space-y-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setShowUnpaidWarning(false)}
-                className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-md transition-all cursor-pointer"
-              >
-                Volver a Cobrar los {finalAmount.toFixed(2)} €
-              </button>
-
               <button
                 type="button"
                 disabled={isSubmitting}
@@ -349,9 +361,18 @@ export function CloseTableModal({
                   setIsSubmitting(true)
                   onConfirm(tableNumber, 'cash', 0, Math.max(1, tableOrders.length))
                 }}
-                className="w-full py-2.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-extrabold text-xs transition-colors cursor-pointer"
+                className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                {isSubmitting ? 'Liberando sin cobrar...' : 'Confirmar Liberación sin Cobro'}
+                <Check className="w-4 h-4 stroke-[3]" />
+                <span>{isSubmitting ? 'Aplicando invitación...' : 'Confirmar Invitación (0,00 €)'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowInviteConfirmation(false)}
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs transition-colors cursor-pointer text-center"
+              >
+                Volver al Cobro Normal
               </button>
             </div>
           </div>

@@ -179,17 +179,23 @@ export async function closeTableSession(
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
-      const { data: activeOrders } = await supabase
-        .from('orders')
-        .select('id, total_amount')
-        .eq('restaurant_id', targetRestaurantId)
-        .eq('table_number', tableNumber)
-        .neq('status', 'cancelled')
-        .neq('status', 'paid')
+      if (calculatedAmount === undefined || calculatedAmount === null || calculatedCount === undefined || calculatedCount === null) {
+        const { data: activeOrders } = await supabase
+          .from('orders')
+          .select('id, total_amount')
+          .eq('restaurant_id', targetRestaurantId)
+          .eq('table_number', tableNumber)
+          .neq('status', 'cancelled')
+          .neq('status', 'paid')
 
-      if (activeOrders && activeOrders.length > 0) {
-        calculatedAmount = activeOrders.reduce((acc: number, o: { total_amount?: number | string | null }) => acc + (Number(o.total_amount) || 0), 0)
-        calculatedCount = activeOrders.length
+        if (activeOrders && activeOrders.length > 0) {
+          if (calculatedAmount === undefined || calculatedAmount === null) {
+            calculatedAmount = activeOrders.reduce((acc: number, o: { total_amount?: number | string | null }) => acc + (Number(o.total_amount) || 0), 0)
+          }
+          if (calculatedCount === undefined || calculatedCount === null) {
+            calculatedCount = activeOrders.length
+          }
+        }
       }
 
       // Intentar actualización completa con columnas de resumen

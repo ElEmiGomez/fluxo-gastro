@@ -202,8 +202,10 @@ export function useComanderoData(slug: string) {
       const sessionsData = tablesRes.sessions || {}
       Object.entries(sessionsData).forEach(([tblNum, sessionData]: [string, any]) => {
         if (sessionData?.status === 'free') {
-          freedTableNumbersRef.current.set(tblNum, Date.now())
-          freedTableNumbersRef.current.set(Number(tblNum), Date.now())
+          if (!freedTableNumbersRef.current.has(tblNum)) {
+            freedTableNumbersRef.current.set(tblNum, Date.now())
+            freedTableNumbersRef.current.set(Number(tblNum), Date.now())
+          }
         }
       })
 
@@ -212,14 +214,20 @@ export function useComanderoData(slug: string) {
 
         const tblNum = ord.table?.table_number || ord.table_number
         const tblStr = tblNum ? tblNum.toString() : ''
-        const isTableFreed = Boolean(tblStr && (freedTableNumbersRef.current.has(tblStr) || freedTableNumbersRef.current.has(Number(tblStr))))
+        const freedTimestamp = tblStr ? (freedTableNumbersRef.current.get(tblStr) || freedTableNumbersRef.current.get(Number(tblStr))) : undefined
+        const isTableFreed = Boolean(freedTimestamp)
 
-        if (isTableFreed && ord.status !== 'paid') {
-          freedTableNumbersRef.current.delete(tblStr)
-          freedTableNumbersRef.current.delete(Number(tblStr))
-        } else if (isTableFreed && ord.status === 'paid') {
-          prevOrdersMapRef.current.delete(ord.id)
-          return
+        if (isTableFreed) {
+          const ordCreatedMs = new Date(ord.created_at || 0).getTime()
+          // Si la orden pertenece a la sesión cerrada (ya pagada o anterior a la liberación):
+          if (ord.status === 'paid' || (!isNaN(ordCreatedMs) && ordCreatedMs <= (freedTimestamp || 0) + 1500)) {
+            prevOrdersMapRef.current.delete(ord.id)
+            return // Descartar comanda antigua de sesión cerrada en el Comandero
+          } else if (!isNaN(ordCreatedMs) && ordCreatedMs > (freedTimestamp || 0) + 1500) {
+            // Nueva comanda creada legítimamente para un nuevo comensal tras liberar la mesa
+            freedTableNumbersRef.current.delete(tblStr)
+            freedTableNumbersRef.current.delete(Number(tblStr))
+          }
         }
 
         const existing = prevMap.get(ord.id) || prevOrdersMapRef.current.get(ord.id)
@@ -306,9 +314,9 @@ export function useComanderoData(slug: string) {
           const isHandledLocally = attendedValidationOrderIdsRef.current.has(prevOrd.id)
           const pTbl = prevOrd.table_number?.toString() || prevOrd.table?.table_number?.toString()
           const isTableFreed = Boolean(pTbl && (freedTableNumbersRef.current.has(pTbl) || freedTableNumbersRef.current.has(Number(pTbl))))
-          if (!isCancelled && !isHandledLocally && !(isTableFreed && prevOrd.status === 'paid')) {
+          if (!isCancelled && !isHandledLocally && !isTableFreed) {
             map.set(prevOrd.id, prevOrd)
-          } else if (isTableFreed && prevOrd.status === 'paid') {
+          } else if (isTableFreed) {
             prevOrdersMapRef.current.delete(prevOrd.id)
           }
         }
@@ -375,9 +383,12 @@ export function useComanderoData(slug: string) {
         if (ord.status === 'cancelled' || ord.status === 'paid') return
         const tblNum = ord.table?.table_number || ord.table_number
         if (tblNum) {
-          const isDelivered = ord.status === 'delivered'
           const numKey = Number(tblNum)
           const strKey = String(tblNum)
+          if (freedTableNumbersRef.current.has(strKey) || freedTableNumbersRef.current.has(numKey)) {
+            return
+          }
+          const isDelivered = ord.status === 'delivered'
           if (ord.status === 'ready' && !isDelivered) {
             statusMap[tblNum] = 'ready'
             statusMap[numKey] = 'ready'
@@ -611,46 +622,12 @@ export function useComanderoData(slug: string) {
 
     loadInitialData()
 
-    const handleTableFreedEvent = (tblNum: string | number) => {
-      if (!tblNum) return
-      const sKey = String(tblNum)
-      const nKey = Number(tblNum)
-      freedTableNumbersRef.current.set(sKey, Date.now())
-      freedTableNumbersRef.current.set(nKey, Date.now())
-
-      prevOrdersMapRef.current.forEach((ord, id) => {
-        const oTbl = ord.table_number?.toString() || ord.table?.table_number?.toString()
-        if (oTbl === sKey) {
-          prevOrdersMapRef.current.delete(id)
-        }
-      })
-
-      setServerOrdersState(prev => prev.filter(o => {
-        const oTbl = o.table_number?.toString() || o.table?.table_number?.toString()
-        return oTbl !== sKey
-      }))
-
-      setTableStatuses(prev => ({
-        ...prev,
-        [tblNum]: 'free' as TableStatusType,
-        [sKey]: 'free' as TableStatusType,
-        [nKey]: 'free' as TableStatusType,
-      }))
-    }
-
     let menuBc: BroadcastChannel | null = null
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         menuBc = new BroadcastChannel('fluxo_menu_channel')
         menuBc.onmessage = (event) => {
           const { type, slug: evtSlug, productId, isAvailable } = event.data || {}
-          if (type === 'table_freed' && (!evtSlug || evtSlug === slug)) {
-            const freedTbl = event.data?.tableNumber
-            if (freedTbl) {
-              handleTableFreedEvent(freedTbl)
-            }
-            return
-          }
           if (type === 'menu_updated' && (!evtSlug || evtSlug === slug)) {
             if (productId && isAvailable !== undefined) {
               const canonical = resolveCanonicalProductId(productId) || productId
@@ -717,12 +694,6 @@ export function useComanderoData(slug: string) {
     }
     window.addEventListener('fluxo_menu_updated', handleMenuUpdated)
 
-    const handleFluxoTableFreed = (e: any) => {
-      const tblNum = e?.detail?.tableNumber
-      if (tblNum) handleTableFreedEvent(tblNum)
-    }
-    window.addEventListener('fluxo_table_freed', handleFluxoTableFreed)
-
     return () => {
       if (realtimeChannel && supabase) {
         supabase.removeChannel(realtimeChannel)
@@ -735,7 +706,6 @@ export function useComanderoData(slug: string) {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleVisibilityChange)
       window.removeEventListener('fluxo_menu_updated', handleMenuUpdated)
-      window.removeEventListener('fluxo_table_freed', handleFluxoTableFreed)
     }
   }, [slug, syncServerData])
 

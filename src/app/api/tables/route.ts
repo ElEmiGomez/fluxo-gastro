@@ -44,8 +44,16 @@ export async function GET(req: NextRequest) {
         }
 
         // Si la mesa no tiene sesión activa en Supabase (SSOT), marcarla explícitamente como 'free'
-        Object.keys(sessions).forEach(tblKey => {
-          if (!activeTableNumbers.has(tblKey.toString())) {
+        const { MOCK_TABLES } = await import('@/lib/supabase/mock-fallback')
+        const knownTables = (MOCK_TABLES[slug] || []).map((t: any) => t.table_number.toString())
+        const allCandidateTableNumbers = new Set<string>([
+          ...Object.keys(sessions).map(String),
+          ...knownTables,
+          ...Array.from({ length: 25 }, (_, i) => String(i + 1)),
+        ])
+
+        allCandidateTableNumbers.forEach(tblKey => {
+          if (!activeTableNumbers.has(tblKey)) {
             sessions[tblKey] = {
               table_number: tblKey,
               status: 'free',

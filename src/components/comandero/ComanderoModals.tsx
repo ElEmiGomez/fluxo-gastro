@@ -70,13 +70,13 @@ interface ComanderoModalsProps {
   onClearCurrentCart: () => void
   onExecuteCloseAndFreeTable: (
     tblNum: number | string,
-    paymentMethod?: 'card' | 'cash',
+    paymentMethod?: 'card' | 'cash' | 'mixed',
     finalAmount?: number,
     ordersCount?: number
   ) => void
   onExecuteChargeTable?: (
     tblNum: number | string,
-    paymentMethod?: 'card' | 'cash',
+    paymentMethod?: 'card' | 'cash' | 'mixed',
     finalAmount?: number,
     ordersCount?: number
   ) => void

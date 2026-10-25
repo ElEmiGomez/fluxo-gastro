@@ -130,6 +130,7 @@ export function ComanderoTableDetailPanel({
   onDeliverStarters,
   onDeliverMains,
 }: ComanderoTableDetailPanelProps) {
+  const [isLiberating, setIsLiberating] = React.useState(false)
   const tableCalls = pendingCalls.filter(c => c.table_number.toString() === selectedTable.table_number.toString())
   const validationOrders = serverOrders.filter(
     o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) && o.status === 'pending_validation'
@@ -143,11 +144,12 @@ export function ComanderoTableDetailPanel({
   }, [serverOrders, selectedTable])
 
   const tablePaidOrders = React.useMemo(() => {
+    if (tableStatus === 'free') return []
     return serverOrders.filter(
       o => (o.table_number?.toString() === selectedTable.table_number.toString() || o.table?.table_number?.toString() === selectedTable.table_number.toString()) &&
            o.status === 'paid'
     )
-  }, [serverOrders, selectedTable])
+  }, [serverOrders, selectedTable, tableStatus])
 
   const isPaidSobremesa = tableStatus !== 'free' && tableActiveOrders.length === 0 && validationOrders.length === 0 && tablePaidOrders.length > 0
 
@@ -877,17 +879,33 @@ export function ComanderoTableDetailPanel({
         {isPaidSobremesa ? (
           <button
             type="button"
-            onClick={() => {
-              if (onExecuteFreeTableDirect) {
-                onExecuteFreeTableDirect(selectedTable.table_number)
-              } else {
-                onOpenFreeTableModal(selectedTable.table_number)
+            disabled={isLiberating}
+            onClick={async () => {
+              if (isLiberating) return
+              setIsLiberating(true)
+              try {
+                if (onExecuteFreeTableDirect) {
+                  await onExecuteFreeTableDirect(selectedTable.table_number)
+                } else {
+                  onOpenFreeTableModal(selectedTable.table_number)
+                }
+              } catch (e) {
+                console.error('Error liberating table:', e)
+              } finally {
+                setIsLiberating(false)
               }
             }}
-            className="w-full h-12 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer"
+            className="w-full h-12 px-4 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             title="Liberar mesa para el siguiente cliente"
           >
-            <span>🧹 MESA LEVANTADA · LIBERAR PARA SIGUIENTE CLIENTE</span>
+            {isLiberating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>LIBERANDO MESA...</span>
+              </>
+            ) : (
+              <span>🧹 MESA LEVANTADA · LIBERAR PARA SIGUIENTE CLIENTE</span>
+            )}
           </button>
         ) : (
           <div className="grid grid-cols-3 gap-2">

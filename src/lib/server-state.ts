@@ -819,6 +819,10 @@ export function freeTableSession(slug: string, tableNumber: string | number): vo
     last_updated_at: new Date().toISOString(),
   }
   globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumber] = newSession
+  globalStore.__GASTRO_TABLE_SESSIONS__[slug][tableNumStr] = newSession
+  if (!isNaN(Number(tableNumber))) {
+    globalStore.__GASTRO_TABLE_SESSIONS__[slug][Number(tableNumber)] = newSession
+  }
 
   // 4. Notificar a todos los dispositivos en tiempo real
   broadcastEvent({ type: 'table_freed', slug, tableNumber, new_session_id: newSession.session_id })
