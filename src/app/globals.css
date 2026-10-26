@@ -302,3 +302,42 @@ button, a, input, select, textarea {
     animation: none !important;
   }
 }
+
+
+/* ==========================================================================
+   Leaflet CRM Map Tile Filtering & Interactive Pointer Fixes
+   ========================================================================== */
+.crm-map-dark .leaflet-tile-pane {
+  filter: brightness(0.65) invert(1) contrast(3.2) hue-rotate(200deg) saturate(0.3) brightness(0.75);
+}
+
+.crm-map-streets .leaflet-tile-pane {
+  filter: none;
+}
+
+.crm-map-container .leaflet-tile-pane {
+  transition: filter 0.3s ease;
+}
+
+.crm-map-container .leaflet-marker-pane,
+.crm-map-container .leaflet-marker-icon,
+.custom-crm-pin {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+.crm-map-container .leaflet-control-attribution {
+  background: rgba(15, 23, 42, 0.8) !important;
+  color: #94a3b8 !important;
+  font-size: 9px !important;
+  border-top-left-radius: 8px !important;
+  backdrop-filter: blur(4px) !important;
+  padding: 2px 6px !important;
+  border: 1px solid rgba(51, 65, 85, 0.5) !important;
+  border-right: none !important;
+  border-bottom: none !important;
+}
+
+.crm-map-container .leaflet-control-attribution a {
+  color: #60a5fa !important;
+}

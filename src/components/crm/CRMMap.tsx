@@ -15,7 +15,8 @@ import {
   Sparkles,
   ChevronRight,
   TrendingUp,
-  Tag
+  Tag,
+  Eye
 } from 'lucide-react'
 import { CRMLead, CRMPlan, CRMStatus } from '@/types/crm.types'
 import { PLAN_PRICING } from '@/types/crm.types'
@@ -25,6 +26,8 @@ interface CRMMapProps {
   leads: CRMLead[]
   onOpenDetail: (lead: CRMLead) => void
 }
+
+type MapTheme = 'dark' | 'streets' | 'satellite'
 
 const STATUS_COLOR_CONFIG: Record<
   CRMStatus,
@@ -78,9 +81,12 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markersLayerRef = useRef<any>(null)
+  const tileLayerRef = useRef<any>(null)
+  const activeTileUrlRef = useRef<string>('')
+
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(null)
   const [mapLoaded, setMapLoaded] = useState<boolean>(false)
-  const [mapStyle, setMapStyle] = useState<'dark' | 'voyager'>('dark')
+  const [mapTheme, setMapTheme] = useState<MapTheme>('dark')
 
   // Calcular días de piloto si aplica
   const pilotDays = useMemo(() => {
@@ -96,10 +102,25 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
     }
   }, [selectedLead])
 
-  // 1. Inicialización de Leaflet de forma segura en navegador (Next.js client-only)
+  // Función auxiliar para auto-encuadrar los leads en el mapa
+  const fitMapToLeads = (map: any, leadList: CRMLead[], animate = false) => {
+    if (!map || leadList.length === 0) return
+
+    import('leaflet').then((leafletModule) => {
+      const L = leafletModule.default || leafletModule
+      const coords = leadList.map((l) => getLeadCoordinates(l))
+      const bounds = L.latLngBounds(coords.map((c) => [c.lat, c.lng]))
+      map.fitBounds(bounds, {
+        padding: [45, 45],
+        maxZoom: 18,
+        animate,
+      })
+    })
+  }
+
+  // 1. Inicialización de Leaflet una única vez (evita recreación innecesaria del mapa)
   useEffect(() => {
     let isMounted = true
-
     if (typeof window === 'undefined') return
 
     Promise.all([
@@ -108,10 +129,8 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
       import('leaflet/dist/leaflet.css')
     ]).then(([leafletModule]) => {
       if (!isMounted || !mapContainerRef.current) return
-
       const L = leafletModule.default || leafletModule
 
-      // Evitar doble inicialización
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
       }
@@ -120,25 +139,38 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
         center: [NOIA_CENTER_COORDINATES.lat, NOIA_CENTER_COORDINATES.lng],
         zoom: NOIA_CENTER_COORDINATES.zoom,
         zoomControl: false,
-        attributionControl: false,
+        attributionControl: true,
       })
 
-      // Controles de zoom abajo a la derecha
+      // Zoom en la esquina inferior derecha
       L.control.zoom({ position: 'bottomright' }).addTo(map)
 
-      // Capa de teselas (CartoDB Dark Matter para modo oscuro ejecutivo)
-      const tileUrl = mapStyle === 'dark'
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
-
-      L.tileLayer(tileUrl, {
+      // Capa base de teselas OpenStreetMap oficial (100% libre, sin API key, sin marcas de agua)
+      const initialTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+      const initialTileLayer = L.tileLayer(initialTileUrl, {
         maxZoom: 19,
-        subdomains: 'abcd',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
       }).addTo(map)
 
+      tileLayerRef.current = initialTileLayer
+      activeTileUrlRef.current = initialTileUrl
+
+      // Capa de marcadores
       const markersGroup = L.layerGroup().addTo(map)
       markersLayerRef.current = markersGroup
       mapInstanceRef.current = map
+
+      // Auto-fit inicial si hay leads
+      if (leads.length > 0) {
+        fitMapToLeads(map, leads, false)
+      }
+
+      // Forzar recálculo del tamaño del contenedor (previene cortes en modales y flexbox)
+      setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize()
+        }
+      }, 150)
 
       setMapLoaded(true)
     })
@@ -150,9 +182,44 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
         mapInstanceRef.current = null
       }
     }
-  }, [mapStyle])
+  }, [])
 
-  // 2. Renderizado reactivo de marcadores cuando cambian los leads o el lead seleccionado
+  // 2. Gestión dinámica del cambio de tema (Noche / Callejero / Satélite) sin desmontar el mapa
+  useEffect(() => {
+    if (!mapLoaded || !mapInstanceRef.current) return
+
+    import('leaflet').then((leafletModule) => {
+      const L = leafletModule.default || leafletModule
+      const map = mapInstanceRef.current
+
+      const targetTileUrl =
+        mapTheme === 'satellite'
+          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+          : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+
+      const targetAttribution =
+        mapTheme === 'satellite'
+          ? '&copy; Esri & Maxar'
+          : '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+
+      // Solo recreamos la capa de teselas si cambia la URL subyacente
+      if (activeTileUrlRef.current !== targetTileUrl) {
+        if (tileLayerRef.current) {
+          map.removeLayer(tileLayerRef.current)
+        }
+
+        const newLayer = L.tileLayer(targetTileUrl, {
+          maxZoom: 19,
+          attribution: targetAttribution,
+        }).addTo(map)
+
+        tileLayerRef.current = newLayer
+        activeTileUrlRef.current = targetTileUrl
+      }
+    })
+  }, [mapTheme, mapLoaded])
+
+  // 3. Renderizado reactivo de marcadores al cambiar los leads o el seleccionado
   useEffect(() => {
     if (!mapLoaded || !mapInstanceRef.current || !markersLayerRef.current) return
 
@@ -166,25 +233,25 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
         const isSelected = selectedLead?.id === lead.id
         const conf = STATUS_COLOR_CONFIG[lead.status] || STATUS_COLOR_CONFIG.lead_por_visitar
 
-        // Crear icono HTML personalizado de alto contraste
+        const size = isSelected ? 38 : 30
         const markerHtml = `
           <div style="
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            width: ${isSelected ? '38px' : '30px'};
-            height: ${isSelected ? '38px' : '30px'};
+            width: ${size}px;
+            height: ${size}px;
             border-radius: 50%;
             background-color: ${conf.pinBg};
             border: ${isSelected ? '3px solid #38bdf8' : `2px solid ${conf.border}`};
-            box-shadow: 0 4px 12px ${conf.ringColor};
+            box-shadow: 0 4px 14px ${isSelected ? '#38bdf8' : conf.ringColor};
             color: ${conf.text};
             font-size: ${isSelected ? '12px' : '10px'};
             font-weight: 800;
             cursor: pointer;
-            transition: all 0.2s ease;
-            transform: ${isSelected ? 'scale(1.15)' : 'scale(1)'};
+            transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
+            transform: ${isSelected ? 'scale(1.18)' : 'scale(1)'};
             z-index: ${isSelected ? '9999' : '100'};
           ">
             <span>${lead.score}</span>
@@ -199,8 +266,8 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
         const customIcon = L.divIcon({
           html: markerHtml,
           className: 'custom-crm-pin',
-          iconSize: [isSelected ? 38 : 30, isSelected ? 38 : 30],
-          iconAnchor: [isSelected ? 19 : 15, isSelected ? 19 : 15],
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size / 2],
         })
 
         const marker = L.marker([coords.lat, coords.lng], { icon: customIcon })
@@ -208,7 +275,7 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
         marker.on('click', () => {
           setSelectedLead(lead)
           if (mapInstanceRef.current) {
-            mapInstanceRef.current.panTo([coords.lat, coords.lng], { animate: true, duration: 0.5 })
+            mapInstanceRef.current.panTo([coords.lat, coords.lng], { animate: true, duration: 0.4 })
           }
         })
 
@@ -217,13 +284,31 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
     })
   }, [leads, selectedLead, mapLoaded])
 
+  // InvalidateSize en redimensionamiento de pantalla
+  useEffect(() => {
+    if (!mapLoaded || !mapInstanceRef.current) return
+
+    const handleResize = () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize()
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [mapLoaded])
+
   const handleResetCenter = () => {
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView(
-        [NOIA_CENTER_COORDINATES.lat, NOIA_CENTER_COORDINATES.lng],
-        NOIA_CENTER_COORDINATES.zoom,
-        { animate: true }
-      )
+      if (leads.length > 0) {
+        fitMapToLeads(mapInstanceRef.current, leads, true)
+      } else {
+        mapInstanceRef.current.setView(
+          [NOIA_CENTER_COORDINATES.lat, NOIA_CENTER_COORDINATES.lng],
+          NOIA_CENTER_COORDINATES.zoom,
+          { animate: true }
+        )
+      }
     }
   }
 
@@ -247,7 +332,11 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
   }
 
   return (
-    <div className="relative w-full h-[72vh] min-h-[500px] rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl flex flex-col select-none">
+    <div
+      className={`relative w-full h-[72vh] min-h-[500px] rounded-3xl overflow-hidden border border-slate-800 bg-slate-950 shadow-2xl flex flex-col select-none crm-map-container ${
+        mapTheme === 'dark' ? 'crm-map-dark' : 'crm-map-streets'
+      }`}
+    >
       {/* Contenedor del Mapa Leaflet */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
@@ -255,26 +344,54 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
       <div className="absolute top-3 left-3 right-3 sm:right-auto z-20 flex items-center gap-2 flex-wrap pointer-events-auto">
         <div className="px-3.5 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-800 text-xs font-semibold text-white flex items-center gap-2 shadow-lg">
           <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
-          <span>{leads.length} locales geolocalizados en Noia</span>
+          <span>{leads.length} locales geolocalizados</span>
         </div>
 
         <button
           onClick={handleResetCenter}
-          title="Centrar mapa en Noia"
+          title="Auto-encuadrar todos los locales en Noia"
           className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-800 text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 shadow-lg transition active:scale-95 touch-manipulation"
         >
           <Compass className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="hidden sm:inline">Centrar Noia</span>
+          <span className="hidden sm:inline">Encuadrar Noia</span>
         </button>
 
-        <button
-          onClick={() => setMapStyle(mapStyle === 'dark' ? 'voyager' : 'dark')}
-          title="Cambiar estilo de mapa"
-          className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md border border-slate-800 text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 shadow-lg transition active:scale-95 touch-manipulation"
-        >
-          <Layers className="w-3.5 h-3.5 text-purple-400" />
-          <span className="hidden sm:inline">{mapStyle === 'dark' ? 'Modo Contraste' : 'Modo Oscuro'}</span>
-        </button>
+        {/* Selector de Tema de Mapa (Noche / Callejero / Satélite) */}
+        <div className="flex items-center bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-800 shadow-lg text-xs font-semibold">
+          <button
+            onClick={() => setMapTheme('dark')}
+            className={`px-2.5 py-1 rounded-lg transition ${
+              mapTheme === 'dark'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Modo Oscuro Ejecutivo"
+          >
+            Noche
+          </button>
+          <button
+            onClick={() => setMapTheme('streets')}
+            className={`px-2.5 py-1 rounded-lg transition ${
+              mapTheme === 'streets'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Modo Callejero de Alto Contraste"
+          >
+            Callejero
+          </button>
+          <button
+            onClick={() => setMapTheme('satellite')}
+            className={`px-2.5 py-1 rounded-lg transition ${
+              mapTheme === 'satellite'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Modo Satélite Aéreo"
+          >
+            Satélite
+          </button>
+        </div>
       </div>
 
       {/* 2. Leyenda Rápida de Estados (Esquina Inferior Izquierda) */}
