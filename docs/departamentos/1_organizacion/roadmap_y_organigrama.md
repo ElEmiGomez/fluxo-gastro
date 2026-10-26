@@ -68,8 +68,10 @@ flowchart TD
 │  │     (Auditoría y simulación integral: estados, sincronización y cierre) │
 │  ├─ [📋 Tarea 2] QR Dinámico y Personalizable para Muestras Comerciales    │
 │        (Soporte de demo redireccionable/configurable para cartas por nicho)│
-│  └─ [📋 Tarea 3] Hacer Vídeo de Landing Page                              │
+│  ├─ [📋 Tarea 3] Hacer Vídeo de Landing Page                              │
 │        (Guion, captura del flujo de terraza/cocina y maquetación web)      │
+│  └─ [📋 Tarea 4] Accionar Plan de Marketing y Validación en Campo          │
+│        (Salida a calle con Carta QR, prospección y feedback de Fluxo)     │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐

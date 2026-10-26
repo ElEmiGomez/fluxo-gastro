@@ -31,6 +31,15 @@
 
 ---
 
+### [2026-10-26 18:10] — Nueva Tarea: Activación de Prospección Comercial y Feedback en Calle (Tarea 4)
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Dirección General y Producto / Program Data (Depto 4).
+* **Definición de la Tarea:**
+  - **Acción Operativa:** Salida a calle en locales objetivo (Noia / Barbanza / Santiago) para ofrecer la Carta QR / Plan Carta e iniciar el proceso de validación real.
+  - **Objetivo Estratégico:** Recopilar feedback cualitativo y cuantitativo directo de hosteleros y camareros sobre el flujo completo de Fluxo.
+  - **Estado en Backlog:** Registrada como **Tarea 4** en la lista activa de prioridades.
+
+---
+
 ### [2026-10-26 18:05] — Nueva Tarea: Producción del Vídeo de la Landing Page (Tarea 3)
 * **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto / Program Data (Depto 4).
 * **Definición de la Tarea:**
