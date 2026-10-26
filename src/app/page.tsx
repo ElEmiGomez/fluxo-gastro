@@ -14,7 +14,6 @@ import {
   TrendingUp,
   Smartphone,
   ChefHat,
-  Printer,
   Eye,
   Star,
   Gift
@@ -725,15 +724,6 @@ export default function LandingPage() {
             >
               <ShieldCheck className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform" />
               <span>Aviso Legal &amp; RGPD</span>
-            </Link>
-
-            <Link 
-              href="/api/printers/receipt?slug=burger-gourmet" 
-              target="_blank" 
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-emerald-400 font-bold transition-all shadow-sm group"
-            >
-              <Printer className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span>Compatibilidad con Impresoras Térmicas</span>
             </Link>
 
             <a 
