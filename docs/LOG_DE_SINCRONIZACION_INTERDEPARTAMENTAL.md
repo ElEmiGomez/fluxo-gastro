@@ -6,6 +6,15 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-26 16:15] — Consolidación Técnica: Lógica Compleja de Mozo y Cocina Certificada (Tarea 1 Done)
+* **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), Dirección General y Organización.
+* **Hito Alcanzado:**
+  - **Tarea 1 marcada como COMPLETADA [x]**.
+  - Flujo de sincronización de sala y cocina validado: estados de pedidos, transiciones en comandero y KDS, y cierre de servicio consolidados.
+  - **Única tarea activa restante en el backlog prioritario:** Tarea 2 — QR Dinámico y Personalizable para Muestras Comerciales.
+
+---
+
 ### [2026-10-19 23:20] — Estrategia de Dominio Oficial: Disponibilidad y Precios (fluxogastro.com y fluxogastro.es)
 * **Departamentos Sincronizados:** Diseño de Marca & UI/UX (Depto 3), Dirección General y Organización (Depto 1).
 * **Documentos Actualizados / Creados:**

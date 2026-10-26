@@ -64,7 +64,7 @@ flowchart TD
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ ⚙️ 4. INGENIERÍA & PRODUCTO — [PROGRAM DATA] (Desarrollo & Software)    │
 │  ├─ [x] Hitos Fundacionales Consolidados (v1.0 & v1.2 completados)         │
-│  ├─ [📋 Tarea 1] Fixear Lógica Compleja de Mozo y Cocina                   │
+│  ├─ [x] Tarea 1: Lógica Compleja de Mozo y Cocina consolidada       │
 │  │     (Auditoría y simulación integral: estados, sincronización y cierre) │
 │  └─ [📋 Tarea 2] QR Dinámico y Personalizable para Muestras Comerciales    │
 │        (Soporte de demo redireccionable/configurable para cartas por nicho)│
