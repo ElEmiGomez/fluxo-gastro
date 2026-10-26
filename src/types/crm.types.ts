@@ -39,6 +39,8 @@ export interface CRMLead {
   next_contact_date: string | null
   notes: string | null
   lost_reason: string | null
+  lat?: number | null
+  lng?: number | null
   created_at: string
   updated_at: string
 }

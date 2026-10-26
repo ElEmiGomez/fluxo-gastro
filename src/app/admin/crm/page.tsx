@@ -28,6 +28,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { CRMICP, CRMLead, CRMMetrics, CRMPlan, CRMStatus } from '@/types/crm.types'
+import dynamic from 'next/dynamic'
 import { CRMAuthModal } from '@/components/crm/CRMAuthModal'
 import { CRMQuickAddModal } from '@/components/crm/CRMQuickAddModal'
 import { CRMLeadDetailModal } from '@/components/crm/CRMLeadDetailModal'
@@ -61,13 +62,25 @@ const getAuthHeaders = (): Record<string, string> => {
   return headers
 }
 
+const CRMMap = dynamic(() => import('@/components/crm/CRMMap').then((m) => m.CRMMap), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[72vh] min-h-[500px] rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
+      <div className="flex flex-col items-center gap-2">
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-mono">Cargando mapa interactivo de Noia...</span>
+      </div>
+    </div>
+  ),
+})
+
 export default function CRMAdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true)
   const [leads, setLeads] = useState<CRMLead[]>([])
   const [metrics, setMetrics] = useState<CRMMetrics | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban')
+  const [viewMode, setViewMode] = useState<'kanban' | 'table' | 'map'>('kanban')
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState('')
@@ -464,6 +477,17 @@ export default function CRMAdminPage() {
                 <TableIcon className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Tabla</span>
               </button>
+              <button
+                onClick={() => setViewMode('map')}
+                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${
+                  viewMode === 'map'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Mapa</span>
+              </button>
             </div>
           </div>
         </div>
@@ -573,7 +597,7 @@ export default function CRMAdminPage() {
               )
             })}
           </div>
-        ) : (
+        ) : viewMode === 'table' ? (
           /* Vista TABLA Detallada */
           <div className="rounded-2xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
@@ -642,6 +666,15 @@ export default function CRMAdminPage() {
               </table>
             </div>
           </div>
+        ) : (
+          /* Vista MAPA Interactivo de Noia */
+          <CRMMap
+            leads={filteredLeads}
+            onOpenDetail={(lead) => {
+              setSelectedLead(lead)
+              setIsDetailOpen(true)
+            }}
+          />
         )}
       </main>
 

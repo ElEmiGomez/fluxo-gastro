@@ -7,6 +7,18 @@
 ## 🕒 Registro de Eventos y Actualizaciones
 
 
+### [2026-10-26 21:55] — Integración del Mapa Interactivo de Prospección en el CRM (/admin/crm)
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Dirección General / Fundador (Depto 1) e Ingeniería & Producto (Depto 4).
+* **Módulo Implementado:**
+  1. **Geolocalización Auditada de Noia:** [`src/lib/crm/geo-utils.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/crm/geo-utils.ts) geocodifica los 34 establecimientos prospectados en Noia con coordenadas reales y dispersión determinista por zonas (Casco Histórico, Alameda, Malecón, Curro, Centro y Periferia).
+  2. **Componente de Mapa Leaflet:** [`src/components/crm/CRMMap.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/components/crm/CRMMap.tsx) implementa mapa interactivo con teselas CartoDB Dark Matter / Voyager, marcadores de alto contraste coloreados por estado comercial con badge de puntuación (Score 4.2 a 9.6) y halo luminoso en pilotos activos.
+  3. **Ficha Táctica al Seleccionar Ubicación:** Al pulsar cualquier pin del mapa, se despliega una ficha flotante (drawer táctil en móvil) con el nombre del local, ICP, dirección, estado, días de piloto restantes, MRR proyectado, notas de dolor, y botones directos de navegación GPS en Google Maps, WhatsApp, llamada y apertura de ficha completa.
+  4. **Conmutador de Vista Triple en Dashboard:** [`src/app/admin/crm/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/admin/crm/page.tsx) incorpora la pestaña **"Mapa"** junto a "Pipeline" y "Tabla", respetando en tiempo real los filtros de búsqueda, zona e ICP.
+* **Verificación:** TypeScript (`npx.cmd tsc --noEmit`), test suite y compilación de producción (`npm run build`) completados con 0 errores.
+
+---
+
+
 ### [2026-10-26 21:20] — Blindaje Criptográfico y Anti-Fuerza Bruta del CRM (Solo Fundador)
 * **Departamentos Sincronizados:** Dirección General / Fundador (Depto 1), Seguridad & Auditoría e Ingeniería & Producto (Depto 4).
 * **Capas de Seguridad Implementadas:**
