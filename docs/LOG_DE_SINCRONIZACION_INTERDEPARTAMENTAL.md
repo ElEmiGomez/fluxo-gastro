@@ -6,6 +6,40 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-26 17:30] — Plan de Desembarco en Calle: Estrategia Caballo de Troya (Carta Digital 39€) y Guía de Campo Noia
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Organización General (Depto 1) e Ingeniería & Producto (Depto 4).
+* **Documentos Impactados / Creados:**
+  - [`docs/departamentos/2_marketing/plan_desembarco_carta_digital_noia.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/plan_desembarco_carta_digital_noia.md) (Nueva guía de campo operativa).
+  - [`docs/departamentos/2_marketing/manual_prospeccion_y_objeciones.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/manual_prospeccion_y_objeciones.md) (Incorporada bifurcación Track A - Carta vs Track B - Sala).
+* **Decisiones y Protocolo Aprobado:**
+  1. *Foco Prioritario en Carta Digital (39€/mes):* El abordaje en frío arranca 100% centrado en carta rápida + fotos + alérgenos + Google Review Booster para eliminar cualquier miedo o sobrecarga en el hostelero.
+  2. *Demostración Pantalla a Pantalla:* Al no disponer aún de QR plastificado impreso, la demo se ejecuta directamente enseñando la carta en el móvil del fundador o proyectando el QR en pantalla para lectura directa del hostelero.
+  3. *Duración del Piloto a 14 Días:* Confirmado el periodo de prueba de 2 fines de semana completos para medir reseñas y visitas antes de formalizar la cuota recurrente.
+  4. *Ruta de Escalado:* Mes 1 (Carta 39€) $\rightarrow$ Mes 2 (Añadir Llamador y Pedir Cuenta con Datáfono - Plan Sala 69€) $\rightarrow$ Mes 3 (Cocina KDS - Plan Full 99€).
+
+---
+
+### [2026-10-26 17:00] — Adopción Estratégica: Modelo "Service-as-a-Software" (Sequoia / Euge Oller)
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Organización General (Depto 1) e Ingeniería & Producto / Program Data (Depto 4).
+* **Documentos Actualizados:**
+  - [`docs/departamentos/1_organizacion/registro_ideas_y_decisiones.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/1_organizacion/registro_ideas_y_decisiones.md) (`DEC-34`).
+  - [`docs/departamentos/2_marketing/manual_prospeccion_y_objeciones.md`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/departamentos/2_marketing/manual_prospeccion_y_objeciones.md) (Nueva Objeción 14: *"No tengo tiempo para cargar fotos ni configurar nada"*).
+* **Decisiones Operativas Consolidadas:**
+  1. *De Software Autogestionable a Servicio Empaquetado:* No se vende una herramienta vacía; el equipo de Fluxo entrega el sistema 100% montado en 24h absorbiendo la carga de datos mediante agentes e IA interna.
+  2. *Defensa y Retención (Moat Físico):* Se ratifica que la verdadera barrera de retención de Fluxo frente a agencias de marketing o clones de IA radica en el control operativo en vivo de sala y cocina (Comandero reactivo + Monitor KDS por turnos).
+  3. *Reencuadre de la Cuota de Setup (149€):* Se comercializa como consultoría de digitalización y puesta a punto, bonificable al 100% como palanca de cierre.
+
+---
+
+### [2026-10-26 18:05] — Nueva Tarea: Producción del Vídeo de la Landing Page (Tarea 3)
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto / Program Data (Depto 4).
+* **Definición de la Tarea:**
+  - **Requisito:** Planificar, grabar/capturar y maquetar el vídeo oficial para la Landing Page de Fluxo.
+  - **Objetivo Comercial:** Mostrar en <45 segundos el dolor de la terraza (paseos innecesarios, manos levantadas ignoradas), la inmediatez del pedido y la cuenta con tarjeta al instante.
+  - **Estado en Backlog:** Registrada como **Tarea 3** en la lista activa de prioridades.
+
+---
+
 ### [2026-10-26 16:15] — Consolidación Técnica: Lógica Compleja de Mozo y Cocina Certificada (Tarea 1 Done)
 * **Departamentos Sincronizados:** Ingeniería & Producto / Program Data (Depto 4), Dirección General y Organización.
 * **Hito Alcanzado:**

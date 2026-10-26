@@ -66,8 +66,10 @@ flowchart TD
 │  ├─ [x] Hitos Fundacionales Consolidados (v1.0 & v1.2 completados)         │
 │  ├─ [x] Tarea 1: Lógica Compleja de Mozo y Cocina consolidada       │
 │  │     (Auditoría y simulación integral: estados, sincronización y cierre) │
-│  └─ [📋 Tarea 2] QR Dinámico y Personalizable para Muestras Comerciales    │
+│  ├─ [📋 Tarea 2] QR Dinámico y Personalizable para Muestras Comerciales    │
 │        (Soporte de demo redireccionable/configurable para cartas por nicho)│
+│  └─ [📋 Tarea 3] Hacer Vídeo de Landing Page                              │
+│        (Guion, captura del flujo de terraza/cocina y maquetación web)      │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐

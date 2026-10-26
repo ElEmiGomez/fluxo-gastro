@@ -17,29 +17,26 @@ En hostelería, el momento de la visita determina el 90% del éxito:
 
 ---
 
-## 2. El Protocolo de Abordaje de 3 Minutos
+## 2. Los Dos Protocolos de Abordaje: Carta Digital vs. Sala Completa
 
-### Paso 1: Identificar al Decisor
-Entra con paso decidido hacia la barra:
-> *"Hola, buenas tardes. ¿Quién es la persona que gestiona la sala y la terraza hoy?"*  
-> *(Si es un camarero el que te atiende, trátalo con máximo respeto: él puede ser tu mayor aliado o tu mayor bloqueador).*
+> **Directriz Táctica (Estrategia Caballo de Troya - DEC-28 / DEC-34):**  
+> Para no saturar al hostelero en el primer contacto, el **Track A (Carta Digital - 39€/mes)** es la vía prioritaria de entrada. Solo se utiliza el **Track B (Sala Completa - 69€/mes)** cuando el local tiene un dolor evidente y visible de falta de personal o terrazas ciegas de gran distancia.
 
-### Paso 2: El Hook (Empatía con su Dolor Diario)
-> *"Hola [Nombre], sé que estáis preparando el servicio y no te voy a robar más de dos minutos.  
-> 
-> No vengo a venderte otra app de QR que te cobre comisiones o que tus camareros odien porque 'complica el trabajo'.  
-> 
-> Te hago solo una pregunta: en un viernes por la noche con la terraza llena, ¿cuántos kilómetros caminan tus camareros solo para ir a una mesa a preguntar '¿qué deseaban?' y tener que volver a por el datáfono para cobrarles?"*
+### 🌟 TRACK A (Prioritario): Abordaje "Caballo de Troya" — Carta Digital (90 Segundos)
+* **Objetivo:** Conseguir la prueba de 14 días sin tocar la operativa del local.
+* **Paso 1: Saludo:** *"Hola [Nombre], sé que estáis preparando el servicio y no te voy a robar más de dos minutos. Soy Emiliano, desarrollador de aquí de la zona. No vengo a venderte un software complicado que tus camareros odien ni a cambiar tu forma de trabajar."*
+* **Paso 2: Pregunta de dolor:** *"¿Cuántos clientes se sientan en tu terraza y les cuesta leer la carta en papel desgastada o tienen que ampliar con los dedos un PDF borroso que tarda en cargar?"*
+* **Paso 3: Muestra visual (30s):** Enseñar en el móvil la carta de Fluxo: *"Abre al instante, fotos apetecibles, 10 idiomas para turistas extranjeros y botón para captar reseñas de 5★ en Google Maps tras el servicio."*
+* **Paso 4: Cierre al Piloto de 14 Días:** *"Me mandas una foto de tu carta por WhatsApp, nosotros te la digitalizamos en 24 horas y te traigo 5 soportes de prueba a coste cero. Si no te convence el lunes, me los llevo y no has gastado ni un euro."*
 
-### Paso 3: La Demostración Visual In Situ (30 Segundos)
-Saca tu móvil con el QR de demostración impreso en una tarjeta:
-> *"Mira: el cliente pulsa 'Pedir Cuenta con Tarjeta' en su móvil. A tu camarero le vibra su teléfono avisando: 'Mesa 12 — Cuenta con Tarjeta'. El camarero sale una sola vez, directo con el datáfono. Ahorras la mitad de los pasos.  
-> 
-> Y lo mejor: si alguien escanea el código desde la calle para hacer la gracia, a cocina NO le llega nada hasta que tu camarero pulsa 'Confirmar' en la mesa. Cero bromas, cero pedidos fantasma."*
+---
 
-### Paso 4: El Cierre al Piloto ("El Desafío Terraza")
-> *"No te pido que me creas a mí. Probémoslo este fin de semana en solo 5 mesas de tu terraza.  
-> Nosotros te digitalizamos la carta hoy mismo sin coste. Si el lunes tus camareros no te dicen que han trabajado con la mitad de agobio, me llevo los códigos y no has gastado ni un euro. ¿Cuál es la zona de la terraza donde tus camareros sufren más distancia?"*
+### 🚶 TRACK B (Avanzado): Abordaje de Sala — Reducción de Paseos del Camarero (3 Minutos)
+* **Objetivo:** Para locales grandes con terrazas lejanas o plantas separadas (Adega do Pazo, Equs, Baobab).
+* **Paso 1: Identificar al Decisor:** Entra con paso decidido hacia la barra: *"Hola, buenas tardes. ¿Quién es la persona que gestiona la sala y la terraza hoy?"*
+* **Paso 2: El Hook de Fatiga:** *"En un viernes por la noche con la terraza llena, ¿cuántos kilómetros caminan tus camareros solo para ir a una mesa a preguntar '¿qué deseaban?' y tener que volver a por el datáfono para cobrarles?"*
+* **Paso 3: Demostración Visual:** *"El cliente pulsa 'Pedir Cuenta con Tarjeta'. Al camarero le vibra su teléfono: 'Mesa 12 — Cuenta con Tarjeta'. Sale una sola vez, directo con el datáfono. Cero bromas: a cocina NO entra nada sin confirmación del camarero."*
+* **Paso 4: Cierre:** *"Probémoslo este fin de semana en solo 5 mesas de tu terraza. Nosotros montamos todo. Si el lunes tus camareros no te dicen que han trabajado con la mitad de agobio, me llevo los códigos a coste cero."*
 
 ---
 
@@ -112,6 +109,11 @@ Saca tu móvil con el QR de demostración impreso en una tarjeta:
 * **Por qué lo dice:** Miedo a que los clientes piensen que los empleados están chateando o usando redes sociales en horas de trabajo.
 * **Respuesta táctica:**
   > *"Totalmente de acuerdo: ver a un empleado enganchado a WhatsApp da una imagen nefasta. Pero lo que da peor imagen aún es ver a dos camareros gritándose de una punta a otra de la barra '¡Oído dos de calamares!' o a una mesa haciendo señas con los dedos como si fuera un árbitro de fútbol porque nadie les cobra. La pantalla de comandero de Fluxo es de uso discreto: el camarero entra a la mesa, pulsa dos toques y guarda el móvil en el bolsillo. A ojos del cliente, el servicio es silencioso, elegante y el doble de rápido."*
+
+### Objeción 14: *"No tengo tiempo para ponerme a cargar fotos, platos, precios ni configurar un programa nuevo"*
+* **Por qué lo dice (Tesis Service-as-a-Software / Euge Oller):** Los hosteleros rechazan el software "en blanco" porque ya trabajan 14 horas al día y no quieren tareas extra para casa.
+* **Respuesta táctica (Cierre por Servicio 100% Resuelto):**
+  > *"Es que tú no vas a tocar una sola tecla ni a configurar nada. Me mandas ahora mismo una foto de tu carta física o de la pizarra por WhatsApp. Nosotros nos encargamos de todo: maquetamos las fotos en alta definición, ponemos los alérgenos al día y te dejamos el sistema funcionando y las 5 peanas de prueba en tu barra en 24 horas. Tú solo atiendes a tus clientes; el trabajo de carga lo hacemos nosotros."*
 
 ---
 
