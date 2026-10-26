@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Clock, CheckCircle2, ChefHat, AlertTriangle, Utensils, Sparkles, Loader2, Layers, Lock, FileText } from 'lucide-react'
+import { Clock, CheckCircle2, ChefHat, AlertTriangle, Utensils, Sparkles, Loader2, Layers, Lock, FileText, ChevronDown, ChevronUp } from 'lucide-react'
 import { Order, OrderStatus } from '@/types/database.types'
 import { getWaitingMinutes } from '@/lib/utils'
 import {
@@ -73,6 +73,135 @@ function subscribeKitchenTick(cb: () => void) {
   }
 }
 
+interface CourseAccordionSectionProps {
+  courseKey: string
+  courseType: 'first' | 'second' | 'dessert'
+  title: string
+  itemCount: number
+  isLocked: boolean
+  isReady: boolean
+  isServed: boolean
+  isCooking?: boolean
+  isExpanded: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}
+
+function CourseAccordionSection({
+  courseType,
+  title,
+  itemCount,
+  isLocked,
+  isReady,
+  isServed,
+  isCooking = false,
+  isExpanded,
+  onToggle,
+  children,
+}: CourseAccordionSectionProps) {
+  const countLabel = `${itemCount} ${itemCount === 1 ? 'plato' : 'platos'}`
+
+  // Determinación de estilos e insignias según máquina de estados del pase
+  let icon: React.ReactNode
+  let badgeText = ''
+  let badgeStyles = ''
+  let headerStyles = ''
+  let chevronColor = ''
+
+  if (isLocked) {
+    icon = <Lock size={13} className="text-slate-500 shrink-0" />
+    badgeText = 'EN ESPERA DEL MOZO'
+    badgeStyles = 'bg-slate-200 text-slate-700 border-slate-300'
+    headerStyles = 'bg-slate-100/90 hover:bg-slate-200/80 border-dashed border-slate-300 text-slate-700'
+    chevronColor = 'text-slate-500'
+  } else if (isServed) {
+    icon = <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+    badgeText = 'ENTREGADO EN MESA'
+    badgeStyles = 'bg-emerald-100 text-emerald-800 border-emerald-300'
+    headerStyles = 'bg-emerald-50/80 hover:bg-emerald-100/70 border-emerald-200 text-emerald-950'
+    chevronColor = 'text-emerald-700'
+  } else if (isReady) {
+    icon = <CheckCircle2 size={13} className="text-emerald-600 shrink-0" />
+    const paseNum = courseType === 'first' ? '1' : courseType === 'second' ? '2' : '3'
+    badgeText = `PASE ${paseNum} COMPLETADO`
+    badgeStyles = 'bg-emerald-100 text-emerald-800 border-emerald-300'
+    headerStyles = 'bg-emerald-50 hover:bg-emerald-100/70 border-emerald-300 text-emerald-950'
+    chevronColor = 'text-emerald-700'
+  } else {
+    // Activo (Por preparar o En preparación)
+    if (courseType === 'first') {
+      icon = <span className="shrink-0 text-xs">{isCooking ? '🔥' : '🥗'}</span>
+      badgeText = isCooking ? 'EN PREPARACIÓN' : 'PASE 1'
+      badgeStyles = isCooking
+        ? 'bg-amber-100 text-amber-900 border-amber-300'
+        : 'bg-amber-100/80 text-amber-800 border-amber-200'
+      headerStyles = 'bg-amber-50/70 hover:bg-amber-100/70 border-amber-200/90 text-amber-950'
+      chevronColor = 'text-amber-800'
+    } else if (courseType === 'second') {
+      icon = <span className="shrink-0 text-xs">{isCooking ? '🔥' : '🍔'}</span>
+      badgeText = isCooking ? 'EN PREPARACIÓN' : 'PASE 2'
+      badgeStyles = isCooking
+        ? 'bg-amber-100 text-amber-900 border-amber-300'
+        : 'bg-blue-100 text-blue-900 border-blue-200'
+      headerStyles = 'bg-blue-50/70 hover:bg-blue-100/70 border-blue-200/90 text-blue-950'
+      chevronColor = 'text-blue-800'
+    } else {
+      icon = <span className="shrink-0 text-xs">🍰</span>
+      badgeText = isCooking ? 'EN PREPARACIÓN' : 'PASE 3'
+      badgeStyles = isCooking
+        ? 'bg-purple-100 text-purple-900 border-purple-300'
+        : 'bg-purple-100/80 text-purple-800 border-purple-200'
+      headerStyles = 'bg-purple-50/70 hover:bg-purple-100/70 border-purple-200/90 text-purple-950'
+      chevronColor = 'text-purple-800'
+    }
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onToggle()
+          }
+        }}
+        className={`w-full px-3 py-2 rounded-xl border flex items-center justify-between gap-2 cursor-pointer select-none transition-all duration-200 shadow-xs ${headerStyles}`}
+      >
+        {/* Izquierda: Icono + Título + Conteo */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          {icon}
+          <span className="font-extrabold text-[11px] sm:text-xs tracking-tight truncate">
+            {`${title} (${countLabel})`}
+          </span>
+        </div>
+
+        {/* Derecha: Badge + Chevron */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeStyles}`}>
+            {badgeText}
+          </span>
+          {isExpanded ? (
+            <ChevronUp size={14} className={`${chevronColor} shrink-0`} />
+          ) : (
+            <ChevronDown size={14} className={`${chevronColor} shrink-0`} />
+          )}
+        </div>
+      </div>
+
+      {/* Contenido desplegable (Modo Vistazo o Modo Activo) */}
+      {isExpanded && (
+        <div className={isLocked ? 'space-y-2 p-2 rounded-2xl bg-slate-100/60 border-2 border-dashed border-slate-300 opacity-80' : 'space-y-2'}>
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function KitchenTicket({
   order,
   orders,
@@ -88,6 +217,8 @@ export function KitchenTicket({
     : (order ? [order] : [])
 
   const [completedItemIds, setCompletedItemIds] = useState<Record<string, boolean>>({})
+  const [expandedCourses, setExpandedCourses] = useState<Record<string, boolean>>({})
+  const prevPhasesRef = React.useRef<Record<string, 'locked' | 'active' | 'delivered'>>({})
   const [, setTick] = useState(0)
 
   // Suscripción al intervalo coordinado de 30s
@@ -96,6 +227,98 @@ export function KitchenTicket({
       setTick(t => t + 1)
     })
   }, [])
+
+  // Invariante Zero-Flicker: La visibilidad de comandas depende exclusivamente de su status activo en cocina
+  const validOrders = effectiveOrders.filter(o => {
+    if (['cancelled', 'paid', 'delivered'].includes(o.status)) return false
+    if (areAllKitchenCoursesCompleted(o)) return false
+    return true
+  })
+
+  // Pre-calcular fases de cada pase por comanda/ronda para auto-sincronización reactiva
+  const currentPhases: Record<string, 'locked' | 'active' | 'delivered'> = {}
+  validOrders.forEach(roundOrder => {
+    const allRoundItems = roundOrder.order_items || []
+    const kitchenItems = allRoundItems.filter(
+      item => !isDrinkItem(item) && getItemCourse(item) !== 'drink' && !isPackHeaderItem(item)
+    )
+    const starters = kitchenItems.filter(item => isStarterItem(item))
+    const mains = kitchenItems.filter(item => isMainItem(item))
+    const desserts = kitchenItems.filter(item => isDessertItem(item))
+
+    const hasStarters = starters.length > 0
+    const hasMains = mains.length > 0
+    const hasDesserts = desserts.length > 0
+
+    const startersServed = areOrderStartersServed(roundOrder)
+    const mainsCooking = mains.some(isMainCooking)
+    const mainsReady = areOrderMainsReady(roundOrder)
+    const mainsServed = areOrderMainsServed(roundOrder)
+    const mainsFired = areOrderMainsFired(roundOrder) || mainsCooking || mainsReady || mainsServed
+    const areMainsLocked = hasStarters && !mainsFired
+
+    const dessertsFired =
+      orderHasActiveDesserts(roundOrder) ||
+      (!hasStarters && !hasMains && roundOrder.status === 'preparing')
+    const dessertsReady = isOrderDessertsReady(roundOrder)
+    const dessertsServed = areOrderDessertsServed(roundOrder)
+    const areDessertsLocked = (hasStarters || hasMains) && !dessertsFired && !dessertsReady && !dessertsServed
+
+    if (hasStarters) {
+      currentPhases[`${roundOrder.id}-starters`] = startersServed ? 'delivered' : 'active'
+    }
+    if (hasMains) {
+      currentPhases[`${roundOrder.id}-mains`] = areMainsLocked ? 'locked' : (mainsServed ? 'delivered' : 'active')
+    }
+    if (hasDesserts) {
+      currentPhases[`${roundOrder.id}-desserts`] = areDessertsLocked ? 'locked' : (dessertsServed ? 'delivered' : 'active')
+    }
+  })
+
+  const phasesKey = JSON.stringify(currentPhases)
+
+  // Auto-sincronización reactiva del estado de los acordeones:
+  // - Pase activo para cocina -> auto-desplegado (true)
+  // - Pase bloqueado o entregado en mesa -> auto-minimizado (false)
+  useEffect(() => {
+    setExpandedCourses(prev => {
+      let changed = false
+      const next = { ...prev }
+
+      Object.entries(currentPhases).forEach(([courseKey, phase]) => {
+        const prevPhase = prevPhasesRef.current[courseKey]
+        if (prevPhase === undefined) {
+          const shouldBeOpen = phase === 'active'
+          if (next[courseKey] !== shouldBeOpen) {
+            next[courseKey] = shouldBeOpen
+            changed = true
+          }
+        } else if (prevPhase !== phase) {
+          if (phase === 'active' && !next[courseKey]) {
+            next[courseKey] = true
+            changed = true
+          } else if ((phase === 'delivered' || phase === 'locked') && next[courseKey]) {
+            next[courseKey] = false
+            changed = true
+          }
+        }
+      })
+
+      prevPhasesRef.current = currentPhases
+      return changed ? next : prev
+    })
+  }, [phasesKey])
+
+  const toggleCourse = (courseKey: string) => {
+    setExpandedCourses(prev => {
+      const currentPhase = currentPhases[courseKey] || 'active'
+      const currentVal = prev[courseKey] !== undefined ? prev[courseKey] : (currentPhase === 'active')
+      return {
+        ...prev,
+        [courseKey]: !currentVal,
+      }
+    })
+  }
 
   const toggleItemCompleted = (itemId: string, initialDoneState?: boolean) => {
     setCompletedItemIds(prev => ({
@@ -114,18 +337,7 @@ export function KitchenTicket({
     })
   }
 
-  if (effectiveOrders.length === 0) {
-    return null
-  }
-
-  // Invariante Zero-Flicker: La visibilidad de comandas depende exclusivamente de su status activo en cocina
-  const validOrders = effectiveOrders.filter(o => {
-    if (['cancelled', 'paid', 'delivered'].includes(o.status)) return false
-    if (areAllKitchenCoursesCompleted(o)) return false
-    return true
-  })
-
-  if (validOrders.length === 0) {
+  if (effectiveOrders.length === 0 || validOrders.length === 0) {
     return null
   }
 
@@ -282,6 +494,44 @@ export function KitchenTicket({
           const dessertsReady = isOrderDessertsReady(roundOrder)
           const dessertsServed = areOrderDessertsServed(roundOrder)
           const areDessertsLocked = (hasStarters || hasMains) && !dessertsFired && !dessertsReady && !dessertsServed
+
+          const startersKey = `${roundOrder.id}-starters`
+          const mainsKey = `${roundOrder.id}-mains`
+          const dessertsKey = `${roundOrder.id}-desserts`
+
+          const isStartersExpanded = (() => {
+            const phase = currentPhases[startersKey] || 'active'
+            if (prevPhasesRef.current[startersKey] !== undefined && prevPhasesRef.current[startersKey] !== phase) {
+              return phase === 'active'
+            }
+            return expandedCourses[startersKey] !== undefined
+              ? Boolean(expandedCourses[startersKey])
+              : phase === 'active'
+          })()
+
+          const isMainsExpanded = (() => {
+            const phase = currentPhases[mainsKey] || 'active'
+            if (prevPhasesRef.current[mainsKey] !== undefined && prevPhasesRef.current[mainsKey] !== phase) {
+              return phase === 'active'
+            }
+            return expandedCourses[mainsKey] !== undefined
+              ? Boolean(expandedCourses[mainsKey])
+              : phase === 'active'
+          })()
+
+          const isDessertsExpanded = (() => {
+            const phase = currentPhases[dessertsKey] || 'active'
+            if (prevPhasesRef.current[dessertsKey] !== undefined && prevPhasesRef.current[dessertsKey] !== phase) {
+              return phase === 'active'
+            }
+            return expandedCourses[dessertsKey] !== undefined
+              ? Boolean(expandedCourses[dessertsKey])
+              : phase === 'active'
+          })()
+
+          const startersCount = starters.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0)
+          const mainsCount = mains.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0)
+          const dessertsCount = desserts.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0)
 
           const renderItemCard = (item: any, idx: number, isHeldItem: boolean, lockLabel?: string) => {
             const prod = item.product || (item as any).products
@@ -528,124 +778,70 @@ export function KitchenTicket({
                   <>
                     {/* Bloque 1: Entradas */}
                     {hasStarters && (
-                      startersReady ? (
-                        <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between">
-                          <span className="flex items-center gap-1.5">
-                            <CheckCircle2 size={13} className="text-emerald-600" />
-                            <span>1º Entradas listas ({starters.length} platos)</span>
-                          </span>
-                          <span className="text-[10px] font-black uppercase bg-emerald-100 px-2 py-0.5 rounded-md text-emerald-800">
-                            {startersServed ? 'Entregado en Mesa' : 'Pase 1 Completado'}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-[11px] font-black uppercase text-amber-900 tracking-wider">
-                            <span>🥗 1º Entradas ({starters.length})</span>
-                            <span className="text-[10px] font-bold text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-md">
-                              Pase 1
-                            </span>
-                          </div>
-                          {starters.map((item, idx) => renderItemCard(item, idx, false))}
-                        </div>
-                      )
+                      <CourseAccordionSection
+                        courseKey={startersKey}
+                        courseType="first"
+                        title="1° Entradas"
+                        itemCount={startersCount}
+                        isLocked={false}
+                        isReady={startersReady}
+                        isServed={startersServed}
+                        isCooking={roundOrder.status === 'preparing' && !startersReady}
+                        isExpanded={isStartersExpanded}
+                        onToggle={() => toggleCourse(startersKey)}
+                      >
+                        {starters.map((item, idx) => renderItemCard(item, idx, false))}
+                      </CourseAccordionSection>
                     )}
 
                     {/* Bloque 2: Platos Principales (Bloque 2.2: Sin botón "+ Iniciar Ahora", candado estricto hasta orden del mozo) */}
                     {hasMains && (
-                      areMainsLocked ? (
-                        <div className="space-y-2 p-2.5 rounded-2xl bg-slate-100/80 border-2 border-dashed border-slate-300 opacity-80">
-                          <div className="flex items-center justify-between text-[11px] font-black uppercase text-slate-500 tracking-wider">
-                            <span className="flex items-center gap-1.5">
-                              <Lock size={13} className="text-slate-500" />
-                              <span>🍔 2º Principales ({mains.length})</span>
-                            </span>
-                            <span className="text-[10px] font-black bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md">
-                              🔒 En espera de orden del mozo
-                            </span>
-                          </div>
-                          {mains.map((item, idx) =>
-                            renderItemCard(
-                              item,
-                              idx + starters.length,
-                              true,
-                              'En espera de orden del mozo'
-                            )
-                          )}
-                        </div>
-                      ) : mainsReady ? (
-                        <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between">
-                          <span className="flex items-center gap-1.5">
-                            <CheckCircle2 size={13} className="text-emerald-600" />
-                            <span>2º Principales listos ({mains.length} platos)</span>
-                          </span>
-                          <span className="text-[10px] font-black uppercase bg-emerald-100 px-2 py-0.5 rounded-md text-emerald-800">
-                            {mainsServed ? 'Entregado en Mesa' : 'Pase 2 Completado'}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-[11px] font-black uppercase text-blue-900 tracking-wider">
-                            <span>🍔 2º Principales ({mains.length})</span>
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
-                              mainsCooking ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-blue-100 text-blue-900'
-                            }`}>
-                              {mainsCooking ? '🔥 En Marcha' : 'Pase 2'}
-                            </span>
-                          </div>
-                          {mains.map((item, idx) =>
-                            renderItemCard(item, idx + starters.length, false)
-                          )}
-                        </div>
-                      )
+                      <CourseAccordionSection
+                        courseKey={mainsKey}
+                        courseType="second"
+                        title="2° Principales"
+                        itemCount={mainsCount}
+                        isLocked={areMainsLocked}
+                        isReady={mainsReady}
+                        isServed={mainsServed}
+                        isCooking={mainsCooking}
+                        isExpanded={isMainsExpanded}
+                        onToggle={() => toggleCourse(mainsKey)}
+                      >
+                        {mains.map((item, idx) =>
+                          renderItemCard(
+                            item,
+                            idx + starters.length,
+                            areMainsLocked,
+                            'En espera de orden del mozo'
+                          )
+                        )}
+                      </CourseAccordionSection>
                     )}
 
                     {/* Bloque 3: Postres (Candado estricto hasta que el mozo pulse "Marchar a Cocina") */}
                     {hasDesserts && (
-                      areDessertsLocked ? (
-                        <div className="space-y-2 p-2.5 rounded-2xl bg-slate-100/80 border-2 border-dashed border-slate-300 opacity-80">
-                          <div className="flex items-center justify-between text-[11px] font-black uppercase text-slate-500 tracking-wider">
-                            <span className="flex items-center gap-1.5">
-                              <Lock size={13} className="text-slate-500" />
-                              <span>🍰 3º Postres ({desserts.length})</span>
-                            </span>
-                            <span className="text-[10px] font-black bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md">
-                              🔒 En espera de orden del mozo
-                            </span>
-                          </div>
-                          {desserts.map((item, idx) =>
-                            renderItemCard(
-                              item,
-                              idx + starters.length + mains.length,
-                              true,
-                              'En espera de orden del mozo'
-                            )
-                          )}
-                        </div>
-                      ) : dessertsReady || dessertsServed ? (
-                        <div className="px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center justify-between">
-                          <span className="flex items-center gap-1.5">
-                            <CheckCircle2 size={13} className="text-emerald-600" />
-                            <span>3º Postres listos ({desserts.length})</span>
-                          </span>
-                          <span className="text-[10px] font-black uppercase bg-emerald-100 px-2 py-0.5 rounded-md text-emerald-800">
-                            {dessertsServed ? 'Entregado en Mesa' : 'Pase 3 Completado'}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className={`space-y-2 ${(hasStarters || hasMains) ? 'pt-2.5 border-t border-slate-200/80' : ''}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-purple-900 tracking-wider">
-                              <span>🍰 3º Postres ({desserts.length})</span>
-                            </div>
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-purple-100 text-purple-900 border border-purple-200 flex items-center gap-1">
-                              <Sparkles size={10} />
-                              <span>Marchados por el mozo · En preparación</span>
-                            </span>
-                          </div>
-                          {desserts.map((item, idx) => renderItemCard(item, idx + starters.length + mains.length, false))}
-                        </div>
-                      )
+                      <CourseAccordionSection
+                        courseKey={dessertsKey}
+                        courseType="dessert"
+                        title="3° Postres"
+                        itemCount={dessertsCount}
+                        isLocked={areDessertsLocked}
+                        isReady={dessertsReady}
+                        isServed={dessertsServed}
+                        isCooking={(dessertsFired || roundOrder.status === 'preparing') && !dessertsReady && !dessertsServed}
+                        isExpanded={isDessertsExpanded}
+                        onToggle={() => toggleCourse(dessertsKey)}
+                      >
+                        {desserts.map((item, idx) =>
+                          renderItemCard(
+                            item,
+                            idx + starters.length + mains.length,
+                            areDessertsLocked,
+                            'En espera de orden del mozo'
+                          )
+                        )}
+                      </CourseAccordionSection>
                     )}
                   </>
                 ) : (
