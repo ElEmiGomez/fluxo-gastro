@@ -7,6 +7,20 @@
 ## 🕒 Registro de Eventos y Actualizaciones
 
 
+### [2026-10-26 21:20] — Blindaje Criptográfico y Anti-Fuerza Bruta del CRM (Solo Fundador)
+* **Departamentos Sincronizados:** Dirección General / Fundador (Depto 1), Seguridad & Auditoría e Ingeniería & Producto (Depto 4).
+* **Capas de Seguridad Implementadas:**
+  1. **Revocación de PINs Secundarios:** Revocado el PIN de prueba `9999`. Único PIN maestro autorizado: `4154928`.
+  2. **Inmunidad a Timing Attacks:** Validación con `crypto.timingSafeEqual` sobre digests SHA-256 en tiempo constante.
+  3. **Blindaje Anti-Fuerza Bruta:** Rate limiter por IP en `/api/crm/auth` que bloquea el acceso durante 15 minutos tras 5 intentos erróneos (HTTP 429) y añade retardo de 200ms por fallo.
+  4. **Ligado Criptográfico a Dispositivo:** El token de sesión HMAC SHA-256 encapsula la huella digital del User-Agent del dispositivo; cookies extraídas o copiadas no son válidas en otros navegadores.
+  5. **Cero Fugas en Bundle Cliente:** Eliminado cualquier rastro del PIN del código frontend y de la interfaz visual.
+  6. **Bloqueo a Motores de Búsqueda:** [`src/app/robots.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/robots.ts) bloquea `/admin/` y el enlace cuenta con `rel="nofollow noopener"`.
+* **Verificación:** Tests automatizados, auditoría RLS y TypeScript (`npx.cmd tsc --noEmit`) completados con 0 errores.
+
+---
+
+
 ### [2026-10-26 21:00] — Botón Dedicado Inferior con Flecha para Acceso al CRM (/admin/crm)
 * **Departamentos Sincronizados:** Dirección General / Fundador (Depto 1), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto (Depto 4).
 * **Elemento Incorporado:**

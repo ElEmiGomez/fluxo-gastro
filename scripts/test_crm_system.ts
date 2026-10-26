@@ -5,30 +5,32 @@ import {
   updateCRMLead,
   deleteCRMLead,
   calculateCRMMetrics,
-  PLAN_PRICING
 } from '../src/lib/supabase/repositories/crm.repository'
+import { PLAN_PRICING } from '../src/types/crm.types'
 
 async function runTests() {
   console.log('--- TEST 1: Auth & Founder PIN Protection ---')
-  console.assert(isMasterPinValid('9999') === true, 'PIN 9999 should be valid')
-  console.assert(isMasterPinValid('4154928') === true, 'PIN 4154928 should be valid')
+  console.assert(isMasterPinValid('4154928') === true, 'PIN 4154928 MUST be valid')
+  console.assert(isMasterPinValid('9999') === false, 'PIN 9999 is revoked (only 4154928 allowed)')
   console.assert(isMasterPinValid('1234') === false, 'Staff PIN 1234 should NOT have founder access')
   console.assert(isMasterPinValid('0000') === false, 'Random PIN should be invalid')
 
-  const token = signFounderSession()
+  const userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)'
+  const token = signFounderSession(userAgent)
   console.assert(typeof token === 'string' && token.includes('.'), 'Token format valid')
-  console.assert(verifyFounderSession(token) === true, 'Session token should verify')
+  console.assert(verifyFounderSession(token, userAgent) === true, 'Session token should verify with correct device')
+  console.assert(verifyFounderSession(token, 'DifferentDevice/1.0') === false, 'Stolen token on different device MUST fail')
   console.assert(verifyFounderSession('invalid.token') === false, 'Invalid token should fail')
 
   const mockReqWithCookie = {
     cookies: { get: (name: string) => (name === 'fluxo_founder_session' ? { value: token } : undefined) },
-    headers: { get: () => null }
+    headers: { get: (name: string) => (name === 'user-agent' ? userAgent : null) }
   }
   console.assert(verifyFounderRequest(mockReqWithCookie as any) === true, 'Req with cookie should authenticate')
 
   const mockReqWithPinHeader = {
     cookies: { get: () => undefined },
-    headers: { get: (name: string) => (name === 'x-founder-pin' ? '9999' : null) }
+    headers: { get: (name: string) => (name === 'x-founder-pin' ? '4154928' : null) }
   }
   console.assert(verifyFounderRequest(mockReqWithPinHeader as any) === true, 'Req with x-founder-pin should authenticate')
 

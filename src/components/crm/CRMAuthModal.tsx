@@ -38,16 +38,16 @@ export function CRMAuthModal({ onSuccess }: CRMAuthModalProps) {
               sessionStorage.setItem('fluxo_founder_token', data.token)
             }
           } catch {
-            // ignore storage restrictions
+            // ignore
           }
         }
         onSuccess()
       } else {
-        setError(data.error || 'PIN incorrecto. Acceso exclusivo para el fundador.')
+        setError(data.error || 'PIN incorrecto. Acceso restringido.')
         setPin('')
       }
     } catch {
-      setError('Error al conectar con el servidor. Verifica tu conexión.')
+      setError('Error de comunicación con el servidor seguro.')
     } finally {
       setLoading(false)
     }
@@ -60,7 +60,8 @@ export function CRMAuthModal({ onSuccess }: CRMAuthModalProps) {
     setPin(nextPin)
     setError(null)
 
-    if (nextPin === '4154928') {
+    // Cuando se ingresan 7 dígitos, validar en el servidor automáticamente
+    if (nextPin.length === 7) {
       executeUnlock(nextPin)
     }
   }
@@ -82,15 +83,14 @@ export function CRMAuthModal({ onSuccess }: CRMAuthModalProps) {
     setPin(rawVal)
     setError(null)
 
-    if (rawVal === '4154928') {
+    if (rawVal.length === 7) {
       executeUnlock(rawVal)
     }
   }
 
-  // Soporte para teclado físico (escritorio / portátil)
+  // Soporte para teclado físico
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Si el foco ya está en el input nativo, dejar que el input se encargue
       if (document.activeElement === inputRef.current) {
         if (e.key === 'Enter') {
           e.preventDefault()
@@ -127,17 +127,17 @@ export function CRMAuthModal({ onSuccess }: CRMAuthModalProps) {
         </div>
 
         <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-1.5">
-          <ShieldCheck className="w-3.5 h-3.5" /> Acceso Fundador
+          <ShieldCheck className="w-3.5 h-3.5" /> Acceso Restringido
         </span>
 
         <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white mb-0.5">
-          CRM Comercial Fluxo
+          Portal de Dirección
         </h2>
         <p className="text-xs text-slate-400 mb-4">
-          Ingresa el PIN Maestro de 7 dígitos para acceder
+          Identificación de seguridad requerida
         </p>
 
-        {/* Campo de Entrada Táctil & Nativo (Compatible con Teclado Móvil y Portapapeles) */}
+        {/* Campo de Entrada Táctil & Nativo */}
         <div className="relative mb-4">
           <input
             ref={inputRef}
@@ -176,7 +176,7 @@ export function CRMAuthModal({ onSuccess }: CRMAuthModalProps) {
           ))}
         </div>
 
-        {/* Mensaje de Error */}
+        {/* Mensaje de Error / Bloqueo */}
         {error && (
           <div className="mb-4 flex items-center justify-center gap-2 text-xs font-medium text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl animate-in shake">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -184,7 +184,7 @@ export function CRMAuthModal({ onSuccess }: CRMAuthModalProps) {
           </div>
         )}
 
-        {/* Teclado Numérico Táctil Móvil (con touch-manipulation y sin delay de 300ms) */}
+        {/* Teclado Numérico Táctil */}
         <div className="grid grid-cols-3 gap-2 mb-4">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
             <button
@@ -234,7 +234,7 @@ export function CRMAuthModal({ onSuccess }: CRMAuthModalProps) {
             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           ) : (
             <>
-              <span>Desbloquear Panel</span>
+              <span>Desbloquear Portal</span>
               <ArrowRight className="w-4 h-4" />
             </>
           )}
@@ -242,7 +242,7 @@ export function CRMAuthModal({ onSuccess }: CRMAuthModalProps) {
 
         <div className="mt-3.5 flex items-center justify-center gap-1.5 text-[11px] text-slate-500 font-mono">
           <KeyRound className="w-3 h-3 text-blue-400" />
-          <span>PIN Maestro: 4154928</span>
+          <span>Protegido con Cifrado HMAC &bull; Anti-Fuerza Bruta</span>
         </div>
       </div>
     </div>
