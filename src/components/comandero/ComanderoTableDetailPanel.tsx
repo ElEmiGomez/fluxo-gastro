@@ -47,6 +47,7 @@ import {
   areOrderDessertsServed,
   resolveCatalogProductForItem,
   isGenericProductName,
+  isPackComponentItem,
 } from '@/lib/course-utils'
 
 interface ComanderoTableDetailPanelProps {
@@ -275,17 +276,24 @@ export function ComanderoTableDetailPanel({
     )
     let sum = 0
     tableOrders.forEach(ord => {
+      // 1. SSOT: Si la orden tiene total_amount persistido en base de datos (> 0), es la fuente única de verdad
+      const persistedTotal = Number(ord.total_amount)
+      if (typeof persistedTotal === 'number' && !isNaN(persistedTotal) && persistedTotal > 0) {
+        sum += persistedTotal
+        return
+      }
+
+      // 2. Fallback si no hay total_amount persistido
       let ordSum = 0
       if (ord.order_items && ord.order_items.length > 0) {
         ord.order_items.forEach(it => {
-          if (!it.is_complimentary) {
-            const unitPrice = it.product?.price ?? (it as any).unit_price ?? (it as any).price ?? resolveCatalogProductForItem(it)?.price ?? 0
+          if (!it.is_complimentary && !isPackComponentItem(it)) {
+            const unitPrice = typeof it.price === 'number' && it.price >= 0
+              ? it.price
+              : (it.product?.price ?? (it as any).unit_price ?? resolveCatalogProductForItem(it)?.price ?? 0)
             ordSum += (it.quantity || 1) * unitPrice
           }
         })
-      }
-      if (ordSum === 0 && ord.total_amount) {
-        ordSum = Number(ord.total_amount) || 0
       }
       sum += ordSum
     })

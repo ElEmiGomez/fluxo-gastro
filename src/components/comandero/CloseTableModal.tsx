@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { X, CreditCard, Banknote, Smartphone, Receipt, CheckCircle2, Sparkles, ShieldCheck, Gift, Check, AlertTriangle } from 'lucide-react'
 import { Order } from '@/types/database.types'
 import { PendingServiceCall } from '@/types/comandero.types'
+import { isPackComponentItem } from '@/lib/course-utils'
 
 interface CloseTableModalProps {
   isOpen: boolean
@@ -102,19 +103,28 @@ export function CloseTableModal({
     let items = 0
 
     targetOrders.forEach(ord => {
+      // 1. SSOT: Si la orden tiene total_amount oficial válido (> 0), utilizarlo directamente
+      const persistedTotal = Number(ord.total_amount)
+      if (typeof persistedTotal === 'number' && !isNaN(persistedTotal) && persistedTotal > 0) {
+        raw += persistedTotal
+        items += (ord.order_items && ord.order_items.length > 0)
+          ? ord.order_items.filter(it => !it.is_complimentary && !isPackComponentItem(it)).reduce((s, it) => s + (it.quantity || 1), 0) || 1
+          : 1
+        return
+      }
+
+      // 2. Fallback
       let ordSum = 0
       if (ord.order_items && ord.order_items.length > 0) {
         ord.order_items.forEach(item => {
-          if (!item.is_complimentary) {
-            const price = item.product?.price ?? (item as any).unit_price ?? (item as any).price ?? 0
+          if (!item.is_complimentary && !isPackComponentItem(item)) {
+            const price = typeof item.price === 'number' && item.price >= 0
+              ? item.price
+              : (item.product?.price ?? (item as any).unit_price ?? 0)
             ordSum += (item.quantity || 1) * price
             items += item.quantity || 1
           }
         })
-      }
-      if (ordSum === 0 && ord.total_amount) {
-        ordSum = Number(ord.total_amount) || 0
-        items += 1
       }
       raw += ordSum
     })

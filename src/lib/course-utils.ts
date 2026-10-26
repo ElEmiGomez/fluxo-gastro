@@ -415,10 +415,14 @@ export function hydrateOrderItemsWithCatalog(
         ? it.course
         : getItemCourse({ ...it, product: resolvedProd, notes: effectiveNotes })
 
-    const effectivePrice = typeof it.price === 'number' && it.price >= 0 ? it.price : (resolvedProd?.price ?? 0)
+    const isSubItem = isPackComponentItem(it)
+    const effectivePrice = isSubItem
+      ? 0
+      : (typeof it.price === 'number' && it.price >= 0 ? it.price : (resolvedProd?.price ?? 0))
 
     return {
       ...it,
+      is_pack_component: isSubItem || Boolean(it.is_pack_component),
       price: effectivePrice,
       product_id: it.product_id || resolvedProd?.id,
       product: resolvedProd ? { ...resolvedProd, price: effectivePrice } : resolvedProd,
@@ -464,6 +468,25 @@ export function isPackHeaderItem(item: OrderItem): boolean {
     return true
   }
   return false
+}
+
+/**
+ * Determina si un ítem es un componente desglosado incluido dentro de un pack o menú (a 0,00 €)
+ */
+export function isPackComponentItem(item: OrderItem | any): boolean {
+  if (!item) return false
+  if (item.is_pack_component) return true
+  if (item.is_pack_header) return false
+  const notes = item.notes || ''
+  if (notes.includes(TAG_PACK_HEADER)) return false
+  return Boolean(
+    notes.includes('[PACK_SUBITEM]') ||
+    notes.includes('[PACK_COMPONENT]') ||
+    notes.includes('[Incluido en') ||
+    notes.includes('[Menú del Día') ||
+    notes.includes('[Promo Pareja') ||
+    /\[(?:Combo|Promo|Menú|Menu|Pack)[^\]]*\]/i.test(notes)
+  )
 }
 
 /**

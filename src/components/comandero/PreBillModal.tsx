@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { X, Receipt, Check, Printer, Share2, Users, CreditCard } from 'lucide-react'
 import { Order, Restaurant } from '@/types/database.types'
 import { formatCurrency } from '@/lib/utils'
+import { isPackComponentItem } from '@/lib/course-utils'
 
 interface PreBillModalProps {
   isOpen: boolean
@@ -36,27 +37,64 @@ export function PreBillModal({
   orders.forEach(ord => {
     (ord.order_items || []).forEach(item => {
       if (item.is_complimentary) return
-      const name = item.product?.name || `Plato`
-      const price = item.product?.price || 0
-      const key = `${name}-${price}`
+
+      const isSubItem = isPackComponentItem(item)
+      // Los componentes de pack tienen precio 0€ porque su coste ya está en la cabecera del pack
+      const unitPrice = isSubItem
+        ? 0
+        : (typeof item.price === 'number' && item.price >= 0
+            ? item.price
+            : (item.product?.price || 0))
+
+      const rawName = item.product?.name || (item as any).name || `Plato`
+      const name = isSubItem ? `${rawName} (Incluido)` : rawName
+      const key = `${name}-${unitPrice}`
 
       if (itemsMap[key]) {
         itemsMap[key].quantity += item.quantity || 1
-        itemsMap[key].total += (item.quantity || 1) * price
+        itemsMap[key].total += (item.quantity || 1) * unitPrice
       } else {
         itemsMap[key] = {
           name,
           quantity: item.quantity || 1,
-          price,
-          total: (item.quantity || 1) * price,
+          price: unitPrice,
+          total: (item.quantity || 1) * unitPrice,
           notes: item.notes || undefined,
         }
       }
     })
   })
 
-  const consolidatedItems = Object.values(itemsMap)
-  const rawTotal = consolidatedItems.reduce((sum, item) => sum + item.total, 0)
+  // 1. SSOT: Calcular total oficial a partir de las órdenes persistidas en Supabase
+  const officialPersistedTotal = orders.reduce((sum, o) => {
+    const pTotal = Number(o.total_amount)
+    return sum + (typeof pTotal === 'number' && !isNaN(pTotal) && pTotal > 0 ? pTotal : 0)
+  }, 0)
+
+  let consolidatedItems = Object.values(itemsMap)
+  const itemsSum = consolidatedItems.reduce((sum, item) => sum + item.total, 0)
+
+  // Si hay una diferencia entre el total oficial de la comanda y la suma de ítems sueltos
+  // (debido a que los componentes del combo van a 0€ y la cabecera del pack no vino en DB),
+  // agregar la línea del Combo/Menú por el importe restante exacto.
+  if (officialPersistedTotal > itemsSum) {
+    const diff = Number((officialPersistedTotal - itemsSum).toFixed(2))
+    const packItem = orders.flatMap(o => o.order_items || []).find(it => isPackComponentItem(it))
+    const packTagMatch = packItem?.notes?.match(/\[((?:Combo|Promo|Menú|Menu|Pack)[^\]]+)\]/i)
+    const packTitle = packTagMatch ? packTagMatch[1] : 'Menú / Combo'
+    consolidatedItems = [
+      {
+        name: packTitle,
+        quantity: 1,
+        price: diff,
+        total: diff,
+        notes: 'Pack completo',
+      },
+      ...consolidatedItems,
+    ]
+  }
+
+  const rawTotal = officialPersistedTotal > 0 ? officialPersistedTotal : itemsSum
   const discountAmount = discountPercentage > 0 ? rawTotal * (discountPercentage / 100) : 0
   const totalAmount = rawTotal - discountAmount
   const perPersonAmount = splitCount > 1 ? totalAmount / splitCount : totalAmount
