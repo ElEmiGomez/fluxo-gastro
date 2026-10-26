@@ -372,7 +372,20 @@ export function getCategoryGroup(idOrName?: string | null): CategoryGroup {
     return 'burgers'
   }
 
-  // 5. Bebidas / Cócteles / Vinos / Cervezas / Cafés & Infusiones
+  // 5. Postres / Dulces / Repostería / Sobremesa (Evaluado con máxima prioridad antes de bebidas para 'POSTRES & CAFÉ')
+  if (
+    s === 'c0000000-0000-0000-0000-000000000006' ||
+    ['cat-10', 'cat-tca-7', 'cat-tm-1', 'cat-tm-7'].includes(s) ||
+    s.includes('postre') ||
+    s.includes('dulce') ||
+    s.includes('sobremesa') ||
+    s.includes('tarta') ||
+    s.includes('helado')
+  ) {
+    return 'postres'
+  }
+
+  // 6. Bebidas / Cócteles / Vinos / Cervezas / Cafés & Infusiones
   if (
     s === 'c0000000-0000-0000-0000-000000000005' ||
     ['cat-12', 'cat-13', 'cat-14', 'cat-15', 'cat-tca-8', 'cat-tca-9', 'cat-tca-10', 'cat-tm-2', 'cat-tm-3', 'cat-tm-5', 'cat-tm-6', 'cat-tm-8'].includes(s) ||
@@ -392,17 +405,6 @@ export function getCategoryGroup(idOrName?: string | null): CategoryGroup {
     s.includes('té')
   ) {
     return 'bebidas'
-  }
-
-  // 6. Postres / Dulces / Repostería
-  if (
-    s === 'c0000000-0000-0000-0000-000000000006' ||
-    ['cat-10', 'cat-tca-7', 'cat-tm-1', 'cat-tm-7'].includes(s) ||
-    s.includes('postre') ||
-    s.includes('dulce') ||
-    s.includes('sobremesa')
-  ) {
-    return 'postres'
   }
 
   return 'other'
@@ -546,30 +548,28 @@ export function isProductInCategory(
     pName.startsWith('combo') ||
     pName.startsWith('promo')
 
-  // Obtener grupo de la categoría seleccionada
+  // Obtener grupo de la categoría seleccionada (priorizando ID canónico, luego nombre)
   const activeCategory = categories.find(c => c.id === selectedCategoryId)
-  const selectedGroup = getCategoryGroup(activeCategory ? activeCategory.name : selectedCategoryId)
+  const selectedGroup = getCategoryGroup(activeCategory ? activeCategory.id : selectedCategoryId) !== 'other'
+    ? getCategoryGroup(activeCategory ? activeCategory.id : selectedCategoryId)
+    : getCategoryGroup(activeCategory ? activeCategory.name : selectedCategoryId)
 
-  // Si la categoría seleccionada es de un grupo conocido
+  // Si el producto es un combo/promo, SOLO debe aparecer en la pestaña 'promos'
+  if (isCombo) {
+    return selectedGroup === 'promos'
+  }
+
+  // Si el producto pertenece directamente por category_id a la categoría seleccionada, siempre mostrar
+  if (product.category_id === selectedCategoryId) {
+    return true
+  }
+
+  // Si la categoría seleccionada es de un grupo conocido, coincidencia por grupo canónico
   if (selectedGroup !== 'other') {
-    // Si el producto es un combo/promo, SOLO debe aparecer en la pestaña 'promos'
-    if (isCombo) {
-      return selectedGroup === 'promos'
-    }
-
     const prodGroup = getProductGroup(product, categories)
     if (prodGroup !== 'other') {
       return prodGroup === selectedGroup
     }
-  }
-
-  // Si la categoría es personalizada o no se identificó el grupo, coincidencia exacta de ID
-  if (product.category_id === selectedCategoryId) {
-    // Aún en coincidencia exacta, si el producto es combo no puede entrar en categorías que no sean promos
-    if (isCombo && selectedGroup !== 'promos' && selectedGroup !== 'other') {
-      return false
-    }
-    return true
   }
 
   return false

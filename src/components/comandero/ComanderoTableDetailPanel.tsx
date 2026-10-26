@@ -534,7 +534,7 @@ export function ComanderoTableDetailPanel({
             <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
               {tableAllDrinks.map((d, idx) => {
                 const served = isDrinkServed(d.item, d.order)
-                const cleanNotes = cleanItemNotes(d.item.notes)
+                const cleanNotes = cleanItemNotes(d.item.notes, Boolean(d.item.is_complimentary && !d.item.is_pack_component))
                 return (
                   <div key={idx} className="flex items-center justify-between text-xs bg-white px-3 py-2 rounded-xl border border-cyan-200/70 shadow-2xs">
                     <div className="min-w-0">
@@ -630,7 +630,7 @@ export function ComanderoTableDetailPanel({
                 </div>
                 <div className="space-y-1 text-xs text-slate-700">
                   {tableStarters.map((it, idx) => {
-                    const cleanNotes = cleanItemNotes(it.item.notes)
+                    const cleanNotes = cleanItemNotes(it.item.notes, Boolean(it.item.is_complimentary && !it.item.is_pack_component))
                     return (
                       <div key={idx} className="flex items-center justify-between">
                         <div>
@@ -694,7 +694,7 @@ export function ComanderoTableDetailPanel({
                 </div>
                 <div className="space-y-1 text-xs text-slate-700">
                   {tableMains.map((it, idx) => {
-                    const cleanNotes = cleanItemNotes(it.item.notes)
+                    const cleanNotes = cleanItemNotes(it.item.notes, Boolean(it.item.is_complimentary && !it.item.is_pack_component))
                     return (
                       <div key={idx} className="flex items-center justify-between">
                         <div>
@@ -787,7 +787,7 @@ export function ComanderoTableDetailPanel({
                 <div className="space-y-1 text-xs text-slate-700">
                   {tableDesserts.map((d, idx) => {
                     const isPendingChoice = isDessertPendingChoice(d.item)
-                    const cleanNotes = cleanItemNotes(d.item.notes)
+                    const cleanNotes = cleanItemNotes(d.item.notes, Boolean(d.item.is_complimentary && !d.item.is_pack_component))
                     return (
                       <div key={idx} className="flex items-center justify-between">
                         <div>

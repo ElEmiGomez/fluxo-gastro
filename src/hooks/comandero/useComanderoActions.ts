@@ -1029,7 +1029,7 @@ export function useComanderoActions({
         const hasWeightInPills = Boolean(weightStr && pills.some(p => p.toLowerCase().includes(weightStr.toLowerCase())))
 
         const noteParts: string[] = []
-        if (item.is_complimentary) noteParts.push('[🎁 INVITACIÓN DE LA CASA]')
+        if (item.is_complimentary && !item.is_pack_component && !item.loyalty_points_redeemed) noteParts.push('[🎁 INVITACIÓN DE LA CASA]')
         if (item.weight_grams && !hasWeightInPills) noteParts.push(`${item.weight_grams}g`)
         pills.forEach(p => {
           if (!noteParts.includes(p)) noteParts.push(p)

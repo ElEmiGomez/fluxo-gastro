@@ -595,12 +595,12 @@ export async function POST(req: NextRequest) {
       )
       const isComplimentary = Boolean(
         !isPackHeader &&
+        !isPackComponent &&
         ((isStaffSender && (item.is_complimentary || (item.notes && item.notes.includes('[🎁 INVITACIÓN DE LA CASA]')))) ||
-        isLoyaltyRedeemed ||
-        isPackComponent)
+        isLoyaltyRedeemed)
       )
 
-      let itemPriceToCharge = isComplimentary ? 0 : (Number(catalogProduct.price) || 0)
+      let itemPriceToCharge = (isComplimentary || isPackComponent) ? 0 : (Number(catalogProduct.price) || 0)
       if (!isComplimentary && catalogProduct.price_type === 'weight') {
         const weight = Number(item.weight_grams) || (item.notes?.match(/(\d+)\s*g/i)?.[1] ? Number(item.notes.match(/(\d+)\s*g/i)[1]) : (item.weightGrams ? Number(item.weightGrams) : 1000))
         const divisor = catalogProduct.price_unit === 'kg' ? 1000 : 100

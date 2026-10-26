@@ -195,10 +195,10 @@ export function MenuHeader({
                   ) : loyaltyMode === 'points' ? (
                     <>
                       <Award className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                      <span className="text-[11px] font-black truncate max-w-[120px] sm:max-w-none">
+                      <span className={`text-[11px] font-black truncate max-w-[120px] sm:max-w-none ${!loyaltyProfile && (!loyaltyPoints || loyaltyPoints === 0) ? 'hidden sm:inline' : ''}`}>
                         {loyaltyProfile?.name
                           ? `${loyaltyProfile.name.trim().split(/\s+/)[0]} · ${loyaltyPoints ?? loyaltyProfile.available_points ?? 0} pts`
-                          : loyaltyPoints !== undefined && loyaltyPoints !== null
+                          : loyaltyPoints !== undefined && loyaltyPoints !== null && loyaltyPoints > 0
                           ? `${loyaltyPoints} pts`
                           : 'Puntos'}
                       </span>
@@ -206,7 +206,7 @@ export function MenuHeader({
                   ) : (
                     <>
                       <Gift className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                      <span className="text-[11px] font-black truncate max-w-[130px] sm:max-w-none">
+                      <span className={`text-[11px] font-black truncate max-w-[130px] sm:max-w-none ${!loyaltyProfile && stampsCount === 0 ? 'hidden sm:inline' : ''}`}>
                         {loyaltyProfile?.name
                           ? `${loyaltyProfile.name.trim().split(/\s+/)[0]} · ${stampsCount}/${stampsTarget}`
                           : stampsCount > 0

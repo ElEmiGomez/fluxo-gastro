@@ -431,19 +431,24 @@ export function hydrateOrderItemsWithCatalog(
 /**
  * Elimina cualquier etiqueta técnica interna entre corchetes de estaciones de cocina/barra
  */
-export function stripInternalStationTags(rawNotes?: string | null): string {
+export function stripInternalStationTags(rawNotes?: string | null, isComplimentary = false): string {
   if (!rawNotes) return ''
-  return rawNotes
+  let cleaned = rawNotes
     .replace(/\[(?:BARRA_SERVIDA|BARRA:\s*SERVIDA|COCINA_LISTA|COCINA:\s*LISTA|ENTRADA_LISTA|ENTRADA_SERVIDA|MARCHAR_PRINCIPAL|PRINCIPAL_EN_MARCHA|PRINCIPAL_LISTO|PRINCIPAL_SERVIDO|POSTRE_LISTO|POSTRE:\s*LISTO|POSTRE_SERVIDO|POSTRE:\s*SERVIDO|POSTRE_EN_ESPERA|POSTRE:\s*EN\s*ESPERA|POSTRE_EN_MARCHA|PASE_1|PASE_2|MARCHAR_POSTRE|POSTRE_PENDIENTE_ELECCION|PACK_HEADER|PACK_SUBITEM|PACK_COMPONENT|COURSE:\s*[a-z]+|Combo[^\]]*|Menú[^\]]*|Menu[^\]]*|Promo[^\]]*|Pack[^\]]*).*?\]/gi, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim()
+
+  const isFromPack = /\[(?:PACK_|Combo|Promo|Menú|Menu)/i.test(rawNotes)
+  if (!isComplimentary || isFromPack) {
+    cleaned = cleaned.replace(/\[🎁\s*INVITACIÓN DE LA CASA\]/gi, '')
+  }
+
+  return cleaned.replace(/\s{2,}/g, ' ').trim()
 }
 
 /**
  * Limpia notas de sistema para visualización de cara al personal y al cliente.
  */
-export function cleanItemNotes(notes?: string | null): string {
-  return stripInternalStationTags(notes)
+export function cleanItemNotes(notes?: string | null, isComplimentary = false): string {
+  return stripInternalStationTags(notes, isComplimentary)
 }
 
 /**
