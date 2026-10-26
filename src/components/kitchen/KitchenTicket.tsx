@@ -146,7 +146,7 @@ function CourseAccordionSection({
       headerStyles = 'bg-blue-50/70 hover:bg-blue-100/70 border-blue-200/90 text-blue-950'
       chevronColor = 'text-blue-800'
     } else {
-      icon = <span className="shrink-0 text-xs">🍰</span>
+      icon = <span className="shrink-0 text-xs">{isCooking ? '🔥' : '🍰'}</span>
       badgeText = isCooking ? 'EN PREPARACIÓN' : 'PASE 3'
       badgeStyles = isCooking
         ? 'bg-purple-100 text-purple-900 border-purple-300'
@@ -304,9 +304,10 @@ export function KitchenTicket({
         }
       })
 
-      prevPhasesRef.current = currentPhases
+
       return changed ? next : prev
     })
+    prevPhasesRef.current = currentPhases
   }, [phasesKey])
 
   const toggleCourse = (courseKey: string) => {
@@ -804,7 +805,7 @@ export function KitchenTicket({
                         isLocked={areMainsLocked}
                         isReady={mainsReady}
                         isServed={mainsServed}
-                        isCooking={mainsCooking}
+                        isCooking={!areMainsLocked && (mainsCooking || (roundOrder.status === 'preparing' && mainsFired)) && !mainsReady && !mainsServed}
                         isExpanded={isMainsExpanded}
                         onToggle={() => toggleCourse(mainsKey)}
                       >
