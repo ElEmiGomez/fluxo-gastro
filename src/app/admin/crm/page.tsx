@@ -567,6 +567,53 @@ export default function CRMAdminPage() {
                             </p>
                           )}
 
+                          {/* Control de Piloto: Hito, Checklist y Firma (Ideas 7, 8, 9) */}
+                          {lead.status === 'piloto_14_dias' && (
+                            <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex items-center gap-1.5 flex-wrap">
+                              {/* Hito y días restantes */}
+                              {lead.pilot_start_date && (() => {
+                                const start = new Date(lead.pilot_start_date).getTime()
+                                const diff = Math.max(1, Math.floor((Date.now() - start) / 86400000) + 1)
+                                const day = Math.min(diff, 14)
+                                const isUrgent = day >= 12
+                                return (
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1 ${
+                                    isUrgent
+                                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
+                                      : day >= 7
+                                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                      : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                                  }`}>
+                                    <Clock className="w-2.5 h-2.5" />
+                                    Día {day}/14 {isUrgent ? '• Cierre' : day >= 7 ? '• Balance' : ''}
+                                  </span>
+                                )
+                              })()}
+
+                              {/* Checklist */}
+                              {(() => {
+                                const cl = lead.pilot_checklist
+                                const count = cl ? Object.values(cl).filter(Boolean).length : 0
+                                return (
+                                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono border ${
+                                    count === 4
+                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
+                                      : 'bg-slate-800 text-slate-400 border-slate-700'
+                                  }`}>
+                                    ✓ {count}/4
+                                  </span>
+                                )
+                              })()}
+
+                              {/* Firma digital */}
+                              {lead.pilot_agreement && (
+                                <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold">
+                                  ✍ Firmado
+                                </span>
+                              )}
+                            </div>
+                          )}
+
                           {/* Pie de Tarjeta: Plan y Botón WhatsApp / Llamar */}
                           <div className="mt-3 pt-2.5 border-t border-slate-700/50 flex items-center justify-between text-xs">
                             <span className="text-[11px] font-mono text-emerald-400 font-semibold">

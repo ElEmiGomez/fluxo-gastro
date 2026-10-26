@@ -17,6 +17,22 @@ export const PLAN_PRICING: Record<CRMPlan, number> = {
   suite_139: 139,
 }
 
+export interface PilotChecklist {
+  qr_placed: boolean          // 1. Pegatinas QR colocadas en mesas y barra
+  menu_uploaded: boolean      // 2. Carta inicial y precios verificados
+  staff_trained: boolean      // 3. Explicación rápida al personal de sala (3 min)
+  review_date_set: boolean    // 4. Fecha de balance de cierre agendada
+}
+
+export interface PilotAgreement {
+  signed_at: string           // Timestamp ISO de firma
+  signee_name: string         // Nombre del titular o responsable que firma
+  signee_phone?: string       // Teléfono de contacto
+  signature_data?: string     // Trazo o imagen base64 de la firma táctil
+  agreed_plan: CRMPlan        // Plan que evalúa
+  trial_duration_days: number // 14 días
+}
+
 export interface CRMLead {
   id: string
   name: string
@@ -41,6 +57,8 @@ export interface CRMLead {
   lost_reason: string | null
   lat?: number | null
   lng?: number | null
+  pilot_checklist?: PilotChecklist | null
+  pilot_agreement?: PilotAgreement | null
   created_at: string
   updated_at: string
 }

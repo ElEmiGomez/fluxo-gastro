@@ -471,6 +471,7 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
                 <span className="flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
                   Día {pilotDays.day} de 14
+                  {pilotDays.day >= 12 ? ' (⚠️ Cierre urgente)' : pilotDays.day >= 7 ? ' (Balance)' : ''}
                 </span>
                 <span>{pilotDays.remaining} días restantes</span>
               </div>
@@ -480,6 +481,21 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
                   style={{ width: `${pilotDays.percent}%` }}
                 />
               </div>
+
+              {selectedLead.pilot_checklist && (
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-300 pt-1 border-t border-amber-500/20">
+                  <span>Puesta en marcha:</span>
+                  <span className="font-mono text-emerald-400 font-bold">
+                    {Object.values(selectedLead.pilot_checklist).filter(Boolean).length}/4 tareas
+                  </span>
+                </div>
+              )}
+
+              {selectedLead.pilot_agreement && (
+                <div className="mt-1 text-[10px] text-amber-300 font-semibold truncate">
+                  ✓ Firmado por {selectedLead.pilot_agreement.signee_name}
+                </div>
+              )}
             </div>
           )}
 

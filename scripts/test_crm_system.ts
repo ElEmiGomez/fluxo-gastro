@@ -6,7 +6,7 @@ import {
   deleteCRMLead,
   calculateCRMMetrics,
 } from '../src/lib/supabase/repositories/crm.repository'
-import { PLAN_PRICING } from '../src/types/crm.types'
+import { PLAN_PRICING, PilotAgreement, PilotChecklist } from '../src/types/crm.types'
 
 async function runTests() {
   console.log('--- TEST 1: Auth & Founder PIN Protection ---')
@@ -57,7 +57,7 @@ async function runTests() {
   })
   console.assert(metrics.totalLeads === initialLeads.length, 'Total leads match')
 
-  console.log('--- TEST 4: Create, Update, Delete Lifecycle ---')
+  console.log('--- TEST 4: Create, Update, Delete Lifecycle with Checklist & Agreement ---')
   const testLead = await createCRMLead({
     name: 'Restaurante Test Unitario',
     address: 'Rúa de Prova, 1',
@@ -84,32 +84,52 @@ async function runTests() {
   console.assert(testLead.id !== undefined, 'Created lead should have ID')
   console.assert(testLead.mrr_projected === 99, 'MRR should match target plan')
 
-  // Update lead to piloto_14_dias
+  // Update lead to piloto_14_dias with agreement and checklist
+  const testAgreement: PilotAgreement = {
+    signed_at: new Date().toISOString(),
+    signee_name: 'Manuel Test',
+    signee_phone: '600112233',
+    agreed_plan: 'full_99',
+    trial_duration_days: 14,
+  }
+
+  const testChecklist: PilotChecklist = {
+    qr_placed: true,
+    menu_uploaded: true,
+    staff_trained: false,
+    review_date_set: true,
+  }
+
   const updated = await updateCRMLead(testLead.id, {
     status: 'piloto_14_dias',
-    notes: 'Iniciado piloto de 14 días'
+    notes: 'Iniciado piloto de 14 días con firma',
+    pilot_agreement: testAgreement,
+    pilot_checklist: testChecklist,
   })
   console.assert(updated !== null, 'Updated lead exists')
   console.assert(updated?.status === 'piloto_14_dias', 'Status updated to piloto_14_dias')
   console.assert(updated?.pilot_start_date !== null, 'Pilot start date set automatically')
   console.assert(updated?.pilot_end_date !== null, 'Pilot end date set automatically')
+  console.assert(updated?.pilot_agreement?.signee_name === 'Manuel Test', 'Agreement saved')
+  console.assert(updated?.pilot_checklist?.qr_placed === true, 'Checklist saved')
+  console.assert(updated?.pilot_checklist?.staff_trained === false, 'Checklist preserves uncompleted tasks')
 
   // Convert to won
   const wonLead = await updateCRMLead(testLead.id, {
     status: 'ganado',
     target_plan: 'suite_139'
   })
-  console.assert(wonLead?.status === 'ganado', 'Status updated to ganado')
+  console.assert(wonLead?.status === 'ganado', 'Status is ganado')
   console.assert(wonLead?.mrr_projected === 139, 'MRR updated to 139 for suite_139')
 
-  // Delete test lead
+  // Cleanup test lead
   const deleted = await deleteCRMLead(testLead.id)
-  console.assert(deleted === true, 'Lead successfully deleted')
+  console.assert(deleted === true, 'Test lead deleted successfully')
 
   console.log('✅ Full CRM test suite passed with 100% success!')
 }
 
-runTests().catch((err) => {
-  console.error('Test failed:', err)
+runTests().catch((e) => {
+  console.error('Test suite failed:', e)
   process.exit(1)
 })
