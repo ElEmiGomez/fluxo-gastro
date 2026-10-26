@@ -21,18 +21,26 @@ import {
   CheckSquare,
   FileCheck2,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Camera,
+  Cpu,
+  Flame,
+  Lightbulb,
+  Plus
 } from 'lucide-react'
 import {
   CRMICP,
   CRMLead,
   CRMPlan,
+  CRMPosSystem,
   CRMStatus,
   PilotAgreement,
   PilotChecklist,
-  PLAN_PRICING
+  PLAN_PRICING,
+  POS_SYSTEM_CONFIG
 } from '@/types/crm.types'
 import { CRMPilotAgreementModal } from './CRMPilotAgreementModal'
+import { CRMMenuScannerModal } from './CRMMenuScannerModal'
 
 interface CRMLeadDetailModalProps {
   lead: CRMLead | null
@@ -95,6 +103,15 @@ const QUICK_PAIN_TAGS = [
   'Dueño no estaba disponible',
 ]
 
+const DEFAULT_REVIEW_COMPLAINT_SUGGESTIONS = [
+  '⏱️ Tardanza en pedir la cuenta en terraza',
+  '📜 Carta física deteriorada o sin precios claros',
+  '👀 Dificultad para llamar al camarero',
+  '❌ Platos agotados no avisados a tiempo',
+  '🇬🇧 Falta de carta en inglés para turistas de Ría',
+  '📱 QR actual abre un PDF lento e incómodo',
+]
+
 export function CRMLeadDetailModal({
   lead,
   isOpen,
@@ -111,6 +128,13 @@ export function CRMLeadDetailModal({
   const [contactWhatsapp, setContactWhatsapp] = useState(lead.contact_whatsapp || lead.contact_phone || '')
   const [notes, setNotes] = useState(lead.notes || '')
   const [lostReason, setLostReason] = useState(lead.lost_reason || '')
+  const [currentPosSystem, setCurrentPosSystem] = useState<CRMPosSystem>(
+    lead.current_pos_system || 'carta_fisica_plastificada'
+  )
+  const [complaintTags, setComplaintTags] = useState<string[]>(
+    lead.google_complaint_tags || (lead.notes?.toLowerCase().includes('demora') ? ['⏱️ Tardanza en pedir la cuenta en terraza'] : [])
+  )
+  const [newComplaintInput, setNewComplaintInput] = useState('')
   const [checklist, setChecklist] = useState<PilotChecklist>(
     lead.pilot_checklist || {
       qr_placed: false,
@@ -121,6 +145,7 @@ export function CRMLeadDetailModal({
   )
   const [agreement, setAgreement] = useState<PilotAgreement | null>(lead.pilot_agreement || null)
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false)
+  const [isScannerOpen, setIsScannerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -140,7 +165,7 @@ export function CRMLeadDetailModal({
 
   const pilotInfo = calculatePilotDays()
 
-  // Control de etapas del periodo de prueba (Hitos del Piloto)
+  // Control de etapas del periodo de prueba (Hitos del Piloto) [Idea 7]
   const getPilotMilestone = (day: number) => {
     if (day <= 2) {
       return {
@@ -180,7 +205,6 @@ export function CRMLeadDetailModal({
 
   const currentMilestone = getPilotMilestone(pilotInfo.day)
 
-  // Enlace a WhatsApp con mensaje del hito actual
   const getMilestoneWhatsAppLink = (message: string) => {
     const rawNumber = (contactWhatsapp || contactPhone || '').replace(/\D/g, '')
     if (!rawNumber) return null
@@ -188,7 +212,6 @@ export function CRMLeadDetailModal({
     return `https://wa.me/${formattedNumber}?text=${encodeURIComponent(message)}`
   }
 
-  // Generar enlace directo a WhatsApp con mensaje personalizado inicial
   const getWhatsAppLink = () => {
     const rawNumber = (contactWhatsapp || contactPhone || '').replace(/\D/g, '')
     if (!rawNumber) return null
@@ -207,7 +230,6 @@ export function CRMLeadDetailModal({
     }
   }
 
-  // Toggle de elementos del checklist
   const handleToggleChecklist = (key: keyof PilotChecklist) => {
     setChecklist((prev) => ({
       ...prev,
@@ -215,11 +237,25 @@ export function CRMLeadDetailModal({
     }))
   }
 
-  // Cálculo del progreso del checklist
+  const handleToggleComplaintTag = (tag: string) => {
+    setComplaintTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    )
+  }
+
+  const handleAddCustomComplaint = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newComplaintInput.trim()) return
+    const tag = `💬 ${newComplaintInput.trim()}`
+    if (!complaintTags.includes(tag)) {
+      setComplaintTags((prev) => [...prev, tag])
+    }
+    setNewComplaintInput('')
+  }
+
   const checklistCount = Object.values(checklist).filter(Boolean).length
   const checklistPercent = Math.round((checklistCount / 4) * 100)
 
-  // Manejo de firma de acuerdo de prueba
   const handleAgreementSigned = async (leadId: string, signedAgreement: PilotAgreement) => {
     setAgreement(signedAgreement)
     setStatus('piloto_14_dias')
@@ -240,12 +276,18 @@ export function CRMLeadDetailModal({
       pilot_end_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
       pilot_agreement: signedAgreement,
       pilot_checklist: checklist,
+      current_pos_system: currentPosSystem,
+      google_complaint_tags: complaintTags,
       contact_name: signedAgreement.signee_name || contactName,
       contact_phone: signedAgreement.signee_phone || contactPhone,
       contact_whatsapp: signedAgreement.signee_phone || contactWhatsapp,
     }
 
     await onUpdate(leadId, updates)
+  }
+
+  const handleAppendScannedMenu = (scannedText: string) => {
+    setNotes((prev) => (prev ? `${prev}\n\n${scannedText}` : scannedText))
   }
 
   const handleSave = async () => {
@@ -263,6 +305,8 @@ export function CRMLeadDetailModal({
         last_visit_date: new Date().toISOString(),
         pilot_checklist: checklist,
         pilot_agreement: agreement,
+        current_pos_system: currentPosSystem,
+        google_complaint_tags: complaintTags,
       }
 
       if (status === 'piloto_14_dias' && !lead.pilot_start_date) {
@@ -336,7 +380,7 @@ export function CRMLeadDetailModal({
               </button>
             </div>
 
-            {/* Barra de Contacto Inmediato */}
+            {/* Barra de Contacto y Acciones Rápidas */}
             <div className="mt-4 flex flex-wrap items-center gap-2">
               {getWhatsAppLink() ? (
                 <a
@@ -346,7 +390,7 @@ export function CRMLeadDetailModal({
                   className="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-2 transition"
                 >
                   <MessageCircle className="w-4 h-4 text-emerald-400" />
-                  <span>WhatsApp Directo</span>
+                  <span>WhatsApp</span>
                 </a>
               ) : null}
 
@@ -356,18 +400,29 @@ export function CRMLeadDetailModal({
                   className="px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold flex items-center gap-2 transition"
                 >
                   <Phone className="w-4 h-4 text-blue-400" />
-                  <span>Llamar: {contactPhone}</span>
+                  <span>Llamar</span>
                 </a>
               ) : null}
 
-              {/* Botón de Firma de Acuerdo de Prueba */}
+              {/* Botón Escanear Carta de Papel [Idea 1] */}
+              <button
+                type="button"
+                onClick={() => setIsScannerOpen(true)}
+                className="px-3 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
+                title="Escanear menú físico con la cámara del móvil"
+              >
+                <Camera className="w-4 h-4 text-cyan-400" />
+                <span>Escanear Carta</span>
+              </button>
+
+              {/* Botón de Firma de Acuerdo de Prueba [Idea 9] */}
               <button
                 type="button"
                 onClick={() => setIsAgreementModalOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
+                className="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
               >
                 <FileCheck2 className="w-4 h-4 text-amber-400" />
-                <span>{agreement ? 'Ver Acuerdo Firmado' : 'Firmar Prueba (14D)'}</span>
+                <span>{agreement ? 'Acuerdo Firmado ✓' : 'Firmar Prueba (14D)'}</span>
               </button>
 
               <div className="ml-auto flex items-center gap-1.5 text-xs font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
@@ -390,7 +445,6 @@ export function CRMLeadDetailModal({
                   <span>{pilotInfo.remaining} días restantes</span>
                 </div>
 
-                {/* Barra de progreso */}
                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-amber-400 h-full rounded-full transition-all duration-500"
@@ -453,7 +507,123 @@ export function CRMLeadDetailModal({
               </div>
             )}
 
-            {/* 2. LISTA DE PUESTA EN MARCHA (CHECKLIST) [Idea 8] */}
+            {/* 2. REGISTRO DEL TPV / SISTEMA ACTUAL DEL LOCAL [Idea 4] */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Cpu className="w-4 h-4 text-indigo-400" />
+                  <span>Sistema o TPV Actual del Restaurante</span>
+                </label>
+                <span className="text-[10px] text-slate-400">Guía de argumentación</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {(Object.keys(POS_SYSTEM_CONFIG) as CRMPosSystem[]).map((posKey) => {
+                  const conf = POS_SYSTEM_CONFIG[posKey]
+                  const isSelected = currentPosSystem === posKey
+                  return (
+                    <button
+                      key={posKey}
+                      type="button"
+                      onClick={() => setCurrentPosSystem(posKey)}
+                      className={`p-2 rounded-xl text-left border text-xs transition flex items-center gap-2 ${
+                        isSelected
+                          ? 'bg-indigo-600/20 border-indigo-500 text-indigo-200 ring-1 ring-indigo-500 font-bold'
+                          : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span className="text-sm">{conf.icon}</span>
+                      <span className="truncate">{conf.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Argumento de Venta Adaptado */}
+              <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-800/40 flex items-start gap-2 text-xs">
+                <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-indigo-300">Argumento de Venta Clave: </span>
+                  <span className="text-slate-300 leading-relaxed">
+                    {POS_SYSTEM_CONFIG[currentPosSystem].pitchHint}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. DETECTOR DE QUEJAS EN GOOGLE REVIEWS & APERTURA [Idea 5] */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Flame className="w-4 h-4 text-rose-400" />
+                  <span>Fricciones y Quejas Frecuentes en Reseñas</span>
+                </label>
+                <span className="text-[10px] text-rose-400 font-mono">Puntos débiles públicos</span>
+              </div>
+
+              {/* Tags de Quejas / Fricciones */}
+              <div className="flex flex-wrap gap-1.5">
+                {DEFAULT_REVIEW_COMPLAINT_SUGGESTIONS.map((tag) => {
+                  const isTagged = complaintTags.includes(tag)
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => handleToggleComplaintTag(tag)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition ${
+                        isTagged
+                          ? 'bg-rose-500/20 border-rose-500 text-rose-300 font-semibold shadow-sm'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  )
+                })}
+
+                {/* Mostrar quejas personalizadas añadidas */}
+                {complaintTags
+                  .filter((t) => !DEFAULT_REVIEW_COMPLAINT_SUGGESTIONS.includes(t))
+                  .map((t) => (
+                    <span
+                      key={t}
+                      onClick={() => handleToggleComplaintTag(t)}
+                      className="px-2.5 py-1 rounded-lg text-[11px] bg-rose-500/25 border border-rose-500/40 text-rose-200 cursor-pointer"
+                    >
+                      {t} ✕
+                    </span>
+                  ))}
+              </div>
+
+              {/* Formulario rápido para añadir queja observada */}
+              <form onSubmit={handleAddCustomComplaint} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newComplaintInput}
+                  onChange={(e) => setNewComplaintInput(e.target.value)}
+                  placeholder="Añadir queja observada: ej. cola en barra, mesas sucias..."
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                />
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-semibold"
+                >
+                  Añadir
+                </button>
+              </form>
+
+              {/* Frase de Entrada Recomendada */}
+              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2 text-xs text-slate-300">
+                <span className="text-emerald-400 font-bold shrink-0">🎯 Apertura:</span>
+                <span className="leading-relaxed">
+                  {complaintTags.length > 0
+                    ? `Menciona cómo Fluxo soluciona directamente "${complaintTags[0].replace(/[^\w\s]/gi, '').trim()}" sin tener que contratar más personal.`
+                    : 'Pregúntale al dueño si en fines de semana se le forman colas en terraza para pedir o pagar la cuenta.'}
+                </span>
+              </div>
+            </div>
+
+            {/* 4. LISTA DE PUESTA EN MARCHA (CHECKLIST) [Idea 8] */}
             <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-white flex items-center gap-1.5">
@@ -465,7 +635,6 @@ export function CRMLeadDetailModal({
                 </span>
               </div>
 
-              {/* Barra de progreso del checklist */}
               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                 <div
                   className="bg-emerald-500 h-full rounded-full transition-all duration-300"
@@ -689,6 +858,14 @@ export function CRMLeadDetailModal({
         isOpen={isAgreementModalOpen}
         onClose={() => setIsAgreementModalOpen(false)}
         onAgreementSigned={handleAgreementSigned}
+      />
+
+      {/* Modal de Escáner de Carta de Papel [Idea 1] */}
+      <CRMMenuScannerModal
+        lead={lead}
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onAppendToNotes={handleAppendScannedMenu}
       />
     </>
   )

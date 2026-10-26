@@ -10,6 +10,50 @@ export type CRMPlan = 'carta_39' | 'sala_69' | 'full_99' | 'suite_139'
 
 export type CRMICP = 'CARLOS' | 'MARTIN' | 'LUCIA'
 
+export type CRMPosSystem =
+  | 'papel_libreta'             // Libreta de papel / comanda manual
+  | 'tpv_tradicional'           // TPV tradicional (Ágora, ICG, Hosteltáctil, BDP)
+  | 'caja_registradora'        // Caja registradora simple
+  | 'qr_pdf_estatico'           // QR que abre un PDF estático
+  | 'carta_fisica_plastificada' // Solo carta física en mesa
+  | 'otro'                      // Otro sistema
+
+export const POS_SYSTEM_CONFIG: Record<
+  CRMPosSystem,
+  { label: string; icon: string; pitchHint: string }
+> = {
+  papel_libreta: {
+    label: 'Libreta de papel',
+    icon: '📝',
+    pitchHint: 'Ahorra hasta 8 paseos por mesa en terraza y elimina comandas ilegibles en cocina.',
+  },
+  tpv_tradicional: {
+    label: 'TPV tradicional (Ágora / ICG)',
+    icon: '🖥️',
+    pitchHint: 'Complementa su TPV con carta digital y aviso al camarero sin cambiar su software contable.',
+  },
+  caja_registradora: {
+    label: 'Caja registradora simple',
+    icon: '📠',
+    pitchHint: 'Digitaliza el local sin comprar hardware costoso ni pagar licencias abusivas.',
+  },
+  qr_pdf_estatico: {
+    label: 'QR con PDF estático',
+    icon: '📄',
+    pitchHint: 'Un PDF tarda en cargar, cuesta leerlo en móvil y no permite alérgenos ni fotos dinámicas.',
+  },
+  carta_fisica_plastificada: {
+    label: 'Carta física plastificada',
+    icon: '📋',
+    pitchHint: 'Elimina los costes de reimprimir cartas cada vez que cambian precios o productos de temporada.',
+  },
+  otro: {
+    label: 'Otro sistema',
+    icon: '⚙️',
+    pitchHint: 'Carta interactiva de carga ultrarrápida y motor de reseñas en Google Maps.',
+  },
+}
+
 export const PLAN_PRICING: Record<CRMPlan, number> = {
   carta_39: 39,
   sala_69: 69,
@@ -57,6 +101,8 @@ export interface CRMLead {
   lost_reason: string | null
   lat?: number | null
   lng?: number | null
+  current_pos_system?: CRMPosSystem | null
+  google_complaint_tags?: string[] | null
   pilot_checklist?: PilotChecklist | null
   pilot_agreement?: PilotAgreement | null
   created_at: string

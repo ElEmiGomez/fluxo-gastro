@@ -51,3 +51,6 @@ CREATE POLICY "Permitir acceso administrativo y de servicio a crm_leads"
 -- Nuevos campos para control de pilotos, checklist y firma digital táctil
 ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS pilot_checklist JSONB DEFAULT '{"qr_placed":false,"menu_uploaded":false,"staff_trained":false,"review_date_set":false}'::jsonb;
 ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS pilot_agreement JSONB;
+
+ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS current_pos_system VARCHAR(50) DEFAULT 'carta_fisica_plastificada';
+ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS google_complaint_tags JSONB DEFAULT '[]'::jsonb;

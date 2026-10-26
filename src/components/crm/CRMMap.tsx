@@ -18,7 +18,7 @@ import {
   Tag,
   Eye
 } from 'lucide-react'
-import { CRMLead, CRMPlan, CRMStatus } from '@/types/crm.types'
+import { CRMLead, CRMPlan, CRMStatus, POS_SYSTEM_CONFIG } from '@/types/crm.types'
 import { PLAN_PRICING } from '@/types/crm.types'
 import { getLeadCoordinates, NOIA_CENTER_COORDINATES } from '@/lib/crm/geo-utils'
 
@@ -496,6 +496,24 @@ export function CRMMap({ leads, onOpenDetail }: CRMMapProps) {
                   ✓ Firmado por {selectedLead.pilot_agreement.signee_name}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Sistema Actual y Fricción en Reseñas [Ideas 4 y 5] */}
+          {selectedLead.current_pos_system && (
+            <div className="mt-2 p-2 rounded-xl bg-indigo-950/40 border border-indigo-800/40 flex items-center justify-between text-[11px]">
+              <span className="text-slate-400">Sistema actual:</span>
+              <span className="font-semibold text-indigo-300 flex items-center gap-1">
+                <span>{POS_SYSTEM_CONFIG[selectedLead.current_pos_system]?.icon}</span>
+                <span>{POS_SYSTEM_CONFIG[selectedLead.current_pos_system]?.label}</span>
+              </span>
+            </div>
+          )}
+
+          {selectedLead.google_complaint_tags && selectedLead.google_complaint_tags.length > 0 && (
+            <div className="mt-1.5 p-2 rounded-xl bg-rose-950/30 border border-rose-800/30 text-[11px] text-rose-300">
+              <span className="font-bold text-rose-400 block text-[10px] mb-0.5">Fricción en Reseñas:</span>
+              <span className="truncate block">{selectedLead.google_complaint_tags[0]}</span>
             </div>
           )}
 

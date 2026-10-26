@@ -27,7 +27,13 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react'
-import { CRMICP, CRMLead, CRMMetrics, CRMPlan, CRMStatus } from '@/types/crm.types'
+import { CRMICP, CRMLead, CRMMetrics, CRMPlan, CRMStatus, POS_SYSTEM_CONFIG } from '@/types/crm.types'
+import {
+  saveLeadsToOfflineCache,
+  getLeadsFromOfflineCache,
+  enqueueOfflineMutation,
+  syncPendingOfflineMutations,
+} from '@/lib/crm/offline-sync'
 import dynamic from 'next/dynamic'
 import { CRMAuthModal } from '@/components/crm/CRMAuthModal'
 import { CRMQuickAddModal } from '@/components/crm/CRMQuickAddModal'
@@ -93,6 +99,8 @@ export default function CRMAdminPage() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isOnline, setIsOnline] = useState<boolean>(true)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
   // 1. Verificar autenticación al montar
   useEffect(() => {
@@ -156,6 +164,20 @@ export default function CRMAdminPage() {
 
   // 4. Actualizar Lead
   const handleUpdateLead = async (id: string, updates: Partial<CRMLead>) => {
+    // Si no hay conexión, aplicar inmediatamente en local y encolar
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      enqueueOfflineMutation({ leadId: id, type: 'update', payload: updates })
+      setLeads((prev) => {
+        const updated = prev.map((l) => (l.id === id ? { ...l, ...updates, updated_at: new Date().toISOString() } : l))
+        saveLeadsToOfflineCache(updated)
+        return updated
+      })
+      if (selectedLead?.id === id) {
+        setSelectedLead((prev) => (prev ? { ...prev, ...updates } : null))
+      }
+      setSyncMessage('✓ Cambio guardado localmente (sin cobertura). Se subirá al recuperar señal.')
+      return
+    }
     const res = await fetch('/api/crm', {
       method: 'PATCH',
       headers: getAuthHeaders(),
@@ -566,6 +588,21 @@ export default function CRMAdminPage() {
                               {lead.notes}
                             </p>
                           )}
+
+                          {/* Badges de TPV y Quejas Frecuentes [Ideas 4 y 5] */}
+                          <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                            {lead.current_pos_system && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-indigo-950/60 text-indigo-300 border border-indigo-800/50 flex items-center gap-1">
+                                <span>{POS_SYSTEM_CONFIG[lead.current_pos_system]?.icon}</span>
+                                <span className="truncate max-w-[120px]">{POS_SYSTEM_CONFIG[lead.current_pos_system]?.label}</span>
+                              </span>
+                            )}
+                            {lead.google_complaint_tags && lead.google_complaint_tags.length > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-rose-500/10 text-rose-300 border border-rose-500/20 truncate max-w-[130px]" title={lead.google_complaint_tags[0]}>
+                                {lead.google_complaint_tags[0]}
+                              </span>
+                            )}
+                          </div>
 
                           {/* Control de Piloto: Hito, Checklist y Firma (Ideas 7, 8, 9) */}
                           {lead.status === 'piloto_14_dias' && (
