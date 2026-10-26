@@ -139,60 +139,6 @@ export async function GET(req: NextRequest) {
       ),
     }))
 
-    // Protección Anti-Zombis Post-Pago en GET /api/orders:
-    // Si una mesa tiene órdenes recién pagadas ('paid') en la sesión actual y NO existe un nuevo pedido
-    // creado posteriormente, ninguna orden previa de esa mesa puede quedar colgada en 'ready'/'preparing'/'pending'/'delivered'.
-    const allServedNotes = `${TAG_DRINK_SERVED} ${TAG_STARTER_READY} ${TAG_STARTER_SERVED} ${TAG_MAIN_FIRED} ${TAG_MAIN_READY} ${TAG_MAIN_SERVED} ${TAG_DESSERT_FIRED} ${TAG_DESSERT_READY} ${TAG_DESSERT_SERVED}`
-    const tablesWithRecentPaid = new Map<number, number>()
-    returnedOrders.forEach(o => {
-      const tNum = Number(o.table_number || o.table?.table_number)
-      if (!isNaN(tNum) && o.status === 'paid') {
-        const paidTs = new Date(o.updated_at || o.created_at || 0).getTime() || Date.now()
-        const prevMax = tablesWithRecentPaid.get(tNum) || 0
-        if (paidTs > prevMax) tablesWithRecentPaid.set(tNum, paidTs)
-      }
-    })
-
-    const tablesToSweep = new Set<number>()
-    returnedOrders = returnedOrders.map(o => {
-      const tNum = Number(o.table_number || o.table?.table_number)
-      const latestPaidTs = tablesWithRecentPaid.get(tNum)
-      if (
-        latestPaidTs &&
-        o.status !== 'paid' &&
-        o.status !== 'cancelled' &&
-        o.status !== 'pending_validation'
-      ) {
-        const ordCreatedTs = new Date(o.created_at || 0).getTime()
-        const hasNewerOrderAfterPaid = returnedOrders.some(other => {
-          const otherT = Number(other.table_number || other.table?.table_number)
-          const otherCreated = new Date(other.created_at || 0).getTime()
-          return otherT === tNum && other.status !== 'paid' && other.status !== 'cancelled' && otherCreated > latestPaidTs
-        })
-        if (!hasNewerOrderAfterPaid && (isNaN(ordCreatedTs) || ordCreatedTs <= latestPaidTs)) {
-          tablesToSweep.add(tNum)
-          return {
-            ...o,
-            status: 'paid' as OrderStatus,
-            notes: `${(o as any).notes || ''} ${allServedNotes}`.trim(),
-            order_items: hydrateOrderItemsWithCatalog(
-              o.order_items || [],
-              catalogProducts,
-              getCachedOrderItems(o.id),
-              `${(o as any).notes || ''} ${allServedNotes}`.trim()
-            ),
-          }
-        }
-      }
-      return o
-    })
-
-    if (tablesToSweep.size > 0) {
-      tablesToSweep.forEach(tNum => {
-        sweepTableOrdersToPaid(restaurantId, slug, tNum).catch(() => {})
-      })
-    }
-
     const overrides = getProductAvailabilityOverrides(slug)
 
     const pausedIdsSet = new Set<string>()
@@ -239,11 +185,9 @@ export async function GET(req: NextRequest) {
     const isKitchenRole = searchParams.get('role') === 'kitchen' || searchParams.get('source') === 'kitchen'
     if (isKitchenRole) {
       returnedOrders = returnedOrders.filter(o => {
-        if (['cancelled', 'paid', 'delivered'].includes(o.status)) return false
+        if (['cancelled', 'paid', 'delivered', 'pending_validation'].includes(o.status)) return false
         if (areAllKitchenCoursesCompleted(o)) return false
         if (isDrinkOnlyOrder(o)) return false
-        const tNum = Number(o.table_number || o.table?.table_number)
-        if (!isNaN(tNum) && tablesWithRecentPaid.has(tNum)) return false
         return true
       })
     }

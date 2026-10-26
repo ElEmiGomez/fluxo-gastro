@@ -1336,12 +1336,13 @@ export async function sweepTableOrdersToPaid(
         .update({ status: 'paid' })
         .eq('restaurant_id', targetRestaurantId)
         .eq('table_number', parsedTableNum)
-        .in('status', ['pending_validation', 'pending', 'confirmed', 'preparing', 'ready', 'delivered'])
+        .in('status', ['confirmed', 'preparing', 'ready', 'delivered'])
 
       if (tableOrdersInDb && tableOrdersInDb.length > 0) {
         const nowIso = new Date().toISOString()
         await Promise.all(
           tableOrdersInDb.map(async (ord: any) => {
+            if (ord.status === 'pending_validation') return;
             const wasOpenInDb = ord.status !== 'paid'
             const items = ord.order_items || []
             for (const it of items) {

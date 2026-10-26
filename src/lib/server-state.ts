@@ -597,7 +597,7 @@ export function sweepServerTableOrdersToPaid(
       o.table_number?.toString() === tableNumStr ||
       o.table?.table_number?.toString() === tableNumStr ||
       o.table_id === `table-${tableNumStr}`
-    if (!isThisTable || o.status === 'cancelled') {
+    if (!isThisTable || o.status === 'cancelled' || o.status === 'pending_validation') {
       return o
     }
 

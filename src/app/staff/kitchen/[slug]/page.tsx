@@ -325,7 +325,6 @@ export default function KitchenKDSPage() {
                     serverMatch.status === 'cancelled' ||
                     serverMatch.status === 'paid' ||
                     serverMatch.status === 'delivered' ||
-                    serverMatch.status === 'pending_validation' ||
                     areAllKitchenCoursesCompleted(serverMatch)
                   if (isServerTerminal) {
                     prevOrdersMapRef.current.delete(prevOrd.id)
@@ -344,7 +343,6 @@ export default function KitchenKDSPage() {
                   prevOrd.status === 'cancelled' ||
                   prevOrd.status === 'paid' ||
                   prevOrd.status === 'delivered' ||
-                  prevOrd.status === 'pending_validation' ||
                   isCompleted
 
                 if (isTerminal) {
