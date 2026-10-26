@@ -712,9 +712,19 @@ export default function LandingPage() {
       {/* ── 7. FOOTER LIMPIO ── */}
       <footer className="border-t border-slate-800/80 py-8 px-4 bg-slate-950 text-xs text-slate-400">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-3">
-            <FluxoLogo size="sm" />
-            <span className="font-bold text-slate-400">&middot; Sistema Gastronómico en Tiempo Real.</span>
+          <div className="flex items-center justify-center sm:justify-start">
+            <Link 
+              href="/admin/crm" 
+              className="inline-flex items-center gap-3 p-2.5 -m-2.5 rounded-2xl transition-all hover:bg-slate-900 active:scale-95 cursor-pointer group touch-manipulation" 
+              title="Acceso CRM Fundador"
+            >
+              <div className="pointer-events-none flex-shrink-0 transition-transform group-hover:scale-110 group-active:scale-90">
+                <FluxoLogo size={36} />
+              </div>
+              <span className="font-bold text-slate-400 group-hover:text-slate-200 transition-colors pointer-events-none select-none text-xs sm:text-sm">
+                &middot; Sistema Gastronómico en Tiempo Real.
+              </span>
+            </Link>
           </div>
 
           <div className="flex items-center justify-center sm:justify-end gap-3 text-slate-400 flex-wrap">
@@ -736,6 +746,28 @@ export default function LandingPage() {
               <ExternalLink className="w-3.5 h-3.5 text-cyan-400 group-hover:translate-x-0.5 transition-transform" />
             </a>
           </div>
+        </div>
+
+        {/* ── ACCESO DISCRETO AL CRM (SOLO FUNDADOR) ── */}
+        <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-slate-900 flex items-center justify-between gap-3 text-[11px] text-slate-600">
+          <p>&copy; {new Date().getFullYear()} Fluxo Gastronomic System.</p>
+
+          <a
+            href="/admin/crm"
+            onClick={(e) => {
+              if (typeof window !== 'undefined') {
+                window.location.assign('/admin/crm')
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-300 active:text-white transition-colors p-2 -m-2 rounded-lg touch-manipulation cursor-pointer group"
+            title="Portal de gestión"
+            aria-label="Portal de gestión"
+          >
+            <span className="font-mono text-[10px] tracking-wider uppercase opacity-70 group-hover:opacity-100">
+              Portal
+            </span>
+            <ArrowRight className="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+          </a>
         </div>
       </footer>
 

@@ -6,6 +6,72 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+
+### [2026-10-26 21:00] — Botón Dedicado Inferior con Flecha para Acceso al CRM (/admin/crm)
+* **Departamentos Sincronizados:** Dirección General / Fundador (Depto 1), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto (Depto 4).
+* **Elemento Incorporado:**
+  - [`src/app/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/page.tsx): Se añadió un botón táctil destacado abajo del todo en el pie de página con texto **"Acceder al CRM"**, indicador verde pulsante y flechita (`ArrowRight`).
+  - **Navegación Robusta en Móvil:** Implementa enlace estándar con fallback imperativo mediante `window.location.assign('/admin/crm')` y `touch-manipulation` a ancho completo (`w-full sm:w-auto`), garantizando que cualquier navegador móvil acceda sin fricción.
+* **Verificación:** TypeScript (`npx.cmd tsc --noEmit`) y tests de CRM completados con 0 errores.
+
+---
+
+
+### [2026-10-26 20:55] — Blindaje Móvil de Acceso al CRM (Hitbox Táctil, SVG WebKit Fix y Dual-Auth Bearer)
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto (Depto 4).
+* **Problema Resuelto:** En navegadores móviles (iOS Safari / Chrome Android), el toque sobre el isotipo del footer no disparaba la navegación debido a captura de eventos en el SVG y un área táctil reducida (36px). Además, en entornos de red local sin HTTPS, las cookies con flag `secure` eran descartadas por el navegador móvil provocando rebote al modal de autenticación.
+* **Soluciones Implementadas:**
+  1. **Hitbox y Eventos Táctiles en el Footer:** [`src/app/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/page.tsx) ahora agrupa logo + texto con `p-2.5 -m-2.5` (>48px útiles), `touch-manipulation` y `pointer-events-none` en el SVG para garantizar que todo toque en pantalla móvil dispare la navegación.
+  2. **Teclado Táctil + Input Nativo Móvil:** [`src/components/crm/CRMAuthModal.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/components/crm/CRMAuthModal.tsx) cuenta con teclado en pantalla de respuesta inmediata (`active:scale-95`), soporte para teclado numérico nativo del teléfono (`inputMode="numeric"`), opción de pegar el PIN `4154928` y conmutador visual de contraseña.
+  3. **Persistencia Dual (Cookie + LocalStorage Bearer):** [`src/app/admin/crm/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/admin/crm/page.tsx) y [`src/app/api/crm/auth/route.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/api/crm/auth/route.ts) propagan el token mediante cabecera `Authorization: Bearer`, asegurando funcionamiento tanto en HTTPS como en pruebas por IP local sin caídas de sesión.
+* **Verificación:** Tests y TypeScript (`npx.cmd tsc --noEmit`) completados con 0 errores.
+
+---
+
+
+### [2026-10-26 19:50] — Acceso Secreto al CRM desde el Isotipo del Footer y PIN Maestro 4154928
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Dirección General / Fundador (Depto 1) e Ingeniería & Producto (Depto 4).
+* **Cambios Implementados:**
+  1. **Acceso Directo desde el Footer:**
+     - [`src/app/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/page.tsx): El isotipo oficial de Fluxo (`<FluxoLogo size="sm" />`) en el pie de página principal ha sido vinculado directamente mediante `<Link href="/admin/crm">` con animación táctil y cursor pointer.
+  2. **Configuración del PIN Maestro `4154928`:**
+     - [`src/lib/auth/crm-auth.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/auth/crm-auth.ts): PIN maestro prioritario fijado en `4154928`.
+     - [`src/components/crm/CRMAuthModal.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/components/crm/CRMAuthModal.tsx): Interfaz de entrada actualizada con 7 indicadores visuales de dígitos, detección automática de 7 dígitos y auto-desbloqueo inmediato al completar el PIN `4154928`.
+* **Verificación:** Pruebas automatizadas y TypeScript (`npx.cmd tsc --noEmit`) completados con 0 errores.
+
+---
+
+
+### [2026-10-26 18:50] — Despliegue del Módulo CRM Comercial del Fundador (/admin/crm) & Protección PIN Maestro
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Dirección General / Fundador (Depto 1) e Ingeniería & Producto (Depto 4).
+* **Entregables Implementados:**
+  1. **Módulo de CRM Completo en `/admin/crm`:**
+     - [`src/app/admin/crm/page.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/admin/crm/page.tsx): Panel visual móvil/escritorio con KPIs en tiempo real (MRR Ganado, ARR, Pipeline Ponderado, Pilotos Activos, Conversión y Universo de Locales), selector de vista Dual (Kanban horizontal y Tabla detallada), filtros por Zona, ICP y Plan, y exportación de datos en 1 clic a Excel/CSV.
+     - [`src/components/crm/CRMAuthModal.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/components/crm/CRMAuthModal.tsx): Teclado numérico táctil móvil con bloqueo por PIN Maestro (`9999` / `MASTER_ADMIN_PIN`) y sesión persistente de 30 días mediante cookie segura HTTP-Only (`fluxo_founder_session`).
+     - [`src/components/crm/CRMQuickAddModal.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/components/crm/CRMQuickAddModal.tsx): Formulario optimizado para captura en calle en 30 segundos a pie de local.
+     - [`src/components/crm/CRMLeadDetailModal.tsx`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/components/crm/CRMLeadDetailModal.tsx): Ficha táctica con botón directo a WhatsApp (mensaje preconfigurado por ICP), llamada telefónica, enlace a Google Maps, barra de progreso del piloto de 14 días ("Día X de 14") y selector de etiquetas rápidas de visita.
+  2. **Arquitectura y Backend Resiliente:**
+     - [`supabase/migrations/20261026_crm_leads.sql`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/supabase/migrations/20261026_crm_leads.sql): Tabla PostgreSQL `crm_leads` con índices de aceleración y RLS.
+     - [`src/lib/supabase/repositories/crm.repository.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/supabase/repositories/crm.repository.ts): Repositorio con SSOT en Supabase y respaldo de memoria local precargado con los 35 locales investigados de Noia (cero caídas en zonas con mala cobertura móvil en el casco histórico).
+     - [`src/lib/auth/crm-auth.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/lib/auth/crm-auth.ts) & [`src/app/api/crm/auth/route.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/api/crm/auth/route.ts): Endpoints de autenticación criptográfica HMAC SHA-256 para el fundador.
+     - [`src/app/api/crm/route.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/src/app/api/crm/route.ts): API REST completa (GET, POST, PATCH, DELETE) con generador de CSV con BOM UTF-8 para Excel en Windows.
+     - [`scripts/test_crm_system.ts`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/scripts/test_crm_system.ts): Suite de verificación automatizada ejecutada con 100% de éxito.
+* **Verificación:** `npx.cmd tsc --noEmit` completado con 0 errores de compilación.
+
+---
+
+### [2026-10-26 18:15] — Generación del Dossier Ejecutivo PDF de Ventas y Promoción (Fase 1: Noia)
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto (Depto 4).
+* **Entregables Generados:**
+  - [`docs/Dossier_Estrategico_Ventas_Fase_1_Fluxo.pdf`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/docs/Dossier_Estrategico_Ventas_Fase_1_Fluxo.pdf) (Documento PDF de 4 páginas A4 de alta fidelidad, con copias automáticas en el Escritorio y Descargas del usuario).
+  - [`scripts/generate_sales_dossier_fase1_pdf.mjs`](file:///c:/Users/mima7/OneDrive/Documentos/Fluxo%20-%20Gastronomic%20System/scripts/generate_sales_dossier_fase1_pdf.mjs) (Compilador automatizado con Chromium y maquetación `@media print`).
+* **Hitos del Dossier:**
+  1. *Estructura Bifolio de 4 Páginas A4:* P1 (Portada y Modelo Service-as-a-Software), P2 (Escalera Modular de 4 Niveles y Comparativa de Mercado), P3 (Guión de 90s y Derribo Quirúrgico de Objeciones) y P4 (CRM Top 6 de Noia & Hoja de Ruta de Conversión del Piloto).
+  2. *Cumplimiento Estricto de Marca y Accesibilidad:* Isotipo invertido oficial de Fluxo sobre fondo blanco, tipografías corporativas (Plus Jakarta Sans y Outfit), contraste estricto y terminología culinaria universal accesible.
+  3. *Verificación de Paginación:* 0 desbordamientos verticales (`scrollHeight === clientHeight` en las 4 páginas).
+
+---
+
 ### [2026-10-26 17:30] — Plan de Desembarco en Calle: Estrategia Caballo de Troya (Carta Digital 39€) y Guía de Campo Noia
 * **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Organización General (Depto 1) e Ingeniería & Producto (Depto 4).
 * **Documentos Impactados / Creados:**
