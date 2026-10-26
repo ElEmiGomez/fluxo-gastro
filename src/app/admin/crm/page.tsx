@@ -25,9 +25,11 @@ import {
   Building2,
   Sparkles,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  QrCode,
+  Calendar
 } from 'lucide-react'
-import { CRMICP, CRMLead, CRMMetrics, CRMPlan, CRMStatus, POS_SYSTEM_CONFIG } from '@/types/crm.types'
+import { CRMICP, CRMLead, CRMMetrics, CRMPlan, CRMStatus, POS_SYSTEM_CONFIG, NOIA_COMMERCIAL_EVENTS } from '@/types/crm.types'
 import {
   saveLeadsToOfflineCache,
   getLeadsFromOfflineCache,
@@ -38,6 +40,7 @@ import dynamic from 'next/dynamic'
 import { CRMAuthModal } from '@/components/crm/CRMAuthModal'
 import { CRMQuickAddModal } from '@/components/crm/CRMQuickAddModal'
 import { CRMLeadDetailModal } from '@/components/crm/CRMLeadDetailModal'
+import { CRMContactCardModal } from '@/components/crm/CRMContactCardModal'
 
 const STATUS_COLUMNS: { id: CRMStatus; title: string; color: string; badgeBg: string }[] = [
   { id: 'lead_por_visitar', title: 'Por Visitar', color: 'border-slate-700', badgeBg: 'bg-slate-800 text-slate-300' },
@@ -99,6 +102,8 @@ export default function CRMAdminPage() {
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isContactCardOpen, setIsContactCardOpen] = useState(false)
+  const [showAllEvents, setShowAllEvents] = useState(false)
   const [isOnline, setIsOnline] = useState<boolean>(true)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
@@ -315,6 +320,15 @@ export default function CRMAdminPage() {
             </button>
 
             <button
+              onClick={() => setIsContactCardOpen(true)}
+              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition shadow-sm active:scale-95"
+              title="Mi Tarjeta de Contacto Digital (vCard QR para móvil)"
+            >
+              <QrCode className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">Mi Contacto QR</span>
+            </button>
+
+            <button
               onClick={handleExportCSV}
               className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
             >
@@ -416,6 +430,78 @@ export default function CRMAdminPage() {
               100% auditados y geolocalizados
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* 2.5. Calendario de Eventos y Campañas de Noia [Idea 7] */}
+      <section className="px-4 pb-4 sm:px-6 max-w-7xl mx-auto w-full">
+        <div className="p-4 rounded-3xl bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 border border-blue-500/30 shadow-lg relative overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  Campaña Municipal Activa
+                </span>
+                <span className="text-xs font-semibold text-blue-300">
+                  {NOIA_COMMERCIAL_EVENTS[0].period}
+                </span>
+              </div>
+
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <span>🦪 {NOIA_COMMERCIAL_EVENTS[0].name}</span>
+              </h3>
+
+              <p className="text-xs text-slate-300 max-w-2xl">
+                {NOIA_COMMERCIAL_EVENTS[0].description}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShowAllEvents(!showAllEvents)}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+              >
+                <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                <span>{showAllEvents ? 'Ocultar Calendario' : 'Ver 4 Campañas de Noia'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Consejo Táctico para la Prospección en Calle */}
+          <div className="mt-3 p-3 rounded-2xl bg-slate-900/90 border border-blue-500/20 flex items-start gap-2.5 text-xs">
+            <span className="text-amber-400 font-bold shrink-0 mt-0.5">💡 Consejo Comercial Hoy:</span>
+            <span className="text-slate-200 leading-relaxed">
+              {NOIA_COMMERCIAL_EVENTS[0].commercialAdvice}
+            </span>
+          </div>
+
+          {/* Acordeón con las 4 campañas municipales si se expande */}
+          {showAllEvents && (
+            <div className="mt-3 pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 animate-in fade-in">
+              {NOIA_COMMERCIAL_EVENTS.map((ev, i) => (
+                <div
+                  key={ev.id}
+                  className={`p-3 rounded-2xl border text-xs space-y-1.5 ${
+                    i === 0
+                      ? 'bg-blue-900/30 border-blue-500/40 text-blue-200'
+                      : 'bg-slate-900/60 border-slate-800 text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white truncate">{ev.name}</span>
+                    {i === 0 && (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 shrink-0">
+                        ACTIVA
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-blue-400 font-mono">{ev.period}</div>
+                  <p className="text-[11px] text-slate-400 leading-snug">{ev.commercialAdvice}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -778,6 +864,11 @@ export default function CRMAdminPage() {
         }}
         onUpdate={handleUpdateLead}
         onDelete={handleDeleteLead}
+      />
+
+      <CRMContactCardModal
+        isOpen={isContactCardOpen}
+        onClose={() => setIsContactCardOpen(false)}
       />
     </div>
   )

@@ -169,6 +169,12 @@ export async function createCRMLead(
           next_contact_date: newLead.next_contact_date,
           notes: newLead.notes,
           lost_reason: newLead.lost_reason,
+          current_pos_system: newLead.current_pos_system,
+          beverage_distributor: newLead.beverage_distributor,
+          decision_makers: newLead.decision_makers,
+          google_complaint_tags: newLead.google_complaint_tags,
+          pilot_checklist: newLead.pilot_checklist,
+          pilot_agreement: newLead.pilot_agreement,
           created_at: newLead.created_at,
           updated_at: newLead.updated_at,
         })

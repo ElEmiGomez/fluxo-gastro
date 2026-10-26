@@ -54,6 +54,101 @@ export const POS_SYSTEM_CONFIG: Record<
   },
 }
 
+export interface DecisionMaker {
+  role: string        // ej: 'Dueño / Gerente', 'Jefe de Cocina', 'Socio / Hermano', 'Gestor'
+  name: string
+  schedule?: string   // ej: 'Mañanas de 11:00 a 13:00', 'Tardes a partir de las 17:30'
+  is_primary: boolean
+}
+
+export type BeverageDistributor =
+  | 'estrella_galicia'
+  | 'mahou'
+  | 'heineken'
+  | 'coca_cola'
+  | 'sin_patrocinio'
+  | 'otro'
+
+export const DISTRIBUTOR_CONFIG: Record<
+  BeverageDistributor,
+  { label: string; icon: string; counterPitch: string }
+> = {
+  estrella_galicia: {
+    label: 'Hijos de Rivera (Estrella Galicia)',
+    icon: '🍺',
+    counterPitch: 'La cervecera imprime cartas estáticas 1 vez al año con su logo. Con Fluxo actualizas precios cuando quieras y mantienes tu identidad propia.',
+  },
+  mahou: {
+    label: 'Mahou San Miguel',
+    icon: '🍻',
+    counterPitch: 'Una carta patrocinada no permite fotos atractivas de marisco ni alérgenos dinámicos. Fluxo es tuyo y proyecta calidad gastronómica.',
+  },
+  heineken: {
+    label: 'Heineken / Cruzcampo',
+    icon: '🍾',
+    counterPitch: 'Evita depender de los plazos de la distribuidora para modificar tus platos de temporada o sugerencias del día.',
+  },
+  coca_cola: {
+    label: 'Coca-Cola / Refrescos',
+    icon: '🥤',
+    counterPitch: 'Las cartas patrocinadas limitan el espacio para tus raciones estrella. Con Fluxo el protagonismo es 100% de tu cocina.',
+  },
+  sin_patrocinio: {
+    label: 'Sin patrocinio (Independiente)',
+    icon: '⭐',
+    counterPitch: 'Perfil óptimo: Valoran su autonomía e imagen propia, encajan directamente con la propuesta de valor de Fluxo.',
+  },
+  otro: {
+    label: 'Otra distribuidora o bodega',
+    icon: '🍷',
+    counterPitch: 'Control total de tus márgenes y precios sin ataduras comerciales ni publicidad impuesta.',
+  },
+}
+
+export interface NoiaEvent {
+  id: string
+  name: string
+  period: string
+  approxMonth: number
+  description: string
+  commercialAdvice: string
+}
+
+export const NOIA_COMMERCIAL_EVENTS: NoiaEvent[] = [
+  {
+    id: 'festa_berberecho',
+    name: 'Campaña Gastronómica del Berberecho y Marisco',
+    period: 'Octubre - Noviembre (Campaña Activa)',
+    approxMonth: 10,
+    description: 'Apertura de la campaña de marisqueo en la Ría de Noia. Máxima afluencia en taperías.',
+    commercialAdvice: 'Momento de oro: Los locales cambian precios de marisco según lonja. La carta digital les permite actualizar el precio del día en 5 segundos.',
+  },
+  {
+    id: 'san_marcos',
+    name: 'Festas de San Marcos',
+    period: 'Finales de Abril',
+    approxMonth: 4,
+    description: 'Feria tradicional y masiva afluencia en terrazas de Noia.',
+    commercialAdvice: 'Activar pruebas 2 semanas antes para evitar colapsos de comanda en terraza.',
+  },
+  {
+    id: 'feira_medieval',
+    name: 'Feira Medieval de Noia',
+    period: 'Mediados de Julio',
+    approxMonth: 7,
+    description: 'El evento de mayor saturación hostelera del año en el casco histórico.',
+    commercialAdvice: 'Cierre prioritario en Rúa do Cantón y Alameda para agilizar comandas y rotación.',
+  },
+  {
+    id: 'verano_turismo',
+    name: 'Campaña Estival / Ría de Muros-Noia',
+    period: 'Julio - Agosto',
+    approxMonth: 8,
+    description: 'Pico de turismo náutico, veraneantes y visitantes de la ría.',
+    commercialAdvice: 'Carta multilingüe obligatoria para captar turismo nacional y extranjero sin barreras.',
+  },
+]
+
 export const PLAN_PRICING: Record<CRMPlan, number> = {
   carta_39: 39,
   sala_69: 69,
@@ -102,6 +197,8 @@ export interface CRMLead {
   lat?: number | null
   lng?: number | null
   current_pos_system?: CRMPosSystem | null
+  beverage_distributor?: BeverageDistributor | null
+  decision_makers?: DecisionMaker[] | null
   google_complaint_tags?: string[] | null
   pilot_checklist?: PilotChecklist | null
   pilot_agreement?: PilotAgreement | null

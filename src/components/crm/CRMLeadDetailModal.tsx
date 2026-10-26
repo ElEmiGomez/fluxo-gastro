@@ -26,7 +26,11 @@ import {
   Cpu,
   Flame,
   Lightbulb,
-  Plus
+  Plus,
+  Users,
+  Sliders,
+  QrCode,
+  FileText
 } from 'lucide-react'
 import {
   CRMICP,
@@ -37,9 +41,15 @@ import {
   PilotAgreement,
   PilotChecklist,
   PLAN_PRICING,
-  POS_SYSTEM_CONFIG
+  POS_SYSTEM_CONFIG,
+  DecisionMaker,
+  BeverageDistributor,
+  DISTRIBUTOR_CONFIG
 } from '@/types/crm.types'
 import { CRMPilotAgreementModal } from './CRMPilotAgreementModal'
+import { CRMBeforeAfterModal } from './CRMBeforeAfterModal'
+import { CRMDossierModal } from './CRMDossierModal'
+import { CRMContactCardModal } from './CRMContactCardModal'
 import { CRMMenuScannerModal } from './CRMMenuScannerModal'
 
 interface CRMLeadDetailModalProps {
@@ -148,6 +158,53 @@ export function CRMLeadDetailModal({
   const [isScannerOpen, setIsScannerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [decisionMakers, setDecisionMakers] = useState<DecisionMaker[]>(
+    lead.decision_makers && lead.decision_makers.length > 0
+      ? lead.decision_makers
+      : lead.contact_name
+      ? [{ role: 'Dueño / Gerente', name: lead.contact_name, schedule: 'Horario habitual', is_primary: true }]
+      : []
+  )
+  const [newMakerName, setNewMakerName] = useState('')
+  const [newMakerRole, setNewMakerRole] = useState('Dueño / Gerente')
+  const [newMakerSchedule, setNewMakerSchedule] = useState('Mañanas de 11:30 a 13:00')
+  const [beverageDistributor, setBeverageDistributor] = useState<BeverageDistributor>(
+    lead.beverage_distributor || 'estrella_galicia'
+  )
+  const [isBeforeAfterOpen, setIsBeforeAfterOpen] = useState(false)
+  const [isDossierOpen, setIsDossierOpen] = useState(false)
+  const [isContactCardOpen, setIsContactCardOpen] = useState(false)
+  const [showStaffPitch, setShowStaffPitch] = useState(false)
+
+  const handleAddDecisionMaker = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newMakerName.trim()) return
+    const newMaker: DecisionMaker = {
+      name: newMakerName.trim(),
+      role: newMakerRole.trim() || 'Responsable',
+      schedule: newMakerSchedule.trim() || undefined,
+      is_primary: decisionMakers.length === 0,
+    }
+    setDecisionMakers((prev) => [...prev, newMaker])
+    setNewMakerName('')
+  }
+
+  const handleRemoveDecisionMaker = (index: number) => {
+    setDecisionMakers((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleSetPrimaryMaker = (index: number) => {
+    setDecisionMakers((prev) =>
+      prev.map((m, i) => ({
+        ...m,
+        is_primary: i === index,
+      }))
+    )
+    const primary = decisionMakers[index]
+    if (primary) {
+      setContactName(primary.name)
+    }
+  }
 
   // Cálculo de días de piloto
   const calculatePilotDays = () => {
@@ -277,6 +334,8 @@ export function CRMLeadDetailModal({
       pilot_agreement: signedAgreement,
       pilot_checklist: checklist,
       current_pos_system: currentPosSystem,
+      decision_makers: decisionMakers,
+      beverage_distributor: beverageDistributor,
       google_complaint_tags: complaintTags,
       contact_name: signedAgreement.signee_name || contactName,
       contact_phone: signedAgreement.signee_phone || contactPhone,
@@ -307,6 +366,8 @@ export function CRMLeadDetailModal({
         pilot_agreement: agreement,
         current_pos_system: currentPosSystem,
         google_complaint_tags: complaintTags,
+        decision_makers: decisionMakers,
+        beverage_distributor: beverageDistributor,
       }
 
       if (status === 'piloto_14_dias' && !lead.pilot_start_date) {
@@ -405,6 +466,36 @@ export function CRMLeadDetailModal({
               ) : null}
 
               {/* Botón Escanear Carta de Papel [Idea 1] */}
+              <button
+                type="button"
+                onClick={() => setIsBeforeAfterOpen(true)}
+                className="px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
+                title="Comparador visual interactiva Antes vs Después"
+              >
+                <Sliders className="w-4 h-4 text-purple-400" />
+                <span>Antes vs Después</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsDossierOpen(true)}
+                className="px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
+                title="Dossier en 1 página A4 para gestoría / asesor fiscal"
+              >
+                <FileText className="w-4 h-4 text-blue-400" />
+                <span>Dossier Gestor</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsContactCardOpen(true)}
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
+                title="Mostrar mi QR de contacto directo"
+              >
+                <QrCode className="w-4 h-4 text-slate-400" />
+                <span>Mi QR</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsScannerOpen(true)}
@@ -551,6 +642,46 @@ export function CRMLeadDetailModal({
               </div>
             </div>
 
+            {/* DISTRIBUIDORA DE BEBIDA O PATROCINIO [Idea 9] */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <span className="text-sm">🍺</span>
+                  <span>Distribuidora de Bebida o Patrocinio Actual</span>
+                </label>
+                <span className="text-[10px] text-amber-400 font-mono">Contra-argumento</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {(Object.keys(DISTRIBUTOR_CONFIG) as BeverageDistributor[]).map((distKey) => {
+                  const conf = DISTRIBUTOR_CONFIG[distKey]
+                  const isSelected = beverageDistributor === distKey
+                  return (
+                    <button
+                      key={distKey}
+                      type="button"
+                      onClick={() => setBeverageDistributor(distKey)}
+                      className={`p-2 rounded-xl text-left border text-xs transition flex items-center gap-2 ${
+                        isSelected
+                          ? 'bg-amber-600/20 border-amber-500 text-amber-200 ring-1 ring-amber-500 font-bold'
+                          : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800'
+                      }`}
+                    >
+                      <span className="text-sm">{conf.icon}</span>
+                      <span className="truncate">{conf.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-800/40 flex items-start gap-2 text-xs">
+                <span className="text-amber-400 font-bold shrink-0 mt-0.5">💡 Objeción resuelta:</span>
+                <span className="text-slate-300 leading-relaxed">
+                  {DISTRIBUTOR_CONFIG[beverageDistributor].counterPitch}
+                </span>
+              </div>
+            </div>
+
             {/* 3. DETECTOR DE QUEJAS EN GOOGLE REVIEWS & APERTURA [Idea 5] */}
             <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
@@ -621,6 +752,67 @@ export function CRMLeadDetailModal({
                     : 'Pregúntale al dueño si en fines de semana se le forman colas en terraza para pedir o pagar la cuenta.'}
                 </span>
               </div>
+            </div>
+
+            {/* ARGUMENTARIO DE ALIVIO PARA EL PERSONAL DE SALA [Idea 10] */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
+              <div
+                onClick={() => setShowStaffPitch(!showStaffPitch)}
+                className="flex items-center justify-between cursor-pointer select-none"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                    👥
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span>Argumentario de Alivio para el Personal de Sala</span>
+                      <span className="text-[10px] text-emerald-400 font-normal hidden sm:inline">(Gánate al camarero)</span>
+                    </h4>
+                    <p className="text-[10px] text-slate-400">Puntos de dolor que sufre el equipo antes de hablar con el dueño</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800"
+                >
+                  {showStaffPitch ? 'Ocultar ▲' : 'Ver Guía ▼'}
+                </button>
+              </div>
+
+              {showStaffPitch && (
+                <div className="space-y-2 pt-2 text-xs animate-in fade-in">
+                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2.5">
+                    <span className="text-base shrink-0">🏃</span>
+                    <div>
+                      <span className="font-bold text-emerald-300">1. Cero paseos innecesarios a la terraza: </span>
+                      <span className="text-slate-300 leading-relaxed">
+                        &quot;Con la carta en QR te ahorras tener que ir a llevar la carta de papel, esperar a que la miren y volver a retirarla. Llegas a la mesa directamente a tomar la comanda.&quot;
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2.5">
+                    <span className="text-base shrink-0">🛡️</span>
+                    <div>
+                      <span className="font-bold text-blue-300">2. Cero dudas con alérgenos e ingredientes: </span>
+                      <span className="text-slate-300 leading-relaxed">
+                        &quot;El cliente intolerante o alérgico mira en su propio móvil los 14 alérgenos oficiales. No tienes que ir a preguntar a cocina a gritos en pleno servicio si la salsa lleva gluten.&quot;
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2.5">
+                    <span className="text-base shrink-0">💶</span>
+                    <div>
+                      <span className="font-bold text-amber-300">3. Cobro rápido y más propinas: </span>
+                      <span className="text-slate-300 leading-relaxed">
+                        &quot;Cuando piden la cuenta por el móvil ya sabes la mesa exacta y llevas el datáfono listo. Menos clientes enfadados esperando la cuenta y mejor propina para vosotros.&quot;
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 4. LISTA DE PUESTA EN MARCHA (CHECKLIST) [Idea 8] */}
@@ -749,6 +941,120 @@ export function CRMLeadDetailModal({
               </div>
             </div>
 
+            {/* MAPA DE DECISORES Y ESTRUCTURA FAMILIAR [Idea 1] */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-blue-400" />
+                  <span>Estructura de Decisión y Horarios en el Local</span>
+                </label>
+                <span className="text-[10px] text-blue-400 font-mono">
+                  {decisionMakers.length} {decisionMakers.length === 1 ? 'persona' : 'personas'}
+                </span>
+              </div>
+
+              {/* Lista de Decisores Registrados */}
+              {decisionMakers.length > 0 ? (
+                <div className="space-y-2">
+                  {decisionMakers.map((dm, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition ${
+                        dm.is_primary
+                          ? 'bg-blue-950/40 border-blue-500/40 text-blue-200'
+                          : 'bg-slate-900/80 border-slate-800 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleSetPrimaryMaker(idx)}
+                          title={dm.is_primary ? 'Decisor principal' : 'Marcar como decisor principal'}
+                          className={`p-1 rounded-lg text-xs transition ${
+                            dm.is_primary
+                              ? 'bg-amber-500/20 text-amber-400 font-bold'
+                              : 'text-slate-500 hover:text-amber-400'
+                          }`}
+                        >
+                          ★
+                        </button>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-white truncate">{dm.name}</span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                              {dm.role}
+                            </span>
+                            {dm.is_primary && (
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300">
+                                Principal
+                              </span>
+                            )}
+                          </div>
+                          {dm.schedule && (
+                            <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                              <Clock className="w-3 h-3 text-slate-500 shrink-0" />
+                              <span className="truncate">{dm.schedule}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDecisionMaker(idx)}
+                        className="p-1 text-slate-500 hover:text-rose-400 transition shrink-0"
+                        title="Eliminar"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">
+                  No hay decisores ni horarios registrados aún. Añade quién decide y cuándo encontrarle en el local.
+                </p>
+              )}
+
+              {/* Formulario rápido para añadir decisor */}
+              <form onSubmit={handleAddDecisionMaker} className="pt-2 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  value={newMakerName}
+                  onChange={(e) => setNewMakerName(e.target.value)}
+                  placeholder="Nombre (ej. Carmen, Antonio)"
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                />
+                <select
+                  value={newMakerRole}
+                  onChange={(e) => setNewMakerRole(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="Dueño / Gerente">Dueño / Gerente</option>
+                  <option value="Jefe de Cocina">Jefe de Cocina</option>
+                  <option value="Encargado de Sala">Encargado de Sala</option>
+                  <option value="Socio / Hermano">Socio / Hermano</option>
+                  <option value="Gestor / Asesor">Gestor / Asesor</option>
+                  <option value="Camarero de Barra">Camarero de Barra</option>
+                </select>
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={newMakerSchedule}
+                    onChange={(e) => setNewMakerSchedule(e.target.value)}
+                    placeholder="Horario (ej. Mañanas 11:30-13h)"
+                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs text-white font-bold shrink-0"
+                  >
+                    + Añadir
+                  </button>
+                </div>
+              </form>
+            </div>
+
             {/* Datos de Contacto */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -866,6 +1172,26 @@ export function CRMLeadDetailModal({
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onAppendToNotes={handleAppendScannedMenu}
+      />
+
+      {/* Modal Comparador Antes vs Después [Idea 2] */}
+      <CRMBeforeAfterModal
+        restaurantName={lead.name}
+        isOpen={isBeforeAfterOpen}
+        onClose={() => setIsBeforeAfterOpen(false)}
+      />
+
+      {/* Modal Dossier Asesor A4 [Idea 5] */}
+      <CRMDossierModal
+        lead={lead}
+        isOpen={isDossierOpen}
+        onClose={() => setIsDossierOpen(false)}
+      />
+
+      {/* Modal Tarjeta de Contacto Digital QR [Idea 3] */}
+      <CRMContactCardModal
+        isOpen={isContactCardOpen}
+        onClose={() => setIsContactCardOpen(false)}
       />
     </>
   )

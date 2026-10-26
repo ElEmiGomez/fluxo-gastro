@@ -6,7 +6,15 @@ import {
   deleteCRMLead,
   calculateCRMMetrics,
 } from '../src/lib/supabase/repositories/crm.repository'
-import { PLAN_PRICING, PilotAgreement, PilotChecklist } from '../src/types/crm.types'
+import {
+  PLAN_PRICING,
+  PilotAgreement,
+  PilotChecklist,
+  DecisionMaker,
+  BeverageDistributor,
+  DISTRIBUTOR_CONFIG,
+  NOIA_COMMERCIAL_EVENTS,
+} from '../src/types/crm.types'
 
 async function runTests() {
   console.log('--- TEST 1: Auth & Founder PIN Protection ---')
@@ -57,7 +65,19 @@ async function runTests() {
   })
   console.assert(metrics.totalLeads === initialLeads.length, 'Total leads match')
 
-  console.log('--- TEST 4: Create, Update, Delete Lifecycle with Checklist & Agreement ---')
+  console.log('--- TEST 4: Noia Seasonal Events & Distributor Pitch Maps ---')
+  console.assert(NOIA_COMMERCIAL_EVENTS.length === 4, 'Should have 4 seasonal Noia campaigns')
+  console.assert(NOIA_COMMERCIAL_EVENTS[0].id === 'festa_berberecho', 'First event should be Berberecho campaign')
+  console.assert(typeof DISTRIBUTOR_CONFIG.estrella_galicia.counterPitch === 'string', 'Estrella Galicia counterpitch loaded')
+  console.assert(typeof DISTRIBUTOR_CONFIG.sin_patrocinio.counterPitch === 'string', 'Sin patrocinio counterpitch loaded')
+  console.log('✅ Seasonal events and distributor configs verified!')
+
+  console.log('--- TEST 5: Create, Update, Delete Lifecycle with Checklist, Decision Makers & Distributor ---')
+  const testDecisionMakers: DecisionMaker[] = [
+    { name: 'Xurxo Martínez', role: 'Dueño / Gerente', schedule: 'Mañanas de 11:30 a 13:00', is_primary: true },
+    { name: 'Brais Martínez', role: 'Jefe de Cocina', schedule: 'Tardes a partir de las 18:00', is_primary: false },
+  ]
+
   const testLead = await createCRMLead({
     name: 'Restaurante Test Unitario',
     address: 'Rúa de Prova, 1',
@@ -79,10 +99,14 @@ async function runTests() {
     next_contact_date: null,
     notes: 'Nota de test',
     lost_reason: null,
+    beverage_distributor: 'estrella_galicia',
+    decision_makers: testDecisionMakers,
   })
 
   console.assert(testLead.id !== undefined, 'Created lead should have ID')
   console.assert(testLead.mrr_projected === 99, 'MRR should match target plan')
+  console.assert(testLead.beverage_distributor === 'estrella_galicia', 'Distributor saved on create')
+  console.assert(testLead.decision_makers?.length === 2, 'Decision makers saved on create')
 
   // Update lead to piloto_14_dias with agreement and checklist
   const testAgreement: PilotAgreement = {
@@ -105,6 +129,7 @@ async function runTests() {
     notes: 'Iniciado piloto de 14 días con firma',
     pilot_agreement: testAgreement,
     pilot_checklist: testChecklist,
+    beverage_distributor: 'sin_patrocinio',
   })
   console.assert(updated !== null, 'Updated lead exists')
   console.assert(updated?.status === 'piloto_14_dias', 'Status updated to piloto_14_dias')
@@ -113,6 +138,7 @@ async function runTests() {
   console.assert(updated?.pilot_agreement?.signee_name === 'Manuel Test', 'Agreement saved')
   console.assert(updated?.pilot_checklist?.qr_placed === true, 'Checklist saved')
   console.assert(updated?.pilot_checklist?.staff_trained === false, 'Checklist preserves uncompleted tasks')
+  console.assert(updated?.beverage_distributor === 'sin_patrocinio', 'Distributor updated')
 
   // Convert to won
   const wonLead = await updateCRMLead(testLead.id, {

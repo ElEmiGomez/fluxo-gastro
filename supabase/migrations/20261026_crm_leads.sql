@@ -54,3 +54,6 @@ ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS pilot_agreement JSONB;
 
 ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS current_pos_system VARCHAR(50) DEFAULT 'carta_fisica_plastificada';
 ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS google_complaint_tags JSONB DEFAULT '[]'::jsonb;
+
+ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS decision_makers JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS beverage_distributor VARCHAR(50) DEFAULT 'sin_patrocinio';
