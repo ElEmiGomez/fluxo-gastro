@@ -157,8 +157,6 @@ export default function KitchenKDSPage() {
             let effectiveOrdStatus = o.status
             if (isMutActive && mut?.status) {
               effectiveOrdStatus = mut.status
-            } else if (o.status === 'pending_validation' && cached?.status && cached.status !== 'pending_validation') {
-              effectiveOrdStatus = cached.status
             }
 
             const mergedOrderNotes = mergeItemNotes((o as any).notes, (cached as any)?.notes)
@@ -298,7 +296,12 @@ export default function KitchenKDSPage() {
               } as Order
 
               const hasItems = Boolean(candidate.order_items && candidate.order_items.length > 0)
-              const isCompletedCandidate = (hasItems && areAllKitchenCoursesCompleted(candidate)) || candidate.status === 'delivered' || candidate.status === 'paid' || candidate.status === 'cancelled'
+              const isCompletedCandidate =
+                (hasItems && areAllKitchenCoursesCompleted(candidate)) ||
+                candidate.status === 'delivered' ||
+                candidate.status === 'paid' ||
+                candidate.status === 'cancelled' ||
+                candidate.status === 'pending_validation'
               if (!isCompletedCandidate) {
                 map.set(candidate.id, candidate)
               }
@@ -315,13 +318,14 @@ export default function KitchenKDSPage() {
                   return
                 }
 
-                // 1. Verificar si el servidor ya conoce esta orden y la marcó finalizada/entregada
+                // 1. Verificar si el servidor ya conoce esta orden y la marcó finalizada/entregada o pendiente de validación
                 const serverMatch = rawOrders.find(r => r.id === prevOrd.id)
                 if (serverMatch) {
                   const isServerTerminal =
                     serverMatch.status === 'cancelled' ||
                     serverMatch.status === 'paid' ||
                     serverMatch.status === 'delivered' ||
+                    serverMatch.status === 'pending_validation' ||
                     areAllKitchenCoursesCompleted(serverMatch)
                   if (isServerTerminal) {
                     prevOrdersMapRef.current.delete(prevOrd.id)
@@ -336,7 +340,12 @@ export default function KitchenKDSPage() {
                 const isMutActive = Boolean((mut && Date.now() < mut.until) || Date.now() < lockUntil)
                 const hasItems = Boolean(prevOrd.order_items && prevOrd.order_items.length > 0)
                 const isCompleted = hasItems && areAllKitchenCoursesCompleted(prevOrd)
-                const isTerminal = prevOrd.status === 'cancelled' || prevOrd.status === 'paid' || prevOrd.status === 'delivered' || isCompleted
+                const isTerminal =
+                  prevOrd.status === 'cancelled' ||
+                  prevOrd.status === 'paid' ||
+                  prevOrd.status === 'delivered' ||
+                  prevOrd.status === 'pending_validation' ||
+                  isCompleted
 
                 if (isTerminal) {
                   prevOrdersMapRef.current.delete(prevOrd.id)
@@ -710,6 +719,7 @@ export default function KitchenKDSPage() {
       orders.filter(
         o =>
           !areAllKitchenCoursesCompleted(o) &&
+          o.status !== 'pending_validation' &&
           (o.status === 'pending' ||
             o.status === 'confirmed' ||
             o.status === 'preparing' ||

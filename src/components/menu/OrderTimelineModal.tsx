@@ -335,12 +335,16 @@ export function OrderTimelineModal({
                       ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
                       : areAnyStartersReady
                       ? 'bg-emerald-500 text-white border-emerald-600 animate-pulse'
+                      : isValidating
+                      ? 'bg-slate-100 text-slate-700 border-slate-300'
                       : 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
                   }`}>
                     {areAllStartersServed
                       ? '✓ Entregado en mesa'
                       : areAnyStartersReady
                       ? 'Listo para servir'
+                      : isValidating
+                      ? 'Esperando validación'
                       : 'En preparación en cocina'}
                   </span>
                 </div>
@@ -349,10 +353,13 @@ export function OrderTimelineModal({
                   {starterEntries.map((entry, idx) => {
                     const served = isStarterServed(entry.item, entry.order) || areOrderStartersServed(entry.order)
                     const ready = !served && (isStarterReady(entry.item, entry.order) || areOrderStartersReady(entry.order))
+                    const ordValidating = entry.order.status === 'pending_validation' || isValidating
                     const itemStateLabel = served
                       ? '✓ Entregado en mesa'
                       : ready
                       ? 'Listo para servir'
+                      : ordValidating
+                      ? 'Esperando validación'
                       : 'En preparación en cocina'
                     const cleanNote = cleanItemNotes(entry.item.notes)
 
@@ -370,6 +377,8 @@ export function OrderTimelineModal({
                             ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                             : ready
                             ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 font-black'
+                            : ordValidating
+                            ? 'bg-slate-100 text-slate-600'
                             : 'bg-amber-50 text-amber-900 border border-amber-200'
                         }`}>
                           {itemStateLabel}
@@ -404,6 +413,8 @@ export function OrderTimelineModal({
                       ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
                       : areAnyMainsReady
                       ? 'bg-emerald-500 text-white border-emerald-600 animate-pulse'
+                      : isValidating
+                      ? 'bg-slate-100 text-slate-700 border-slate-300'
                       : areAnyMainsCookingOrFired
                       ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
                       : 'bg-slate-100 text-slate-600 border-slate-300'
@@ -412,6 +423,8 @@ export function OrderTimelineModal({
                       ? '✓ Entregado en mesa'
                       : areAnyMainsReady
                       ? 'Listo para servir'
+                      : isValidating
+                      ? 'Esperando validación'
                       : areAnyMainsCookingOrFired
                       ? 'En preparación en cocina'
                       : 'En espera del 1° plato'}
@@ -422,9 +435,11 @@ export function OrderTimelineModal({
                   {mainEntries.map((entry, idx) => {
                     const served = isMainServed(entry.item, entry.order) || areOrderMainsServed(entry.order)
                     const ready = !served && (isMainReady(entry.item, entry.order) || areOrderMainsReady(entry.order))
+                    const ordValidating = entry.order.status === 'pending_validation' || isValidating
                     const waitingFirstCourse =
                       !served &&
                       !ready &&
+                      !ordValidating &&
                       orderHasStarters(entry.order) &&
                       !areOrderMainsFired(entry.order) &&
                       !isMainCooking(entry.item, entry.order)
@@ -432,6 +447,8 @@ export function OrderTimelineModal({
                       ? '✓ Entregado en mesa'
                       : ready
                       ? 'Listo para servir'
+                      : ordValidating
+                      ? 'Esperando validación'
                       : waitingFirstCourse
                       ? 'En espera del 1° plato'
                       : 'En preparación en cocina'
@@ -451,6 +468,8 @@ export function OrderTimelineModal({
                             ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                             : ready
                             ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 font-black'
+                            : ordValidating
+                            ? 'bg-slate-100 text-slate-600'
                             : waitingFirstCourse
                             ? 'bg-slate-100 text-slate-600 border border-slate-200'
                             : 'bg-amber-50 text-amber-900 border border-amber-200'
@@ -483,12 +502,16 @@ export function OrderTimelineModal({
                   <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
                     areAllDessertsServed
                       ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                      : isValidating
+                      ? 'bg-slate-100 text-slate-700 border-slate-300'
                       : areAnyDessertsActiveOrReady
                       ? 'bg-purple-100 text-purple-950 border-purple-300 animate-pulse'
                       : 'bg-slate-100 text-slate-600 border-slate-300'
                   }`}>
                     {areAllDessertsServed
                       ? '✓ Entregado en mesa'
+                      : isValidating
+                      ? 'Esperando validación'
                       : areAnyDessertsActiveOrReady
                       ? 'Preparando postre'
                       : 'Guardado para el final de la comida'}
@@ -498,8 +521,10 @@ export function OrderTimelineModal({
                 <div className="space-y-1.5 pt-1 border-t border-slate-200/60">
                   {dessertEntries.map((entry, idx) => {
                     const served = isDessertServed(entry.item, entry.order) || areOrderDessertsServed(entry.order)
+                    const ordValidating = entry.order.status === 'pending_validation' || isValidating
                     const activeOrReady =
                       !served &&
+                      !ordValidating &&
                       (isDessertReady(entry.item, entry.order) ||
                         isDessertCooking(entry.item, entry.order) ||
                         isDessertFired(entry.item, entry.order) ||
@@ -507,6 +532,8 @@ export function OrderTimelineModal({
                         (!hasStarters && !hasMains && entry.order.status === 'preparing'))
                     const itemStateLabel = served
                       ? '✓ Entregado en mesa'
+                      : ordValidating
+                      ? 'Esperando validación'
                       : activeOrReady
                       ? 'Preparando postre'
                       : 'Guardado para el final de la comida'
@@ -524,6 +551,8 @@ export function OrderTimelineModal({
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0 ${
                           served
                             ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                            : ordValidating
+                            ? 'bg-slate-100 text-slate-600'
                             : activeOrReady
                             ? 'bg-purple-100 text-purple-950 border border-purple-300'
                             : 'bg-slate-100 text-slate-600 border border-slate-200'

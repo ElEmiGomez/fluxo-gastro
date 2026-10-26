@@ -265,7 +265,9 @@ export function MenuLiveTracker({
               ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
               : areStartersReady
               ? 'bg-emerald-200 text-emerald-950 border-emerald-400 animate-pulse ring-1 ring-emerald-400'
-              : areStartersCooking || !isPendingValidation
+              : isPendingValidation
+              ? 'bg-slate-100 text-slate-700 border-slate-200'
+              : areStartersCooking
               ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
               : 'bg-slate-100 text-slate-700 border-slate-200'
           }`}>
@@ -275,7 +277,11 @@ export function MenuLiveTracker({
                 ? '✓ Entregado en mesa'
                 : areStartersReady
                 ? 'Listo para servir'
-                : 'En preparación en cocina'}
+                : isPendingValidation
+                ? 'Esperando validación'
+                : areStartersCooking
+                ? 'En preparación en cocina'
+                : 'En cola de cocina'}
             </span>
           </span>
         )}
@@ -287,6 +293,8 @@ export function MenuLiveTracker({
               ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
               : areMainsReady
               ? 'bg-emerald-200 text-emerald-950 border-emerald-400 animate-pulse ring-1 ring-emerald-400'
+              : isPendingValidation
+              ? 'bg-slate-100 text-slate-700 border-slate-200'
               : areMainsCooking
               ? 'bg-amber-100 text-amber-950 border-amber-300 animate-pulse'
               : hasStarters && !areMainsFired
@@ -299,6 +307,8 @@ export function MenuLiveTracker({
                 ? '✓ Entregado en mesa'
                 : areMainsReady
                 ? 'Listo para servir'
+                : isPendingValidation
+                ? 'Esperando validación'
                 : hasStarters && !areMainsFired
                 ? 'En espera del 1° plato'
                 : 'En preparación en cocina'}
@@ -311,6 +321,8 @@ export function MenuLiveTracker({
           <span className={`px-2 py-0.5 rounded-lg border font-bold flex items-center gap-1 ${
             areDessertsServed
               ? 'bg-emerald-100 text-emerald-950 border-emerald-300'
+              : isPendingValidation
+              ? 'bg-slate-100 text-slate-700 border-slate-200'
               : areDessertsReady || areDessertsCooking
               ? 'bg-purple-100 text-purple-950 border-purple-300 animate-pulse'
               : hasChoicePending
@@ -321,6 +333,8 @@ export function MenuLiveTracker({
             <span className="font-black">
               {areDessertsServed
                 ? '✓ Entregado en mesa'
+                : isPendingValidation
+                ? 'Esperando validación'
                 : areDessertsReady || areDessertsCooking
                 ? 'Preparando postre'
                 : 'Guardado para el final de la comida'}

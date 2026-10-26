@@ -649,7 +649,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const initialStatus = requestedStatus || (created_by === 'waiter' ? (isDrinkOnlyOrder(validItems as any) ? 'ready' : 'pending') : 'pending_validation')
+    const initialStatus: OrderStatus = created_by === 'waiter'
+      ? (requestedStatus || (isDrinkOnlyOrder(validItems as any) ? 'ready' : 'pending'))
+      : 'pending_validation'
 
     const saved = await createOrder(restaurantId, slug, {
       table_number: assignedTableNum,

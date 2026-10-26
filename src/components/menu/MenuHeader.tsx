@@ -172,9 +172,9 @@ export function MenuHeader({
                     e.stopPropagation()
                     onOpenLoyaltyModal()
                   }}
-                  className={`px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer ${
+                  className={`relative px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer ${
                     unlockedRewardsCount > 0 || stampsCount > 0 || Boolean(loyaltyProfile)
-                      ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 ring-2 ring-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-[pulse_2.5s_cubic-bezier(0.4,0,0.6,1)_infinite]'
+                      ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 ring-2 ring-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-[pulse_3s_cubic-bezier(0.4,0,0.6,1)_infinite]'
                       : 'bg-amber-50/90 hover:bg-amber-100 text-amber-900 border border-amber-200/90'
                   }`}
                   title={
@@ -183,10 +183,18 @@ export function MenuHeader({
                       : 'Ver mi cartilla de sellos y premios'
                   }
                 >
+                  {/* Indicador sutil e intermitente de sesión activa en móviles muy estrechos */}
+                  {Boolean(loyaltyProfile) && (
+                    <span className="sm:hidden absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500 border border-white"></span>
+                    </span>
+                  )}
+
                   {unlockedRewardsCount > 0 ? (
                     <>
                       <Gift className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                      <span className="text-[11px] font-black truncate max-w-[120px] sm:max-w-none">
+                      <span className="text-[11px] font-black truncate max-w-[120px] sm:max-w-none hidden sm:inline">
                         {loyaltyProfile?.name
                           ? `${loyaltyProfile.name.trim().split(/\s+/)[0]} · ¡Premio!`
                           : '¡1 Premio!'}
@@ -195,7 +203,7 @@ export function MenuHeader({
                   ) : loyaltyMode === 'points' ? (
                     <>
                       <Award className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                      <span className={`text-[11px] font-black truncate max-w-[120px] sm:max-w-none ${!loyaltyProfile && (!loyaltyPoints || loyaltyPoints === 0) ? 'hidden sm:inline' : ''}`}>
+                      <span className="text-[11px] font-black truncate max-w-[120px] sm:max-w-none hidden sm:inline">
                         {loyaltyProfile?.name
                           ? `${loyaltyProfile.name.trim().split(/\s+/)[0]} · ${loyaltyPoints ?? loyaltyProfile.available_points ?? 0} pts`
                           : loyaltyPoints !== undefined && loyaltyPoints !== null && loyaltyPoints > 0
@@ -206,7 +214,7 @@ export function MenuHeader({
                   ) : (
                     <>
                       <Gift className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                      <span className={`text-[11px] font-black truncate max-w-[130px] sm:max-w-none ${!loyaltyProfile && stampsCount === 0 ? 'hidden sm:inline' : ''}`}>
+                      <span className="text-[11px] font-black truncate max-w-[130px] sm:max-w-none hidden sm:inline">
                         {loyaltyProfile?.name
                           ? `${loyaltyProfile.name.trim().split(/\s+/)[0]} · ${stampsCount}/${stampsTarget}`
                           : stampsCount > 0
@@ -218,16 +226,16 @@ export function MenuHeader({
                 </button>
               )}
 
-              {/* Botón Cerrar Sesión del comensal en esta mesa */}
+              {/* Botón Cerrar Sesión del comensal en esta mesa (visible a partir de pantalla sm para evitar colapso en móviles estrechos) */}
               {loyaltyProfile && onLogout && (
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="p-1.5 sm:px-2 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200/90 hover:border-red-200 flex items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                  className="hidden sm:flex p-1.5 sm:px-2 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200/90 hover:border-red-200 items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer"
                   title={`Cerrar sesión de ${loyaltyProfile.name || 'comensal'} en esta mesa`}
                 >
                   <LogOut className="w-3.5 h-3.5 text-slate-500 hover:text-red-500 flex-shrink-0" />
-                  <span className="text-[10px] sm:text-[11px] font-bold hidden min-[440px]:inline">
+                  <span className="text-[10px] sm:text-[11px] font-bold">
                     Salir
                   </span>
                 </button>
