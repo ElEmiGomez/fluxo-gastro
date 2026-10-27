@@ -510,7 +510,10 @@ export default function CRMAdminPage() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-white truncate">Emiliano Gomez</p>
-                <p className="text-[10px] text-blue-400 truncate">+34 711 573 870</p>
+                <div className="text-[10px] space-y-0.5 mt-0.5">
+                  <p className="text-slate-400 font-mono truncate">📞 +34 711 573 870 (Llamadas)</p>
+                  <p className="text-emerald-400 font-mono truncate">💬 +54 358 518 7430 (WA)</p>
+                </div>
               </div>
             </div>
           </div>
