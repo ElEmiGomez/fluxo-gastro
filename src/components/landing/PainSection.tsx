@@ -89,12 +89,22 @@ export function PainSection() {
           </div>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Mazo sticky en móvil (<768px): cada tarjeta cubre a la anterior; grid en tablet/PC */}
+        <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {PAIN_CARDS.map((card, idx) => {
             const Icon = card.icon
+            // Mismo top para todas + z creciente + altura común: suben y bajan alineadas
+            const stickyCls = [
+              'max-md:sticky max-md:top-24 max-md:z-10 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]',
+              'max-md:sticky max-md:top-24 max-md:z-20 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]',
+              'max-md:sticky max-md:top-24 max-md:z-30 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]',
+              'max-md:sticky max-md:top-24 max-md:z-40 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]',
+              'max-md:sticky max-md:top-24 max-md:z-40 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]',
+              'max-md:sticky max-md:top-24 max-md:z-40 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]',
+            ][idx]
             return (
-              <ScrollReveal key={idx} delay={idx * 60} distance={20} className="h-full">
-                <div className="h-full bg-white hover:bg-slate-50/60 border border-slate-200 hover:border-slate-300 rounded-2xl p-5 sm:p-7 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-lg hover:-translate-y-1 group">
+              <ScrollReveal key={idx} delay={idx * 60} distance={20} className={`h-full ${stickyCls}`}>
+                <div className="h-full max-md:min-h-[268px] bg-white hover:bg-slate-50/60 border border-slate-200 hover:border-slate-300 rounded-2xl p-5 sm:p-7 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-lg hover:-translate-y-1 group">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div
