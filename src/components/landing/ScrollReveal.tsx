@@ -7,6 +7,7 @@ interface ScrollRevealProps {
   className?: string
   delay?: number // en milisegundos (ms)
   duration?: number // en milisegundos (ms)
+  instant?: boolean // en móvil (<768px) muestra sin animación de entrada (mazos sticky)
   distance?: number // desplazamiento en px
   blur?: number // desenfoque inicial en px (0 = sin difuminado)
   direction?: 'up' | 'down' | 'left' | 'right' | 'none'
@@ -21,6 +22,7 @@ export function ScrollReveal({
   className = '',
   delay = 0,
   duration = 750,
+  instant = false,
   distance = 32,
   blur = 8,
   direction = 'up',
@@ -54,6 +56,13 @@ export function ScrollReveal({
     const currentElem = elementRef.current
     if (!currentElem) return
 
+    // Mazos sticky en móvil: la tarjeta debe llegar sólida (sin opacidad parcial
+    // ni desplazamiento) para no quedar fantasma sobre la anterior ya pegada.
+    if (instant && isMobile) {
+      setIsVisible(true)
+      return
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -76,7 +85,7 @@ export function ScrollReveal({
     return () => {
       observer.disconnect()
     }
-  }, [threshold, once])
+  }, [threshold, once, instant, isMobile])
 
   // Calcular la transformación inicial según la dirección
   const getInitialTransform = () => {

@@ -65,10 +65,13 @@ const PAIN_CARDS = [
 
 export function PainSection() {
   return (
-    <section className="py-12 sm:py-20 bg-slate-50 border-t border-slate-200 relative overflow-hidden">
+    <section className="py-12 sm:py-20 bg-slate-50 border-t border-slate-200 relative">
       
-      {/* Luz ambiente de fondo */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-rose-500/5 rounded-full blur-[120px] pointer-events-none" />
+      {/* Luz ambiente de fondo (recortada en su propio contenedor: overflow-hidden
+          en el section anularía el sticky del mazo móvil) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-rose-500/5 rounded-full blur-[120px]" />
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
@@ -103,7 +106,7 @@ export function PainSection() {
               'max-md:sticky max-md:top-24 max-md:z-40 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]',
             ][idx]
             return (
-              <ScrollReveal key={idx} delay={idx * 60} distance={20} className={`h-full ${stickyCls}`}>
+              <ScrollReveal key={idx} delay={idx * 60} distance={20} instant className={`h-full ${stickyCls}`}>
                 <div className="h-full max-md:min-h-[268px] bg-white hover:bg-slate-50/60 border border-slate-200 hover:border-slate-300 rounded-2xl p-5 sm:p-7 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-lg hover:-translate-y-1 group">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">

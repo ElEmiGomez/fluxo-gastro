@@ -233,7 +233,7 @@ export default function LandingPage() {
             <div className="flex flex-col md:grid md:grid-cols-3 gap-5 sm:gap-8">
               
               {/* Tarjeta 1: Carta QR Visual y Ventas Sugeridas */}
-              <ScrollReveal delay={0} distance={32} className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-10 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
+              <ScrollReveal delay={0} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-10 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
                 <div className="bg-white max-md:min-h-[502px] hover:bg-slate-50/50 border border-slate-200 hover:border-emerald-500/50 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -275,7 +275,7 @@ export default function LandingPage() {
               </ScrollReveal>
 
               {/* Tarjeta 2: Comandero Ágil en Cualquier Móvil */}
-              <ScrollReveal delay={150} distance={32} className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-20 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
+              <ScrollReveal delay={150} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-20 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
                 <div className="bg-white max-md:min-h-[502px] hover:bg-slate-50/50 border border-slate-200 hover:border-blue-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -317,7 +317,7 @@ export default function LandingPage() {
               </ScrollReveal>
 
               {/* Tarjeta 3: Monitor KDS por Estaciones */}
-              <ScrollReveal delay={300} distance={32} className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-30 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
+              <ScrollReveal delay={300} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-30 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
                 <div className="bg-white max-md:min-h-[502px] hover:bg-slate-50/50 border border-slate-200 hover:border-amber-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
