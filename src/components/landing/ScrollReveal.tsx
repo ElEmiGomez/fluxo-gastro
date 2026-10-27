@@ -119,26 +119,31 @@ export function ScrollReveal({
   }
 
   const activeBlur = !isMobile && blur > 0
-  // Modo sólido (mazos sticky en móvil): sin transición alguna. Si se dejara la
-  // transición por defecto (750ms + delay), la opacidad pasaría de 0 a 1 con
-  // fundido al hidratar y la tarjeta entraría semitransparente encima de la
-  // anterior ya pegada (textos de ambas visibles a la vez).
+  // Modo sólido (mazos sticky en móvil): wrapper completamente estático, igual
+  // que las tarjetas de FeatureTabs. Sin opacity/transform/will-change ni
+  // transiciones en línea: en iOS Safari, will-change + transform en un elemento
+  // sticky crea capas compuestas que pueden rasterizarse mal y pintar texto
+  // mezclado de otras tarjetas al hacer scroll.
   const solidMode = instant && isMobile
 
   return (
     <Component
       ref={elementRef}
-      className={`will-change-[transform,opacity] ${className}`}
-      style={{
-        opacity: isVisible ? 1 : 0,
-        transform: getInitialTransform(),
-        filter: activeBlur ? (isVisible ? 'blur(0px)' : `blur(${blur}px)`) : undefined,
-        willChange: activeBlur ? 'transform, opacity, filter' : 'transform, opacity',
-        transitionProperty: solidMode ? 'none' : 'opacity, transform, filter',
-        transitionDuration: solidMode ? '0ms' : `${duration}ms`,
-        transitionDelay: solidMode ? '0ms' : `${delay}ms`,
-        transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', // Curva suave orgánica (Apple / BioMenu style)
-      }}
+      className={solidMode ? className : `will-change-[transform,opacity] ${className}`}
+      style={
+        solidMode
+          ? undefined
+          : {
+              opacity: isVisible ? 1 : 0,
+              transform: getInitialTransform(),
+              filter: activeBlur ? (isVisible ? 'blur(0px)' : `blur(${blur}px)`) : undefined,
+              willChange: activeBlur ? 'transform, opacity, filter' : 'transform, opacity',
+              transitionProperty: 'opacity, transform, filter',
+              transitionDuration: `${duration}ms`,
+              transitionDelay: `${delay}ms`,
+              transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', // Curva suave orgánica (Apple / BioMenu style)
+            }
+      }
     >
       {children}
     </Component>
