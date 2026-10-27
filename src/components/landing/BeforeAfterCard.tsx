@@ -49,7 +49,7 @@ export function BeforeAfterCard() {
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-10 shadow-xl relative overflow-hidden">
 
         {/* Halo decorativo de fondo */}
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />

@@ -50,11 +50,11 @@ export function FaqSection({ onOpenContact }: FaqSectionProps) {
   }
 
   return (
-    <section id="faq" className="py-20 bg-slate-50 border-t border-slate-200 relative">
+    <section id="faq" className="py-12 sm:py-20 bg-slate-50 border-t border-slate-200 relative">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <ScrollReveal distance={24}>
-          <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
+          <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-14 space-y-3">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-black uppercase tracking-wider">
               <HelpCircle className="w-3.5 h-3.5" />
               <span>Respuestas Claras</span>

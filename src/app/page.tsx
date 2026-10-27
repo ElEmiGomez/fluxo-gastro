@@ -212,11 +212,11 @@ export default function LandingPage() {
         <FeatureTabs onOpenPilotModal={handleOpenPilotModal} />
 
         {/* ── 5. IMPACTO REAL & MÉTRICAS DE NEGOCIO (3 PILARES) ── */}
-        <section id="funcionalidades" className="py-20 bg-white border-t border-slate-200">
+        <section id="funcionalidades" className="py-12 sm:py-20 bg-white border-t border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <ScrollReveal distance={24}>
-              <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+              <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16 space-y-3">
                 <span className="text-xs font-black uppercase tracking-wider text-blue-600">
                   Diseñado para el Dueño Gastronómico
                 </span>
@@ -229,11 +229,11 @@ export default function LandingPage() {
               </div>
             </ScrollReveal>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8">
               
               {/* Tarjeta 1: Carta QR Visual y Ventas Sugeridas */}
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
-                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-emerald-500/50 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
+                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-emerald-500/50 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
@@ -275,7 +275,7 @@ export default function LandingPage() {
 
               {/* Tarjeta 2: Comandero Ágil en Cualquier Móvil */}
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
-                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-blue-400 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
+                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-blue-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
@@ -317,7 +317,7 @@ export default function LandingPage() {
 
               {/* Tarjeta 3: Monitor KDS por Estaciones */}
               <ScrollReveal delay={300} distance={32} className="flex flex-col h-full">
-                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-amber-400 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
+                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-amber-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
@@ -363,11 +363,11 @@ export default function LandingPage() {
         </section>
 
         {/* ── 6. BLOQUE DE PLANES Y PRECIOS ── */}
-        <section id="precios" className="py-20 bg-slate-50/70 border-t border-slate-200">
+        <section id="precios" className="py-12 sm:py-20 bg-slate-50/70 border-t border-slate-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             <ScrollReveal distance={24}>
-              <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+              <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16 space-y-3">
                 <span className="text-xs font-black uppercase tracking-wider text-blue-600">
                   Inversión Clara y Transparente
                 </span>
@@ -380,13 +380,13 @@ export default function LandingPage() {
               </div>
             </ScrollReveal>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch pt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8 items-stretch pt-4">
               
               {/* Tarjeta 1: Plan Carta (39 €) */}
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
-                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
+                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-100 border border-slate-300 text-slate-800 group-hover:bg-emerald-50 group-hover:border-emerald-300 group-hover:text-emerald-700 text-[11px] font-black tracking-wide shadow-xs flex items-center gap-1.5 z-20 transition-colors duration-300">
@@ -460,7 +460,7 @@ export default function LandingPage() {
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
-                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
+                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 group-hover:bg-emerald-50 group-hover:border-emerald-300 group-hover:text-emerald-700 text-[11px] font-black tracking-wide shadow-xs flex items-center gap-1.5 z-20 transition-colors duration-300">
@@ -534,7 +534,7 @@ export default function LandingPage() {
               <ScrollReveal delay={300} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
-                  className="bg-white border-2 border-blue-600 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl ring-4 ring-blue-500/10 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 hover:-translate-y-1.5 lg:hover:-translate-y-2.5 active:-translate-y-1 group relative lg:-translate-y-2 cursor-pointer h-full"
+                  className="bg-white border-2 border-blue-600 hover:border-emerald-500 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-xl ring-4 ring-blue-500/10 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 hover:-translate-y-1.5 lg:hover:-translate-y-2.5 active:-translate-y-1 group relative lg:-translate-y-2 cursor-pointer h-full"
                 >
                   {/* Badge Recomendado */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1.5">
@@ -646,10 +646,10 @@ export default function LandingPage() {
         <FaqSection onOpenContact={handleOpenContactModal} />
 
         {/* ── 8. CALL TO ACTION (CTA) FINAL CON EFECTO GLOW / SHIMMER ── */}
-        <section id="contacto" className="py-20 bg-white border-t border-slate-200">
+        <section id="contacto" className="py-12 sm:py-20 bg-white border-t border-slate-200">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <ScrollReveal distance={28} scale={0.98}>
-              <div className="bg-gradient-to-b from-blue-100/70 via-sky-50/30 to-slate-100/60 border border-blue-200/80 rounded-3xl p-8 sm:p-14 text-center space-y-6 relative overflow-hidden shadow-xl">
+              <div className="bg-gradient-to-b from-blue-100/70 via-sky-50/30 to-slate-100/60 border border-blue-200/80 rounded-3xl p-6 sm:p-14 text-center space-y-6 relative overflow-hidden shadow-xl">
                 
                 {/* Halo sutil de fondo */}
                 <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />

@@ -65,7 +65,7 @@ const PAIN_CARDS = [
 
 export function PainSection() {
   return (
-    <section className="py-20 bg-slate-50 border-t border-slate-200 relative overflow-hidden">
+    <section className="py-12 sm:py-20 bg-slate-50 border-t border-slate-200 relative overflow-hidden">
       
       {/* Luz ambiente de fondo */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-rose-500/5 rounded-full blur-[120px] pointer-events-none" />
@@ -73,7 +73,7 @@ export function PainSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
         <ScrollReveal distance={24}>
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-3">
+          <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-16 space-y-3">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-black uppercase tracking-wider">
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>La Realidad de un Turno Difícil</span>
@@ -94,7 +94,7 @@ export function PainSection() {
             const Icon = card.icon
             return (
               <ScrollReveal key={idx} delay={idx * 60} distance={20} className="h-full">
-                <div className="h-full bg-white hover:bg-slate-50/60 border border-slate-200 hover:border-slate-300 rounded-2xl p-6 sm:p-7 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-lg hover:-translate-y-1 group">
+                <div className="h-full bg-white hover:bg-slate-50/60 border border-slate-200 hover:border-slate-300 rounded-2xl p-5 sm:p-7 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-lg hover:-translate-y-1 group">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div

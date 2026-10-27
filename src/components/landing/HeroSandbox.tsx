@@ -195,7 +195,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
                 }`}
               />
               <span
-                className={`text-[10px] sm:text-xs font-bold leading-tight ${
+                className={`text-[9px] sm:text-xs font-bold leading-tight ${
                   done ? 'text-emerald-600' : active ? 'text-blue-700' : 'text-slate-400'
                 }`}
               >
@@ -207,14 +207,14 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
       </ol>
 
       {/* ── 3 PANTALLAS ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start text-left">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-start text-left">
         {/* 1. CARTA QR */}
         <div className="flex flex-col items-center">
           <div
             className={`w-full max-w-[300px] rounded-[2.2rem] bg-slate-900 p-2.5 border-4 border-slate-800 shadow-2xl transition-all duration-300 ${ring('carta')}`}
           >
             <div className="w-20 h-3.5 bg-slate-950 rounded-full mx-auto mb-2" />
-            <div className="relative bg-slate-50 rounded-[1.6rem] p-3 min-h-[380px] flex flex-col gap-2.5 overflow-hidden">
+            <div className="relative bg-slate-50 rounded-[1.6rem] p-3 min-h-[300px] md:min-h-[380px] flex flex-col gap-2.5 overflow-hidden">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-extrabold text-slate-900">Menú Fluxo</span>
                 <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
@@ -320,7 +320,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
             className={`w-full max-w-[300px] rounded-[2.2rem] bg-slate-900 p-2.5 border-4 border-slate-800 shadow-2xl transition-all duration-300 ${ring('mozo')}`}
           >
             <div className="w-20 h-3.5 bg-slate-950 rounded-full mx-auto mb-2" />
-            <div className="bg-slate-50 rounded-[1.6rem] p-3 min-h-[380px] flex flex-col gap-2.5">
+            <div className="bg-slate-50 rounded-[1.6rem] p-3 min-h-[280px] md:min-h-[380px] flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-extrabold text-slate-900">Mozo</span>
                 <Bell className={`w-4 h-4 ${stage === 'pendiente' || stage === 'listo' ? 'text-amber-500 animate-bounce' : 'text-slate-400'}`} />
@@ -407,7 +407,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
           <div
             className={`w-full max-w-[300px] rounded-[1.6rem] bg-slate-900 p-2.5 border-4 border-slate-800 shadow-2xl transition-all duration-300 ${ring('cocina')}`}
           >
-            <div className="bg-slate-950 rounded-[1.1rem] p-3 min-h-[396px] flex flex-col gap-2.5">
+            <div className="bg-slate-950 rounded-[1.1rem] p-3 min-h-[300px] md:min-h-[396px] flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-extrabold text-white">Cocina</span>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">

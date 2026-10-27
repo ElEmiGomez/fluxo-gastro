@@ -132,11 +132,11 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
     <section
       ref={sectionRef}
       id="modulos"
-      className="py-20 bg-slate-50 border-t border-slate-200"
+      className="py-12 sm:py-20 bg-slate-50 border-t border-slate-200"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <ScrollReveal distance={24}>
-          <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
+          <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-12 space-y-3">
             <span className="text-xs font-black uppercase tracking-wider text-blue-600">
               Así fluye un servicio con Fluxo
             </span>
