@@ -208,22 +208,22 @@ export function PilotRequestModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200">
       <div 
-        className="relative w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-250 flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-250 flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cabecera del Modal */}
-        <div className="relative p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-800 flex items-start justify-between gap-4">
+        <div className="relative p-5 sm:p-6 bg-slate-50 border-b border-slate-200 flex items-start justify-between gap-4">
           <div className="space-y-1.5 flex-1 min-w-0">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
               <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
               <span>14 DÍAS DE PRUEBA A 0€</span>
             </div>
-            <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight leading-tight">
+            <h3 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
               Solicitar Piloto para tu Restaurante
             </h3>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-slate-600">
               Digitalizamos tu carta y la dejamos lista para operar en menos de 24h.
             </p>
           </div>
@@ -231,7 +231,7 @@ export function PilotRequestModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer flex-shrink-0"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer flex-shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -242,23 +242,23 @@ export function PilotRequestModal({
           {isSuccess ? (
             /* Pantalla de Éxito */
             <div className="text-center py-6 space-y-5 animate-in fade-in zoom-in-95">
-              <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
+              <div className="w-16 h-16 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-2xl font-black text-white">¡Solicitud Registrada con Éxito!</h4>
-                <p className="text-sm text-slate-300 max-w-md mx-auto">
-                  Gracias <strong className="text-white">{contactName}</strong>. Hemos recibido los datos de <strong className="text-white">{restaurantName}</strong> para el <strong className="text-cyan-400">{selectedPlan}</strong>.
+                <h4 className="text-2xl font-black text-slate-900">¡Solicitud Registrada con Éxito!</h4>
+                <p className="text-sm text-slate-600 max-w-md mx-auto">
+                  Gracias <strong className="text-slate-900">{contactName}</strong>. Hemos recibido los datos de <strong className="text-slate-900">{restaurantName}</strong> para el <strong className="text-blue-600">{selectedPlan}</strong>.
                 </p>
               </div>
 
-              <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 text-left space-y-2.5 max-w-md mx-auto text-xs text-slate-300">
-                <div className="flex items-center gap-2 text-emerald-400 font-bold">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2.5 max-w-md mx-auto text-xs text-slate-700">
+                <div className="flex items-center gap-2 text-emerald-700 font-bold">
                   <ShieldCheck className="w-4 h-4" />
                   <span>¿Qué sucederá a continuación?</span>
                 </div>
-                <ul className="space-y-1.5 list-disc list-inside text-slate-300 pl-1">
+                <ul className="space-y-1.5 list-disc list-inside text-slate-600 pl-1">
                   <li>Un asesor técnico de Fluxo te contactará al teléfono <strong>{phone}</strong> en menos de 2 horas.</li>
                   <li>Nos envías una foto o PDF de tu carta actual y la cargamos completa.</li>
                   <li>Iniciamos los 14 días de prueba a 0€ sin tocar tu TPV ni pedir tarjeta.</li>
@@ -269,14 +269,14 @@ export function PilotRequestModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-bold transition-colors cursor-pointer"
+                  className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-bold transition-colors cursor-pointer border border-slate-200"
                 >
                   Entendido, cerrar
                 </button>
                 <button
                   type="button"
                   onClick={handleOpenWhatsAppDirect}
-                  className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition-colors shadow-lg shadow-emerald-600/30 cursor-pointer"
+                  className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition-colors shadow-md shadow-emerald-600/25 cursor-pointer"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>¿Tienes prisa? Abrir WhatsApp</span>
@@ -287,18 +287,18 @@ export function PilotRequestModal({
             /* Formulario */
             <form onSubmit={handleSubmit} className="space-y-5">
               {errorMessage && (
-                <div className="p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-semibold">
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
                   {errorMessage}
                 </div>
               )}
 
               {/* 1. Nombre del Restaurante */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Nombre del Restaurante / Bar / Local *
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <Store className="w-4 h-4" />
                   </div>
                   <input
@@ -307,7 +307,7 @@ export function PilotRequestModal({
                     placeholder="Ej: Tapería Casco Antigo, Burger Gourmet..."
                     value={restaurantName}
                     onChange={(e) => setRestaurantName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                   />
                 </div>
               </div>
@@ -315,11 +315,11 @@ export function PilotRequestModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* 2. Persona de Contacto */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                     Tu Nombre *
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <User className="w-4 h-4" />
                     </div>
                     <input
@@ -328,24 +328,24 @@ export function PilotRequestModal({
                       placeholder="Ej: Manuel, Lucía..."
                       value={contactName}
                       onChange={(e) => setContactName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                     />
                   </div>
                 </div>
 
                 {/* 3. Cargo / Puesto (Opciones Predefinidas) */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                     Cargo / Puesto
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <Briefcase className="w-4 h-4" />
                     </div>
                     <select
                       value={contactRole}
                       onChange={(e) => setContactRole(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors cursor-pointer"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"
                     >
                       {ROLE_OPTIONS.map((role) => (
                         <option key={role} value={role}>
@@ -360,11 +360,11 @@ export function PilotRequestModal({
               {/* 4. Teléfono con Numeral & Población Desplegable Limpia */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                     Teléfono / WhatsApp *
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <Phone className="w-4 h-4" />
                     </div>
                     <input
@@ -375,23 +375,23 @@ export function PilotRequestModal({
                       value={phone}
                       onChange={handlePhoneChange}
                       onKeyDown={handlePhoneKeyDown}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                     Población / Zona
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <MapPin className="w-4 h-4" />
                     </div>
                     <select
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors cursor-pointer"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer"
                     >
                       <optgroup label="🇪🇸 España">
                         {POPULAR_LOCATIONS.espana.map((loc) => (
@@ -413,22 +413,22 @@ export function PilotRequestModal({
               </div>
 
               {/* Plan Seleccionado Automáticamente (Sin pasos innecesarios) */}
-              <div className="p-3.5 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between gap-3">
+              <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-black flex-shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black flex-shrink-0">
                     <Sparkles className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">
+                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block truncate">
                       Plan Seleccionado
                     </span>
-                    <span className="text-sm font-black text-white truncate block">
+                    <span className="text-sm font-black text-slate-900 truncate block">
                       {selectedPlan}
                     </span>
                   </div>
                 </div>
                 <div className="flex-shrink-0">
-                  <span className="text-xs font-black text-emerald-400 bg-emerald-500/20 px-3 py-1.5 rounded-full border border-emerald-500/40 whitespace-nowrap inline-block">
+                  <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 whitespace-nowrap inline-block">
                     14 días a 0€
                   </span>
                 </div>
@@ -436,7 +436,7 @@ export function PilotRequestModal({
 
               {/* 6. Comentarios o enlace a carta */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                   Enlace a tu carta actual o comentarios (Opcional)
                 </label>
                 <textarea
@@ -444,22 +444,22 @@ export function PilotRequestModal({
                   placeholder="Instagram, web o detalles de tu local (número de mesas, terraza...)"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors resize-none"
+                  className="w-full p-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
                 />
               </div>
 
               {/* Garantías de Confianza */}
-              <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-800/40 border border-slate-700/60 text-center">
-                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-emerald-400">
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-emerald-700">
                   <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
                   <span className="whitespace-nowrap">0€ (14 días)</span>
                 </div>
-                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-300 border-x border-slate-700/60 px-1">
-                  <Check className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-600 border-x border-slate-200 px-1">
+                  <Check className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
                   <span className="whitespace-nowrap">Sin permanencia</span>
                 </div>
-                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-300">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-600">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                   <span className="whitespace-nowrap">Setup incluido</span>
                 </div>
               </div>
@@ -469,7 +469,7 @@ export function PilotRequestModal({
                 onSuccess={(token) => setTurnstileToken(token)}
                 onError={() => setTurnstileToken(null)}
                 onExpire={() => setTurnstileToken(null)}
-                theme="dark"
+                theme="light"
                 size="flexible"
               />
 
@@ -477,7 +477,7 @@ export function PilotRequestModal({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-4 px-6 rounded-xl font-black text-sm text-slate-950 bg-cyan-400 hover:bg-cyan-300 shadow-xl shadow-cyan-500/25 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full py-4 px-6 rounded-xl font-black text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmitting ? (
                   <>

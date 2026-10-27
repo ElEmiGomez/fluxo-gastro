@@ -48,20 +48,20 @@ export function BeforeAfterCard() {
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xl relative overflow-hidden">
         
         {/* Halo decorativo de fondo */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-red-600/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 text-center max-w-3xl mx-auto mb-8 space-y-2">
-          <span className="text-xs font-black uppercase tracking-wider text-cyan-400">
+          <span className="text-xs font-black uppercase tracking-wider text-blue-600">
             Comparativa Operativa
           </span>
-          <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+          <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Antes vs. Después de Fluxo en tu Sala
           </h3>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-slate-600">
             El impacto directo de cambiar el desorden analógico por sincronización digital en tiempo real.
           </p>
 
@@ -70,8 +70,8 @@ export function BeforeAfterCard() {
             <button
               type="button"
               onClick={() => setMobileView('both')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                mobileView === 'both' ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                mobileView === 'both' ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
               }`}
             >
               Frente a Frente
@@ -79,8 +79,8 @@ export function BeforeAfterCard() {
             <button
               type="button"
               onClick={() => setMobileView('before')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                mobileView === 'before' ? 'bg-red-500 text-white' : 'bg-slate-800 text-slate-400'
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                mobileView === 'before' ? 'bg-rose-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
               }`}
             >
               El Caos
@@ -88,8 +88,8 @@ export function BeforeAfterCard() {
             <button
               type="button"
               onClick={() => setMobileView('after')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
-                mobileView === 'after' ? 'bg-cyan-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                mobileView === 'after' ? 'bg-blue-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
               }`}
             >
               Con Fluxo
@@ -98,20 +98,20 @@ export function BeforeAfterCard() {
         </div>
 
         {/* Encabezados de Columna (Desktop) */}
-        <div className="hidden md:grid md:grid-cols-2 gap-6 pb-4 border-b border-slate-800 text-sm font-black relative z-10">
-          <div className="flex items-center justify-between px-3 text-red-400">
+        <div className="hidden md:grid md:grid-cols-2 gap-6 pb-4 border-b border-slate-200 text-sm font-black relative z-10">
+          <div className="flex items-center justify-between px-3 text-rose-600">
             <span className="flex items-center gap-2">
               <AlertOctagon className="w-4 h-4" /> Operación Tradicional
             </span>
-            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider bg-red-500/15 border border-red-500/30">
+            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
               El Caos
             </span>
           </div>
-          <div className="flex items-center justify-between px-3 text-cyan-400">
+          <div className="flex items-center justify-between px-3 text-blue-600">
             <span className="flex items-center gap-2">
               <Sparkles className="w-4 h-4" /> Con Fluxo
             </span>
-            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
               Control Total
             </span>
           </div>
@@ -126,32 +126,32 @@ export function BeforeAfterCard() {
             >
               {/* Lado Antes (El Caos) */}
               {(mobileView === 'both' || mobileView === 'before') && (
-                <div className="bg-red-950/20 border border-red-500/25 rounded-2xl p-4 sm:p-5 flex items-start gap-3 transition-colors hover:border-red-500/40">
-                  <XCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="bg-rose-50/70 border border-rose-200 rounded-2xl p-4 sm:p-5 flex items-start gap-3 transition-colors hover:border-rose-300 shadow-xs">
+                  <XCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
                   <div className="text-xs sm:text-sm">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-red-400 block mb-0.5 md:hidden">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 block mb-0.5 md:hidden">
                       {row.aspect} &middot; El Caos
                     </span>
-                    <strong className="text-red-300 font-bold hidden md:inline mr-1">
+                    <strong className="text-rose-900 font-bold hidden md:inline mr-1">
                       {row.aspect}:
                     </strong>
-                    <span className="text-slate-300 leading-relaxed">{row.before}</span>
+                    <span className="text-slate-700 leading-relaxed">{row.before}</span>
                   </div>
                 </div>
               )}
 
               {/* Lado Después (Con Fluxo) */}
               {(mobileView === 'both' || mobileView === 'after') && (
-                <div className="bg-cyan-950/25 border-2 border-cyan-500/40 hover:border-cyan-400 rounded-2xl p-4 sm:p-5 flex items-start gap-3 shadow-sm transition-all">
-                  <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                <div className="bg-blue-50/40 border-2 border-blue-500/50 hover:border-blue-500 rounded-2xl p-4 sm:p-5 flex items-start gap-3 shadow-xs hover:shadow-md transition-all">
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="text-xs sm:text-sm">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-cyan-400 block mb-0.5 md:hidden">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 block mb-0.5 md:hidden">
                       {row.aspect} &middot; Con Fluxo
                     </span>
-                    <strong className="text-cyan-300 font-bold block sm:inline mr-1">
+                    <strong className="text-blue-700 font-bold block sm:inline mr-1">
                       {row.afterTitle}:
                     </strong>
-                    <span className="text-slate-200 leading-relaxed">{row.after}</span>
+                    <span className="text-slate-800 leading-relaxed">{row.after}</span>
                   </div>
                 </div>
               )}

@@ -50,21 +50,21 @@ export function FaqSection({ whatsAppUrl }: FaqSectionProps) {
   }
 
   return (
-    <section id="faq" className="py-20 bg-slate-900/80 border-t border-slate-800 relative">
+    <section id="faq" className="py-20 bg-slate-50 border-t border-slate-200 relative">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <ScrollReveal distance={24}>
           <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-black uppercase tracking-wider">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-black uppercase tracking-wider">
               <HelpCircle className="w-3.5 h-3.5" />
               <span>Respuestas Claras</span>
             </div>
 
-            <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
               Preguntas Frecuentes
             </h2>
 
-            <p className="text-sm sm:text-base text-slate-400">
+            <p className="text-sm sm:text-base text-slate-600">
               Resolvemos las dudas habituales de los hosteleros antes de empezar el piloto gratuito.
             </p>
           </div>
@@ -79,8 +79,8 @@ export function FaqSection({ whatsAppUrl }: FaqSectionProps) {
                 <div
                   className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
                     isOpen
-                      ? 'bg-slate-800/90 border-blue-500/50 shadow-lg shadow-blue-500/5'
-                      : 'bg-slate-800/40 hover:bg-slate-800/70 border-slate-700/60'
+                      ? 'bg-white border-blue-500 shadow-md ring-1 ring-blue-500/20'
+                      : 'bg-white hover:bg-slate-50/80 border-slate-200 shadow-xs'
                   }`}
                 >
                   <button
@@ -90,14 +90,14 @@ export function FaqSection({ whatsAppUrl }: FaqSectionProps) {
                     aria-expanded={isOpen}
                     aria-controls={`faq-answer-${index}`}
                   >
-                    <span className="text-base sm:text-lg font-black text-white">
+                    <span className="text-base sm:text-lg font-black text-slate-900">
                       «{faq.question}»
                     </span>
                     <div
                       className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-transform duration-300 ${
                         isOpen
-                          ? 'rotate-180 bg-blue-500/20 text-blue-400'
-                          : 'bg-slate-800 text-slate-400'
+                          ? 'rotate-180 bg-blue-50 text-blue-600'
+                          : 'bg-slate-100 text-slate-500'
                       }`}
                     >
                       <ChevronDown className="w-4 h-4" />
@@ -107,7 +107,7 @@ export function FaqSection({ whatsAppUrl }: FaqSectionProps) {
                   {isOpen && (
                     <div
                       id={`faq-answer-${index}`}
-                      className="px-5 pb-5 sm:px-6 sm:pb-6 text-sm text-slate-300 leading-relaxed border-t border-slate-700/50 pt-3 animate-in fade-in duration-200"
+                      className="px-5 pb-5 sm:px-6 sm:pb-6 text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3 animate-in fade-in duration-200"
                     >
                       <p>{faq.answer}</p>
                     </div>
@@ -119,10 +119,10 @@ export function FaqSection({ whatsAppUrl }: FaqSectionProps) {
         </div>
 
         {/* Contacto directo por dudas adicionales */}
-        <div className="mt-12 text-center p-6 rounded-2xl bg-slate-800/30 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="mt-12 text-center p-6 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-left space-y-1">
-            <h4 className="font-extrabold text-white text-sm">¿Tienes una pregunta específica sobre tu local?</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="font-extrabold text-slate-900 text-sm">¿Tienes una pregunta específica sobre tu local?</h4>
+            <p className="text-xs text-slate-500">
               Escríbenos directamente por WhatsApp y te respondemos en menos de 15 minutos.
             </p>
           </div>
@@ -131,9 +131,9 @@ export function FaqSection({ whatsAppUrl }: FaqSectionProps) {
             href={whatsAppUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex-shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs font-bold transition-all flex-shrink-0 cursor-pointer shadow-xs"
           >
-            <MessageCircle className="w-4 h-4 text-emerald-400" />
+            <MessageCircle className="w-4 h-4 text-emerald-600" />
             <span>Consultar por WhatsApp</span>
           </a>
         </div>
