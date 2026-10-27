@@ -9,20 +9,17 @@ import {
   RotateCcw,
   ExternalLink,
   Clock,
+  ShieldCheck,
   Bell,
   ArrowRight,
-  Gift,
-  Flame,
-  Beer,
-  UtensilsCrossed,
   Check,
+  Gift,
 } from 'lucide-react'
 
 /**
- * HeroSandbox v2
- * Simulador interactivo del circuito completo en 3 pantallas sincronizadas:
- * Carta QR (comensal) -> Comandero (mozo valida) -> KDS (cocina prepara) -> mozo sirve y cobra -> comensal recibe (cierre esmeralda).
- * Ningún paso se salta automáticamente: cada pantalla tiene su botón real.
+ * HeroSandbox
+ * Demostración rápida del circuito completo en 3 pantallas sincronizadas:
+ * Carta QR (comensal) -> Comandero (mozo valida) -> KDS (cocina prepara) -> vuelta al mozo y al comensal.
  * Todo el estado vive en memoria del navegador: no toca Supabase.
  */
 
@@ -31,14 +28,13 @@ interface Dish {
   name: string
   price: number
   station: 'cocina' | 'barra'
-  course: 'bebida' | 'entrada' | 'principal' | 'postre'
 }
 
 const DISHES: Dish[] = [
-  { id: 'smash', name: 'Smash Burger Doble', price: 13.5, station: 'cocina', course: 'principal' },
-  { id: 'bravas', name: 'Patatas Bravas', price: 6.0, station: 'cocina', course: 'entrada' },
-  { id: 'ipa', name: 'Cerveza Artesana IPA', price: 3.8, station: 'barra', course: 'bebida' },
-  { id: 'tarta', name: 'Tarta de Queso', price: 5.5, station: 'cocina', course: 'postre' },
+  { id: 'smash', name: 'Smash Burger Doble', price: 13.5, station: 'cocina' },
+  { id: 'bravas', name: 'Patatas Bravas', price: 6.0, station: 'cocina' },
+  { id: 'ipa', name: 'Cerveza Artesana IPA', price: 3.8, station: 'barra' },
+  { id: 'tarta', name: 'Tarta de Queso', price: 5.5, station: 'cocina' },
 ]
 
 type Stage = 'carrito' | 'pendiente' | 'cocina' | 'listo' | 'servido'
@@ -49,35 +45,14 @@ interface CartLine {
   qty: number
   price: number
   station: 'cocina' | 'barra'
-  course: 'bebida' | 'entrada' | 'principal' | 'postre'
 }
 
 const STEPS: { key: Stage; label: string }[] = [
-  { key: 'carrito', label: '1. Comensal pide' },
-  { key: 'pendiente', label: '2. Mozo valida' },
-  { key: 'cocina', label: '3. Cocina prepara' },
-  { key: 'listo', label: '4. Mozo sirve' },
-  { key: 'servido', label: '5. Comensal recibe' },
-]
-
-const COURSE_LABELS: Record<CartLine['course'], string> = {
-  bebida: 'Bebidas',
-  entrada: '1° Entradas',
-  principal: '2° Principales',
-  postre: 'Postres',
-}
-
-// Indicadores de sala para llenar las pantallas del Comandero y el KDS
-const ROOM_TABLES = [
-  { table: 'Mesa 1', zone: 'Interior', status: 'Cenando', tone: 'amber' },
-  { table: 'Mesa 2', zone: 'Interior', status: 'Servida', tone: 'emerald' },
-  { table: 'Mesa 4', zone: 'Terraza', status: 'Activa', tone: 'blue' },
-  { table: 'Mesa 7', zone: 'Barra', status: 'Libre', tone: 'slate' },
-] as const
-
-const KDS_PASSES_DONE = [
-  { table: 'Mesa 2', note: 'Marchado · 08:42' },
-  { table: 'Mesa 9', note: 'Marchado · 08:15' },
+  { key: 'carrito', label: 'Comensal pide' },
+  { key: 'pendiente', label: 'Mozo valida' },
+  { key: 'cocina', label: 'Cocina prepara' },
+  { key: 'listo', label: 'Mozo sirve' },
+  { key: 'servido', label: 'Comensal recibe' },
 ]
 
 const formatEuro = (n: number) => `${n.toFixed(2).replace('.', ',')} €`
@@ -124,7 +99,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
     setCart((prev) => {
       const found = prev.find((l) => l.id === dish.id)
       if (found) return prev.map((l) => (l.id === dish.id ? { ...l, qty: l.qty + 1 } : l))
-      return [...prev, { id: dish.id, name: dish.name, qty: 1, price: dish.price, station: dish.station, course: dish.course }]
+      return [...prev, { id: dish.id, name: dish.name, qty: 1, price: dish.price, station: dish.station }]
     })
   }
 
@@ -168,22 +143,6 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
   const ring = (target: 'carta' | 'mozo' | 'cocina') =>
     pulse === target ? 'ring-4 ring-blue-400/40 scale-[1.01]' : 'ring-0'
 
-  const elapsedLabel = elapsed < 60 ? `Hace ${elapsed} s` : `Hace ${Math.floor(elapsed / 60)} min`
-  const roomTone: Record<string, string> = {
-    amber: 'bg-amber-50 text-amber-700 border-amber-200',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    slate: 'bg-slate-100 text-slate-500 border-slate-200',
-  }
-  // El estado de la Mesa 4 en la sala depende del paso actual del circuito
-  const mesa4Status: Record<Stage, string> = {
-    carrito: 'Pidiendo',
-    pendiente: 'Nueva comanda',
-    cocina: 'En cocina',
-    listo: 'Lista para servir',
-    servido: 'Pagada',
-  }
-
   return (
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* ── BARRA SUPERIOR ── */}
@@ -226,8 +185,8 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
       {/* ── PROGRESO DEL CIRCUITO ── */}
       <ol className="mb-6 grid grid-cols-5 gap-1.5 sm:gap-3">
         {STEPS.map((s, i) => {
-          const done = i < stageIndex
-          const active = i === stageIndex
+          const done = i < stageIndex || stage === 'servido'
+          const active = i === stageIndex && stage !== 'servido'
           return (
             <li key={s.key} className="flex flex-col items-center gap-1.5 text-center">
               <div
@@ -255,7 +214,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
             className={`w-full max-w-[300px] rounded-[2.2rem] bg-slate-900 p-2.5 border-4 border-slate-800 shadow-2xl transition-all duration-300 ${ring('carta')}`}
           >
             <div className="w-20 h-3.5 bg-slate-950 rounded-full mx-auto mb-2" />
-            <div className="relative bg-slate-50 rounded-[1.6rem] p-3 min-h-[430px] flex flex-col gap-2.5 overflow-hidden">
+            <div className="relative bg-slate-50 rounded-[1.6rem] p-3 min-h-[380px] flex flex-col gap-2.5 overflow-hidden">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-extrabold text-slate-900">Fluxo Bistro</span>
                 <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
@@ -309,7 +268,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
                 )}
               </div>
 
-              {/* ── PASO 5: TARJETA DE CELEBRACIÓN VERDE ESMERALDA ── */}
+              {/* CIERRE: TARJETA DE CELEBRACIÓN VERDE ESMERALDA (paso final del circuito) */}
               {stage === 'servido' && (
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 p-4 text-center bg-gradient-to-br from-emerald-500 to-teal-600 text-white animate-in fade-in zoom-in-95 duration-500">
                   {/* Check brillante con pulso */}
@@ -361,31 +320,10 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
             className={`w-full max-w-[300px] rounded-[2.2rem] bg-slate-900 p-2.5 border-4 border-slate-800 shadow-2xl transition-all duration-300 ${ring('mozo')}`}
           >
             <div className="w-20 h-3.5 bg-slate-950 rounded-full mx-auto mb-2" />
-            <div className="bg-slate-50 rounded-[1.6rem] p-3 min-h-[430px] flex flex-col gap-2.5">
+            <div className="bg-slate-50 rounded-[1.6rem] p-3 min-h-[380px] flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-extrabold text-slate-900">Comandero · Roberto</span>
                 <Bell className={`w-4 h-4 ${stage === 'pendiente' || stage === 'listo' ? 'text-amber-500 animate-bounce' : 'text-slate-400'}`} />
-              </div>
-
-              {/* Indicador superior de mesas activas (siempre visible) */}
-              <div className="grid grid-cols-2 gap-1.5">
-                {ROOM_TABLES.map((t) => (
-                  <div
-                    key={t.table}
-                    className={`flex items-center justify-between gap-1 rounded-lg border px-2 py-1 text-[10px] font-bold ${roomTone[t.tone]}`}
-                  >
-                    <span>{t.table}</span>
-                    <span className="truncate text-[9px] font-semibold opacity-80">
-                      {t.table === 'Mesa 4' ? mesa4Status[stage] : t.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Resumen de pases / facturación de turno */}
-              <div className="flex items-center justify-between rounded-lg bg-white border border-slate-200 px-2 py-1.5 text-[10px] font-bold text-slate-600">
-                <span>3 mesas activas</span>
-                <span className="tabular-nums">{stage === 'servido' ? '246,80 €' : '214,30 €'} cobrado hoy</span>
               </div>
 
               {stage === 'carrito' && (
@@ -405,18 +343,12 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
                   <ul className="space-y-0.5">
                     {cart.map((l) => (
                       <li key={l.id} className="flex items-center justify-between text-[11px] text-slate-600">
-                        <span className={stage === 'listo' || stage === 'servido' ? 'line-through decoration-emerald-500/70' : ''}>
+                        <span>
                           {l.qty}x {l.name}
                         </span>
-                        {stage === 'listo' || stage === 'servido' ? (
-                          <span className="inline-flex items-center gap-0.5 font-bold text-emerald-600">
-                            <Check className="w-3 h-3" /> Listo
-                          </span>
-                        ) : (
-                          <span className={`font-bold ${l.station === 'barra' ? 'text-violet-600' : 'text-orange-600'}`}>
-                            {l.station === 'barra' ? 'Barra' : 'Cocina'}
-                          </span>
-                        )}
+                        <span className={`font-bold ${l.station === 'barra' ? 'text-violet-600' : 'text-orange-600'}`}>
+                          {l.station === 'barra' ? 'Barra' : 'Cocina'}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -424,31 +356,17 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
               )}
 
               <div className="mt-auto space-y-2">
-                {/* PASO 2: VALIDACIÓN DEL MOZO (sin salto automático) */}
                 {stage === 'pendiente' && (
                   <>
-                    <div className="px-2.5 py-1.5 rounded-lg border bg-amber-50 border-amber-300 text-amber-800 text-[11px] font-black flex items-center gap-1.5 animate-pulse">
-                      <Bell className="w-3.5 h-3.5" /> 🔔 Validar Comanda Nueva
+                    <div className="px-2.5 py-1.5 rounded-lg border bg-amber-50 border-amber-200 text-amber-700 text-[11px] font-bold flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5" /> Pedido nuevo · revisar y validar
                     </div>
-                    <ul className="rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 text-[10px] font-bold text-slate-600">
-                      {(['bebida', 'entrada', 'principal', 'postre'] as const).map((c) => {
-                        const n = cart.filter((l) => l.course === c).reduce((a, l) => a + l.qty, 0)
-                        return (
-                          <li key={c} className="flex items-center justify-between px-2 py-1">
-                            <span>{COURSE_LABELS[c]}</span>
-                            <span className={`tabular-nums ${n > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
-                              {n > 0 ? `${n} ud.` : '—'}
-                            </span>
-                          </li>
-                        )
-                      })}
-                    </ul>
                     <button
                       type="button"
                       onClick={validateOrder}
-                      className="w-full py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 transition-colors cursor-pointer active:scale-95"
+                      className="w-full py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 transition-colors cursor-pointer"
                     >
-                      ✓ Aprobar y Enviar a Cocina
+                      Validar y enviar a cocina
                     </button>
                   </>
                 )}
@@ -457,24 +375,23 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
                     En cocina · te avisamos cuando esté listo
                   </div>
                 )}
-                {/* PASO 4: MOZO SIRVE Y COBRA */}
                 {stage === 'listo' && (
                   <>
                     <div className="px-2.5 py-1.5 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700 text-[11px] font-bold flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> ✓ Listo en Cocina · Mesa 4
+                      <Bell className="w-3.5 h-3.5" /> Cocina: Mesa 4 lista para servir
                     </div>
                     <button
                       type="button"
                       onClick={serveOrder}
-                      className="w-full py-2.5 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition-colors cursor-pointer active:scale-95"
+                      className="w-full py-2.5 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition-colors cursor-pointer"
                     >
-                      Entregar y Cobrar Mesa
+                      Marcar como servido
                     </button>
                   </>
                 )}
                 {stage === 'servido' && (
                   <div className="px-2.5 py-1.5 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700 text-[11px] font-bold flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Mesa 4 servida · {formatEuro(total)} cobrado
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Mesa 4 servida
                   </div>
                 )}
               </div>
@@ -490,7 +407,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
           <div
             className={`w-full max-w-[300px] rounded-[1.6rem] bg-slate-900 p-2.5 border-4 border-slate-800 shadow-2xl transition-all duration-300 ${ring('cocina')}`}
           >
-            <div className="bg-slate-950 rounded-[1.1rem] p-3 min-h-[430px] flex flex-col gap-2.5">
+            <div className="bg-slate-950 rounded-[1.1rem] p-3 min-h-[396px] flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-extrabold text-white">Monitor Cocina</span>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">
@@ -498,37 +415,10 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
                 </span>
               </div>
 
-              {/* Indicador superior de estaciones (siempre visible) */}
-              <div className="grid grid-cols-2 gap-1.5">
-                <div className="flex items-center gap-1.5 rounded-lg border border-orange-500/30 bg-orange-500/10 px-2 py-1.5 text-[10px] font-bold text-orange-300">
-                  <Flame className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>Cocina</span>
-                  <span className="ml-auto tabular-nums">{stage === 'carrito' || stage === 'pendiente' ? 0 : kitchenLines.length > 0 ? 1 : 0} pase</span>
-                </div>
-                <div className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2 py-1.5 text-[10px] font-bold text-violet-300">
-                  <Beer className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>Barra</span>
-                  <span className="ml-auto tabular-nums">{barLines.length > 0 && stage !== 'carrito' && stage !== 'pendiente' ? 1 : 0} pase</span>
-                </div>
-              </div>
-
-              {/* Pases colapsados de la sala (siempre visible) */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">Pases cerrados:</span>
-                {KDS_PASSES_DONE.map((p) => (
-                  <span
-                    key={p.table}
-                    className="inline-flex items-center gap-1 rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[9px] font-bold text-slate-300"
-                  >
-                    {p.table} <Check className="w-2.5 h-2.5 text-emerald-400" /> {p.note}
-                  </span>
-                ))}
-              </div>
-
               {stage === 'carrito' || stage === 'pendiente' ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 text-slate-500">
                   <ChefHat className="w-8 h-8" />
-                  <p className="text-xs font-semibold">Sin comandas en fuegos</p>
+                  <p className="text-xs font-semibold">Sin comandas</p>
                   <p className="text-[11px]">Solo entran pedidos validados por el camarero.</p>
                 </div>
               ) : (
@@ -537,12 +427,11 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
                     stage === 'cocina' ? 'bg-slate-900 border-amber-500/50' : 'bg-slate-900/60 border-emerald-500/40'
                   }`}
                 >
-                  {/* Cabecera del pase activo con cronómetro y semáforo */}
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-white">Mesa 4 · Terraza</span>
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-400 tabular-nums">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-amber-400 tabular-nums">
                       <Clock className="w-3 h-3" />
-                      ⏱ {elapsedLabel} · En Tiempo
+                      {String(Math.floor(elapsed / 60)).padStart(2, '0')}:{String(elapsed % 60).padStart(2, '0')}
                     </span>
                   </div>
                   {kitchenLines.length > 0 ? (
@@ -550,9 +439,6 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
                       {kitchenLines.map((l) => (
                         <li key={l.id} className="text-sm font-bold text-slate-100">
                           {l.qty}x {l.name}
-                          <span className="ml-1.5 align-middle text-[9px] font-black uppercase tracking-wider text-slate-500">
-                            {COURSE_LABELS[l.course]}
-                          </span>
                         </li>
                       ))}
                     </ul>
@@ -568,24 +454,18 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
               )}
 
               <div className="mt-auto">
-                {/* PASO 3: COCINA MARCHA EL PASE */}
                 {stage === 'cocina' && (
                   <button
                     type="button"
                     onClick={markReady}
-                    className="w-full py-4 rounded-xl text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors cursor-pointer active:scale-95"
+                    className="w-full py-4 rounded-xl text-sm font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors cursor-pointer"
                   >
-                    🔥 ¡LISTO PARA SERVIR!
+                    ¡LISTO!
                   </button>
                 )}
-                {stage === 'listo' && (
+                {(stage === 'listo' || stage === 'servido') && (
                   <div className="px-2.5 py-2 rounded-lg border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 text-[11px] font-bold flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Pase completado · camarero avisado
-                  </div>
-                )}
-                {stage === 'servido' && (
-                  <div className="px-2.5 py-2 rounded-lg border bg-emerald-500/10 border-emerald-500/30 text-emerald-300 text-[11px] font-bold flex items-center gap-1.5">
-                    <UtensilsCrossed className="w-3.5 h-3.5" /> Mesa 4 servida · ticket cerrado
                   </div>
                 )}
               </div>
@@ -601,13 +481,13 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
       <p className="mt-6 text-center text-xs sm:text-sm text-slate-500 flex items-center justify-center gap-1.5">
         <ArrowRight className="w-4 h-4 text-blue-600" />
         {stage === 'carrito' && (itemsCount === 0 ? 'Empieza pidiendo un plato en la carta.' : 'Pulsa «Enviar pedido» en la carta.')}
-        {stage === 'pendiente' && 'Ahora el camarero valida con «✓ Aprobar y Enviar a Cocina».'}
-        {stage === 'cocina' && 'La cocina prepara el pase y pulsa «🔥 ¡LISTO PARA SERVIR!».'}
-        {stage === 'listo' && 'El camarero entrega y pulsa «Entregar y Cobrar Mesa».'}
-        {stage === 'servido' && 'Circuito completo: sello sumado y reseña pendiente. Pulsa «Reiniciar» para repetirlo.'}
+        {stage === 'pendiente' && 'Ahora el camarero valida el pedido en su móvil.'}
+        {stage === 'cocina' && 'La cocina prepara el pedido y pulsa «¡LISTO!».'}
+        {stage === 'listo' && 'El camarero recibe el aviso y sirve la mesa.'}
+        {stage === 'servido' && 'Circuito completo. Pulsa «Reiniciar» para repetirlo.'}
       </p>
 
-      {/* Keyframes locales del cierre esmeralda */}
+      {/* Keyframes del resplandor del check esmeralda */}
       <style jsx global>{`
         @keyframes fluxoGlowPulse {
           0%, 100% { box-shadow: 0 0 18px rgba(255, 255, 255, 0.45); }
