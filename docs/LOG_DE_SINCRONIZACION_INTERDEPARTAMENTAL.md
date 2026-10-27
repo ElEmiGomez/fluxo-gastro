@@ -6,6 +6,16 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-10-27 11:15] — Registro de Nueva Tarea: Implementar FAQ en Landing Page (Tarea 5)
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto (Depto 4).
+* **Alcance de la Tarea:**
+  1. Diseñar e implementar sección interactiva de Preguntas Frecuentes (FAQ / Acordeón) en la landing page principal (`src/app/page.tsx` o componente dedicado).
+  2. Abordar y resolver las principales objeciones comerciales detectadas en prospección: coexistencia con TPV existente, 0% comisiones por comanda, tolerancia y reconexión ante caídas de internet, curva de aprendizaje inmediata para el personal, y compatibilidad BYOD (dispositivos móviles/tablets sin hardware propietario).
+  3. Accesibilidad semántica y optimización para conversión en visitas comerciales.
+* **Orden de Backlog Activo:** Tarea 2 (QR dinámico muestras), Tarea 3 (Vídeo landing), Tarea 4 (Plan marketing y calle), Tarea 5 (FAQ Landing Page). Tarea de QR masivo de mesas archivada en espera.
+
+---
+
 
 ### [2026-10-26 21:55] — Integración del Mapa Interactivo de Prospección en el CRM (/admin/crm)
 * **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Dirección General / Fundador (Depto 1) e Ingeniería & Producto (Depto 4).

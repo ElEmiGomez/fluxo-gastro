@@ -70,8 +70,10 @@ flowchart TD
 │        (Soporte de demo redireccionable/configurable para cartas por nicho)│
 │  ├─ [📋 Tarea 3] Hacer Vídeo de Landing Page                              │
 │        (Guion, captura del flujo de terraza/cocina y maquetación web)      │
-│  └─ [📋 Tarea 4] Accionar Plan de Marketing y Validación en Campo          │
+│  ├─ [📋 Tarea 4] Accionar Plan de Marketing y Validación en Campo          │
 │        (Salida a calle con Carta QR, prospección y feedback de Fluxo)     │
+│  └─ [📋 Tarea 5] Implementar FAQ en la Landing Page                        │
+│        (Preguntas frecuentes y derribo de objeciones comerciales)         │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐
