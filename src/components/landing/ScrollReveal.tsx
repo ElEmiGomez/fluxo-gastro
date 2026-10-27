@@ -30,7 +30,19 @@ export function ScrollReveal({
   as: Component = 'div',
 }: ScrollRevealProps) {
   const [isVisible, setIsVisible] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const elementRef = useRef<HTMLElement | null>(null)
+
+  // En móvil (<768px) se desactiva el difuminado: animar filter: blur() fuerza
+  // re-rasterizaciones masivas en la GPU del teléfono (scroll con tirones).
+  // En PC se mantiene el blur-in.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    setIsMobile(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   useEffect(() => {
     // Si el usuario prefiere movimiento reducido, mostrar inmediatamente
@@ -97,14 +109,17 @@ export function ScrollReveal({
     return transform
   }
 
+  const activeBlur = !isMobile && blur > 0
+
   return (
     <Component
       ref={elementRef}
-      className={`will-change-[transform,opacity,filter] ${className}`}
+      className={`will-change-[transform,opacity] ${className}`}
       style={{
         opacity: isVisible ? 1 : 0,
         transform: getInitialTransform(),
-        filter: isVisible ? 'blur(0px)' : `blur(${blur}px)`,
+        filter: activeBlur ? (isVisible ? 'blur(0px)' : `blur(${blur}px)`) : undefined,
+        willChange: activeBlur ? 'transform, opacity, filter' : 'transform, opacity',
         transitionProperty: 'opacity, transform, filter',
         transitionDuration: `${duration}ms`,
         transitionDelay: `${delay}ms`,

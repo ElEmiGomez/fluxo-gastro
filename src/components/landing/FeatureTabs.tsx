@@ -182,14 +182,15 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
             const Icon = m.icon
             const isActive = i === active
             const isDone = i < active
-            // Sticky Scroll Stack móvil: cada tarjeta se superpone sobre la anterior al hacer scroll
+            // Sticky Scroll Stack móvil: cada tarjeta cubre por completo a la anterior
+            // al hacer scroll (mismo top para todas, sin asomos de índices).
             // (clases literales completas: Tailwind no genera clases dinámicas)
             const stickyCls = [
-              'max-md:sticky max-md:top-20 max-md:z-10',
-              'max-md:sticky max-md:top-24 max-md:z-20',
-              'max-md:sticky max-md:top-28 max-md:z-30',
-              'max-md:sticky max-md:top-32 max-md:z-40',
-              'max-md:sticky max-md:top-36 max-md:z-50',
+              'max-md:sticky max-md:top-[72px] max-md:z-10',
+              'max-md:sticky max-md:top-[72px] max-md:z-20',
+              'max-md:sticky max-md:top-[72px] max-md:z-30',
+              'max-md:sticky max-md:top-[72px] max-md:z-40',
+              'max-md:sticky max-md:top-[72px] max-md:z-50',
             ][i]
             return (
               <React.Fragment key={m.title}>
@@ -203,7 +204,7 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
                         ? 'border-blue-500 shadow-xl shadow-blue-500/15 ring-4 ring-blue-500/10 lg:-translate-y-2'
                         : isDone
                           ? 'border-emerald-200 shadow-sm'
-                          : 'border-slate-200 shadow-sm opacity-80 hover:opacity-100'
+                          : 'border-slate-200 shadow-sm lg:opacity-80 lg:hover:opacity-100'
                     }`}
                   >
                     {/* Cabecera del paso */}
