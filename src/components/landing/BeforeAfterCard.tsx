@@ -111,7 +111,7 @@ export function BeforeAfterCard() {
               className={`rounded-2xl p-4 sm:p-5 flex items-start gap-3 transition-all duration-500 shadow-xs ${
                 showFluxo
                   ? 'bg-blue-50 border-2 border-blue-500/60'
-                  : 'bg-rose-50 border border-rose-200'
+                  : 'bg-rose-50 border-2 border-rose-200'
               }`}
             >
               {showFluxo ? (
