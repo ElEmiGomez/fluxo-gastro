@@ -186,11 +186,11 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
             // al hacer scroll (mismo top para todas, con holgura bajo la navbar de 64px).
             // (clases literales completas: Tailwind no genera clases dinámicas)
             const stickyCls = [
-              'max-md:sticky max-md:top-24 max-md:z-10',
-              'max-md:sticky max-md:top-24 max-md:z-20',
-              'max-md:sticky max-md:top-24 max-md:z-30',
-              'max-md:sticky max-md:top-24 max-md:z-40',
-              'max-md:sticky max-md:top-24 max-md:z-40',
+              'max-md:sticky max-md:top-24 max-md:z-10 max-md:min-h-[320px]',
+              'max-md:sticky max-md:top-24 max-md:z-20 max-md:min-h-[320px]',
+              'max-md:sticky max-md:top-24 max-md:z-30 max-md:min-h-[320px]',
+              'max-md:sticky max-md:top-24 max-md:z-40 max-md:min-h-[320px]',
+              'max-md:sticky max-md:top-24 max-md:z-40 max-md:min-h-[320px]',
             ][i]
             return (
               <React.Fragment key={m.title}>
