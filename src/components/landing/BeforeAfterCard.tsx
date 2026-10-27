@@ -60,10 +60,10 @@ export function BeforeAfterCard() {
             Comparativa Operativa
           </span>
           <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Antes vs. Después de Fluxo en tu Sala
+            Del Caos al Control: tu Sala con Fluxo
           </h3>
           <p className="text-sm text-slate-600">
-            El impacto directo de cambiar el desorden analógico por sincronización digital en tiempo real.
+            Cinco dolores diarios del servicio y cómo los resuelve la sincronización en tiempo real.
           </p>
         </div>
 
