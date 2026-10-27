@@ -183,14 +183,14 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
             const isActive = i === active
             const isDone = i < active
             // Sticky Scroll Stack móvil: cada tarjeta cubre por completo a la anterior
-            // al hacer scroll (mismo top para todas, sin asomos de índices).
+            // al hacer scroll (mismo top para todas, con holgura bajo la navbar de 64px).
             // (clases literales completas: Tailwind no genera clases dinámicas)
             const stickyCls = [
-              'max-md:sticky max-md:top-[72px] max-md:z-10',
-              'max-md:sticky max-md:top-[72px] max-md:z-20',
-              'max-md:sticky max-md:top-[72px] max-md:z-30',
-              'max-md:sticky max-md:top-[72px] max-md:z-40',
-              'max-md:sticky max-md:top-[72px] max-md:z-50',
+              'max-md:sticky max-md:top-20 max-md:z-10',
+              'max-md:sticky max-md:top-20 max-md:z-20',
+              'max-md:sticky max-md:top-20 max-md:z-30',
+              'max-md:sticky max-md:top-20 max-md:z-40',
+              'max-md:sticky max-md:top-20 max-md:z-50',
             ][i]
             return (
               <React.Fragment key={m.title}>
