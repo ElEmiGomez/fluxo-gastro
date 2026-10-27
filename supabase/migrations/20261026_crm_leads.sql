@@ -57,3 +57,10 @@ ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS google_complaint_tags JSONB DEFAU
 
 ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS decision_makers JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS beverage_distributor VARCHAR(50) DEFAULT 'sin_patrocinio';
+
+-- Migración de ICPs a A, B, C
+ALTER TABLE crm_leads DROP CONSTRAINT IF EXISTS crm_leads_icp_segment_check;
+ALTER TABLE crm_leads ADD CONSTRAINT crm_leads_icp_segment_check CHECK (icp_segment IN ('A', 'B', 'C', 'CARLOS', 'MARTIN', 'LUCIA'));
+UPDATE crm_leads SET icp_segment = 'A' WHERE icp_segment = 'CARLOS';
+UPDATE crm_leads SET icp_segment = 'B' WHERE icp_segment = 'MARTIN';
+UPDATE crm_leads SET icp_segment = 'C' WHERE icp_segment = 'LUCIA';

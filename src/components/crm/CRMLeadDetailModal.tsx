@@ -44,7 +44,9 @@ import {
   POS_SYSTEM_CONFIG,
   DecisionMaker,
   BeverageDistributor,
-  DISTRIBUTOR_CONFIG
+  DISTRIBUTOR_CONFIG,
+  normalizeICP,
+  ICP_CONFIG
 } from '@/types/crm.types'
 import { CRMPilotAgreementModal } from './CRMPilotAgreementModal'
 import { CRMBeforeAfterModal } from './CRMBeforeAfterModal'
@@ -412,9 +414,15 @@ export function CRMLeadDetailModal({
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
                     {lead.zone}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                    ICP: {lead.icp_segment}
-                  </span>
+                  {(() => {
+                    const icpKey = normalizeICP(lead.icp_segment);
+                    const icpData = ICP_CONFIG[icpKey];
+                    return (
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${icpData.badge}`} title={icpData.description}>
+                        {icpData.label}
+                      </span>
+                    );
+                  })()}
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
                     ★ Score {lead.score}/10
                   </span>

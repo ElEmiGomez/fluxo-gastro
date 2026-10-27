@@ -8,7 +8,42 @@ export type CRMStatus =
 
 export type CRMPlan = 'carta_39' | 'sala_69' | 'full_99' | 'suite_139'
 
-export type CRMICP = 'CARLOS' | 'MARTIN' | 'LUCIA'
+export type CRMICP = 'A' | 'B' | 'C' | 'CARLOS' | 'MARTIN' | 'LUCIA'
+
+export const normalizeICP = (icp: string | null | undefined): 'A' | 'B' | 'C' => {
+  if (!icp) return 'B'
+  if (icp === 'A' || icp === 'CARLOS') return 'A'
+  if (icp === 'B' || icp === 'MARTIN') return 'B'
+  if (icp === 'C' || icp === 'LUCIA') return 'C'
+  return 'B'
+}
+
+export const ICP_CONFIG: Record<
+  'A' | 'B' | 'C',
+  { label: string; shortLabel: string; badge: string; badgeLight: string; description: string }
+> = {
+  A: {
+    label: 'ICP A (Alta Aptitud)',
+    shortLabel: 'ICP A',
+    badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    badgeLight: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    description: 'Máxima aptitud: Alto volumen de raciones/marisco y terraza. Dolor crítico en comandas y cobro.',
+  },
+  B: {
+    label: 'ICP B (Aptitud Media)',
+    shortLabel: 'ICP B',
+    badge: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+    badgeLight: 'bg-blue-50 text-blue-700 border-blue-200',
+    description: 'Aptitud media: Restaurantes tradicionales y mesones con menú del día. Dolor en impresión de cartas.',
+  },
+  C: {
+    label: 'ICP C (Básica / Carta QR)',
+    shortLabel: 'ICP C',
+    badge: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    badgeLight: 'bg-slate-100 text-slate-700 border-slate-300',
+    description: 'Aptitud básica: Cafeterías, locales de copas o picoteo. Aplica para Carta QR digital y reseñas.',
+  },
+}
 
 export type CRMPosSystem =
   | 'papel_libreta'             // Libreta de papel / comanda manual

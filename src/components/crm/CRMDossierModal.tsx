@@ -239,7 +239,7 @@ export function CRMDossierModal({ lead, isOpen, onClose }: CRMDossierModalProps)
                   Escanee el código QR adyacente con la cámara del móvil para consultar el catálogo interactivo adaptado para {lead.name}.
                 </p>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  Soporte técnico directo: (+34) 600 000 000 • Noia, Galicia
+                  Soporte técnico directo: (+34) 711 573 870 • Noia, Galicia
                 </p>
               </div>
 

@@ -14,6 +14,8 @@ import {
   BeverageDistributor,
   DISTRIBUTOR_CONFIG,
   NOIA_COMMERCIAL_EVENTS,
+  normalizeICP,
+  ICP_CONFIG,
 } from '../src/types/crm.types'
 
 async function runTests() {
@@ -44,7 +46,7 @@ async function runTests() {
 
   console.log('✅ Auth tests passed!')
 
-  console.log('--- TEST 2: Leads Repository & Seed Data ---')
+  console.log('--- TEST 2: Leads Repository & Seed Data (ICP A, B, C) ---')
   const initialLeads = await getCRMLeads()
   console.log(`Total initial leads loaded: ${initialLeads.length}`)
   console.assert(initialLeads.length >= 35, 'Should load at least 35 initial Noia leads')
@@ -52,6 +54,11 @@ async function runTests() {
   const topLead = initialLeads[0]
   console.log(`Top scored establishment: ${topLead.name} (Score: ${topLead.score}, ICP: ${topLead.icp_segment})`)
   console.assert(topLead.score >= 9.0, 'Top lead should have high priority score')
+  console.assert(normalizeICP('CARLOS') === 'A', 'CARLOS maps to A')
+  console.assert(normalizeICP('MARTIN') === 'B', 'MARTIN maps to B')
+  console.assert(normalizeICP('LUCIA') === 'C', 'LUCIA maps to C')
+  console.assert(ICP_CONFIG.A.label.includes('Alta'), 'ICP A label defined')
+  console.assert(ICP_CONFIG.C.label.includes('Básica'), 'ICP C label defined')
 
   console.log('--- TEST 3: Executive Metrics Calculation ---')
   const metrics = calculateCRMMetrics(initialLeads)
@@ -82,10 +89,10 @@ async function runTests() {
     name: 'Restaurante Test Unitario',
     address: 'Rúa de Prova, 1',
     zone: 'Noia Centro',
-    icp_segment: 'CARLOS',
+    icp_segment: 'A',
     contact_name: 'Tester',
-    contact_phone: '600112233',
-    contact_whatsapp: '600112233',
+    contact_phone: '+34 711 573 870',
+    contact_whatsapp: '34711573870',
     instagram: null,
     google_rating: 4.8,
     google_reviews_count: 50,
@@ -112,7 +119,7 @@ async function runTests() {
   const testAgreement: PilotAgreement = {
     signed_at: new Date().toISOString(),
     signee_name: 'Manuel Test',
-    signee_phone: '600112233',
+    signee_phone: '+34 711 573 870',
     agreed_plan: 'full_99',
     trial_duration_days: 14,
   }

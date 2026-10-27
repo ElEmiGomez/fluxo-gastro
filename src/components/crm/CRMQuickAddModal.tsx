@@ -14,7 +14,7 @@ export function CRMQuickAddModal({ isOpen, onClose, onSave }: CRMQuickAddModalPr
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [zone, setZone] = useState('Noia Centro')
-  const [icpSegment, setIcpSegment] = useState<CRMICP>('CARLOS')
+  const [icpSegment, setIcpSegment] = useState<CRMICP>('A')
   const [targetPlan, setTargetPlan] = useState<CRMPlan>('carta_39')
   const [status, setStatus] = useState<CRMStatus>('lead_por_visitar')
   const [contactName, setContactName] = useState('')
@@ -165,9 +165,9 @@ export function CRMQuickAddModal({ isOpen, onClose, onSave }: CRMQuickAddModalPr
                 onChange={(e) => setIcpSegment(e.target.value as CRMICP)}
                 className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500"
               >
-                <option value="CARLOS">Carlos (Alta rotación / Terrazas)</option>
-                <option value="MARTIN">Martín (Tradicional / Escéptico)</option>
-                <option value="LUCIA">Lucía (Gastrobar / Experiencia)</option>
+                <option value="A">ICP A — Alta Aptitud (Alto volumen, marisco, terraza)</option>
+                <option value="B">ICP B — Media Aptitud (Restaurante tradicional, menú del día)</option>
+                <option value="C">ICP C — Básica (Cafetería, copas, ideal Carta QR)</option>
               </select>
             </div>
 

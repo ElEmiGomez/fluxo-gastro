@@ -27,9 +27,27 @@ import {
   CheckCircle,
   AlertCircle,
   QrCode,
-  Calendar
+  Calendar,
+  Sun,
+  Moon,
+  FileSpreadsheet,
+  FileCode,
+  FileText,
+  Check,
+  LayoutDashboard,
+  MoveRight
 } from 'lucide-react'
-import { CRMICP, CRMLead, CRMMetrics, CRMPlan, CRMStatus, POS_SYSTEM_CONFIG, NOIA_COMMERCIAL_EVENTS } from '@/types/crm.types'
+import {
+  CRMICP,
+  CRMLead,
+  CRMMetrics,
+  CRMPlan,
+  CRMStatus,
+  POS_SYSTEM_CONFIG,
+  NOIA_COMMERCIAL_EVENTS,
+  normalizeICP,
+  ICP_CONFIG
+} from '@/types/crm.types'
 import {
   saveLeadsToOfflineCache,
   getLeadsFromOfflineCache,
@@ -42,13 +60,13 @@ import { CRMQuickAddModal } from '@/components/crm/CRMQuickAddModal'
 import { CRMLeadDetailModal } from '@/components/crm/CRMLeadDetailModal'
 import { CRMContactCardModal } from '@/components/crm/CRMContactCardModal'
 
-const STATUS_COLUMNS: { id: CRMStatus; title: string; color: string; badgeBg: string }[] = [
-  { id: 'lead_por_visitar', title: 'Por Visitar', color: 'border-slate-700', badgeBg: 'bg-slate-800 text-slate-300' },
-  { id: 'contactado', title: 'Contactados', color: 'border-blue-800/60', badgeBg: 'bg-blue-950/80 text-blue-300' },
-  { id: 'piloto_14_dias', title: 'Piloto (14 Días)', color: 'border-amber-800/60', badgeBg: 'bg-amber-950/80 text-amber-300' },
-  { id: 'en_negociacion', title: 'En Negociación', color: 'border-purple-800/60', badgeBg: 'bg-purple-950/80 text-purple-300' },
-  { id: 'ganado', title: 'Ganados (Clientes)', color: 'border-emerald-800/60', badgeBg: 'bg-emerald-950/80 text-emerald-300' },
-  { id: 'perdido', title: 'Perdidos', color: 'border-rose-800/60', badgeBg: 'bg-rose-950/80 text-rose-300' },
+const STATUS_COLUMNS: { id: CRMStatus; title: string; color: string; badgeBg: string; badgeBgLight: string }[] = [
+  { id: 'lead_por_visitar', title: 'Por Visitar', color: 'border-slate-700', badgeBg: 'bg-slate-800 text-slate-300', badgeBgLight: 'bg-slate-200 text-slate-700' },
+  { id: 'contactado', title: 'Contactados', color: 'border-blue-800/60', badgeBg: 'bg-blue-950/80 text-blue-300', badgeBgLight: 'bg-blue-100 text-blue-800' },
+  { id: 'piloto_14_dias', title: 'Piloto (14 Días)', color: 'border-amber-800/60', badgeBg: 'bg-amber-950/80 text-amber-300', badgeBgLight: 'bg-amber-100 text-amber-800' },
+  { id: 'en_negociacion', title: 'En Negociación', color: 'border-purple-800/60', badgeBg: 'bg-purple-950/80 text-purple-300', badgeBgLight: 'bg-purple-100 text-purple-800' },
+  { id: 'ganado', title: 'Ganados (Clientes)', color: 'border-emerald-800/60', badgeBg: 'bg-emerald-950/80 text-emerald-300', badgeBgLight: 'bg-emerald-100 text-emerald-800' },
+  { id: 'perdido', title: 'Perdidos', color: 'border-rose-800/60', badgeBg: 'bg-rose-950/80 text-rose-300', badgeBgLight: 'bg-rose-100 text-rose-800' },
 ]
 
 // Helper para autorizar peticiones de forma resiliente en móvil (Cookie + Bearer Token)
@@ -91,6 +109,9 @@ export default function CRMAdminPage() {
   const [loading, setLoading] = useState<boolean>(false)
   const [viewMode, setViewMode] = useState<'kanban' | 'table' | 'map'>('kanban')
 
+  // Modo Claro / Oscuro (Tema estilo imagen de referencia por defecto)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
   // Filtros
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedZone, setSelectedZone] = useState<string>('all')
@@ -98,14 +119,37 @@ export default function CRMAdminPage() {
   const [selectedPlan, setSelectedPlan] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
 
-  // Modales
+  // Modales y menús
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isContactCardOpen, setIsContactCardOpen] = useState(false)
   const [showAllEvents, setShowAllEvents] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
   const [isOnline, setIsOnline] = useState<boolean>(true)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
+
+  // Drag & Drop Trello Style
+  const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null)
+  const [dragOverColId, setDragOverColId] = useState<CRMStatus | null>(null)
+
+  // Inicializar tema desde localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('fluxo_crm_theme') as 'light' | 'dark' | null
+      if (savedTheme) {
+        setTheme(savedTheme)
+      }
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(nextTheme)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('fluxo_crm_theme', nextTheme)
+    }
+  }
 
   // 1. Verificar autenticación al montar
   useEffect(() => {
@@ -183,20 +227,66 @@ export default function CRMAdminPage() {
       setSyncMessage('✓ Cambio guardado localmente (sin cobertura). Se subirá al recuperar señal.')
       return
     }
-    const res = await fetch('/api/crm', {
-      method: 'PATCH',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ id, ...updates }),
-    })
-    if (!res.ok) {
-      const err = await res.json()
-      throw new Error(err.error || 'Error al actualizar lead')
+
+    // Actualización optimista local
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...updates, updated_at: new Date().toISOString() } : l)))
+    if (selectedLead?.id === id) {
+      setSelectedLead((prev) => (prev ? { ...prev, ...updates } : null))
     }
-    const data = await res.json()
-    if (data.lead) {
-      setLeads((prev) => prev.map((l) => (l.id === id ? data.lead : l)))
-      if (data.metrics) setMetrics(data.metrics)
-      if (selectedLead?.id === id) setSelectedLead(data.lead)
+
+    try {
+      const res = await fetch('/api/crm', {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ id, ...updates }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Error al actualizar lead')
+      }
+      const data = await res.json()
+      if (data.lead) {
+        setLeads((prev) => prev.map((l) => (l.id === id ? data.lead : l)))
+        if (data.metrics) setMetrics(data.metrics)
+        if (selectedLead?.id === id) setSelectedLead(data.lead)
+      }
+    } catch (e: any) {
+      console.error('Error al actualizar lead:', e)
+      fetchCRMData()
+    }
+  }
+
+  // Drag and Drop Handlers (Trello Style)
+  const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    e.dataTransfer.setData('text/plain', leadId)
+    e.dataTransfer.effectAllowed = 'move'
+    setDraggingLeadId(leadId)
+  }
+
+  const handleDragOver = (e: React.DragEvent, colId: CRMStatus) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOverColId !== colId) {
+      setDragOverColId(colId)
+    }
+  }
+
+  const handleDragLeave = (colId: CRMStatus) => {
+    if (dragOverColId === colId) {
+      setDragOverColId(null)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent, targetStatus: CRMStatus) => {
+    e.preventDefault()
+    const leadId = e.dataTransfer.getData('text/plain') || draggingLeadId
+    setDraggingLeadId(null)
+    setDragOverColId(null)
+
+    if (!leadId) return
+    const targetLead = leads.find((l) => l.id === leadId)
+    if (targetLead && targetLead.status !== targetStatus) {
+      handleUpdateLead(leadId, { status: targetStatus })
     }
   }
 
@@ -231,9 +321,35 @@ export default function CRMAdminPage() {
     setIsAuthenticated(false)
   }
 
-  // 7. Descargar CSV
+  // 7. Opciones de Exportación
   const handleExportCSV = () => {
     window.open('/api/crm?format=csv', '_blank')
+  }
+
+  const handleExportJSON = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(leads, null, 2))
+    const downloadAnchor = document.createElement('a')
+    downloadAnchor.setAttribute('href', dataStr)
+    downloadAnchor.setAttribute('download', `fluxo-crm-leads-${new Date().toISOString().split('T')[0]}.json`)
+    document.body.appendChild(downloadAnchor)
+    downloadAnchor.click()
+    downloadAnchor.remove()
+  }
+
+  const handleCopyMarkdownSummary = () => {
+    const lines = [
+      `# Resumen Comercial Fluxo CRM — ${new Date().toLocaleDateString('es-ES')}`,
+      `Total Locales: ${leads.length} | Ganados: ${metrics?.wonCount || 0} (${metrics?.wonMRR || 0} €/mes) | Pilotos: ${metrics?.activePilotsCount || 0}`,
+      '',
+      '## Estado de Locales en Noia:',
+      ...leads.map((l) => `- [${l.status.toUpperCase()}] **${l.name}** (${l.zone}) — ICP: ${normalizeICP(l.icp_segment)} | Plan: ${l.target_plan} | Tel: ${l.contact_phone || 'Sin tel'} | Notas: ${l.notes || 'Sin notas'}`)
+    ].join('\n')
+
+    if (typeof navigator !== 'undefined') {
+      navigator.clipboard.writeText(lines)
+      setSyncMessage('✓ Resumen copiado al portapapeles con éxito')
+      setTimeout(() => setSyncMessage(null), 3000)
+    }
   }
 
   // 8. Filtrar leads
@@ -246,7 +362,7 @@ export default function CRMAdminPage() {
         (lead.contact_name && lead.contact_name.toLowerCase().includes(searchQuery.toLowerCase()))
 
       const matchesZone = selectedZone === 'all' || lead.zone === selectedZone
-      const matchesICP = selectedICP === 'all' || lead.icp_segment === selectedICP
+      const matchesICP = selectedICP === 'all' || normalizeICP(lead.icp_segment) === selectedICP
       const matchesPlan = selectedPlan === 'all' || lead.target_plan === selectedPlan
       const matchesStatus = selectedStatus === 'all' || lead.status === selectedStatus
 
@@ -285,570 +401,923 @@ export default function CRMAdminPage() {
     )
   }
 
+  const isLight = theme === 'light'
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
-      {/* 1. Header Superior */}
-      <header className="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 sm:px-6">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          {/* Logo y Título */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-500/20">
+    <div
+      className={`min-h-screen flex flex-col md:flex-row font-sans transition-colors duration-200 ${
+        isLight
+          ? 'bg-[#F4F7FE] text-slate-800 selection:bg-blue-600 selection:text-white'
+          : 'bg-[#020617] text-slate-100 selection:bg-blue-600 selection:text-white'
+      }`}
+    >
+      {/* ==============================================================================
+          BARRA LATERAL IZQUIERDA (Estilo CRM.io de la imagen de referencia)
+      ============================================================================== */}
+      <aside className="w-full md:w-64 bg-[#0B132B] text-slate-300 flex flex-col shrink-0 border-r border-slate-800/80 shadow-2xl z-20">
+        {/* Logotipo de Marca */}
+        <div className="p-5 border-b border-slate-800/60 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-blue-500/25">
               F
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-bold text-base sm:text-lg text-white">CRM Fundador</h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  FASE 1: NOIA
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
-                Prospección comercial en calle y control de métricas B2B
-              </p>
+              <span className="text-lg font-black tracking-tight text-white">
+                Fluxo<span className="text-blue-500">.io</span>
+              </span>
+              <p className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">CRM Fundador</p>
             </div>
           </div>
 
-          {/* Acciones del Header */}
-          <div className="flex items-center gap-2">
+          {/* Toggle Modo Claro/Oscuro en móvil */}
+          <button
+            onClick={toggleTheme}
+            className="md:hidden p-2 rounded-xl bg-slate-800/80 text-amber-400 hover:text-white transition"
+            title="Alternar Modo Claro / Oscuro"
+          >
+            {isLight ? <Moon className="w-4 h-4 text-slate-300" /> : <Sun className="w-4 h-4 text-amber-400" />}
+          </button>
+        </div>
+
+        {/* Navegación y Vistas */}
+        <div className="p-4 space-y-6 flex-1 overflow-y-auto">
+          {/* Sección Vistas de Trabajo */}
+          <div className="space-y-1.5">
+            <p className="px-3 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Gestión</p>
+
             <button
-              onClick={fetchCRMData}
-              disabled={loading}
-              title="Recargar datos"
-              className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition"
+              onClick={() => setViewMode('kanban')}
+              className={`w-full px-3.5 py-2.5 rounded-2xl text-xs font-semibold flex items-center gap-3 transition ${
+                viewMode === 'kanban'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  : 'text-slate-400 hover:bg-slate-850 hover:text-white'
+              }`}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <Kanban className="w-4 h-4" />
+              <span>Pipeline (Kanban)</span>
             </button>
 
             <button
-              onClick={() => setIsContactCardOpen(true)}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition shadow-sm active:scale-95"
-              title="Mi Tarjeta de Contacto Digital (vCard QR para móvil)"
+              onClick={() => setViewMode('table')}
+              className={`w-full px-3.5 py-2.5 rounded-2xl text-xs font-semibold flex items-center gap-3 transition ${
+                viewMode === 'table'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  : 'text-slate-400 hover:bg-slate-850 hover:text-white'
+              }`}
             >
-              <QrCode className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden sm:inline">Mi Contacto QR</span>
+              <TableIcon className="w-4 h-4" />
+              <span>Tabla de Locales</span>
             </button>
 
             <button
-              onClick={handleExportCSV}
-              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
+              onClick={() => setViewMode('map')}
+              className={`w-full px-3.5 py-2.5 rounded-2xl text-xs font-semibold flex items-center gap-3 transition ${
+                viewMode === 'map'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                  : 'text-slate-400 hover:bg-slate-850 hover:text-white'
+              }`}
             >
-              <Download className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden sm:inline">Exportar Excel</span>
+              <MapPin className="w-4 h-4" />
+              <span>Mapa de Noia</span>
             </button>
+          </div>
+
+          {/* Sección Acciones Rápidas */}
+          <div className="space-y-1.5">
+            <p className="px-3 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Acciones</p>
 
             <button
               onClick={() => setIsQuickAddOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition shadow-lg shadow-blue-600/25"
+              className="w-full px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-3 shadow-md shadow-blue-600/20 transition active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
               <span>Nuevo Local</span>
             </button>
 
             <button
-              onClick={handleLogout}
-              title="Cerrar sesión"
-              className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-slate-800/60 transition ml-1"
+              onClick={() => setIsContactCardOpen(true)}
+              className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 border border-slate-700/60 text-xs font-semibold flex items-center gap-3 transition"
             >
-              <LogOut className="w-4 h-4" />
+              <QrCode className="w-4 h-4 text-blue-400" />
+              <span>Mi Tarjeta QR</span>
             </button>
           </div>
-        </div>
-      </header>
 
-      {/* 2. Barra de Métricas KPI Clave */}
-      <section className="px-4 py-4 sm:px-6 max-w-7xl mx-auto w-full">
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* MRR Ganado */}
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-              <span>MRR Ganado</span>
-              <DollarSign className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-emerald-400 font-mono">
-              {metrics?.wonMRR || 0} €<span className="text-xs text-slate-400 font-normal">/mes</span>
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1 font-mono">
-              ARR: {((metrics?.wonMRR || 0) * 12).toLocaleString()} €/año
-            </div>
-          </div>
-
-          {/* Pipeline Ponderado */}
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-              <span>Pipeline en Juego</span>
-              <TrendingUp className="w-4 h-4 text-blue-400" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-white font-mono">
-              {metrics?.pipelineMRR || 0} €<span className="text-xs text-slate-400 font-normal">/mes</span>
-            </div>
-            <div className="text-[11px] text-blue-400/80 mt-1">
-              {(metrics?.pipelineCounts.contactado || 0) +
-                (metrics?.pipelineCounts.piloto_14_dias || 0) +
-                (metrics?.pipelineCounts.en_negociacion || 0)}{' '}
-              en proceso activo
-            </div>
-          </div>
-
-          {/* Pilotos Activos (14 días) */}
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-              <span>Pilotos de 14 Días</span>
-              <Clock className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-amber-400 font-mono">
-              {metrics?.activePilotsCount || 0}
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1">
-              Locales probando sin coste
-            </div>
-          </div>
-
-          {/* Tasa de Conversión */}
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-              <span>Conversión</span>
-              <Award className="w-4 h-4 text-purple-400" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-purple-400 font-mono">
-              {metrics?.conversionRate || 0}%
-            </div>
-            <div className="text-[11px] text-slate-500 mt-1">
-              {metrics?.wonCount || 0} de {metrics?.totalLeads || 0} locales
-            </div>
-          </div>
-
-          {/* Universo de Locales */}
-          <div className="col-span-2 lg:col-span-1 p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm relative overflow-hidden">
-            <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-              <span>Universo Noia</span>
-              <Building2 className="w-4 h-4 text-slate-400" />
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-white font-mono">
-              {metrics?.totalLeads || 0}
-            </div>
-            <div className="text-[11px] text-emerald-400/80 mt-1">
-              100% auditados y geolocalizados
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 2.5. Calendario de Eventos y Campañas de Noia [Idea 7] */}
-      <section className="px-4 pb-4 sm:px-6 max-w-7xl mx-auto w-full">
-        <div className="p-4 rounded-3xl bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 border border-blue-500/30 shadow-lg relative overflow-hidden">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                  Campaña Municipal Activa
-                </span>
-                <span className="text-xs font-semibold text-blue-300">
-                  {NOIA_COMMERCIAL_EVENTS[0].period}
-                </span>
+          {/* Datos del Fundador */}
+          <div className="pt-2">
+            <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800/80 flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white font-black text-xs shadow-md">
+                EG
               </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-white truncate">Emiliano Gomez</p>
+                <p className="text-[10px] text-blue-400 truncate">+34 711 573 870</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <span>🦪 {NOIA_COMMERCIAL_EVENTS[0].name}</span>
-              </h3>
+        {/* Pie de Barra Lateral */}
+        <div className="p-4 border-t border-slate-800/60 flex items-center justify-between text-xs">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition p-1.5 rounded-xl hover:bg-slate-850"
+            title="Cambiar Modo Claro / Oscuro"
+          >
+            {isLight ? (
+              <>
+                <Moon className="w-4 h-4 text-blue-400" />
+                <span className="hidden md:inline text-xs">Modo Oscuro</span>
+              </>
+            ) : (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span className="hidden md:inline text-xs">Modo Claro</span>
+              </>
+            )}
+          </button>
 
-              <p className="text-xs text-slate-300 max-w-2xl">
-                {NOIA_COMMERCIAL_EVENTS[0].description}
+          <button
+            onClick={handleLogout}
+            title="Cerrar sesión de fundador"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-850 transition"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+      </aside>
+
+      {/* ==============================================================================
+          ESPACIO DE TRABAJO PRINCIPAL (Overview & Dashboard)
+      ============================================================================== */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* 1. Header Superior del Workspace */}
+        <header
+          className={`px-5 py-4 border-b sticky top-0 z-10 backdrop-blur-md transition-colors ${
+            isLight
+              ? 'bg-white/85 border-slate-200/80 text-slate-900 shadow-sm'
+              : 'bg-slate-950/80 border-slate-800/80 text-white'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className={`text-xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                Overview
+              </h2>
+              <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'} hidden sm:block`}>
+                Control ejecutivo de prospección comercial en calle • Noia, Galicia
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Acciones del Header */}
+            <div className="flex items-center gap-2.5">
+              {syncMessage && (
+                <span className="text-[11px] px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-medium animate-pulse hidden md:inline">
+                  {syncMessage}
+                </span>
+              )}
+
+              {/* Botón Alternar Tema (Sol/Luna) */}
               <button
-                onClick={() => setShowAllEvents(!showAllEvents)}
-                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95"
+                onClick={toggleTheme}
+                title={isLight ? 'Cambiar a Modo Oscuro' : 'Cambiar a Modo Claro'}
+                className={`p-2 rounded-xl border transition ${
+                  isLight
+                    ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                    : 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-750'
+                }`}
               >
-                <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                <span>{showAllEvents ? 'Ocultar Calendario' : 'Ver 4 Campañas de Noia'}</span>
+                {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </button>
-            </div>
-          </div>
 
-          {/* Consejo Táctico para la Prospección en Calle */}
-          <div className="mt-3 p-3 rounded-2xl bg-slate-900/90 border border-blue-500/20 flex items-start gap-2.5 text-xs">
-            <span className="text-amber-400 font-bold shrink-0 mt-0.5">💡 Consejo Comercial Hoy:</span>
-            <span className="text-slate-200 leading-relaxed">
-              {NOIA_COMMERCIAL_EVENTS[0].commercialAdvice}
-            </span>
-          </div>
+              {/* Recargar datos */}
+              <button
+                onClick={fetchCRMData}
+                disabled={loading}
+                title="Recargar datos"
+                className={`p-2 rounded-xl border transition ${
+                  isLight
+                    ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-500' : ''}`} />
+              </button>
 
-          {/* Acordeón con las 4 campañas municipales si se expande */}
-          {showAllEvents && (
-            <div className="mt-3 pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 animate-in fade-in">
-              {NOIA_COMMERCIAL_EVENTS.map((ev, i) => (
-                <div
-                  key={ev.id}
-                  className={`p-3 rounded-2xl border text-xs space-y-1.5 ${
-                    i === 0
-                      ? 'bg-blue-900/30 border-blue-500/40 text-blue-200'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-300'
+              {/* BOTÓN DE DESCARGA: SOLO ICONO (Con menú desplegable de opciones) */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  title="Opciones de Exportación (Excel, JSON, Resumen)"
+                  className={`p-2 rounded-xl border transition shadow-sm active:scale-95 ${
+                    isLight
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white truncate">{ev.name}</span>
-                    {i === 0 && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 shrink-0">
-                        ACTIVA
-                      </span>
-                    )}
+                  <Download className="w-4 h-4 text-blue-500" />
+                </button>
+
+                {showExportMenu && (
+                  <div
+                    className={`absolute right-0 mt-2 w-64 rounded-2xl border shadow-2xl p-2 z-50 text-xs animate-in fade-in ${
+                      isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-slate-900 border-slate-800 text-white'
+                    }`}
+                  >
+                    <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Exportar Datos
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExportCSV()
+                        setShowExportMenu(false)
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl flex items-center gap-2.5 transition text-left ${
+                        isLight ? 'hover:bg-slate-100 text-slate-800' : 'hover:bg-slate-800 text-slate-200'
+                      }`}
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <div>
+                        <p className="font-bold">Excel (.csv)</p>
+                        <p className="text-[10px] text-slate-400">Compatible directo con Microsoft Excel</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExportJSON()
+                        setShowExportMenu(false)
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl flex items-center gap-2.5 transition text-left ${
+                        isLight ? 'hover:bg-slate-100 text-slate-800' : 'hover:bg-slate-800 text-slate-200'
+                      }`}
+                    >
+                      <FileCode className="w-4 h-4 text-blue-500 shrink-0" />
+                      <div>
+                        <p className="font-bold">JSON Estructurado</p>
+                        <p className="text-[10px] text-slate-400">Respaldo completo para base de datos</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleCopyMarkdownSummary()
+                        setShowExportMenu(false)
+                      }}
+                      className={`w-full px-3 py-2 rounded-xl flex items-center gap-2.5 transition text-left ${
+                        isLight ? 'hover:bg-slate-100 text-slate-800' : 'hover:bg-slate-800 text-slate-200'
+                      }`}
+                    >
+                      <FileText className="w-4 h-4 text-purple-500 shrink-0" />
+                      <div>
+                        <p className="font-bold">Copiar Resumen de Visitas</p>
+                        <p className="text-[10px] text-slate-400">Texto formateado para informe rápido</p>
+                      </div>
+                    </button>
                   </div>
-                  <div className="text-[11px] text-blue-400 font-mono">{ev.period}</div>
-                  <p className="text-[11px] text-slate-400 leading-snug">{ev.commercialAdvice}</p>
+                )}
+              </div>
+
+              {/* Botón Nuevo Local */}
+              <button
+                onClick={() => setIsQuickAddOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-lg shadow-blue-600/25 active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Nuevo Local</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* 2. Tarjetas KPI Clave (Estilo visual exacto a la imagen CRM.io) */}
+        <section className="px-5 pt-5 max-w-7xl w-full mx-auto">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+            {/* Tarjeta 1: MRR Ganado */}
+            <div
+              className={`p-4 rounded-3xl border transition-all ${
+                isLight
+                  ? 'bg-white border-slate-200/70 shadow-[0_4px_20px_rgb(0,0,0,0.03)]'
+                  : 'bg-slate-900 border-slate-800/80 shadow-md'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  MRR Ganado
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4" />
                 </div>
-              ))}
+              </div>
+              <div className={`text-2xl font-black font-mono ${isLight ? 'text-slate-900' : 'text-emerald-400'}`}>
+                {metrics?.wonMRR || 0} €
+              </div>
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-1">
+                <span>↗</span>
+                <span>ARR: {((metrics?.wonMRR || 0) * 12).toLocaleString()} €/año</span>
+              </div>
             </div>
-          )}
-        </div>
-      </section>
 
-      {/* 3. Barra de Búsqueda, Filtros y Selector de Vista */}
-      <section className="px-4 pb-4 sm:px-6 max-w-7xl mx-auto w-full">
-        <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          {/* Buscador */}
-          <div className="relative flex-1 min-w-[200px] sm:min-w-[280px]">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar local, calle o contacto..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          {/* Filtros */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Filtro Zona */}
-            <select
-              value={selectedZone}
-              onChange={(e) => setSelectedZone(e.target.value)}
-              className="px-2.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+            {/* Tarjeta 2: Pipeline en Juego */}
+            <div
+              className={`p-4 rounded-3xl border transition-all ${
+                isLight
+                  ? 'bg-white border-slate-200/70 shadow-[0_4px_20px_rgb(0,0,0,0.03)]'
+                  : 'bg-slate-900 border-slate-800/80 shadow-md'
+              }`}
             >
-              <option value="all">Todas las Zonas</option>
-              {uniqueZones.map((z) => (
-                <option key={z} value={z}>
-                  {z}
-                </option>
-              ))}
-            </select>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Pipeline en Juego
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <div className={`text-2xl font-black font-mono ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                {metrics?.pipelineMRR || 0} €
+              </div>
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 mt-1">
+                <span>↗</span>
+                <span>
+                  {(metrics?.pipelineCounts.contactado || 0) +
+                    (metrics?.pipelineCounts.piloto_14_dias || 0) +
+                    (metrics?.pipelineCounts.en_negociacion || 0)}{' '}
+                  en negociación activa
+                </span>
+              </div>
+            </div>
 
-            {/* Filtro ICP */}
-            <select
-              value={selectedICP}
-              onChange={(e) => setSelectedICP(e.target.value)}
-              className="px-2.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+            {/* Tarjeta 3: Pilotos de 14 Días */}
+            <div
+              className={`p-4 rounded-3xl border transition-all ${
+                isLight
+                  ? 'bg-white border-slate-200/70 shadow-[0_4px_20px_rgb(0,0,0,0.03)]'
+                  : 'bg-slate-900 border-slate-800/80 shadow-md'
+              }`}
             >
-              <option value="all">Todos los ICPs</option>
-              <option value="CARLOS">Carlos (Alta rotación)</option>
-              <option value="MARTIN">Martín (Tradicional)</option>
-              <option value="LUCIA">Lucía (Gastrobar)</option>
-            </select>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Pilotos de 14 Días
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Clock className="w-4 h-4" />
+                </div>
+              </div>
+              <div className={`text-2xl font-black font-mono ${isLight ? 'text-slate-900' : 'text-amber-400'}`}>
+                {metrics?.activePilotsCount || 0}
+              </div>
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 mt-1">
+                <span>⚡</span>
+                <span>Locales probando sin coste</span>
+              </div>
+            </div>
 
-            {/* Filtro Plan */}
-            <select
-              value={selectedPlan}
-              onChange={(e) => setSelectedPlan(e.target.value)}
-              className="px-2.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+            {/* Tarjeta 4: Conversión & Universo Noia */}
+            <div
+              className={`p-4 rounded-3xl border transition-all ${
+                isLight
+                  ? 'bg-white border-slate-200/70 shadow-[0_4px_20px_rgb(0,0,0,0.03)]'
+                  : 'bg-slate-900 border-slate-800/80 shadow-md'
+              }`}
             >
-              <option value="all">Todos los Planes</option>
-              <option value="carta_39">Carta 39€</option>
-              <option value="sala_69">Sala 69€</option>
-              <option value="full_99">Full 99€</option>
-              <option value="suite_139">Suite 139€</option>
-            </select>
-
-            {/* Toggle Modo Vista (Kanban / Tabla) */}
-            <div className="flex items-center bg-slate-800 p-1 rounded-xl border border-slate-700/80">
-              <button
-                onClick={() => setViewMode('kanban')}
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${
-                  viewMode === 'kanban'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Kanban className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Pipeline</span>
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${
-                  viewMode === 'table'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <TableIcon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Tabla</span>
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${
-                  viewMode === 'map'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden sm:inline">Mapa</span>
-              </button>
+              <div className="flex items-center justify-between mb-2">
+                <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  Conversión / Noia
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <Award className="w-4 h-4" />
+                </div>
+              </div>
+              <div className={`text-2xl font-black font-mono ${isLight ? 'text-slate-900' : 'text-purple-400'}`}>
+                {metrics?.conversionRate || 0}%
+              </div>
+              <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 mt-1">
+                <span>★</span>
+                <span>{metrics?.wonCount || 0} de {metrics?.totalLeads || 0} locales auditados</span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* 4. Cuerpo Principal: Kanban o Tabla */}
-      <main className="px-4 pb-12 sm:px-6 max-w-7xl mx-auto w-full flex-1">
-        {viewMode === 'kanban' ? (
-          /* Vista KANBAN Horizontal */
-          <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-800">
-            {STATUS_COLUMNS.map((col) => {
-              const columnLeads = filteredLeads.filter((l) => l.status === col.id)
-              const columnMRR = columnLeads.reduce(
-                (acc, curr) => acc + Number(curr.mrr_projected || 39),
-                0
-              )
+        {/* 2.5. Calendario y Campaña Activa de Noia [Idea 7] */}
+        <section className="px-5 pt-3.5 max-w-7xl w-full mx-auto">
+          <div
+            className={`p-4 rounded-3xl border transition-all relative overflow-hidden ${
+              isLight
+                ? 'bg-white border-blue-200 shadow-[0_4px_20px_rgb(0,0,0,0.03)] text-slate-800'
+                : 'bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 border-blue-500/30 text-white shadow-lg'
+            }`}
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 border border-amber-300">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    Campaña Municipal Activa
+                  </span>
+                  <span className={`text-xs font-semibold ${isLight ? 'text-blue-700' : 'text-blue-300'}`}>
+                    {NOIA_COMMERCIAL_EVENTS[0].period}
+                  </span>
+                </div>
 
-              return (
-                <div
-                  key={col.id}
-                  className="w-80 shrink-0 flex flex-col rounded-2xl bg-slate-900/60 border border-slate-800/80 max-h-[75vh]"
+                <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'} flex items-center gap-2`}>
+                  <span>🦪 {NOIA_COMMERCIAL_EVENTS[0].name}</span>
+                </h3>
+
+                <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'} max-w-2xl`}>
+                  {NOIA_COMMERCIAL_EVENTS[0].description}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setShowAllEvents(!showAllEvents)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 border ${
+                    isLight
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  }`}
                 >
-                  {/* Encabezado de Columna */}
-                  <div className="p-3.5 border-b border-slate-800 flex items-center justify-between sticky top-0 bg-slate-900/90 backdrop-blur-sm rounded-t-2xl z-10">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-xs text-white">{col.title}</h3>
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${col.badgeBg}`}>
-                        {columnLeads.length}
+                  <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                  <span>{showAllEvents ? 'Ocultar Calendario' : 'Ver 4 Campañas de Noia'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Consejo Táctico para la Prospección en Calle */}
+            <div
+              className={`mt-3 p-3 rounded-2xl flex items-start gap-2.5 text-xs border ${
+                isLight
+                  ? 'bg-blue-50/70 border-blue-200 text-slate-700'
+                  : 'bg-slate-900/90 border-blue-500/20 text-slate-200'
+              }`}
+            >
+              <span className="text-amber-500 font-bold shrink-0 mt-0.5">💡 Consejo Comercial Hoy:</span>
+              <span className="leading-relaxed">
+                {NOIA_COMMERCIAL_EVENTS[0].commercialAdvice}
+              </span>
+            </div>
+
+            {/* Acordeón con las 4 campañas de Noia */}
+            {showAllEvents && (
+              <div className="mt-3 pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 animate-in fade-in">
+                {NOIA_COMMERCIAL_EVENTS.map((ev, i) => (
+                  <div
+                    key={ev.id}
+                    className={`p-3 rounded-2xl border text-xs space-y-1.5 ${
+                      i === 0
+                        ? 'bg-blue-500/10 border-blue-400 text-blue-900'
+                        : isLight
+                        ? 'bg-slate-50 border-slate-200 text-slate-700'
+                        : 'bg-slate-900/60 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold truncate">{ev.name}</span>
+                      {i === 0 && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-700 shrink-0">
+                          ACTIVA
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-blue-600 font-mono font-medium">{ev.period}</div>
+                    <p className="text-[11px] text-slate-500 leading-snug">{ev.commercialAdvice}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* 3. Barra de Búsqueda y Filtros */}
+        <section className="px-5 pt-3.5 max-w-7xl w-full mx-auto">
+          <div
+            className={`p-3 rounded-3xl border flex flex-wrap items-center justify-between gap-3 ${
+              isLight ? 'bg-white border-slate-200/80 shadow-sm' : 'bg-slate-900/80 border-slate-800'
+            }`}
+          >
+            {/* Buscador */}
+            <div className="relative flex-1 min-w-[200px] sm:min-w-[280px]">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar local, calle o contacto en Noia..."
+                className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 border ${
+                  isLight
+                    ? 'bg-slate-50 border-slate-200 text-slate-800'
+                    : 'bg-slate-800 border-slate-700 text-white'
+                }`}
+              />
+            </div>
+
+            {/* Filtros */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Filtro Zona */}
+              <select
+                value={selectedZone}
+                onChange={(e) => setSelectedZone(e.target.value)}
+                className={`px-2.5 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 border ${
+                  isLight
+                    ? 'bg-slate-50 border-slate-200 text-slate-700'
+                    : 'bg-slate-800 border-slate-700 text-slate-200'
+                }`}
+              >
+                <option value="all">Todas las Zonas</option>
+                {uniqueZones.map((z) => (
+                  <option key={z} value={z}>
+                    {z}
+                  </option>
+                ))}
+              </select>
+
+              {/* Filtro ICP: A, B, C */}
+              <select
+                value={selectedICP}
+                onChange={(e) => setSelectedICP(e.target.value)}
+                className={`px-2.5 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 border font-medium ${
+                  isLight
+                    ? 'bg-slate-50 border-slate-200 text-slate-700'
+                    : 'bg-slate-800 border-slate-700 text-slate-200'
+                }`}
+              >
+                <option value="all">Todos los ICPs</option>
+                <option value="A">ICP A (Alta Aptitud - Raciones/Terraza)</option>
+                <option value="B">ICP B (Media - Restaurante Menú)</option>
+                <option value="C">ICP C (Básica - Cafetería/Carta QR)</option>
+              </select>
+
+              {/* Filtro Plan */}
+              <select
+                value={selectedPlan}
+                onChange={(e) => setSelectedPlan(e.target.value)}
+                className={`px-2.5 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 border ${
+                  isLight
+                    ? 'bg-slate-50 border-slate-200 text-slate-700'
+                    : 'bg-slate-800 border-slate-700 text-slate-200'
+                }`}
+              >
+                <option value="all">Todos los Planes</option>
+                <option value="carta_39">Carta 39€</option>
+                <option value="sala_69">Sala 69€</option>
+                <option value="full_99">Full 99€</option>
+                <option value="suite_139">Suite 139€</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Cuerpo Principal: KANBAN DRAG & DROP o TABLA */}
+        <main className="px-5 py-4 max-w-7xl w-full mx-auto flex-1">
+          {viewMode === 'kanban' ? (
+            /* Vista KANBAN Horizontal con Drag & Drop Estilo Trello */
+            <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-thin">
+              {STATUS_COLUMNS.map((col) => {
+                const columnLeads = filteredLeads.filter((l) => l.status === col.id)
+                const columnMRR = columnLeads.reduce(
+                  (acc, curr) => acc + Number(curr.mrr_projected || 39),
+                  0
+                )
+                const isDragOver = dragOverColId === col.id
+
+                return (
+                  <div
+                    key={col.id}
+                    onDragOver={(e) => handleDragOver(e, col.id)}
+                    onDragLeave={() => handleDragLeave(col.id)}
+                    onDrop={(e) => handleDrop(e, col.id)}
+                    className={`w-80 shrink-0 flex flex-col rounded-3xl border transition-all max-h-[75vh] ${
+                      isDragOver
+                        ? 'ring-2 ring-blue-500 bg-blue-500/10 border-blue-500'
+                        : isLight
+                        ? 'bg-white/80 border-slate-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.02)]'
+                        : 'bg-slate-900/60 border-slate-800/80'
+                    }`}
+                  >
+                    {/* Encabezado de Columna */}
+                    <div
+                      className={`p-3.5 border-b flex items-center justify-between sticky top-0 backdrop-blur-md rounded-t-3xl z-10 ${
+                        isLight ? 'bg-white/95 border-slate-200' : 'bg-slate-900/90 border-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <h3 className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                          {col.title}
+                        </h3>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${
+                            isLight ? col.badgeBgLight : col.badgeBg
+                          }`}
+                        >
+                          {columnLeads.length}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-600 font-bold">
+                        {columnMRR} €
                       </span>
                     </div>
-                    <span className="text-[11px] font-mono text-emerald-400 font-semibold">
-                      {columnMRR} €
-                    </span>
-                  </div>
 
-                  {/* Lista de Tarjetas de Local */}
-                  <div className="p-3 space-y-2.5 overflow-y-auto flex-1">
-                    {columnLeads.length === 0 ? (
-                      <div className="py-8 text-center text-xs text-slate-500 italic">
-                        Sin locales en esta etapa
-                      </div>
-                    ) : (
-                      columnLeads.map((lead) => (
+                    {/* Lista de Tarjetas Arrastrables (Trello Style) */}
+                    <div className="p-3 space-y-2.5 overflow-y-auto flex-1">
+                      {columnLeads.length === 0 ? (
                         <div
+                          className={`py-8 text-center text-xs italic rounded-2xl border border-dashed ${
+                            isDragOver
+                              ? 'border-blue-400 bg-blue-50/50 text-blue-600'
+                              : isLight
+                              ? 'border-slate-200 text-slate-400'
+                              : 'border-slate-800 text-slate-600'
+                          }`}
+                        >
+                          Arrastra un local aquí
+                        </div>
+                      ) : (
+                        columnLeads.map((lead) => {
+                          const icpKey = normalizeICP(lead.icp_segment)
+                          const icpData = ICP_CONFIG[icpKey]
+                          const isBeingDragged = draggingLeadId === lead.id
+
+                          return (
+                            <div
+                              key={lead.id}
+                              draggable={true}
+                              onDragStart={(e) => handleDragStart(e, lead.id)}
+                              onClick={() => {
+                                setSelectedLead(lead)
+                                setIsDetailOpen(true)
+                              }}
+                              className={`p-3.5 rounded-2xl border transition-all cursor-grab active:cursor-grabbing select-none relative group ${
+                                isBeingDragged ? 'opacity-40 scale-95' : 'opacity-100'
+                              } ${
+                                isLight
+                                  ? 'bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-400 shadow-sm hover:shadow-md'
+                                  : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700/60 hover:border-blue-500/50 shadow-sm'
+                              }`}
+                            >
+                              {/* Segmento & Score */}
+                              <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <span
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                    isLight ? icpData.badgeLight : icpData.badge
+                                  }`}
+                                  title={icpData.description}
+                                >
+                                  {icpData.shortLabel}
+                                </span>
+                                <span className="text-[11px] font-bold text-amber-500 flex items-center gap-0.5">
+                                  ★ {lead.score}
+                                </span>
+                              </div>
+
+                              {/* Nombre del Local */}
+                              <h4
+                                className={`font-bold text-sm truncate transition ${
+                                  isLight
+                                    ? 'text-slate-900 group-hover:text-blue-600'
+                                    : 'text-white group-hover:text-blue-400'
+                                }`}
+                              >
+                                {lead.name}
+                              </h4>
+
+                              {/* Dirección */}
+                              <div
+                                className={`flex items-center gap-1 text-[11px] mt-1 truncate ${
+                                  isLight ? 'text-slate-500' : 'text-slate-400'
+                                }`}
+                              >
+                                <MapPin className="w-3 h-3 shrink-0 text-slate-400" />
+                                <span className="truncate">{lead.address}</span>
+                              </div>
+
+                              {/* Badges de TPV y Quejas */}
+                              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                                {lead.current_pos_system && (
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded-md text-[10px] border flex items-center gap-1 ${
+                                      isLight
+                                        ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                        : 'bg-indigo-950/60 text-indigo-300 border-indigo-800/50'
+                                    }`}
+                                  >
+                                    <span>{POS_SYSTEM_CONFIG[lead.current_pos_system]?.icon}</span>
+                                    <span className="truncate max-w-[110px]">
+                                      {POS_SYSTEM_CONFIG[lead.current_pos_system]?.label}
+                                    </span>
+                                  </span>
+                                )}
+                                {lead.google_complaint_tags && lead.google_complaint_tags.length > 0 && (
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded-md text-[10px] truncate max-w-[120px] border ${
+                                      isLight
+                                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                        : 'bg-rose-500/10 text-rose-300 border-rose-500/20'
+                                    }`}
+                                    title={lead.google_complaint_tags[0]}
+                                  >
+                                    {lead.google_complaint_tags[0]}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Piloto de 14 Días y Checklist */}
+                              {lead.status === 'piloto_14_dias' && (
+                                <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center gap-1.5 flex-wrap">
+                                  {lead.pilot_start_date && (() => {
+                                    const start = new Date(lead.pilot_start_date).getTime()
+                                    const diff = Math.max(1, Math.floor((Date.now() - start) / 86400000) + 1)
+                                    const day = Math.min(diff, 14)
+                                    const isUrgent = day >= 12
+                                    return (
+                                      <span
+                                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1 ${
+                                          isUrgent
+                                            ? 'bg-rose-500/20 text-rose-600 border-rose-300 animate-pulse'
+                                            : day >= 7
+                                            ? 'bg-amber-500/20 text-amber-700 border-amber-300'
+                                            : 'bg-blue-500/20 text-blue-700 border-blue-300'
+                                        }`}
+                                      >
+                                        <Clock className="w-2.5 h-2.5" />
+                                        Día {day}/14
+                                      </span>
+                                    )
+                                  })()}
+
+                                  {lead.pilot_agreement && (
+                                    <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-amber-500/15 text-amber-700 border border-amber-300 font-bold">
+                                      ✍ Firmado
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Pie de Tarjeta: MRR y Selector Rápido Móvil */}
+                              <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                                <span className="text-[11px] font-mono text-emerald-600 font-bold">
+                                  {lead.mrr_projected} €/mes
+                                </span>
+
+                                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                  {/* Selector rápido para mover de etapa en móvil con 1 toque */}
+                                  <select
+                                    value={lead.status}
+                                    onChange={(e) => handleUpdateLead(lead.id, { status: e.target.value as CRMStatus })}
+                                    className={`text-[10px] py-0.5 px-1 rounded-md border focus:outline-none ${
+                                      isLight
+                                        ? 'bg-slate-100 border-slate-300 text-slate-700'
+                                        : 'bg-slate-900 border-slate-700 text-slate-300'
+                                    }`}
+                                    title="Mover de etapa en 1 clic"
+                                  >
+                                    <option value="lead_por_visitar">Por Visitar</option>
+                                    <option value="contactado">Contactado</option>
+                                    <option value="piloto_14_dias">Piloto 14D</option>
+                                    <option value="en_negociacion">Negociación</option>
+                                    <option value="ganado">Ganado</option>
+                                    <option value="perdido">Perdido</option>
+                                  </select>
+
+                                  {lead.contact_phone && (
+                                    <a
+                                      href={`tel:${lead.contact_phone}`}
+                                      className={`p-1 rounded-lg transition ${
+                                        isLight
+                                          ? 'bg-slate-100 text-slate-600 hover:text-blue-600'
+                                          : 'bg-slate-700/60 text-slate-300 hover:text-white'
+                                      }`}
+                                      title={`Llamar a ${lead.contact_phone}`}
+                                    >
+                                      <Phone className="w-3.5 h-3.5" />
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : viewMode === 'table' ? (
+            /* Vista TABLA Analítica */
+            <div
+              className={`rounded-3xl border overflow-hidden shadow-sm ${
+                isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+              }`}
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead
+                    className={`border-b uppercase font-mono text-[10px] tracking-wider ${
+                      isLight
+                        ? 'bg-slate-50 border-slate-200 text-slate-500'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <tr>
+                      <th className="px-4 py-3">Establecimiento</th>
+                      <th className="px-4 py-3">Zona</th>
+                      <th className="px-4 py-3">ICP</th>
+                      <th className="px-4 py-3">Score</th>
+                      <th className="px-4 py-3">Estado</th>
+                      <th className="px-4 py-3">Plan / MRR</th>
+                      <th className="px-4 py-3">Teléfono</th>
+                      <th className="px-4 py-3 text-right">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200/60">
+                    {filteredLeads.map((lead) => {
+                      const icpKey = normalizeICP(lead.icp_segment)
+                      const icpData = ICP_CONFIG[icpKey]
+                      return (
+                        <tr
                           key={lead.id}
                           onClick={() => {
                             setSelectedLead(lead)
                             setIsDetailOpen(true)
                           }}
-                          className="p-3.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 hover:border-blue-500/50 transition cursor-pointer shadow-sm group select-none relative"
+                          className={`cursor-pointer transition ${
+                            isLight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/50'
+                          }`}
                         >
-                          {/* Segmento & Score */}
-                          <div className="flex items-center justify-between gap-2 mb-1.5">
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                              {lead.icp_segment}
+                          <td className="px-4 py-3.5 font-bold whitespace-nowrap">
+                            <span className={isLight ? 'text-slate-900' : 'text-white'}>{lead.name}</span>
+                            <span className="block text-[11px] font-normal text-slate-400">{lead.address}</span>
+                          </td>
+                          <td className="px-4 py-3.5 text-slate-500 whitespace-nowrap">{lead.zone}</td>
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                isLight ? icpData.badgeLight : icpData.badge
+                              }`}
+                            >
+                              {icpData.shortLabel}
                             </span>
-                            <span className="text-[11px] font-bold text-amber-400 flex items-center gap-0.5">
-                              ★ {lead.score}
+                          </td>
+                          <td className="px-4 py-3.5 font-bold text-amber-500 whitespace-nowrap">
+                            ★ {lead.score}
+                          </td>
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                STATUS_COLUMNS.find((c) => c.id === lead.status)?.badgeBgLight || 'bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {STATUS_COLUMNS.find((c) => c.id === lead.status)?.title}
                             </span>
-                          </div>
-
-                          {/* Nombre del Local */}
-                          <h4 className="font-bold text-sm text-white group-hover:text-blue-400 transition truncate">
-                            {lead.name}
-                          </h4>
-
-                          {/* Dirección */}
-                          <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1 truncate">
-                            <MapPin className="w-3 h-3 shrink-0 text-slate-500" />
-                            <span className="truncate">{lead.address}</span>
-                          </div>
-
-                          {/* Notas cortas */}
-                          {lead.notes && (
-                            <p className="text-[11px] text-slate-400 mt-2 line-clamp-2 bg-slate-900/60 p-2 rounded-lg border border-slate-800/80">
-                              {lead.notes}
-                            </p>
-                          )}
-
-                          {/* Badges de TPV y Quejas Frecuentes [Ideas 4 y 5] */}
-                          <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                            {lead.current_pos_system && (
-                              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-indigo-950/60 text-indigo-300 border border-indigo-800/50 flex items-center gap-1">
-                                <span>{POS_SYSTEM_CONFIG[lead.current_pos_system]?.icon}</span>
-                                <span className="truncate max-w-[120px]">{POS_SYSTEM_CONFIG[lead.current_pos_system]?.label}</span>
-                              </span>
-                            )}
-                            {lead.google_complaint_tags && lead.google_complaint_tags.length > 0 && (
-                              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-rose-500/10 text-rose-300 border border-rose-500/20 truncate max-w-[130px]" title={lead.google_complaint_tags[0]}>
-                                {lead.google_complaint_tags[0]}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Control de Piloto: Hito, Checklist y Firma (Ideas 7, 8, 9) */}
-                          {lead.status === 'piloto_14_dias' && (
-                            <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex items-center gap-1.5 flex-wrap">
-                              {/* Hito y días restantes */}
-                              {lead.pilot_start_date && (() => {
-                                const start = new Date(lead.pilot_start_date).getTime()
-                                const diff = Math.max(1, Math.floor((Date.now() - start) / 86400000) + 1)
-                                const day = Math.min(diff, 14)
-                                const isUrgent = day >= 12
-                                return (
-                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1 ${
-                                    isUrgent
-                                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
-                                      : day >= 7
-                                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                      : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
-                                  }`}>
-                                    <Clock className="w-2.5 h-2.5" />
-                                    Día {day}/14 {isUrgent ? '• Cierre' : day >= 7 ? '• Balance' : ''}
-                                  </span>
-                                )
-                              })()}
-
-                              {/* Checklist */}
-                              {(() => {
-                                const cl = lead.pilot_checklist
-                                const count = cl ? Object.values(cl).filter(Boolean).length : 0
-                                return (
-                                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono border ${
-                                    count === 4
-                                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-bold'
-                                      : 'bg-slate-800 text-slate-400 border-slate-700'
-                                  }`}>
-                                    ✓ {count}/4
-                                  </span>
-                                )
-                              })()}
-
-                              {/* Firma digital */}
-                              {lead.pilot_agreement && (
-                                <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold">
-                                  ✍ Firmado
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Pie de Tarjeta: Plan y Botón WhatsApp / Llamar */}
-                          <div className="mt-3 pt-2.5 border-t border-slate-700/50 flex items-center justify-between text-xs">
-                            <span className="text-[11px] font-mono text-emerald-400 font-semibold">
-                              {lead.mrr_projected} €/mes
-                            </span>
-
-                            <div className="flex items-center gap-1.5">
-                              {lead.contact_phone && (
-                                <a
-                                  href={`tel:${lead.contact_phone}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="p-1 rounded-lg bg-slate-700/60 text-slate-300 hover:text-white transition"
-                                  title={`Llamar a ${lead.contact_phone}`}
-                                >
-                                  <Phone className="w-3.5 h-3.5" />
-                                </a>
-                              )}
-                              <span className="text-[10px] text-slate-400 group-hover:translate-x-0.5 transition flex items-center">
-                                Abrir <ChevronRight className="w-3 h-3 ml-0.5" />
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : viewMode === 'table' ? (
-          /* Vista TABLA Detallada */
-          <div className="rounded-2xl bg-slate-900/80 border border-slate-800 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-300">
-                <thead className="bg-slate-900 text-slate-400 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-800">
-                  <tr>
-                    <th className="px-4 py-3">Local</th>
-                    <th className="px-4 py-3">Zona</th>
-                    <th className="px-4 py-3">ICP</th>
-                    <th className="px-4 py-3">Score</th>
-                    <th className="px-4 py-3">Estado</th>
-                    <th className="px-4 py-3">Plan / MRR</th>
-                    <th className="px-4 py-3">Contacto</th>
-                    <th className="px-4 py-3 text-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {filteredLeads.map((lead) => (
-                    <tr
-                      key={lead.id}
-                      onClick={() => {
-                        setSelectedLead(lead)
-                        setIsDetailOpen(true)
-                      }}
-                      className="hover:bg-slate-800/50 transition cursor-pointer"
-                    >
-                      <td className="px-4 py-3.5">
-                        <div className="font-bold text-white text-sm">{lead.name}</div>
-                        <div className="text-[11px] text-slate-400 truncate max-w-xs">{lead.address}</div>
-                      </td>
-                      <td className="px-4 py-3.5 text-slate-300 whitespace-nowrap">{lead.zone}</td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                          {lead.icp_segment}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap font-bold text-amber-400">
-                        ★ {lead.score}
-                      </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-slate-200 border border-slate-700">
-                          {lead.status.replace(/_/g, ' ')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 whitespace-nowrap font-mono text-emerald-400 font-bold">
-                        {lead.mrr_projected} €/mes
-                      </td>
-                      <td className="px-4 py-3.5 text-slate-400 whitespace-nowrap">
-                        {lead.contact_phone || 'Sin registrar'}
-                      </td>
-                      <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedLead(lead)
-                            setIsDetailOpen(true)
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-[11px] font-semibold transition"
-                        >
-                          Gestionar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          </td>
+                          <td className="px-4 py-3.5 font-mono text-emerald-600 font-bold whitespace-nowrap">
+                            {lead.mrr_projected} €/mes
+                          </td>
+                          <td className="px-4 py-3.5 text-slate-500 whitespace-nowrap">
+                            {lead.contact_phone || 'Sin registrar'}
+                          </td>
+                          <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedLead(lead)
+                                setIsDetailOpen(true)
+                              }}
+                              className="px-2.5 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 border border-blue-200 text-[11px] font-bold transition"
+                            >
+                              Gestionar
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        ) : (
-          /* Vista MAPA Interactivo de Noia */
-          <CRMMap
-            leads={filteredLeads}
-            onOpenDetail={(lead) => {
-              setSelectedLead(lead)
-              setIsDetailOpen(true)
-            }}
-          />
-        )}
-      </main>
+          ) : (
+            /* Vista MAPA Interactivo de Noia */
+            <CRMMap
+              leads={filteredLeads}
+              onOpenDetail={(lead) => {
+                setSelectedLead(lead)
+                setIsDetailOpen(true)
+              }}
+            />
+          )}
+        </main>
+      </div>
 
-      {/* Modales */}
+      {/* ==============================================================================
+          MODALES DE APOYO
+      ============================================================================== */}
       <CRMQuickAddModal
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
