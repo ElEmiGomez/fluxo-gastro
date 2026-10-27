@@ -8,6 +8,7 @@ interface ScrollRevealProps {
   delay?: number // en milisegundos (ms)
   duration?: number // en milisegundos (ms)
   distance?: number // desplazamiento en px
+  blur?: number // desenfoque inicial en px (0 = sin difuminado)
   direction?: 'up' | 'down' | 'left' | 'right' | 'none'
   scale?: number // escala inicial (ej: 0.95 para zoom-in sutil)
   threshold?: number // porcentaje de visibilidad para disparar (0 a 1)
@@ -21,6 +22,7 @@ export function ScrollReveal({
   delay = 0,
   duration = 750,
   distance = 32,
+  blur = 8,
   direction = 'up',
   scale = 1,
   threshold = 0.1,
@@ -98,11 +100,12 @@ export function ScrollReveal({
   return (
     <Component
       ref={elementRef}
-      className={`will-change-[transform,opacity] ${className}`}
+      className={`will-change-[transform,opacity,filter] ${className}`}
       style={{
         opacity: isVisible ? 1 : 0,
         transform: getInitialTransform(),
-        transitionProperty: 'opacity, transform',
+        filter: isVisible ? 'blur(0px)' : `blur(${blur}px)`,
+        transitionProperty: 'opacity, transform, filter',
         transitionDuration: `${duration}ms`,
         transitionDelay: `${delay}ms`,
         transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', // Curva suave orgánica (Apple / BioMenu style)
