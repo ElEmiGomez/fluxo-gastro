@@ -59,6 +59,7 @@ import { CRMAuthModal } from '@/components/crm/CRMAuthModal'
 import { CRMQuickAddModal } from '@/components/crm/CRMQuickAddModal'
 import { CRMLeadDetailModal } from '@/components/crm/CRMLeadDetailModal'
 import { CRMContactCardModal } from '@/components/crm/CRMContactCardModal'
+import { FluxoLogo } from '@/components/common/FluxoLogo'
 
 const STATUS_COLUMNS: { id: CRMStatus; title: string; color: string; badgeBg: string; badgeBgLight: string }[] = [
   { id: 'lead_por_visitar', title: 'Por Visitar', color: 'border-slate-700', badgeBg: 'bg-slate-800 text-slate-300', badgeBgLight: 'bg-slate-200 text-slate-700' },
@@ -418,12 +419,10 @@ export default function CRMAdminPage() {
         {/* Logotipo de Marca */}
         <div className="p-5 border-b border-slate-800/60 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-blue-500/25">
-              F
-            </div>
+            <FluxoLogo size={36} />
             <div>
               <span className="text-lg font-black tracking-tight text-white">
-                Fluxo<span className="text-blue-500">.io</span>
+                Fluxo
               </span>
               <p className="text-[10px] text-slate-400 font-mono tracking-wider uppercase">CRM Fundador</p>
             </div>
