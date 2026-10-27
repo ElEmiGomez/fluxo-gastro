@@ -117,7 +117,7 @@ export default function LandingPage() {
         <section className="relative overflow-hidden pt-14 pb-16 sm:pt-20 sm:pb-24 border-b border-slate-800/80">
           
           {/* Fondo Dinámico Aurora B2B */}
-          <HeroAuroraBackground />
+          <HeroAuroraBackground theme="dark" />
 
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
             <div className="max-w-3xl mx-auto space-y-6">
