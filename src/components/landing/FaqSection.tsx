@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { ChevronDown, HelpCircle, MessageCircle } from 'lucide-react'
+import { ChevronDown, HelpCircle, Mail } from 'lucide-react'
 import { ScrollReveal } from './ScrollReveal'
 
 interface FaqItem {
@@ -18,7 +18,7 @@ const FAQS: FaqItem[] = [
   {
     question: '¿Cuánto tarda el personal en aprender a usarlo?',
     answer:
-      'El sistema está diseñado para que un camarero nuevo empiece a marchar comandas en menos de 5 minutos desde su propio móvil. Es tan intuitivo como usar WhatsApp.',
+      'El sistema está diseñado para que un camarero nuevo empiece a marchar comandas en menos de 5 minutos desde su propio móvil. Es tan intuitivo como usar una app de mensajería.',
   },
   {
     question: '¿Qué pasa si un día se cae la conexión a internet?',
@@ -38,12 +38,12 @@ const FAQS: FaqItem[] = [
 ]
 
 interface FaqSectionProps {
-  whatsAppUrl: string
+  onOpenContact: () => void
 }
 
-export function FaqSection({ whatsAppUrl }: FaqSectionProps) {
-  // Primer FAQ abierto por defecto para fomentar lectura
-  const [openIndex, setOpenIndex] = useState<number | null>(0)
+export function FaqSection({ onOpenContact }: FaqSectionProps) {
+  // 100% cerrado al inicio: ninguna FAQ abierta por defecto
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
 
   const toggleFaq = (index: number) => {
     setOpenIndex((prev) => (prev === index ? null : index))
@@ -118,24 +118,23 @@ export function FaqSection({ whatsAppUrl }: FaqSectionProps) {
           })}
         </div>
 
-        {/* Contacto directo por dudas adicionales */}
+        {/* Contacto directo por dudas adicionales (100% correo electrónico) */}
         <div className="mt-12 text-center p-6 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-left space-y-1">
             <h4 className="font-extrabold text-slate-900 text-sm">¿Tienes una pregunta específica sobre tu local?</h4>
             <p className="text-xs text-slate-500">
-              Escríbenos directamente por WhatsApp y te respondemos en menos de 15 minutos.
+              Envíanos tu consulta por correo y te respondemos en menos de 2 horas.
             </p>
           </div>
 
-          <a
-            href={whatsAppUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs font-bold transition-all flex-shrink-0 cursor-pointer shadow-xs"
+          <button
+            type="button"
+            onClick={onOpenContact}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs font-bold transition-all flex-shrink-0 cursor-pointer shadow-xs active:scale-95"
           >
-            <MessageCircle className="w-4 h-4 text-emerald-600" />
-            <span>Consultar por WhatsApp</span>
-          </a>
+            <Mail className="w-4 h-4 text-blue-600" />
+            <span>Consultar por Correo ✉️</span>
+          </button>
         </div>
 
       </div>

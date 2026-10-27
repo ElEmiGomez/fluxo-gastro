@@ -172,7 +172,7 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
           ))}
         </div>
 
-        {/* Recorrido: horizontal en escritorio, vertical en móvil */}
+        {/* Recorrido: horizontal en escritorio, baraja sticky en móvil (< 768px) */}
         <ol
           className="flex flex-col lg:flex-row lg:items-stretch gap-3 lg:gap-0"
           onMouseEnter={() => setPaused(true)}
@@ -182,9 +182,18 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
             const Icon = m.icon
             const isActive = i === active
             const isDone = i < active
+            // Sticky Scroll Stack móvil: cada tarjeta se superpone sobre la anterior al hacer scroll
+            // (clases literales completas: Tailwind no genera clases dinámicas)
+            const stickyCls = [
+              'max-md:sticky max-md:top-20 max-md:z-10',
+              'max-md:sticky max-md:top-24 max-md:z-20',
+              'max-md:sticky max-md:top-28 max-md:z-30',
+              'max-md:sticky max-md:top-32 max-md:z-40',
+              'max-md:sticky max-md:top-36 max-md:z-50',
+            ][i]
             return (
               <React.Fragment key={m.title}>
-                <li className="lg:flex-1 lg:min-w-0">
+                <li className={`${stickyCls} max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)] rounded-2xl lg:flex-1 lg:min-w-0`}>
                   <button
                     type="button"
                     onClick={() => setActive(i)}
@@ -249,7 +258,7 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
 
                 {/* Flecha conectora */}
                 {i < MODULES.length - 1 && (
-                  <li aria-hidden="true" className="flex items-center justify-center lg:w-8 flex-shrink-0">
+                  <li aria-hidden="true" className="flex items-center justify-center lg:w-8 flex-shrink-0 max-md:hidden">
                     <ArrowDown
                       className={`lg:hidden w-5 h-5 transition-colors duration-500 ${
                         i < active ? 'text-emerald-500' : i === active ? 'text-blue-600 animate-bounce' : 'text-slate-300'

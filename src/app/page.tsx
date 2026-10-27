@@ -31,30 +31,32 @@ import { PainSection } from '@/components/landing/PainSection'
 import { FeatureTabs } from '@/components/landing/FeatureTabs'
 import { FaqSection } from '@/components/landing/FaqSection'
 
-const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '5493585187430'
-const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para mi restaurante.'
-
-const getWhatsAppUrl = (planName?: string) => {
-  const msg = planName
-    ? `¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para el ${planName}.`
-    : DEFAULT_WHATSAPP_MSG
-  const encoded = encodeURIComponent(msg)
-  return `https://wa.me/${WHATSAPP_PHONE}?text=${encoded}`
+interface ContactModalState {
+  isOpen: boolean
+  mode: 'pilot' | 'question'
+  selectedPlan?: string
 }
 
 export default function LandingPage() {
   const [popupsBlocked, setPopupsBlocked] = useState(false)
-  const [isPilotModalOpen, setIsPilotModalOpen] = useState(false)
+  // Modal unificado de contacto (100% correo electrónico): piloto 14 días o consulta libre
+  const [contactModal, setContactModal] = useState<ContactModalState>({
+    isOpen: false,
+    mode: 'pilot',
+    selectedPlan: 'Plan Full (Recomendado)'
+  })
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
-  const [selectedPlanForModal, setSelectedPlanForModal] = useState('Plan Full (Recomendado)')
 
   React.useEffect(() => {
     document.title = 'Fluxo - Gastronomic System'
   }, [])
 
   const handleOpenPilotModal = (plan = 'Plan Full (Recomendado)') => {
-    setSelectedPlanForModal(plan)
-    setIsPilotModalOpen(true)
+    setContactModal({ isOpen: true, mode: 'pilot', selectedPlan: plan })
+  }
+
+  const handleOpenContactModal = () => {
+    setContactModal((prev) => ({ isOpen: true, mode: 'question', selectedPlan: prev.selectedPlan }))
   }
 
   const handleOpenAllDashboards = () => {
@@ -231,7 +233,7 @@ export default function LandingPage() {
               
               {/* Tarjeta 1: Carta QR Visual y Ventas Sugeridas */}
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
-                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-emerald-500/50 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-xl group h-full">
+                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-emerald-500/50 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
@@ -273,7 +275,7 @@ export default function LandingPage() {
 
               {/* Tarjeta 2: Comandero Ágil en Cualquier Móvil */}
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
-                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-blue-400 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-xl group h-full">
+                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-blue-400 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
@@ -315,7 +317,7 @@ export default function LandingPage() {
 
               {/* Tarjeta 3: Monitor KDS por Estaciones */}
               <ScrollReveal delay={300} distance={32} className="flex flex-col h-full">
-                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-amber-400 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-xl group h-full">
+                <div className="bg-white hover:bg-slate-50/50 border border-slate-200 hover:border-amber-400 rounded-2xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
@@ -384,7 +386,7 @@ export default function LandingPage() {
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
-                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 group relative cursor-pointer h-full"
+                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-100 border border-slate-300 text-slate-800 group-hover:bg-emerald-50 group-hover:border-emerald-300 group-hover:text-emerald-700 text-[11px] font-black tracking-wide shadow-xs flex items-center gap-1.5 z-20 transition-colors duration-300">
@@ -458,7 +460,7 @@ export default function LandingPage() {
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
-                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 group relative cursor-pointer h-full"
+                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 group-hover:bg-emerald-50 group-hover:border-emerald-300 group-hover:text-emerald-700 text-[11px] font-black tracking-wide shadow-xs flex items-center gap-1.5 z-20 transition-colors duration-300">
@@ -532,7 +534,7 @@ export default function LandingPage() {
               <ScrollReveal delay={300} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
-                  className="bg-white border-2 border-blue-600 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl ring-4 ring-blue-500/10 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 group relative lg:-translate-y-2 cursor-pointer h-full"
+                  className="bg-white border-2 border-blue-600 hover:border-emerald-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl ring-4 ring-blue-500/10 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 hover:-translate-y-1.5 lg:hover:-translate-y-2.5 active:-translate-y-1 group relative lg:-translate-y-2 cursor-pointer h-full"
                 >
                   {/* Badge Recomendado */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1.5">
@@ -642,7 +644,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── 7. SECCIÓN DE PREGUNTAS FRECUENTES (FAQ - DESARME DE OBJECIONES) ── */}
-        <FaqSection whatsAppUrl={getWhatsAppUrl('Consulta FAQ')} />
+        <FaqSection onOpenContact={handleOpenContactModal} />
 
         {/* ── 8. CALL TO ACTION (CTA) FINAL CON EFECTO GLOW / SHIMMER ── */}
         <section id="contacto" className="py-20 bg-white border-t border-slate-200">
@@ -769,15 +771,14 @@ export default function LandingPage() {
               <span>Aviso Legal &amp; RGPD</span>
             </Link>
 
-            <a 
-              href={getWhatsAppUrl('Contacto Comercial')}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-600 font-bold transition-all shadow-xs group"
+            <button
+              type="button"
+              onClick={handleOpenContactModal}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-600 font-bold transition-all shadow-xs group cursor-pointer active:scale-95"
             >
               <span>Contacto Comercial</span>
               <ExternalLink className="w-3.5 h-3.5 text-blue-600 group-hover:translate-x-0.5 transition-transform" />
-            </a>
+            </button>
           </div>
         </div>
 
@@ -804,12 +805,12 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* ── MODAL DE SOLICITUD DE PILOTO 14 DÍAS A 0€ ── */}
+      {/* ── MODAL UNIFICADO DE CONTACTO (PILOTO 14 DÍAS / CONSULTA POR CORREO) ── */}
       <PilotRequestModal
-        isOpen={isPilotModalOpen}
-        onClose={() => setIsPilotModalOpen(false)}
-        initialPlan={selectedPlanForModal}
-        whatsAppPhone={WHATSAPP_PHONE}
+        isOpen={contactModal.isOpen}
+        onClose={() => setContactModal((prev) => ({ ...prev, isOpen: false }))}
+        initialPlan={contactModal.selectedPlan}
+        mode={contactModal.mode}
       />
 
       {/* ── MODAL DE MUESTRA DEL REPORTE MENSUAL EJECUTIVO IA ── */}

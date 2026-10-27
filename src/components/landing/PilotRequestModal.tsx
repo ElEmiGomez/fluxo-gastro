@@ -13,8 +13,7 @@ import {
   Briefcase,
   MapPin,
   Loader2,
-  ArrowRight,
-  MessageSquare
+  ArrowRight
 } from 'lucide-react'
 import CloudflareTurnstile from '@/components/common/CloudflareTurnstile'
 
@@ -102,14 +101,14 @@ interface PilotRequestModalProps {
   isOpen: boolean
   onClose: () => void
   initialPlan?: string
-  whatsAppPhone?: string
+  mode?: 'pilot' | 'question'
 }
 
 export function PilotRequestModal({
   isOpen,
   onClose,
   initialPlan = 'Plan Full (Recomendado)',
-  whatsAppPhone = '5493585187430'
+  mode = 'pilot'
 }: PilotRequestModalProps) {
   const [restaurantName, setRestaurantName] = useState('')
   const [contactName, setContactName] = useState('')
@@ -181,7 +180,8 @@ export function PilotRequestModal({
           location,
           selectedPlan,
           notes,
-          turnstileToken
+          turnstileToken,
+          contactMode: mode
         })
       })
 
@@ -193,18 +193,10 @@ export function PilotRequestModal({
 
       setIsSuccess(true)
     } catch (err: any) {
-      setErrorMessage(err.message || 'Error de conexión. Puedes escribirnos directamente por WhatsApp.')
+      setErrorMessage(err.message || 'Error de conexión. Inténtalo de nuevo o escríbenos a contactofluxosystem@gmail.com.')
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const handleOpenWhatsAppDirect = () => {
-    const roleText = contactRole ? ` (${contactRole})` : ''
-    const text = encodeURIComponent(
-      '¡Hola! Solicité el Piloto Gratuito de 14 Días para ' + (restaurantName || 'mi restaurante') + ' (' + selectedPlan + '). Mi nombre es ' + (contactName || '') + roleText + ' (' + (phone || '') + ').'
-    )
-    window.open('https://wa.me/' + whatsAppPhone + '?text=' + text, '_blank')
   }
 
   return (
@@ -216,16 +208,33 @@ export function PilotRequestModal({
         {/* Cabecera del Modal */}
         <div className="relative p-5 sm:p-6 bg-slate-50 border-b border-slate-200 flex items-start justify-between gap-4">
           <div className="space-y-1.5 flex-1 min-w-0">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
-              <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>14 DÍAS DE PRUEBA A 0€</span>
-            </div>
-            <h3 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
-              Solicitar Piloto para tu Restaurante
-            </h3>
-            <p className="text-xs text-slate-600">
-              Digitalizamos tu carta y la dejamos lista para operar en menos de 24h.
-            </p>
+            {mode === 'question' ? (
+              <>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
+                  <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>RESPUESTA EN MENOS DE 2 HORAS</span>
+                </div>
+                <h3 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                  Envíanos tu consulta por correo
+                </h3>
+                <p className="text-xs text-slate-600">
+                  Cuéntanos tu duda y un asesor técnico de Fluxo te responde por correo electrónico.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-black uppercase tracking-wider whitespace-nowrap">
+                  <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>14 DÍAS DE PRUEBA A 0€</span>
+                </div>
+                <h3 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
+                  Solicita tu prueba piloto de 14 días a 0 €
+                </h3>
+                <p className="text-xs text-slate-600">
+                  Digitalizamos tu carta y la dejamos lista para operar en menos de 24h.
+                </p>
+              </>
+            )}
           </div>
 
           <button
@@ -249,21 +258,31 @@ export function PilotRequestModal({
               <div className="space-y-2">
                 <h4 className="text-2xl font-black text-slate-900">¡Solicitud Registrada con Éxito!</h4>
                 <p className="text-sm text-slate-600 max-w-md mx-auto">
-                  Gracias <strong className="text-slate-900">{contactName}</strong>. Hemos recibido los datos de <strong className="text-slate-900">{restaurantName}</strong> para el <strong className="text-blue-600">{selectedPlan}</strong>.
+                  {mode === 'question' ? (
+                    <>
+                      Gracias <strong className="text-slate-900">{contactName}</strong>. Hemos recibido tu consulta de <strong className="text-slate-900">{restaurantName}</strong> y te responderemos por correo en menos de 2 horas.
+                    </>
+                  ) : (
+                    <>
+                      Gracias <strong className="text-slate-900">{contactName}</strong>. Hemos recibido los datos de <strong className="text-slate-900">{restaurantName}</strong> para el <strong className="text-blue-600">{selectedPlan}</strong>.
+                    </>
+                  )}
                 </p>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2.5 max-w-md mx-auto text-xs text-slate-700">
-                <div className="flex items-center gap-2 text-emerald-700 font-bold">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>¿Qué sucederá a continuación?</span>
+              {mode !== 'question' && (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2.5 max-w-md mx-auto text-xs text-slate-700">
+                  <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>¿Qué sucederá a continuación?</span>
+                  </div>
+                  <ul className="space-y-1.5 list-disc list-inside text-slate-600 pl-1">
+                    <li>Un asesor técnico de Fluxo te contactará al teléfono <strong>{phone}</strong> en menos de 2 horas.</li>
+                    <li>Nos envías una foto o PDF de tu carta actual y la cargamos completa.</li>
+                    <li>Iniciamos los 14 días de prueba a 0€ sin tocar tu TPV ni pedir tarjeta.</li>
+                  </ul>
                 </div>
-                <ul className="space-y-1.5 list-disc list-inside text-slate-600 pl-1">
-                  <li>Un asesor técnico de Fluxo te contactará al teléfono <strong>{phone}</strong> en menos de 2 horas.</li>
-                  <li>Nos envías una foto o PDF de tu carta actual y la cargamos completa.</li>
-                  <li>Iniciamos los 14 días de prueba a 0€ sin tocar tu TPV ni pedir tarjeta.</li>
-                </ul>
-              </div>
+              )}
 
               <div className="pt-3 flex flex-col sm:flex-row gap-3 justify-center">
                 <button
@@ -272,14 +291,6 @@ export function PilotRequestModal({
                   className="px-6 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-bold transition-colors cursor-pointer border border-slate-200"
                 >
                   Entendido, cerrar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleOpenWhatsAppDirect}
-                  className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition-colors shadow-md shadow-emerald-600/25 cursor-pointer"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>¿Tienes prisa? Abrir WhatsApp</span>
                 </button>
               </div>
             </div>
@@ -361,7 +372,7 @@ export function PilotRequestModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Teléfono / WhatsApp *
+                    Teléfono *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -412,36 +423,42 @@ export function PilotRequestModal({
                 </div>
               </div>
 
-              {/* Plan Seleccionado Automáticamente (Sin pasos innecesarios) */}
-              <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black flex-shrink-0">
-                    <Sparkles className="w-4 h-4" />
+              {/* Plan Seleccionado Automáticamente (solo modo piloto) */}
+              {mode === 'pilot' && (
+                <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-black flex-shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block truncate">
+                        Plan Seleccionado
+                      </span>
+                      <span className="text-sm font-black text-slate-900 truncate block">
+                        {selectedPlan}
+                      </span>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block truncate">
-                      Plan Seleccionado
-                    </span>
-                    <span className="text-sm font-black text-slate-900 truncate block">
-                      {selectedPlan}
+                  <div className="flex-shrink-0">
+                    <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 whitespace-nowrap inline-block">
+                      14 días a 0€
                     </span>
                   </div>
                 </div>
-                <div className="flex-shrink-0">
-                  <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 whitespace-nowrap inline-block">
-                    14 días a 0€
-                  </span>
-                </div>
-              </div>
+              )}
 
               {/* 6. Comentarios o enlace a carta */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Enlace a tu carta actual o comentarios (Opcional)
+                  {mode === 'question' ? 'Tu consulta o comentario (opcional)' : 'Enlace a tu carta actual o comentarios (Opcional)'}
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Instagram, web o detalles de tu local (número de mesas, terraza...)"
+                  placeholder={
+                    mode === 'question'
+                      ? 'Ej: ¿Funciona con 2 barras y terraza? ¿Cómo se cobra la propina...'
+                      : 'Instagram, web o detalles de tu local (número de mesas, terraza...)'
+                  }
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="w-full p-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
