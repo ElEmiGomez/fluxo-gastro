@@ -16,13 +16,20 @@ import {
   ChefHat,
   Eye,
   Star,
-  Gift
+  Gift,
+  Sparkles
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
 import { MonthlyReportModal } from '@/components/analytics/MonthlyReportModal'
 import { ScrollReveal } from '@/components/landing/ScrollReveal'
 import { HeroAuroraBackground } from '@/components/landing/HeroAuroraBackground'
+import { GlowButton } from '@/components/landing/GlowButton'
+import { HeroSandbox } from '@/components/landing/HeroSandbox'
+import { BeforeAfterCard } from '@/components/landing/BeforeAfterCard'
+import { PainSection } from '@/components/landing/PainSection'
+import { FeatureTabs } from '@/components/landing/FeatureTabs'
+import { FaqSection } from '@/components/landing/FaqSection'
 
 const WHATSAPP_PHONE = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || '5493585187430'
 const DEFAULT_WHATSAPP_MSG = '¡Hola! Me comunico desde la web de Fluxo. Me gustaría solicitar el Piloto Gratuito de 14 Días (a 0€) para mi restaurante.'
@@ -73,36 +80,41 @@ export default function LandingPage() {
           </Link>
 
           {/* Navegación Rápida */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-400">
+          <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-400">
+            <a href="#demo" className="hover:text-cyan-400 transition-colors">
+              Demo en Vivo
+            </a>
+            <a href="#modulos" className="hover:text-cyan-400 transition-colors">
+              Módulos
+            </a>
             <a href="#funcionalidades" className="hover:text-cyan-400 transition-colors">
-              Funcionalidades
+              Beneficios
             </a>
             <a href="#precios" className="hover:text-cyan-400 transition-colors">
               Planes &amp; Precios
             </a>
-            <a href="#contacto" className="hover:text-cyan-400 transition-colors">
-              Piloto 14 Días
+            <a href="#faq" className="hover:text-cyan-400 transition-colors">
+              FAQ
             </a>
           </nav>
 
-          {/* CTA Superior: Abre los 3 Dashboards del Simulador */}
+          {/* CTA Superior: Botón con brillo Glow */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <GlowButton
               onClick={handleOpenAllDashboards}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg text-xs sm:text-sm font-extrabold bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-md shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-all active:scale-95 cursor-pointer"
+              className="px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm"
+              icon={<ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />}
             >
-              <span>Probar Simulador</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
+              <span>Probar demo en vivo</span>
+            </GlowButton>
           </div>
         </div>
       </header>
 
       <main className="flex-1">
         
-        {/* ── 2. HERO SECTION CENTRADO & LIMPIO (SIN BLOQUE ARTIFICIAL) ── */}
-        <section className="relative overflow-hidden pt-16 pb-20 sm:pt-24 sm:pb-28 border-b border-slate-800/80">
+        {/* ── 2. HERO SECTION CENTRADO & LIMPIO (CON GLOW BUTTON Y SANDBOX) ── */}
+        <section className="relative overflow-hidden pt-14 pb-16 sm:pt-20 sm:pb-24 border-b border-slate-800/80">
           
           {/* Fondo Dinámico Aurora B2B */}
           <HeroAuroraBackground />
@@ -135,24 +147,23 @@ export default function LandingPage() {
                 </p>
               </ScrollReveal>
 
-              {/* Acciones del Hero */}
+              {/* Acciones del Hero: Botón Azul Glow / Shimmer + Botón Secundario */}
               <ScrollReveal delay={380} distance={24}>
                 <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <button
-                    type="button"
+                  <GlowButton
                     onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all active:scale-95 cursor-pointer"
+                    className="w-full sm:w-auto px-8 py-4 text-base font-black"
+                    icon={<ArrowRight className="w-5 h-5 flex-shrink-0" />}
                   >
-                    <span>SOLICITAR PILOTO 14 DÍAS (0 €)</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
+                    <span>Solicitar piloto 14 días</span>
+                  </GlowButton>
 
                   <button
                     type="button"
                     onClick={handleOpenAllDashboards}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm sm:text-base font-bold text-slate-300 hover:text-white bg-slate-800/60 hover:bg-slate-800 border border-slate-700/80 hover:border-cyan-500/40 transition-all active:scale-95 cursor-pointer group"
                   >
-                    <span>Ver Demo Interactiva en Vivo</span>
+                    <span>Probar demo interactiva</span>
                     <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
@@ -175,9 +186,30 @@ export default function LandingPage() {
 
             </div>
           </div>
+
+          {/* ── 2.1 EL SANDBOX INTERACTIVO EN EL HERO (DOBLE PANTALLA MÓVIL + TABLET) ── */}
+          <div id="demo" className="mt-14 sm:mt-16 relative z-10">
+            <ScrollReveal delay={200} distance={30}>
+              <HeroSandbox onOpenAllDashboards={handleOpenAllDashboards} />
+            </ScrollReveal>
+
+            {/* ── 2.2 TARJETA COMPARATIVA «ANTES VS. DESPUÉS» ── */}
+            <ScrollReveal delay={250} distance={30}>
+              <BeforeAfterCard />
+            </ScrollReveal>
+          </div>
+
         </section>
 
-        {/* ── 3. IMPACTO REAL & MÉTRICAS DE NEGOCIO (3 PILARES) ── */}
+        {/* ── 3. SECCIÓN DEL DOLOR: «TU SERVICIO NO DEBERÍA SER CAÓTICO» (6 TARJETAS OSCURAS) ── */}
+        <div id="dolor">
+          <PainSection />
+        </div>
+
+        {/* ── 4. NAVEGACIÓN POR MÓDULOS FUNCIONALES (5 PESTAÑAS INTERACTIVAS) ── */}
+        <FeatureTabs onOpenPilotModal={handleOpenPilotModal} />
+
+        {/* ── 5. IMPACTO REAL & MÉTRICAS DE NEGOCIO (3 PILARES) ── */}
         <section id="funcionalidades" className="py-20 bg-slate-900/60 border-t border-slate-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
@@ -328,7 +360,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── 4. BLOQUE DE PLANES Y PRECIOS (ESPACIADO Y COHERENCIA CORREGIDOS) ── */}
+        {/* ── 6. BLOQUE DE PLANES Y PRECIOS ── */}
         <section id="precios" className="py-20 border-t border-slate-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
@@ -496,13 +528,13 @@ export default function LandingPage() {
                 </div>
               </ScrollReveal>
 
-              {/* Tarjeta 3: Plan Full (DESTACADA CON BORDE CIAN & BADGE RECOMENDADO LIMPIO) */}
+              {/* Tarjeta 3: Plan Full (DESTACADA) */}
               <ScrollReveal delay={300} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
                   className="bg-slate-800/90 border-2 border-cyan-500 hover:border-emerald-400 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl shadow-cyan-500/20 hover:shadow-emerald-500/30 transition-all duration-300 group relative lg:-translate-y-2 cursor-pointer h-full"
                 >
-                  {/* Badge Recomendado Limpio y sin duplicidades */}
+                  {/* Badge Recomendado */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1.5">
                     <Star className="w-3.5 h-3.5 fill-slate-950 text-slate-950 flex-shrink-0" />
                     <span>RECOMENDADO</span>
@@ -534,9 +566,8 @@ export default function LandingPage() {
                       </div>
                     </div>
 
-                    {/* LISTA DE BENEFICIOS COHERENTE Y SIN CAJAS DISJUNTAS */}
+                    {/* LISTA DE BENEFICIOS */}
                     <ul className="space-y-3 text-xs sm:text-sm text-slate-200">
-                      {/* DESTACADO DE ALTA GAMA: Multiplicador de Reseñas Google Maps */}
                       <li className="flex items-start gap-2.5">
                         <Star className="w-5 h-5 text-amber-400 fill-amber-400 flex-shrink-0 mt-0.5" />
                         <span className="text-white font-bold leading-snug">
@@ -552,7 +583,7 @@ export default function LandingPage() {
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-cyan-400 group-hover:text-emerald-400 flex-shrink-0 mt-0.5 transition-colors duration-300" />
                         <div className="space-y-0.5">
-                          <span><strong>Reporte Mensual de Eficiencia &amp; Rentabilidad con IA</strong> (Horas punta, matriz BCG de platos y optimización de terraza)</span>
+                          <span><strong>Reporte Mensual de Eficiencia &amp; Rentabilidad con IA</strong> (Horas punta, matriz de platos y optimización de terraza)</span>
                           <div>
                             <button
                               type="button"
@@ -610,7 +641,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── 5. CALL TO ACTION (CTA) FINAL ── */}
+        {/* ── 7. SECCIÓN DE PREGUNTAS FRECUENTES (FAQ - DESARME DE OBJECIONES) ── */}
+        <FaqSection whatsAppUrl={getWhatsAppUrl('Consulta FAQ')} />
+
+        {/* ── 8. CALL TO ACTION (CTA) FINAL CON EFECTO GLOW / SHIMMER ── */}
         <section id="contacto" className="py-20 bg-slate-900 border-t border-slate-800">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <ScrollReveal distance={28} scale={0.98}>
@@ -633,14 +667,13 @@ export default function LandingPage() {
                   </p>
 
                   <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button
-                      type="button"
+                    <GlowButton
                       onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl text-sm sm:text-base font-black bg-cyan-500 text-slate-950 hover:bg-cyan-400 shadow-xl shadow-cyan-500/30 transition-all active:scale-95 cursor-pointer"
+                      className="w-full sm:w-auto px-8 py-4 text-base font-black"
+                      icon={<ChevronRight className="w-5 h-5 flex-shrink-0" />}
                     >
                       <span>Solicitar Piloto 14 Días (0 €)</span>
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
+                    </GlowButton>
 
                     <button
                       type="button"
@@ -709,7 +742,7 @@ export default function LandingPage() {
         </aside>
       )}
 
-      {/* ── 7. FOOTER LIMPIO ── */}
+      {/* ── 9. FOOTER LIMPIO ── */}
       <footer className="border-t border-slate-800/80 py-8 px-4 bg-slate-950 text-xs text-slate-400">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
           <div className="flex items-center justify-center sm:justify-start">
