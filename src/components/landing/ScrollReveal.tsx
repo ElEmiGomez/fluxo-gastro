@@ -119,6 +119,11 @@ export function ScrollReveal({
   }
 
   const activeBlur = !isMobile && blur > 0
+  // Modo sólido (mazos sticky en móvil): sin transición alguna. Si se dejara la
+  // transición por defecto (750ms + delay), la opacidad pasaría de 0 a 1 con
+  // fundido al hidratar y la tarjeta entraría semitransparente encima de la
+  // anterior ya pegada (textos de ambas visibles a la vez).
+  const solidMode = instant && isMobile
 
   return (
     <Component
@@ -129,9 +134,9 @@ export function ScrollReveal({
         transform: getInitialTransform(),
         filter: activeBlur ? (isVisible ? 'blur(0px)' : `blur(${blur}px)`) : undefined,
         willChange: activeBlur ? 'transform, opacity, filter' : 'transform, opacity',
-        transitionProperty: 'opacity, transform, filter',
-        transitionDuration: `${duration}ms`,
-        transitionDelay: `${delay}ms`,
+        transitionProperty: solidMode ? 'none' : 'opacity, transform, filter',
+        transitionDuration: solidMode ? '0ms' : `${duration}ms`,
+        transitionDelay: solidMode ? '0ms' : `${delay}ms`,
         transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', // Curva suave orgánica (Apple / BioMenu style)
       }}
     >
