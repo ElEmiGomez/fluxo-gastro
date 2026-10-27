@@ -29,6 +29,7 @@ import { HeroSandbox } from '@/components/landing/HeroSandbox'
 import { BeforeAfterCard } from '@/components/landing/BeforeAfterCard'
 import { PainSection } from '@/components/landing/PainSection'
 import { FeatureTabs } from '@/components/landing/FeatureTabs'
+import { useDeckHeights } from '@/components/landing/useDeckHeights'
 import { FaqSection } from '@/components/landing/FaqSection'
 
 interface ContactModalState {
@@ -46,6 +47,8 @@ export default function LandingPage() {
     selectedPlan: 'Plan Full (Recomendado)'
   })
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+  // Mazo sticky de pilares: iguala alturas en el dispositivo (móvil)
+  const deckPilaresRef = useDeckHeights()
 
   React.useEffect(() => {
     document.title = 'Fluxo - Gastronomic System'
@@ -104,10 +107,11 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <GlowButton
               onClick={handleOpenAllDashboards}
-              className="px-4 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm"
+              className="px-3 py-2 sm:px-5 sm:py-2.5 text-xs sm:text-sm"
               icon={<ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />}
             >
-              <span>Probar demo en vivo</span>
+              <span className="sm:hidden">Ver demo</span>
+              <span className="hidden sm:inline">Probar demo en vivo</span>
             </GlowButton>
           </div>
         </div>
@@ -230,7 +234,7 @@ export default function LandingPage() {
             </ScrollReveal>
 
             {/* Mazo sticky en móvil (<768px): cada tarjeta cubre a la anterior; grid en tablet/PC */}
-            <div className="flex flex-col md:grid md:grid-cols-3 gap-5 sm:gap-8">
+            <div ref={deckPilaresRef} className="flex flex-col md:grid md:grid-cols-3 gap-5 sm:gap-8">
               
               {/* Tarjeta 1: Carta QR Visual y Ventas Sugeridas */}
               <ScrollReveal delay={0} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-10 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">

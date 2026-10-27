@@ -11,6 +11,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { ScrollReveal } from './ScrollReveal'
+import { useDeckHeights } from './useDeckHeights'
 
 const PAIN_CARDS = [
   {
@@ -64,6 +65,7 @@ const PAIN_CARDS = [
 ]
 
 export function PainSection() {
+  const deckRef = useDeckHeights()
   return (
     <section className="py-12 sm:py-20 bg-slate-50 border-t border-slate-200 relative">
       
@@ -93,7 +95,7 @@ export function PainSection() {
         </ScrollReveal>
 
         {/* Mazo sticky en móvil (<768px): cada tarjeta cubre a la anterior; grid en tablet/PC */}
-        <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div ref={deckRef} className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {PAIN_CARDS.map((card, idx) => {
             const Icon = card.icon
             // Mismo top para todas + z creciente + altura común: suben y bajan alineadas
