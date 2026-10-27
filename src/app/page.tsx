@@ -623,17 +623,16 @@ export default function LandingPage() {
                   </div>
 
                   <div className="pt-6 sm:pt-8 w-full flex items-center justify-center">
-                    <button
-                      type="button"
+                    <GlowButton
                       onClick={(e) => {
                         e.stopPropagation()
                         handleOpenPilotModal('Plan Full (Recomendado)')
                       }}
-                      className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none bg-gradient-to-r from-blue-600 via-sky-600 to-blue-700 text-white hover:from-blue-700 hover:to-sky-700 shadow-xl shadow-blue-500/25 border border-blue-400/40"
+                      className="w-full h-14 rounded-2xl text-xs sm:text-sm font-black"
+                      icon={<ArrowRight className="w-4 h-4 flex-shrink-0" />}
                     >
                       <span>Probar 14 Días a 0 €</span>
-                      <ArrowRight className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
-                    </button>
+                    </GlowButton>
                   </div>
                 </div>
               </ScrollReveal>

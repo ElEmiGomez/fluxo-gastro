@@ -216,7 +216,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
             <div className="w-20 h-3.5 bg-slate-950 rounded-full mx-auto mb-2" />
             <div className="relative bg-slate-50 rounded-[1.6rem] p-3 min-h-[380px] flex flex-col gap-2.5 overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] font-extrabold text-slate-900">Fluxo Bistro</span>
+                <span className="text-[13px] font-extrabold text-slate-900">Menú Fluxo</span>
                 <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold">
                   Mesa 4
                 </span>
@@ -322,7 +322,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
             <div className="w-20 h-3.5 bg-slate-950 rounded-full mx-auto mb-2" />
             <div className="bg-slate-50 rounded-[1.6rem] p-3 min-h-[380px] flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] font-extrabold text-slate-900">Comandero · Roberto</span>
+                <span className="text-[13px] font-extrabold text-slate-900">Mozo</span>
                 <Bell className={`w-4 h-4 ${stage === 'pendiente' || stage === 'listo' ? 'text-amber-500 animate-bounce' : 'text-slate-400'}`} />
               </div>
 
@@ -409,7 +409,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
           >
             <div className="bg-slate-950 rounded-[1.1rem] p-3 min-h-[396px] flex flex-col gap-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] font-extrabold text-white">Monitor Cocina</span>
+                <span className="text-[13px] font-extrabold text-white">Cocina</span>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">
                   KDS
                 </span>
