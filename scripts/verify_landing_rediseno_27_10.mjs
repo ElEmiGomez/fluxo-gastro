@@ -115,33 +115,32 @@ const run = async () => {
   await page.locator('button', { hasText: 'Probar otro pedido en el simulador' }).click()
   await page.waitForTimeout(300)
 
-  // 5. ANTES/DESPUÉS: bloques únicos con transform hover/toque
+  // 5. ANTES/DESPUÉS: interruptor global «El Caos ⟷ Con Fluxo»
   const bloques = page.locator('#antes-despues > div')
-  check('Selector «Frente a Frente» ELIMINADO (bloques únicos)', (await page.locator('button', { hasText: 'Frente a Frente' }).count()) === 0)
-  check('Selector «El Caos» del conmutador ELIMINADO', (await page.locator('button', { hasText: 'Sala Tradicional' }).count()) === 0)
   const isRose = (loc) => loc.evaluate((el) => el.className.includes('bg-rose-50'))
   const isBlue = (loc) => loc.evaluate((el) => el.className.includes('bg-blue-50'))
+  const allStates = async (loc, fn) => {
+    const vals = []
+    for (let i = 0; i < 5; i++) vals.push(await fn(loc.nth(i)))
+    return vals
+  }
+  check('Selector «Frente a Frente» ELIMINADO (bloques únicos)', (await page.locator('button', { hasText: 'Frente a Frente' }).count()) === 0)
+  check('Conmutador antiguo «Comparativa Interactiva» ELIMINADO', (await page.locator('button', { hasText: 'Comparativa Interactiva' }).count()) === 0)
   check('5 bloques únicos presentes', (await bloques.count()) === 5)
-  let roseInit = 0
-  for (let i = 0; i < 5; i++) if (await isRose(bloques.nth(i))) roseInit++
+  const roseInit = (await allStates(bloques, isRose)).filter(Boolean).length
   check('5 bloques del Caos visibles y 0 de Fluxo al inicio', roseInit === 5)
-  // ScrollReveal (delay 250 + animación 30px): esperar a que la sección se asiente
-  // antes de hover; en mitad de la animación el bloque se mueve bajo el puntero
-  // y el mouseleave revertiría la transformación
   await bloques.first().scrollIntoViewIfNeeded()
-  await page.waitForTimeout(1300)
-  // Hidratación selectiva de React 18: sin espera, los primeros eventos se pierden
+  await page.waitForTimeout(1300) // asentar ScrollReveal
   await waitForHydration(page)
-  await bloques.first().hover()
-  await page.waitForTimeout(500)
-  check('Hover: el bloque pasa a «Con Fluxo»', await isBlue(bloques.first()))
-  check('Hover: el contenido Fluxo es visible', (await page.locator('#antes-despues', { hasText: 'Tiempos sincronizados y pases' }).count()) > 0)
-  let roseMid = 0
-  for (let i = 0; i < 5; i++) if (await isRose(bloques.nth(i))) roseMid++
-  check('Hover: solo 1 bloque transformado, 4 siguen en El Caos', roseMid === 4)
-  await page.mouse.move(10, 10)
-  await page.waitForTimeout(500)
-  check('Mouse out: el bloque vuelve a El Caos', await isRose(bloques.first()))
+  await page.locator('button', { hasText: 'Con Fluxo' }).click()
+  await page.waitForTimeout(700)
+  const bluesTrasSwitch = (await allStates(bloques, isBlue)).filter(Boolean).length
+  check('Interruptor: los 5 bloques pasan a «Con Fluxo» a la vez', bluesTrasSwitch === 5)
+  check('Interruptor: contenido Fluxo visible', (await page.locator('#antes-despues', { hasText: 'Tiempos sincronizados y pases' }).count()) > 0)
+  await page.locator('button', { hasText: 'El Caos' }).click()
+  await page.waitForTimeout(700)
+  const rosesBack = (await allStates(bloques, isRose)).filter(Boolean).length
+  check('Interruptor: los 5 bloques vuelven a «El Caos»', rosesBack === 5)
 
   // 6. PLAN FULL: botón con efecto Glow (misma luz que «Probar demo en vivo»)
   const fullBtn = page.locator('#precios button', { hasText: 'Probar 14 Días a 0 €' })
@@ -174,17 +173,16 @@ const run = async () => {
   await stickyCheck(mobile.locator('#modulos ol > li:has(h3)'), '5 engranajes', 5)
   const mBloques = mobile.locator('#antes-despues > div')
   await mBloques.first().scrollIntoViewIfNeeded()
-  // esperar al asentamiento de ScrollReveal antes de leer sticky / tocar
-  await mobile.waitForTimeout(1300)
-  await stickyCheck(mBloques, 'bloques Antes/Después', 5)
-
+  await mobile.waitForTimeout(1300) // asentar ScrollReveal
   await waitForHydration(mobile)
-  await mBloques.first().tap()
-  await mobile.waitForTimeout(500)
-  check('Móvil: toque transforma el bloque a Fluxo (permanece)', await mBloques.first().evaluate((el) => el.className.includes('bg-blue-50')))
-  await mBloques.first().tap()
-  await mobile.waitForTimeout(500)
-  check('Móvil: segundo toque vuelve a El Caos', await mBloques.first().evaluate((el) => el.className.includes('bg-rose-50')))
+  await mobile.locator('button', { hasText: 'Con Fluxo' }).tap()
+  await mobile.waitForTimeout(700)
+  const mBlues = (await allStates(mBloques, isBlue)).filter(Boolean).length
+  check('Móvil: interruptor pasa los 5 bloques a «Con Fluxo»', mBlues === 5)
+  await mobile.locator('button', { hasText: 'El Caos' }).tap()
+  await mobile.waitForTimeout(700)
+  const mRoses = (await allStates(mBloques, isRose)).filter(Boolean).length
+  check('Móvil: interruptor vuelve a «El Caos»', mRoses === 5)
   await mobile.close()
 
   await browser.close()
