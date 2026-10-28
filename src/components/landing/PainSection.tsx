@@ -70,8 +70,11 @@ export function PainSection() {
     <section className="py-12 sm:py-20 bg-slate-50 border-t border-slate-200 relative">
       
       {/* Luz ambiente de fondo (recortada en su propio contenedor: overflow-hidden
-          en el section anularía el sticky del mazo móvil) */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          en el section anularía el sticky del mazo móvil).
+          En móvil se oculta: el blur de 120px crea una capa compuesta que en
+          iOS Safari se rasteriza mal al hacer scroll y mezcla el texto de las
+          tarjetas del mazo sticky que tiene encima. En PC no afecta. */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none max-md:hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-rose-500/5 rounded-full blur-[120px]" />
       </div>
 
