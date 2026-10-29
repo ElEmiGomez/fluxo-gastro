@@ -406,18 +406,34 @@ export default function CRMAdminPage() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col md:flex-row font-sans transition-colors duration-200 ${
+      className={`min-h-screen font-sans p-3 md:p-5 ${
         isLight
-          ? 'bg-[#F4F7FE] text-slate-800 selection:bg-blue-600 selection:text-white'
-          : 'bg-[#020617] text-slate-100 selection:bg-blue-600 selection:text-white'
+          ? 'crm-mesh-bg text-slate-800 selection:bg-blue-600 selection:text-white'
+          : 'crm-mesh-bg-dark text-slate-100 selection:bg-blue-600 selection:text-white'
       }`}
     >
+      {/* Ventana flotante unificada estilo macOS: marco de cristal redondeado
+          que flota sobre el lienzo mesh. La geometría interna (flex aside/main)
+          se conserva intacta. */}
+      <div
+        className={`flex flex-col md:flex-row overflow-hidden rounded-[28px] shadow-[0_25px_80px_rgba(15,23,42,0.22)] min-h-[calc(100vh-1.5rem)] md:min-h-[calc(100vh-2.5rem)] ${
+          isLight
+            ? 'border border-white/50 bg-white/45 backdrop-blur-3xl'
+            : 'border border-white/10 bg-slate-950/55 backdrop-blur-3xl'
+        }`}
+      >
       {/* ==============================================================================
           BARRA LATERAL IZQUIERDA (Estilo CRM.io de la imagen de referencia)
       ============================================================================== */}
-      <aside className="w-full md:w-64 bg-[#0B132B] text-slate-300 flex flex-col shrink-0 border-r border-slate-800/80 shadow-2xl z-20">
+      <aside className="w-full md:w-64 apple-glass-sidebar text-slate-300 flex flex-col shrink-0 z-20 relative overflow-hidden">
+        {/* Reflejo diagonal tenue en la parte superior (decorativo, sin interacción) */}
+        <div
+          className="absolute inset-x-0 top-0 h-24 pointer-events-none"
+          style={{ background: 'linear-gradient(125deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.04) 45%, rgba(255,255,255,0) 70%)' }}
+          aria-hidden
+        />
         {/* Logotipo de Marca */}
-        <div className="p-5 border-b border-slate-800/60 flex items-center justify-between">
+        <div className="relative p-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <FluxoLogo size={36} />
             <div>
@@ -439,17 +455,17 @@ export default function CRMAdminPage() {
         </div>
 
         {/* Navegación y Vistas */}
-        <div className="p-4 space-y-6 flex-1 overflow-y-auto">
+        <div className="relative p-4 space-y-6 flex-1 overflow-y-auto">
           {/* Sección Vistas de Trabajo */}
           <div className="space-y-1.5">
             <p className="px-3 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Gestión</p>
 
             <button
               onClick={() => setViewMode('kanban')}
-              className={`w-full px-3.5 py-2.5 rounded-2xl text-xs font-semibold flex items-center gap-3 transition ${
+              className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 apple-smooth ${
                 viewMode === 'kanban'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'text-slate-400 hover:bg-slate-850 hover:text-white'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-[0_6px_20px_rgba(59,130,246,0.4)]'
+                  : 'text-slate-300/90 hover:bg-white/10 hover:text-white'
               }`}
             >
               <Kanban className="w-4 h-4" />
@@ -458,10 +474,10 @@ export default function CRMAdminPage() {
 
             <button
               onClick={() => setViewMode('table')}
-              className={`w-full px-3.5 py-2.5 rounded-2xl text-xs font-semibold flex items-center gap-3 transition ${
+              className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 apple-smooth ${
                 viewMode === 'table'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'text-slate-400 hover:bg-slate-850 hover:text-white'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-[0_6px_20px_rgba(59,130,246,0.4)]'
+                  : 'text-slate-300/90 hover:bg-white/10 hover:text-white'
               }`}
             >
               <TableIcon className="w-4 h-4" />
@@ -470,10 +486,10 @@ export default function CRMAdminPage() {
 
             <button
               onClick={() => setViewMode('map')}
-              className={`w-full px-3.5 py-2.5 rounded-2xl text-xs font-semibold flex items-center gap-3 transition ${
+              className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 apple-smooth ${
                 viewMode === 'map'
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
-                  : 'text-slate-400 hover:bg-slate-850 hover:text-white'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-[0_6px_20px_rgba(59,130,246,0.4)]'
+                  : 'text-slate-300/90 hover:bg-white/10 hover:text-white'
               }`}
             >
               <MapPin className="w-4 h-4" />
@@ -487,7 +503,7 @@ export default function CRMAdminPage() {
 
             <button
               onClick={() => setIsQuickAddOpen(true)}
-              className="w-full px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-3 shadow-md shadow-blue-600/20 transition active:scale-[0.98]"
+              className="w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-white border border-white/[0.15] text-xs font-bold flex items-center gap-3 backdrop-blur-md apple-smooth active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
               <span>Nuevo Local</span>
@@ -495,7 +511,7 @@ export default function CRMAdminPage() {
 
             <button
               onClick={() => setIsContactCardOpen(true)}
-              className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 border border-slate-700/60 text-xs font-semibold flex items-center gap-3 transition"
+              className="w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15] text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth"
             >
               <QrCode className="w-4 h-4 text-blue-400" />
               <span>Mi Tarjeta QR</span>
@@ -504,7 +520,7 @@ export default function CRMAdminPage() {
 
           {/* Datos del Fundador */}
           <div className="pt-2">
-            <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800/80 flex items-center gap-2.5">
+            <div className="p-3 rounded-2xl bg-white/[0.08] border border-white/[0.12] backdrop-blur-md flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white font-black text-xs shadow-md">
                 EG
               </div>
@@ -520,10 +536,10 @@ export default function CRMAdminPage() {
         </div>
 
         {/* Pie de Barra Lateral */}
-        <div className="p-4 border-t border-slate-800/60 flex items-center justify-between text-xs">
+        <div className="relative p-4 border-t border-white/10 flex items-center justify-between text-xs">
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition p-1.5 rounded-xl hover:bg-slate-850"
+            className="flex items-center gap-2 text-slate-400 hover:text-white p-1.5 rounded-full hover:bg-white/10 apple-smooth"
             title="Cambiar Modo Claro / Oscuro"
           >
             {isLight ? (
@@ -542,7 +558,7 @@ export default function CRMAdminPage() {
           <button
             onClick={handleLogout}
             title="Cerrar sesión de fundador"
-            className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-850 transition"
+            className="p-1.5 rounded-full text-slate-400 hover:text-rose-400 hover:bg-white/10 apple-smooth"
           >
             <LogOut className="w-4 h-4" />
           </button>
@@ -583,10 +599,10 @@ export default function CRMAdminPage() {
               <button
                 onClick={toggleTheme}
                 title={isLight ? 'Cambiar a Modo Oscuro' : 'Cambiar a Modo Claro'}
-                className={`p-2 rounded-xl border transition ${
+                className={`p-2 rounded-full border shadow-sm backdrop-blur-md apple-smooth ${
                   isLight
-                    ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                    : 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-750'
+                    ? 'bg-white/65 hover:bg-white/85 border-white/80 text-slate-700'
+                    : 'bg-slate-800/70 hover:bg-slate-700/70 border-white/10 text-amber-400'
                 }`}
               >
                 {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -597,10 +613,10 @@ export default function CRMAdminPage() {
                 onClick={fetchCRMData}
                 disabled={loading}
                 title="Recargar datos"
-                className={`p-2 rounded-xl border transition ${
+                className={`p-2 rounded-full border shadow-sm backdrop-blur-md apple-smooth ${
                   isLight
-                    ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-white/65 hover:bg-white/85 border-white/80 text-slate-700'
+                    : 'bg-slate-800/70 hover:bg-slate-700/70 border-white/10 text-slate-300'
                 }`}
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-500' : ''}`} />
@@ -612,10 +628,10 @@ export default function CRMAdminPage() {
                   type="button"
                   onClick={() => setShowExportMenu(!showExportMenu)}
                   title="Opciones de Exportación (Excel, JSON, Resumen)"
-                  className={`p-2 rounded-xl border transition shadow-sm active:scale-95 ${
+                  className={`p-2 rounded-full border shadow-sm backdrop-blur-md apple-smooth active:scale-95 ${
                     isLight
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                      ? 'bg-white/65 hover:bg-white/85 text-slate-700 border-white/80'
+                      : 'bg-slate-800/70 hover:bg-slate-700/70 text-slate-200 border-white/10'
                   }`}
                 >
                   <Download className="w-4 h-4 text-blue-500" />
@@ -688,7 +704,7 @@ export default function CRMAdminPage() {
               {/* Botón Nuevo Local */}
               <button
                 onClick={() => setIsQuickAddOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition shadow-lg shadow-blue-600/25 active:scale-95"
+                className="px-3.5 py-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 apple-smooth shadow-md shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">Nuevo Local</span>
@@ -702,10 +718,10 @@ export default function CRMAdminPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
             {/* Tarjeta 1: MRR Ganado */}
             <div
-              className={`p-4 rounded-3xl border transition-all ${
+              className={`p-4 rounded-2xl apple-smooth ${
                 isLight
-                  ? 'bg-white border-slate-200/70 shadow-[0_4px_20px_rgb(0,0,0,0.03)]'
-                  : 'bg-slate-900 border-slate-800/80 shadow-md'
+                  ? 'apple-glass-card apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
+                  : 'apple-glass-card-dark apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(0,0,0,0.35)]'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -727,10 +743,10 @@ export default function CRMAdminPage() {
 
             {/* Tarjeta 2: Pipeline en Juego */}
             <div
-              className={`p-4 rounded-3xl border transition-all ${
+              className={`p-4 rounded-2xl apple-smooth ${
                 isLight
-                  ? 'bg-white border-slate-200/70 shadow-[0_4px_20px_rgb(0,0,0,0.03)]'
-                  : 'bg-slate-900 border-slate-800/80 shadow-md'
+                  ? 'apple-glass-card apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
+                  : 'apple-glass-card-dark apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(0,0,0,0.35)]'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -757,10 +773,10 @@ export default function CRMAdminPage() {
 
             {/* Tarjeta 3: Pilotos de 14 Días */}
             <div
-              className={`p-4 rounded-3xl border transition-all ${
+              className={`p-4 rounded-2xl apple-smooth ${
                 isLight
-                  ? 'bg-white border-slate-200/70 shadow-[0_4px_20px_rgb(0,0,0,0.03)]'
-                  : 'bg-slate-900 border-slate-800/80 shadow-md'
+                  ? 'apple-glass-card apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
+                  : 'apple-glass-card-dark apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(0,0,0,0.35)]'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -782,10 +798,10 @@ export default function CRMAdminPage() {
 
             {/* Tarjeta 4: Conversión & Universo Noia */}
             <div
-              className={`p-4 rounded-3xl border transition-all ${
+              className={`p-4 rounded-2xl apple-smooth ${
                 isLight
-                  ? 'bg-white border-slate-200/70 shadow-[0_4px_20px_rgb(0,0,0,0.03)]'
-                  : 'bg-slate-900 border-slate-800/80 shadow-md'
+                  ? 'apple-glass-card apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
+                  : 'apple-glass-card-dark apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(0,0,0,0.35)]'
               }`}
             >
               <div className="flex items-center justify-between mb-2">
@@ -810,10 +826,10 @@ export default function CRMAdminPage() {
         {/* 2.5. Calendario y Campaña Activa de Noia [Idea 7] */}
         <section className="px-5 pt-3.5 max-w-7xl w-full mx-auto">
           <div
-            className={`p-4 rounded-3xl border transition-all relative overflow-hidden ${
+            className={`p-4 rounded-3xl relative apple-smooth ${
               isLight
-                ? 'bg-white border-blue-200 shadow-[0_4px_20px_rgb(0,0,0,0.03)] text-slate-800'
-                : 'bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 border-blue-500/30 text-white shadow-lg'
+                ? 'apple-glass-card apple-glass-reflection text-slate-800 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
+                : 'apple-glass-card-dark apple-glass-reflection text-white'
             }`}
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -854,10 +870,10 @@ export default function CRMAdminPage() {
 
             {/* Consejo Táctico para la Prospección en Calle */}
             <div
-              className={`mt-3 p-3 rounded-2xl flex items-start gap-2.5 text-xs border ${
+              className={`mt-3 p-3 rounded-xl flex items-start gap-2.5 text-xs ${
                 isLight
-                  ? 'bg-blue-50/70 border-blue-200 text-slate-700'
-                  : 'bg-slate-900/90 border-blue-500/20 text-slate-200'
+                  ? 'bg-white/55 border border-white/75 backdrop-blur-md text-slate-700'
+                  : 'bg-slate-900/90 border border-blue-500/20 text-slate-200'
               }`}
             >
               <span className="text-amber-500 font-bold shrink-0 mt-0.5">💡 Consejo Comercial Hoy:</span>
@@ -900,8 +916,8 @@ export default function CRMAdminPage() {
         {/* 3. Barra de Búsqueda y Filtros */}
         <section className="px-5 pt-3.5 max-w-7xl w-full mx-auto">
           <div
-            className={`p-3 rounded-3xl border flex flex-wrap items-center justify-between gap-3 ${
-              isLight ? 'bg-white border-slate-200/80 shadow-sm' : 'bg-slate-900/80 border-slate-800'
+            className={`p-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 ${
+              isLight ? 'apple-glass-card' : 'apple-glass-card-dark'
             }`}
           >
             {/* Buscador */}
@@ -912,10 +928,10 @@ export default function CRMAdminPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar local, calle o contacto en Noia..."
-                className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 border ${
+                className={`w-full pl-9 pr-3 py-2 rounded-full text-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 border shadow-inner apple-smooth ${
                   isLight
-                    ? 'bg-slate-50 border-slate-200 text-slate-800'
-                    : 'bg-slate-800 border-slate-700 text-white'
+                    ? 'bg-white/80 hover:bg-white/95 focus:bg-white border-white/80 text-slate-800'
+                    : 'bg-slate-800/80 hover:bg-slate-800 border-white/10 text-white'
                 }`}
               />
             </div>
@@ -926,10 +942,10 @@ export default function CRMAdminPage() {
               <select
                 value={selectedZone}
                 onChange={(e) => setSelectedZone(e.target.value)}
-                className={`px-2.5 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 border ${
+                className={`px-3 py-2 rounded-full text-xs focus:outline-none focus:border-blue-500 border shadow-inner apple-smooth ${
                   isLight
-                    ? 'bg-slate-50 border-slate-200 text-slate-700'
-                    : 'bg-slate-800 border-slate-700 text-slate-200'
+                    ? 'bg-white/80 hover:bg-white/95 focus:bg-white border-white/80 text-slate-700'
+                    : 'bg-slate-800/80 hover:bg-slate-800 border-white/10 text-slate-200'
                 }`}
               >
                 <option value="all">Todas las Zonas</option>
@@ -944,10 +960,10 @@ export default function CRMAdminPage() {
               <select
                 value={selectedICP}
                 onChange={(e) => setSelectedICP(e.target.value)}
-                className={`px-2.5 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 border font-medium ${
+                className={`px-3 py-2 rounded-full text-xs focus:outline-none focus:border-blue-500 border font-medium shadow-inner apple-smooth ${
                   isLight
-                    ? 'bg-slate-50 border-slate-200 text-slate-700'
-                    : 'bg-slate-800 border-slate-700 text-slate-200'
+                    ? 'bg-white/80 hover:bg-white/95 focus:bg-white border-white/80 text-slate-700'
+                    : 'bg-slate-800/80 hover:bg-slate-800 border-white/10 text-slate-200'
                 }`}
               >
                 <option value="all">Todos los ICPs</option>
@@ -960,10 +976,10 @@ export default function CRMAdminPage() {
               <select
                 value={selectedPlan}
                 onChange={(e) => setSelectedPlan(e.target.value)}
-                className={`px-2.5 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 border ${
+                className={`px-3 py-2 rounded-full text-xs focus:outline-none focus:border-blue-500 border shadow-inner apple-smooth ${
                   isLight
-                    ? 'bg-slate-50 border-slate-200 text-slate-700'
-                    : 'bg-slate-800 border-slate-700 text-slate-200'
+                    ? 'bg-white/80 hover:bg-white/95 focus:bg-white border-white/80 text-slate-700'
+                    : 'bg-slate-800/80 hover:bg-slate-800 border-white/10 text-slate-200'
                 }`}
               >
                 <option value="all">Todos los Planes</option>
@@ -995,18 +1011,18 @@ export default function CRMAdminPage() {
                     onDragOver={(e) => handleDragOver(e, col.id)}
                     onDragLeave={() => handleDragLeave(col.id)}
                     onDrop={(e) => handleDrop(e, col.id)}
-                    className={`w-80 shrink-0 flex flex-col rounded-3xl border transition-all max-h-[75vh] ${
-                      isDragOver
-                        ? 'ring-2 ring-blue-500 bg-blue-500/10 border-blue-500'
-                        : isLight
-                        ? 'bg-white/80 border-slate-200/80 shadow-[0_4px_20px_rgb(0,0,0,0.02)]'
-                        : 'bg-slate-900/60 border-slate-800/80'
+                    className={`w-80 shrink-0 flex flex-col rounded-2xl transition-all max-h-[75vh] ${
+                      isDragOver ? 'ring-2 ring-blue-500 border-blue-500' : ''
+                    } ${
+                      isLight
+                        ? 'apple-glass-card apple-glass-reflection'
+                        : 'apple-glass-card-dark apple-glass-reflection'
                     }`}
                   >
                     {/* Encabezado de Columna */}
                     <div
-                      className={`p-3.5 border-b flex items-center justify-between sticky top-0 backdrop-blur-md rounded-t-3xl z-10 ${
-                        isLight ? 'bg-white/95 border-slate-200' : 'bg-slate-900/90 border-slate-800'
+                      className={`p-3.5 border-b flex items-center justify-between sticky top-0 backdrop-blur-md rounded-t-2xl z-10 ${
+                        isLight ? 'bg-white/70 border-white/60' : 'bg-slate-950/70 border-white/10'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -1030,12 +1046,12 @@ export default function CRMAdminPage() {
                     <div className="p-3 space-y-2.5 overflow-y-auto flex-1">
                       {columnLeads.length === 0 ? (
                         <div
-                          className={`py-8 text-center text-xs italic rounded-2xl border border-dashed ${
+                          className={`py-8 text-center text-xs italic rounded-xl border border-dashed apple-smooth ${
                             isDragOver
                               ? 'border-blue-400 bg-blue-50/50 text-blue-600'
                               : isLight
-                              ? 'border-slate-200 text-slate-400'
-                              : 'border-slate-800 text-slate-600'
+                              ? 'border-slate-400/35 bg-white/25 text-slate-400 backdrop-blur-sm'
+                              : 'border-slate-800 bg-white/[0.04] text-slate-600 backdrop-blur-sm'
                           }`}
                         >
                           Arrastra un local aquí
@@ -1055,11 +1071,11 @@ export default function CRMAdminPage() {
                                 setSelectedLead(lead)
                                 setIsDetailOpen(true)
                               }}
-                              className={`p-3.5 rounded-2xl border transition-all cursor-grab active:cursor-grabbing select-none relative group ${
+                              className={`p-3.5 border rounded-xl apple-smooth cursor-grab active:cursor-grabbing select-none relative group ${
                                 isBeingDragged ? 'opacity-40 scale-95' : 'opacity-100'
                               } ${
                                 isLight
-                                  ? 'bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-400 shadow-sm hover:shadow-md'
+                                  ? 'bg-white/80 hover:bg-white/95 border-white/85 backdrop-blur-md hover:border-blue-400 shadow-sm hover:shadow-md hover:-translate-y-0.5'
                                   : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700/60 hover:border-blue-500/50 shadow-sm'
                               }`}
                             >
@@ -1214,8 +1230,8 @@ export default function CRMAdminPage() {
           ) : viewMode === 'table' ? (
             /* Vista TABLA Analítica */
             <div
-              className={`rounded-3xl border overflow-hidden shadow-sm ${
-                isLight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+              className={`rounded-3xl overflow-hidden shadow-sm ${
+                isLight ? 'apple-glass-card' : 'apple-glass-card-dark'
               }`}
             >
               <div className="overflow-x-auto">
@@ -1315,6 +1331,7 @@ export default function CRMAdminPage() {
             />
           )}
         </main>
+      </div>
       </div>
 
       {/* ==============================================================================
