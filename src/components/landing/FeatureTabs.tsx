@@ -13,6 +13,7 @@ import {
   Check,
 } from 'lucide-react'
 import { ScrollReveal } from './ScrollReveal'
+import { useDeckHeights } from './useDeckHeights'
 
 /**
  * FeatureTabs
@@ -100,6 +101,8 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
   const [inView, setInView] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
   const sectionRef = useRef<HTMLElement | null>(null)
+  // Mazo sticky de engranajes: iguala alturas de las li en el dispositivo (móvil)
+  const deckRef = useDeckHeights()
 
   // Respeta prefers-reduced-motion
   useEffect(() => {
@@ -174,6 +177,7 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
 
         {/* Recorrido: horizontal en escritorio, baraja sticky en móvil (< 768px) */}
         <ol
+          ref={deckRef}
           className="flex flex-col lg:flex-row lg:items-stretch gap-3 lg:gap-0 max-md:pb-12"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
@@ -182,30 +186,35 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
             const Icon = m.icon
             const isActive = i === active
             const isDone = i < active
-            // Mazo de cartas en móvil: top escalonado fino (14px por carta) + z
-            // creciente + altura uniforme. La tarjeta siguiente cubre 100% a la
-            // anterior y solo asoma una pestaña limpia de 14px arriba.
+            // Mazo de cartas en móvil: escalón superior progresivo de 12px +
+            // z creciente. El marginBottom de cierre (4-i)*12 alinea todos los
+            // bordes inferiores al terminar el bloque (sin escalera invertida).
             // (clases literales completas: Tailwind no genera clases dinámicas;
-            //  top/zIndex en style dinámico: en PC el li es static y no aplican)
+            //  top/zIndex/marginBottom en style dinámico: en PC el li es static,
+            //  el top/zIndex no aplican y md:!mb-0 anula el margen inline)
             const stickyCls = [
-              'max-md:sticky max-md:min-h-[350px]',
-              'max-md:sticky max-md:min-h-[350px]',
-              'max-md:sticky max-md:min-h-[350px]',
-              'max-md:sticky max-md:min-h-[350px]',
-              'max-md:sticky max-md:min-h-[350px]',
+              'max-md:sticky max-md:min-h-[360px]',
+              'max-md:sticky max-md:min-h-[360px]',
+              'max-md:sticky max-md:min-h-[360px]',
+              'max-md:sticky max-md:min-h-[360px]',
+              'max-md:sticky max-md:min-h-[360px]',
             ][i]
-            const stickyStyle = { top: `calc(76px + ${i * 14}px)`, zIndex: 20 + i }
+            const stickyStyle = {
+              top: `calc(76px + ${i * 12}px)`,
+              marginBottom: `calc(${(5 - 1 - i) * 12}px)`,
+              zIndex: 20 + i,
+            }
             return (
               <React.Fragment key={m.title}>
                 <li
-                  className={`${stickyCls} max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)] rounded-2xl lg:flex-1 lg:min-w-0`}
+                  className={`${stickyCls} md:!mb-0 max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)] rounded-2xl lg:flex-1 lg:min-w-0`}
                   style={stickyStyle}
                 >
                   <button
                     type="button"
                     onClick={() => setActive(i)}
                     aria-current={isActive ? 'step' : undefined}
-                    className={`relative w-full h-full text-left bg-white rounded-2xl p-5 border transition-all duration-500 cursor-pointer flex flex-col gap-3 max-md:justify-between ${
+                    className={`relative w-full h-full text-left bg-white overflow-hidden rounded-2xl p-5 border transition-all duration-500 cursor-pointer flex flex-col gap-3 max-md:justify-between ${
                       isActive
                         ? 'border-blue-500 shadow-xl shadow-blue-500/15 ring-4 ring-blue-500/10 lg:-translate-y-2'
                         : isDone

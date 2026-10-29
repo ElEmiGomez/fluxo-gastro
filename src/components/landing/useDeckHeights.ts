@@ -18,8 +18,8 @@ import { useEffect, useRef } from 'react'
  *
  * En PC (>=768px) no hace nada: el grid ya iguala alturas por fila.
  */
-export function useDeckHeights() {
-  const ref = useRef<HTMLDivElement | null>(null)
+export function useDeckHeights<T extends HTMLElement = HTMLElement>() {
+  const ref = useRef<T | null>(null)
 
   useEffect(() => {
     const el = ref.current
@@ -70,5 +70,5 @@ export function useDeckHeights() {
     }
   }, [])
 
-  return ref
+  return ref as unknown as React.RefObject<any>
 }

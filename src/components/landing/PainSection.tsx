@@ -101,20 +101,25 @@ export function PainSection() {
         <div ref={deckRef} className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-md:pb-10">
           {PAIN_CARDS.map((card, idx) => {
             const Icon = card.icon
-            // Mazo de cartas en móvil: top escalonado fino (12px por carta) + z
-            // creciente + altura uniforme. La tarjeta siguiente cubre 100% a la
-            // anterior y solo asoma una pestaña limpia de 12px arriba.
-            // (top/zIndex en style dinámico: en PC el wrapper es static y no aplican)
+            // Mazo de cartas en móvil: escalón superior progresivo de 10px +
+            // z creciente. El marginBottom de cierre (5-i)*10 hace que, al
+            // terminar el bloque, todos los bordes inferiores queden
+            // alineados (sin escalera invertida). En escritorio el margen
+            // inline se anula con md:!mb-0 y el top/zIndex no aplican (static).
             return (
               <ScrollReveal
                 key={idx}
                 delay={idx * 60}
                 distance={20}
                 instant
-                className="h-full max-md:sticky max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)]"
-                style={{ top: `calc(76px + ${idx * 12}px)`, zIndex: 10 + idx }}
+                className="h-full max-md:sticky md:!mb-0 max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)]"
+                style={{
+                  top: `calc(76px + ${idx * 10}px)`,
+                  marginBottom: `calc(${(6 - 1 - idx) * 10}px)`,
+                  zIndex: 10 + idx,
+                }}
               >
-                <div className="h-full max-md:min-h-[260px] bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl p-5 sm:p-7 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-lg hover:-translate-y-1 group">
+                <div className="h-full max-md:min-h-[260px] bg-white hover:bg-slate-50 overflow-hidden border border-slate-200 hover:border-slate-300 rounded-2xl p-5 sm:p-7 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-lg hover:-translate-y-1 group">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div

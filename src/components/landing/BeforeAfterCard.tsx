@@ -51,9 +51,11 @@ export function BeforeAfterCard() {
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
       <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-10 shadow-xl relative overflow-hidden">
 
-        {/* Halo decorativo de fondo */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
+        {/* Halos decorativos de fondo — ocultos en móvil: el blur grande se
+            rasteriza mal en iOS Safari y pinta manchas grises cerca de los
+            bordes del cuadro (bordes fantasmas). En PC se mantienen. */}
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none max-md:hidden" />
+        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-rose-500/5 rounded-full blur-3xl pointer-events-none max-md:hidden" />
 
         <div className="relative z-10 text-center max-w-3xl mx-auto mb-6 space-y-2">
           <span className="text-xs font-black uppercase tracking-wider text-blue-600">
