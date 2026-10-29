@@ -15,6 +15,7 @@ interface ScrollRevealProps {
   threshold?: number // porcentaje de visibilidad para disparar (0 a 1)
   once?: boolean // si es true, la animación ocurre solo una vez
   as?: React.ElementType
+  style?: React.CSSProperties // estilos extra del caller (top/zIndex dinámico de mazos sticky)
 }
 
 export function ScrollReveal({
@@ -30,6 +31,7 @@ export function ScrollReveal({
   threshold = 0.1,
   once = true,
   as: Component = 'div',
+  style: styleProp,
 }: ScrollRevealProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -132,7 +134,7 @@ export function ScrollReveal({
       className={solidMode ? className : `will-change-[transform,opacity] ${className}`}
       style={
         solidMode
-          ? undefined
+          ? styleProp
           : {
               opacity: isVisible ? 1 : 0,
               transform: getInitialTransform(),
@@ -142,6 +144,7 @@ export function ScrollReveal({
               transitionDuration: `${duration}ms`,
               transitionDelay: `${delay}ms`,
               transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)', // Curva suave orgánica (Apple / BioMenu style)
+              ...styleProp,
             }
       }
     >

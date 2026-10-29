@@ -174,7 +174,7 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
 
         {/* Recorrido: horizontal en escritorio, baraja sticky en móvil (< 768px) */}
         <ol
-          className="flex flex-col lg:flex-row lg:items-stretch gap-3 lg:gap-0"
+          className="flex flex-col lg:flex-row lg:items-stretch gap-3 lg:gap-0 max-md:pb-12"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
@@ -182,24 +182,30 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
             const Icon = m.icon
             const isActive = i === active
             const isDone = i < active
-            // Sticky Scroll Stack móvil: cada tarjeta cubre por completo a la anterior
-            // al hacer scroll (mismo top para todas, con holgura bajo la navbar de 64px).
-            // (clases literales completas: Tailwind no genera clases dinámicas)
+            // Mazo de cartas en móvil: top escalonado fino (14px por carta) + z
+            // creciente + altura uniforme. La tarjeta siguiente cubre 100% a la
+            // anterior y solo asoma una pestaña limpia de 14px arriba.
+            // (clases literales completas: Tailwind no genera clases dinámicas;
+            //  top/zIndex en style dinámico: en PC el li es static y no aplican)
             const stickyCls = [
-              'max-md:sticky max-md:top-24 max-md:z-10 max-md:min-h-[320px]',
-              'max-md:sticky max-md:top-24 max-md:z-20 max-md:min-h-[320px]',
-              'max-md:sticky max-md:top-24 max-md:z-30 max-md:min-h-[320px]',
-              'max-md:sticky max-md:top-24 max-md:z-40 max-md:min-h-[320px]',
-              'max-md:sticky max-md:top-24 max-md:z-40 max-md:min-h-[320px]',
+              'max-md:sticky max-md:min-h-[350px]',
+              'max-md:sticky max-md:min-h-[350px]',
+              'max-md:sticky max-md:min-h-[350px]',
+              'max-md:sticky max-md:min-h-[350px]',
+              'max-md:sticky max-md:min-h-[350px]',
             ][i]
+            const stickyStyle = { top: `calc(76px + ${i * 14}px)`, zIndex: 20 + i }
             return (
               <React.Fragment key={m.title}>
-                <li className={`${stickyCls} max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)] rounded-2xl lg:flex-1 lg:min-w-0`}>
+                <li
+                  className={`${stickyCls} max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)] rounded-2xl lg:flex-1 lg:min-w-0`}
+                  style={stickyStyle}
+                >
                   <button
                     type="button"
                     onClick={() => setActive(i)}
                     aria-current={isActive ? 'step' : undefined}
-                    className={`relative w-full h-full text-left bg-white rounded-2xl p-5 border transition-all duration-500 cursor-pointer flex flex-col gap-3 ${
+                    className={`relative w-full h-full text-left bg-white rounded-2xl p-5 border transition-all duration-500 cursor-pointer flex flex-col gap-3 max-md:justify-between ${
                       isActive
                         ? 'border-blue-500 shadow-xl shadow-blue-500/15 ring-4 ring-blue-500/10 lg:-translate-y-2'
                         : isDone

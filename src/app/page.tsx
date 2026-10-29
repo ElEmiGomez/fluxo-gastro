@@ -234,11 +234,11 @@ export default function LandingPage() {
             </ScrollReveal>
 
             {/* Mazo sticky en móvil (<768px): cada tarjeta cubre a la anterior; grid en tablet/PC */}
-            <div ref={deckPilaresRef} className="flex flex-col md:grid md:grid-cols-3 gap-5 sm:gap-8">
+            <div ref={deckPilaresRef} className="flex flex-col md:grid md:grid-cols-3 gap-5 sm:gap-8 max-md:pb-12">
               
               {/* Tarjeta 1: Carta QR Visual y Ventas Sugeridas */}
-              <ScrollReveal delay={0} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-10 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
-                <div className="bg-white max-md:min-h-[502px] hover:bg-slate-50/50 border border-slate-200 hover:border-emerald-500/50 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
+              <ScrollReveal delay={0} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)]" style={{ top: `calc(76px + ${0 * 16}px)`, zIndex: 30 + 0 }}>
+                <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 border border-slate-200 hover:border-emerald-500/50 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
@@ -279,8 +279,8 @@ export default function LandingPage() {
               </ScrollReveal>
 
               {/* Tarjeta 2: Comandero Ágil en Cualquier Móvil */}
-              <ScrollReveal delay={150} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-20 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
-                <div className="bg-white max-md:min-h-[502px] hover:bg-slate-50/50 border border-slate-200 hover:border-blue-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
+              <ScrollReveal delay={150} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)]" style={{ top: `calc(76px + ${1 * 16}px)`, zIndex: 30 + 1 }}>
+                <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 border border-slate-200 hover:border-blue-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
@@ -321,8 +321,8 @@ export default function LandingPage() {
               </ScrollReveal>
 
               {/* Tarjeta 3: Monitor KDS por Estaciones */}
-              <ScrollReveal delay={300} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:top-24 max-md:z-30 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
-                <div className="bg-white max-md:min-h-[502px] hover:bg-slate-50/50 border border-slate-200 hover:border-amber-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
+              <ScrollReveal delay={300} distance={32} instant className="flex flex-col h-full max-md:sticky max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)]" style={{ top: `calc(76px + ${2 * 16}px)`, zIndex: 30 + 2 }}>
+                <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 border border-slate-200 hover:border-amber-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="w-14 h-14 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
