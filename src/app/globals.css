@@ -369,40 +369,77 @@ button, a, input, select, textarea {
     linear-gradient(145deg, #0f172a 0%, #020617 55%, #0b1120 100%);
 }
 
-/* Tarjeta de cristal esmerilado con borde biselado luminoso */
+/* Tarjeta de cristal esmerilado (Modo Claro). El Modo Oscuro se resuelve
+   con [data-theme="dark"] sobre el contenedor raíz del CRM (el theme vive
+   en un useState del componente, no en tailwind darkMode). Luz difusa
+   continua: nunca genera líneas de corte en columnas altas ni paneles anchos. */
 .apple-glass-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.48) 50%, rgba(255, 255, 255, 0.62) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.58) 100%);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.75);
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.95), inset 1px 0 0 0 rgba(255, 255, 255, 0.6);
   position: relative;
   overflow: hidden;
 }
 
-/* Variante oscura de la tarjeta de cristal (Modo Oscuro) */
-.apple-glass-card-dark {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.78) 0%, rgba(22, 32, 54, 0.62) 50%, rgba(15, 23, 42, 0.8) 100%);
+[data-theme="dark"] .apple-glass-card {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.65) 0%, rgba(15, 23, 42, 0.55) 100%);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.1);
-  position: relative;
-  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.14), inset 1px 0 0 0 rgba(255, 255, 255, 0.05);
 }
 
-/* Reflejo diagonal especular suave (no bloquea clics: pointer-events none) */
+/* Reflejo continuo de amplio espectro: luz radial en la esquina superior
+   izquierda + gradiente ancho de baja opacidad. Sin franjas estrechas
+   (adiós cortes a media columna). Con `border-radius: inherit` no se sale
+   nunca del cristal. En Modo Oscuro los valores son ultra bajos para que
+   no aparezcan manchas blancas lechosas. */
 .apple-glass-reflection::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(125deg, rgba(255, 255, 255, 0) 20%, rgba(255, 255, 255, 0.38) 42%, rgba(255, 255, 255, 0.08) 52%, rgba(255, 255, 255, 0) 70%);
-  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.6s ease;
+  border-radius: inherit;
+  opacity: 0.8;
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0) 85%),
+    linear-gradient(125deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0) 90%);
+  transition: opacity 0.4s ease;
 }
 
+[data-theme="dark"] .apple-glass-reflection::before {
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(186, 230, 253, 0.055) 0%, rgba(255, 255, 255, 0.02) 45%, rgba(255, 255, 255, 0) 85%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 50%, rgba(255, 255, 255, 0) 85%);
+}
+
+/* Al hover, el reflejo sube de luminosidad de forma fluida (sin saltos) */
 .apple-glass-reflection:hover::before {
-  transform: translateX(6%);
+  opacity: 1;
+}
+
+/* Entrada suave al cambiar de vista (Kanban/Tabla/Mapa) y abrir modales */
+@keyframes appleFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-apple-fade-in {
+  animation: appleFadeIn 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-apple-fade-in {
+    animation: none;
+  }
 }
 
 /* Barra lateral esmerilada oscura (siempre oscura, ambos temas) */

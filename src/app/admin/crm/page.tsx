@@ -406,6 +406,7 @@ export default function CRMAdminPage() {
 
   return (
     <div
+      data-theme={theme}
       className={`min-h-screen font-sans p-3 md:p-5 ${
         isLight
           ? 'crm-mesh-bg text-slate-800 selection:bg-blue-600 selection:text-white'
@@ -418,7 +419,7 @@ export default function CRMAdminPage() {
       <div
         className={`flex flex-col md:flex-row overflow-hidden rounded-[28px] shadow-[0_25px_80px_rgba(15,23,42,0.22)] min-h-[calc(100vh-1.5rem)] md:min-h-[calc(100vh-2.5rem)] ${
           isLight
-            ? 'border border-white/50 bg-white/45 backdrop-blur-3xl'
+            ? 'border border-white/50 bg-white/30 backdrop-blur-3xl'
             : 'border border-white/10 bg-slate-950/55 backdrop-blur-3xl'
         }`}
       >
@@ -568,7 +569,11 @@ export default function CRMAdminPage() {
       {/* ==============================================================================
           ESPACIO DE TRABAJO PRINCIPAL (Overview & Dashboard)
       ============================================================================== */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      <div className={`flex-1 flex flex-col min-w-0 overflow-y-auto max-md:rounded-b-[28px] ${
+        isLight
+          ? 'bg-gradient-to-br from-[#e8f0fe] via-[#eef6ff] to-[#e0f2fe]'
+          : 'bg-gradient-to-br from-[#0b1120] via-[#0f172a] to-[#0c192c]'
+      }`}>
         {/* 1. Header Superior del Workspace */}
         <header
           className={`px-5 py-4 border-b sticky top-0 z-10 backdrop-blur-md transition-colors ${
@@ -718,11 +723,7 @@ export default function CRMAdminPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
             {/* Tarjeta 1: MRR Ganado */}
             <div
-              className={`p-4 rounded-2xl apple-smooth ${
-                isLight
-                  ? 'apple-glass-card apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
-                  : 'apple-glass-card-dark apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(0,0,0,0.35)]'
-              }`}
+              className={`p-4 rounded-2xl apple-glass-card apple-glass-reflection apple-smooth hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -743,11 +744,7 @@ export default function CRMAdminPage() {
 
             {/* Tarjeta 2: Pipeline en Juego */}
             <div
-              className={`p-4 rounded-2xl apple-smooth ${
-                isLight
-                  ? 'apple-glass-card apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
-                  : 'apple-glass-card-dark apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(0,0,0,0.35)]'
-              }`}
+              className={`p-4 rounded-2xl apple-glass-card apple-glass-reflection apple-smooth hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -773,11 +770,7 @@ export default function CRMAdminPage() {
 
             {/* Tarjeta 3: Pilotos de 14 Días */}
             <div
-              className={`p-4 rounded-2xl apple-smooth ${
-                isLight
-                  ? 'apple-glass-card apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
-                  : 'apple-glass-card-dark apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(0,0,0,0.35)]'
-              }`}
+              className={`p-4 rounded-2xl apple-glass-card apple-glass-reflection apple-smooth hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -798,11 +791,7 @@ export default function CRMAdminPage() {
 
             {/* Tarjeta 4: Conversión & Universo Noia */}
             <div
-              className={`p-4 rounded-2xl apple-smooth ${
-                isLight
-                  ? 'apple-glass-card apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
-                  : 'apple-glass-card-dark apple-glass-reflection hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(0,0,0,0.35)]'
-              }`}
+              className={`p-4 rounded-2xl apple-glass-card apple-glass-reflection apple-smooth hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -826,10 +815,8 @@ export default function CRMAdminPage() {
         {/* 2.5. Calendario y Campaña Activa de Noia [Idea 7] */}
         <section className="px-5 pt-3.5 max-w-7xl w-full mx-auto">
           <div
-            className={`p-4 rounded-3xl relative apple-smooth ${
-              isLight
-                ? 'apple-glass-card apple-glass-reflection text-slate-800 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]'
-                : 'apple-glass-card-dark apple-glass-reflection text-white'
+            className={`p-4 rounded-3xl relative apple-glass-card apple-glass-reflection apple-smooth hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)] ${
+              isLight ? 'text-slate-800' : 'text-white'
             }`}
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -916,9 +903,7 @@ export default function CRMAdminPage() {
         {/* 3. Barra de Búsqueda y Filtros */}
         <section className="px-5 pt-3.5 max-w-7xl w-full mx-auto">
           <div
-            className={`p-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 ${
-              isLight ? 'apple-glass-card' : 'apple-glass-card-dark'
-            }`}
+            className={`p-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 apple-glass-card`}
           >
             {/* Buscador */}
             <div className="relative flex-1 min-w-[200px] sm:min-w-[280px]">
@@ -994,6 +979,8 @@ export default function CRMAdminPage() {
 
         {/* 4. Cuerpo Principal: KANBAN DRAG & DROP o TABLA */}
         <main className="px-5 py-4 max-w-7xl w-full mx-auto flex-1">
+          {/* Al cambiar de vista, el remount por `key` dispara la entrada suave */}
+          <div key={viewMode} className="animate-apple-fade-in">
           {viewMode === 'kanban' ? (
             /* Vista KANBAN Horizontal con Drag & Drop Estilo Trello */
             <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-thin">
@@ -1011,12 +998,8 @@ export default function CRMAdminPage() {
                     onDragOver={(e) => handleDragOver(e, col.id)}
                     onDragLeave={() => handleDragLeave(col.id)}
                     onDrop={(e) => handleDrop(e, col.id)}
-                    className={`w-80 shrink-0 flex flex-col rounded-2xl transition-all max-h-[75vh] ${
+                    className={`w-80 shrink-0 flex flex-col rounded-2xl apple-glass-card apple-glass-reflection transition-all max-h-[75vh] ${
                       isDragOver ? 'ring-2 ring-blue-500 border-blue-500' : ''
-                    } ${
-                      isLight
-                        ? 'apple-glass-card apple-glass-reflection'
-                        : 'apple-glass-card-dark apple-glass-reflection'
                     }`}
                   >
                     {/* Encabezado de Columna */}
@@ -1230,9 +1213,7 @@ export default function CRMAdminPage() {
           ) : viewMode === 'table' ? (
             /* Vista TABLA Analítica */
             <div
-              className={`rounded-3xl overflow-hidden shadow-sm ${
-                isLight ? 'apple-glass-card' : 'apple-glass-card-dark'
-              }`}
+              className={`rounded-3xl overflow-hidden shadow-sm apple-glass-card`}
             >
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -1330,6 +1311,7 @@ export default function CRMAdminPage() {
               }}
             />
           )}
+          </div>
         </main>
       </div>
       </div>

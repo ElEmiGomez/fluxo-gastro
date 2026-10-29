@@ -75,7 +75,7 @@ export function CRMQuickAddModal({ isOpen, onClose, onSave }: CRMQuickAddModalPr
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-apple-fade-in">
       <div className="w-full max-w-lg rounded-3xl bg-slate-900 border border-slate-800 text-white shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Cabecera */}
         <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-900/50">

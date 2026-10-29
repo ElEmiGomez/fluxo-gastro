@@ -99,7 +99,7 @@ export function CRMContactCardModal({ isOpen, onClose }: CRMContactCardModalProp
   )}`
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-3 sm:p-4 animate-in fade-in select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-3 sm:p-4 animate-apple-fade-in select-none">
       <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-slate-700 text-white shadow-2xl overflow-hidden flex flex-col">
         {/* Cabecera */}
         <div className="p-4 border-b border-slate-800 bg-slate-900/80 flex items-center justify-between">
