@@ -17,7 +17,9 @@ import {
   Eye,
   Star,
   Gift,
-  Sparkles
+  Sparkles,
+  MessageCircle,
+  Phone
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
@@ -51,7 +53,7 @@ export default function LandingPage() {
   const deckPilaresRef = useDeckHeights()
 
   React.useEffect(() => {
-    document.title = 'Fluxo - Gastronomic System'
+    document.title = 'Fluxo — Software para Restaurantes sin TPV | Carta Digital QR y Comandas Móviles'
   }, [])
 
   const handleOpenPilotModal = (plan = 'Plan Full (Recomendado)') => {
@@ -240,13 +242,18 @@ export default function LandingPage() {
               <ScrollReveal delay={0} distance={32} instant className="flex flex-col h-full max-md:sticky md:!mb-0 max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)]" style={{ top: `calc(76px + ${0 * 14}px)`, marginBottom: `calc(${(3 - 1 - 0) * 14}px)`, zIndex: 30 + 0 }}>
                 <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 overflow-hidden border border-slate-200 hover:border-emerald-500/50 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="w-14 h-14 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center flex-shrink-0">
                         <TrendingUp className="w-7 h-7" />
                       </div>
-                      <span className="px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        +22% Ticket Medio
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          +22% Ticket Medio
+                        </span>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed text-right max-w-[250px]">
+                          Calculado al sumar 1 bebida, entrante o postre sugerido automáticamente en solo 1 de cada 4 mesas.
+                        </p>
+                      </div>
                     </div>
                     <div>
                       <h3 className="text-xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
@@ -308,9 +315,14 @@ export default function LandingPage() {
                       <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
                       <span><strong>Cero inversión en TPVs:</strong> funciona en los móviles Android o iPhone de tu equipo.</span>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                      <span><strong>Cobro y comanda en mesa:</strong> menos viajes a barra y rotación un 35% más rápida.</span>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span><strong>Cobro y comanda en mesa:</strong> menos viajes a barra y rotación un 35% más rápida.</span>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                          Estimado al ahorrar de 8 a 12 min de espera muerta entre sentarse, ver la carta y pedir la cuenta.
+                        </p>
+                      </div>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
@@ -334,7 +346,7 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <h3 className="text-xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
-                        Monitor KDS por Estaciones
+                        Pantalla de cocina (KDS) por estaciones
                       </h3>
                       <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mt-1">
                         Cero comandas perdidas, letra ilegible o platos fríos
@@ -356,7 +368,7 @@ export default function LandingPage() {
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                      <span><strong>Impresoras térmicas ESC/POS:</strong> conecta tus impresoras de tickets actuales sin cables raros.</span>
+                      <span><strong>Impresoras de tickets de toda la vida (térmicas ESC/POS):</strong> conecta las que ya tienes, sin cables raros.</span>
                     </li>
                   </ul>
                 </div>
@@ -382,6 +394,15 @@ export default function LandingPage() {
                 <p className="text-sm sm:text-base text-slate-600">
                   Sin comisiones por comanda, sin hardware propietario obligatorio y con cancelación libre en cualquier momento.
                 </p>
+                <div className="inline-flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-300 shadow-sm">
+                  <span className="text-xs font-black text-amber-900">
+                    ⚡ Cupo limitado a 5 locales nuevos por semana
+                  </span>
+                  <span className="hidden sm:inline text-amber-400 font-black">&middot;</span>
+                  <span className="text-xs font-semibold text-amber-800">
+                    Cargamos tu carta completa en menos de 24h y dejamos todo configurado contigo paso a paso.
+                  </span>
+                </div>
               </div>
             </ScrollReveal>
 
@@ -506,7 +527,7 @@ export default function LandingPage() {
                       </li>
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-blue-600 group-hover:text-emerald-600 flex-shrink-0 mt-0.5 transition-colors duration-300" />
-                        <span>Filtro anti-fraude en mesa (Gatekeeper)</span>
+                        <span>Validación del camarero en 1 toque (filtro antifraude)</span>
                       </li>
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-blue-600 group-hover:text-emerald-600 flex-shrink-0 mt-0.5 transition-colors duration-300" />
@@ -554,7 +575,7 @@ export default function LandingPage() {
                       </div>
                       <h3 className="text-2xl font-black text-slate-900 group-hover:text-emerald-600 transition-colors duration-300">Plan Full</h3>
                       <p className="text-xs text-slate-500 mt-1">
-                        Solución integral: Comensal + Sala + Pantalla KDS o Tiqueteras térmicas.
+                        Solución integral: Comensal + Sala + Pantalla de cocina (KDS) o impresoras de tickets.
                       </p>
                     </div>
 
@@ -578,7 +599,7 @@ export default function LandingPage() {
                       <li className="flex items-start gap-2.5">
                         <Star className="w-5 h-5 text-amber-500 fill-amber-400 flex-shrink-0 mt-0.5" />
                         <span className="text-slate-900 font-bold leading-snug">
-                          Multiplicador de Reseñas 5★ en Google Maps automático tras el pago de la mesa.
+                          Impulso automático de reseñas en Google Maps tras el pago de la mesa.
                         </span>
                       </li>
 
@@ -610,7 +631,7 @@ export default function LandingPage() {
 
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-blue-600 group-hover:text-emerald-600 flex-shrink-0 mt-0.5 transition-colors duration-300" />
-                        <span>Monitor KDS industrial con botones gigantes (&gt;70px)</span>
+                        <span>Pantalla de cocina (KDS) industrial con botones gigantes (&gt;70px)</span>
                       </li>
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-blue-600 group-hover:text-emerald-600 flex-shrink-0 mt-0.5 transition-colors duration-300" />
@@ -618,7 +639,7 @@ export default function LandingPage() {
                       </li>
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-blue-600 group-hover:text-emerald-600 flex-shrink-0 mt-0.5 transition-colors duration-300" />
-                        <span>API compatible con Impresoras Térmicas ESC/POS</span>
+                        <span>Compatible con impresoras de tickets de toda la vida (térmicas ESC/POS)</span>
                       </li>
                       <li className="flex items-start gap-2.5">
                         <Check className="w-5 h-5 text-blue-600 group-hover:text-emerald-600 flex-shrink-0 mt-0.5 transition-colors duration-300" />
@@ -672,6 +693,10 @@ export default function LandingPage() {
                     Nosotros cargamos tu carta, fotos y alérgenos en 24 horas. Te entregamos el sistema configurado y listo para probar en tu próximo turno sin riesgo.
                   </p>
 
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 inline-block font-semibold">
+                    ⚡ Cupo limitado a 5 locales nuevos por semana &middot; Implantación guiada en menos de 24 h
+                  </p>
+
                   <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
                     <GlowButton
                       onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
@@ -689,6 +714,26 @@ export default function LandingPage() {
                       <span>Ver Demo Interactiva en Vivo</span>
                       <ExternalLink className="w-4 h-4 text-blue-600" />
                     </button>
+                  </div>
+
+                  {/* Contacto directo en 1 toque: WhatsApp y llamada */}
+                  <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <a
+                      href="https://wa.me/5493585187430?text=Hola%20Emiliano,%20quiero%20informaci%C3%B3n%20para%20probar%20el%20piloto%20de%2014%20d%C3%ADas%20de%20Fluxo%20en%20mi%20local"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-black text-white bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/25 transition-colors active:scale-95"
+                    >
+                      <MessageCircle className="w-5 h-5 flex-shrink-0" />
+                      <span>Hablar por WhatsApp ahora</span>
+                    </a>
+                    <a
+                      href="tel:+34711573870"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 hover:border-blue-400 shadow-sm transition-colors active:scale-95"
+                    >
+                      <Phone className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <span>Llamar +34 711 573 870</span>
+                    </a>
                   </div>
 
                   <p className="text-xs text-slate-500 pt-2 font-medium">
@@ -775,6 +820,24 @@ export default function LandingPage() {
               <span>Aviso Legal &amp; RGPD</span>
             </Link>
 
+            <a
+              href="https://wa.me/5493585187430?text=Hola%20Emiliano,%20quiero%20informaci%C3%B3n%20para%20probar%20el%20piloto%20de%2014%20d%C3%ADas%20de%20Fluxo%20en%20mi%20local"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-400 text-slate-700 hover:text-emerald-600 font-bold transition-all shadow-xs group"
+            >
+              <MessageCircle className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+              <span>Hablar por WhatsApp</span>
+            </a>
+
+            <a
+              href="tel:+34711573870"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-600 font-bold transition-all shadow-xs group"
+            >
+              <Phone className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+              <span>Llamar</span>
+            </a>
+
             <button
               type="button"
               onClick={handleOpenContactModal}
@@ -822,6 +885,79 @@ export default function LandingPage() {
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}
         slug="burger-gourmet"
+      />
+
+      {/* ── SEO / MOTORES DE IA: FAQPage + SoftwareApplication ──
+          Las 5 respuestas viven en el DOM (ver FaqSection) y se duplican aquí
+          en JSON-LD para indexación directa en Google y respuestas de IA. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': [
+              {
+                '@type': 'FAQPage',
+                mainEntity: [
+                  {
+                    '@type': 'Question',
+                    name: '¿Tengo que comprar pantallas o TPVs nuevos?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'No. Fluxo corre desde cualquier navegador web moderno en cualquier teléfono Android/iPhone, tablet o Smart TV que ya tengas en el local. Cero inversión en hardware propietario.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: '¿Cuánto tarda el personal en aprender a usarlo?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'El sistema está diseñado para que un camarero nuevo empiece a marchar comandas en menos de 5 minutos desde su propio móvil. Es tan intuitivo como usar una app de mensajería.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: '¿Qué pasa si un día se cae la conexión a internet?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'El sistema mantiene el estado local activo en sala y sincroniza las órdenes en cuanto recupera señal, evitando perder comandas o bloquear el servicio del local.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: '¿Hay permanencia obligatoria?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Ninguna. No creemos en atar a los hosteleros con contratos anuales ni penalizaciones. Puedes darte de baja en cualquier momento con un clic desde tu panel.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: '¿Cómo se sube mi carta de platos?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Nos envías una foto o PDF de tu carta actual y nosotros te entregamos el menú configurado con fotos, precios y alérgenos en 24 horas durante tu piloto gratuito.',
+                    },
+                  },
+                ],
+              },
+              {
+                '@type': 'SoftwareApplication',
+                name: 'Fluxo — Gastronomic System',
+                applicationCategory: 'BusinessApplication',
+                operatingSystem: 'Web (PWA), Android, iOS',
+                description: 'Software para restaurantes sin TPV: carta digital QR interactiva y sistema de comandas móvil para bares y restaurantes, con pantalla de cocina KDS y piloto gratuito de 14 días.',
+                offers: {
+                  '@type': 'AggregateOffer',
+                  lowPrice: '39',
+                  highPrice: '99',
+                  priceCurrency: 'EUR',
+                  offerCount: '3',
+                },
+              },
+            ],
+          }),
+        }}
       />
 
     </div>

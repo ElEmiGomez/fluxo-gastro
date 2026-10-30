@@ -104,14 +104,24 @@ export function FaqSection({ onOpenContact }: FaqSectionProps) {
                     </div>
                   </button>
 
-                  {isOpen && (
-                    <div
-                      id={`faq-answer-${index}`}
-                      className="px-5 pb-5 sm:px-6 sm:pb-6 text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-3 animate-in fade-in duration-200"
-                    >
-                      <p>{faq.answer}</p>
+                  {/* Respuesta SIEMPRE presente en el DOM (SEO/motores de IA):
+                      el nodo nunca se desmonta; se abre/cierra con grid-rows.
+                      aria-hidden evita exposición de contenido duplicado al lector. */}
+                  <div
+                    id={`faq-answer-${index}`}
+                    aria-hidden={!isOpen}
+                    className={`grid transition-all duration-300 ease-in-out ${
+                      isOpen
+                        ? 'grid-rows-[1fr] opacity-100 mt-3'
+                        : 'grid-rows-[0fr] opacity-0 mt-0'
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="px-5 pb-5 sm:px-6 sm:pb-6 text-sm text-slate-600 leading-relaxed border-t border-slate-100">
+                        <p>{faq.answer}</p>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               </ScrollReveal>
             )

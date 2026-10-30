@@ -8,8 +8,17 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
-  title: "Fluxo - Gastronomic System",
-  description: "Plataforma web interactiva para comensales, comandero de mozos y monitor de cocina KDS en tiempo real.",
+  title: "Fluxo — Software para Restaurantes sin TPV | Carta Digital QR y Comandas Móviles",
+  description: "Carta digital QR interactiva y sistema de comandas móvil para bares y restaurantes sin TPV: funciona en el móvil del camarero, con pantalla de cocina KDS y piloto gratuito de 14 días.",
+  keywords: [
+    "software para restaurantes sin TPV",
+    "carta digital QR interactiva",
+    "sistema de comandas móvil para bares y restaurantes",
+    "pantalla de cocina KDS",
+    "carta digital para restaurantes",
+    "comandero de mesa",
+    "software hostelería España",
+  ],
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -27,8 +36,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "es_ES",
-    title: "Fluxo — Carta Digital & Servicio en Mesa",
-    description: "Consulta la carta con fotos, alérgenos y precios en tiempo real. Pide desde tu mesa sin esperas.",
+    title: "Fluxo — Carta Digital QR & Sistema de Comandas para Restaurantes",
+    description: "Software para restaurantes sin TPV: carta digital QR interactiva, comandas móviles para bares y restaurantes y pantalla de cocina KDS. Piloto gratuito de 14 días.",
     siteName: "Fluxo",
   },
   twitter: {

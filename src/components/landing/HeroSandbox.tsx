@@ -411,7 +411,7 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
               <div className="flex items-center justify-between">
                 <span className="text-[13px] font-extrabold text-white">Cocina</span>
                 <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">
-                  KDS
+                  Pantalla de cocina
                 </span>
               </div>
 

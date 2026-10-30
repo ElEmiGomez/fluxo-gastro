@@ -14,7 +14,7 @@ const COMPARISON_ROWS: ComparisonRow[] = [
   {
     aspect: 'Pase de platos',
     before: 'Gritos a cocina, tickets térmicos extraviados o traspapelados.',
-    afterTitle: 'Pantalla KDS',
+    afterTitle: 'Pantalla de cocina (KDS)',
     after: 'Tiempos sincronizados y pases con acordeones inteligentes auto-colapsables.',
   },
   {
