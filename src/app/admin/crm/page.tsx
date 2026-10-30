@@ -35,7 +35,10 @@ import {
   FileText,
   Check,
   LayoutDashboard,
-  MoveRight
+  MoveRight,
+  ArrowLeft,
+  Edit3,
+  Trash2
 } from 'lucide-react'
 import {
   CRMICP,
@@ -108,7 +111,7 @@ export default function CRMAdminPage() {
   const [leads, setLeads] = useState<CRMLead[]>([])
   const [metrics, setMetrics] = useState<CRMMetrics | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
-  const [viewMode, setViewMode] = useState<'kanban' | 'table' | 'map'>('kanban')
+  const [viewMode, setViewMode] = useState<'kanban' | 'table' | 'map' | 'qr_dinamicos'>('kanban')
 
   // Modo Claro / Oscuro (Tema estilo imagen de referencia por defecto)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
@@ -129,6 +132,16 @@ export default function CRMAdminPage() {
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [isOnline, setIsOnline] = useState<boolean>(true)
   const [syncMessage, setSyncMessage] = useState<string | null>(null)
+
+  // Estados QRs Dinámicos
+  const [qrs, setQrs] = useState<any[]>([])
+  const [qrLoading, setQrLoading] = useState(false)
+  const [selectedLeadForQr, setSelectedLeadForQr] = useState<CRMLead | null>(null)
+  const [newQrTargetUrl, setNewQrTargetUrl] = useState('')
+  const [editingQrId, setEditingQrId] = useState<string | null>(null)
+  const [editQrTargetUrl, setEditQrTargetUrl] = useState('')
+  const [qrError, setQrError] = useState<string | null>(null)
+  const [qrSuccess, setQrSuccess] = useState<string | null>(null)
 
   // Drag & Drop Trello Style
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null)
@@ -353,6 +366,110 @@ export default function CRMAdminPage() {
     }
   }
 
+  // ============================================================================
+  // GESTIÓN DE QRs DINÁMICOS (dentro del CRM Admin)
+  // ============================================================================
+
+  const loadQrs = async (leadId: string) => {
+    setQrLoading(true)
+    setQrError(null)
+    try {
+      const headers = getAuthHeaders()
+      const res = await fetch(`/api/qr-dinamicos?lead_id=${leadId}`, { headers })
+      if (!res.ok) throw new Error('Error cargando QRs')
+      const data = await res.json()
+      setQrs(Array.isArray(data) ? data : [])
+    } catch (err: any) {
+      setQrError(err.message || 'Error cargando QRs dinámicos')
+      setQrs([])
+    } finally {
+      setQrLoading(false)
+    }
+  }
+
+  const handleCreateQr = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedLeadForQr) return
+    setQrError(null)
+    try {
+      const headers = getAuthHeaders()
+      const res = await fetch('/api/qr-dinamicos', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: selectedLeadForQr.id,
+          target_url: newQrTargetUrl,
+          lead_id: selectedLeadForQr.id,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Error creando QR')
+      }
+      setNewQrTargetUrl('')
+      setQrSuccess('QR dinámico creado correctamente')
+      await loadQrs(selectedLeadForQr.id)
+      setTimeout(() => setQrSuccess(null), 3000)
+    } catch (err: any) {
+      setQrError(err.message || 'Error creando QR dinámico')
+    }
+  }
+
+  const handleUpdateQr = async (id: string) => {
+    setQrError(null)
+    try {
+      const headers = getAuthHeaders()
+      const res = await fetch(`/api/qr-dinamicos/${id}`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: selectedLeadForQr?.id || 'burger-gourmet',
+          target_url: editQrTargetUrl,
+          lead_id: selectedLeadForQr?.id,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Error actualizando QR')
+      }
+      setEditingQrId(null)
+      setEditQrTargetUrl('')
+      setQrSuccess('URL de destino actualizada. El QR sigue funcionando sin cambios.')
+      await loadQrs(selectedLeadForQr!.id)
+      setTimeout(() => setQrSuccess(null), 3000)
+    } catch (err: any) {
+      setQrError(err.message || 'Error actualizando QR')
+    }
+  }
+
+  const handleDeleteQr = async (id: string) => {
+    if (!confirm('¿Eliminar este QR dinámico? El código corto dejará de funcionar.')) return
+    try {
+      const headers = getAuthHeaders()
+      const res = await fetch(`/api/qr-dinamicos/${id}`, {
+        method: 'DELETE',
+        headers,
+      })
+      if (!res.ok) throw new Error('Error eliminando QR')
+      setQrSuccess('QR dinámico eliminado')
+      await loadQrs(selectedLeadForQr!.id)
+      setTimeout(() => setQrSuccess(null), 3000)
+    } catch (err: any) {
+      setQrError(err.message || 'Error eliminando QR')
+    }
+  }
+
+  const downloadQr = (id: string) => {
+    const qr = qrs.find((q) => q.id === id)
+    if (!qr) return
+    const a = document.createElement('a')
+    a.href = qr.qr_url
+    a.download = `qr-${id}.png`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
   // 8. Filtrar leads
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
@@ -516,6 +633,22 @@ export default function CRMAdminPage() {
             >
               <QrCode className="w-4 h-4 text-blue-400" />
               <span>Mi Tarjeta QR</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setViewMode('qr_dinamicos')
+                setSelectedLeadForQr(null)
+                setQrs([])
+              }}
+              className={`w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15] text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth ${
+                viewMode === 'qr_dinamicos'
+                  ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                  : ''
+              }`}
+            >
+              <QrCode className="w-4 h-4 text-purple-400" />
+              <span>QRs Dinámicos</span>
             </button>
           </div>
 
@@ -1300,6 +1433,248 @@ export default function CRMAdminPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          ) : viewMode === 'qr_dinamicos' ? (
+            /* Vista QRs Dinámicos - Generador y Administrador */
+            <div className="px-5 py-6 max-w-5xl w-full mx-auto">
+              {qrError && (
+                <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold">{qrError}</p>
+                  </div>
+                </div>
+              )}
+              {qrSuccess && (
+                <div className="mb-6 p-4 rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm flex items-center gap-3">
+                  <RefreshCw className="w-5 h-5 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold">{qrSuccess}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Selección de Local (Lead) */}
+              {!selectedLeadForQr && (
+                <div className="mb-8 bg-white/80 backdrop-blur-md border border-white/80 rounded-3xl p-6 shadow-sm">
+                  <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <QrCode className="w-5 h-5 text-purple-600" />
+                    QRs Dinámicos por Local
+                  </h2>
+                  <p className="text-slate-600 mb-6">
+                    Selecciona un local (lead) del CRM para crear y administrar sus QRs dinámicos.
+                    Cada QR impreso apunta a un código corto que puedes cambiar de carta sin reimprimirlo.
+                  </p>
+                  <div className="space-y-3">
+                    {leads
+                      .filter((l) => l.status === 'ganado' || l.status === 'piloto_14_dias')
+                      .map((lead) => (
+                        <button
+                          key={lead.id}
+                          onClick={() => {
+                            setSelectedLeadForQr(lead)
+                            loadQrs(lead.id)
+                          }}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-left hover:bg-slate-50 hover:border-blue-300 transition-all flex items-center justify-between group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-black text-sm">
+                              {lead.name.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-slate-900">{lead.name}</p>
+                              <p className="text-xs text-slate-500">{lead.address}</p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+                            Gestionar QRs
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                  {leads.filter((l) => l.status === 'ganado' || l.status === 'piloto_14_dias').length === 0 && (
+                    <p className="text-center text-slate-500 text-sm mt-4">
+                      No hay locales ganados o en piloto todavía. Cierra algunos leads primero.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Gestión de QRs del Local Seleccionado */}
+              {selectedLeadForQr && (
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <button
+                        onClick={() => {
+                          setSelectedLeadForQr(null)
+                          setQrs([])
+                          setNewQrTargetUrl('')
+                        }}
+                        className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1 mb-2"
+                      >
+                        <ArrowLeft className="w-3 h-3" /> Volver a lista de locales
+                      </button>
+                      <h2 className="text-xl font-bold text-slate-900">
+                        QRs de {selectedLeadForQr.name}
+                      </h2>
+                      <p className="text-slate-600 text-sm">
+                        {selectedLeadForQr.address} · {selectedLeadForQr.zone}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Formulario Crear QR */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                    <h3 className="font-bold text-lg text-slate-900 mb-4 flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-purple-600" />
+                      Crear QR Dinámico para este local
+                    </h3>
+                    <form onSubmit={handleCreateQr} className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-1">
+                          URL de destino (carta / menú del negocio)
+                        </label>
+                        <input
+                          type="url"
+                          value={newQrTargetUrl}
+                          onChange={(e) => setNewQrTargetUrl(e.target.value)}
+                          placeholder="https://tu-negocio.com/menu"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-sm"
+                          required
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={qrLoading}
+                        className="w-full px-4 py-3 rounded-xl bg-purple-600 text-white font-semibold hover:bg-purple-700 disabled:opacity-60 transition-colors flex items-center justify-center gap-2"
+                      >
+                        {qrLoading ? 'Creando...' : 'Generar QR Dinámico'}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Tabla de QRs Existentes */}
+                  <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                    <h3 className="font-bold text-lg text-slate-900 mb-4">
+                      Tus QRs Activos
+                    </h3>
+
+                    {qrLoading ? (
+                      <div className="text-center py-8 text-slate-500">Cargando QRs...</div>
+                    ) : qrs.length === 0 ? (
+                      <div className="text-center py-10">
+                        <p className="text-slate-500 text-sm">No hay QRs dinámicos para este local todavía.</p>
+                        <p className="text-slate-400 text-xs mt-1">Crea uno arriba para empezar.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-slate-200">
+                              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase">
+                                Código corto
+                              </th>
+                              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase">
+                                Short URL
+                              </th>
+                              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase">
+                                URL de destino
+                              </th>
+                              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase">
+                                Clics
+                              </th>
+                              <th className="py-3 px-4 text-xs font-semibold text-slate-500 uppercase text-right">
+                                Acciones
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {qrs.map((qr) => (
+                              <tr
+                                key={qr.id}
+                                className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                              >
+                                <td className="py-3 px-4 text-xs font-mono text-slate-700">
+                                  {qr.id}
+                                </td>
+                                <td className="py-3 px-4 text-xs text-slate-600">
+                                  <a
+                                    href={qr.short_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-purple-600 hover:underline break-all"
+                                  >
+                                    {qr.short_url}
+                                  </a>
+                                </td>
+                                <td className="py-3 px-4 text-xs text-slate-600 break-all">
+                                  {qr.target_url}
+                                </td>
+                                <td className="py-3 px-4 text-xs font-mono text-slate-700">
+                                  {qr.click_count}
+                                </td>
+                                <td className="py-3 px-4 text-right space-y-2">
+                                  {editingQrId === qr.id ? (
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                      <input
+                                        value={editQrTargetUrl}
+                                        onChange={(e) => setEditQrTargetUrl(e.target.value)}
+                                        className="px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-purple-500 outline-none flex-1"
+                                      />
+                                      <div className="flex gap-1">
+                                        <button
+                                          onClick={() => handleUpdateQr(qr.id)}
+                                          className="px-3 py-2 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700"
+                                        >
+                                          Guardar
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setEditingQrId(null)
+                                            setEditQrTargetUrl('')
+                                          }}
+                                          className="px-3 py-2 rounded-xl bg-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-400"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-1 justify-end">
+                                      <button
+                                        onClick={() => downloadQr(qr.id)}
+                                        className="px-3 py-2 rounded-xl bg-green-100 text-green-700 text-xs font-semibold hover:bg-green-200 flex items-center gap-1"
+                                      >
+                                        <Download className="w-3 h-3" /> Descargar QR
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEditQrTargetUrl(qr.target_url)
+                                          setEditingQrId(qr.id)
+                                        }}
+                                        className="px-3 py-2 rounded-xl bg-blue-100 text-blue-700 text-xs font-semibold hover:bg-blue-200 flex items-center gap-1"
+                                      >
+                                        <Edit3 className="w-3 h-3" /> Cambiar URL
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteQr(qr.id)}
+                                        className="px-3 py-2 rounded-xl bg-red-100 text-red-700 text-xs font-semibold hover:bg-red-200 flex items-center gap-1"
+                                      >
+                                        <Trash2 className="w-3 h-3" /> Eliminar
+                                      </button>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* Vista MAPA Interactivo de Noia */

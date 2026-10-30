@@ -206,3 +206,13 @@ export interface DailyMenuItem {
   product?: Product
 }
 
+export interface QrDinamico {
+  id: string
+  restaurant_id: string
+  slug: string
+  target_url: string
+  click_count: number
+  created_at: string
+  updated_at: string
+}
+

@@ -97,7 +97,24 @@ create table if not exists order_items (
   notes text
 );
 
--- 9. Logs de Errores del Sistema (System Error Logs)
+-- 9. QRs Dinámicos (Redirects con código corto editable)
+create table if not exists qr_dinamicos (
+  id text primary key,
+  restaurant_id uuid references restaurants(id) on delete cascade,
+  lead_id text,
+  slug text not null,
+  target_url text not null,
+  click_count integer default 0,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index if not exists idx_qr_dinamicos_id on qr_dinamicos(id);
+create index if not exists idx_qr_dinamicos_restaurant_id on qr_dinamicos(restaurant_id);
+create index if not exists idx_qr_dinamicos_slug on qr_dinamicos(slug);
+create index if not exists idx_qr_dinamicos_lead_id on qr_dinamicos(lead_id);
+
+-- 10. Logs de Errores del Sistema (System Error Logs)
 create table if not exists system_error_logs (
   id uuid default gen_random_uuid() primary key,
   timestamp timestamp with time zone default timezone('utc'::text, now()) not null,
@@ -153,6 +170,11 @@ create policy "Permitir gestion completa de ordenes" on orders for all using (tr
 create policy "Permitir gestion completa de order_items" on order_items for all using (true);
 create policy "Permitir insercion de system_error_logs" on system_error_logs for insert with check (true);
 create policy "Permitir lectura de system_error_logs" on system_error_logs for select using (true);
+
+-- RLS para QRs Dinámicos
+alter table qr_dinamicos enable row level security;
+create policy "Permitir lectura publica de qr_dinamicos" on qr_dinamicos for select using (true);
+create policy "Permitir gestion de qr_dinamicos para administracion" on qr_dinamicos for all using (true) with check (true);
 
 
 -- STORED PROCEDURE: CREATE_ORDER_ATOMIC
