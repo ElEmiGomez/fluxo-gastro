@@ -93,11 +93,10 @@ const MODULES: ModuleInfo[] = [
   },
 ]
 
-const STEP_MS = 3200
+const STEP_MS = 2000
 
 export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
   const [active, setActive] = useState(0)
-  const [paused, setPaused] = useState(false)
   const [inView, setInView] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(false)
   const sectionRef = useRef<HTMLElement | null>(null)
@@ -122,14 +121,18 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
     return () => obs.disconnect()
   }, [])
 
-  // Avance automático paso a paso
+  // Avance automático en bucle infinito cada 2 segundos (nunca se detiene al
+  // pasar el ratón: prohibido lingering con onMouseEnter/onMouseLeave).
+  // `active` en dependencias reinicia el temporizador tras cualquier clic
+  // manual (indicadores/tarjetas): el paso no salta medio segundo después
+  // de la acción del usuario. Cleanup: clearInterval siempre al desmontar.
   useEffect(() => {
-    if (!inView || paused || reducedMotion) return
-    const t = setTimeout(() => setActive((s) => (s + 1) % MODULES.length), STEP_MS)
-    return () => clearTimeout(t)
-  }, [active, inView, paused, reducedMotion])
+    if (!inView || reducedMotion) return
+    const timer = setInterval(() => setActive((prev) => (prev + 1) % MODULES.length), STEP_MS)
+    return () => clearInterval(timer)
+  }, [active, inView, reducedMotion])
 
-  const animate = inView && !paused && !reducedMotion
+  const animate = inView && !reducedMotion
 
   return (
     <section
@@ -179,8 +182,6 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
         <ol
           ref={deckRef}
           className="flex flex-col lg:flex-row lg:items-stretch gap-3 lg:gap-0 max-md:pb-12"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
         >
           {MODULES.map((m, i) => {
             const Icon = m.icon

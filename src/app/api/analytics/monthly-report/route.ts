@@ -94,13 +94,22 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const slug = searchParams.get('slug') || 'burger-gourmet'
 
-    if (!verifyStaffRequest(req, slug, ['admin'])) {
+    // Auth por roles: restaurantes reales exigen sesión admin. El slug
+    // 'burger-gourmet' es el restaurante demo modélico de la landing: sin
+    // sesión se sirve la muestra pública SOLO con datos de referencia
+    // (mocks calibrados), sin leer nada de Supabase. Así la muestra del
+    // reporte ejecutivo funciona en la landing sin exponer datos reales.
+    const isAuthorized = verifyStaffRequest(req, slug, ['admin'])
+    if (!isAuthorized && slug !== 'burger-gourmet') {
       return NextResponse.json(
         { error: 'No autorizado. Se requiere sesión de administrador para ver el reporte ejecutivo.' },
         { status: 401 }
       )
     }
     const requestedMonth = searchParams.get('month') || '2026-10'
+
+    // Petición pública (sin sesión, landing): versión de ejemplo con datos de demostración
+    const isPublicSample = !isAuthorized
 
     let restaurant = MOCK_RESTAURANTS[slug] || MOCK_RESTAURANTS['burger-gourmet']
     let products: Product[] = getServerProducts(slug) || MOCK_PRODUCTS[slug] || []
@@ -111,7 +120,7 @@ export async function GET(req: NextRequest) {
     let realOrderItems: any[] = []
     let realSessions: any[] = []
 
-    if (supabase && isSupabaseConfigured()) {
+    if (supabase && isSupabaseConfigured() && !isPublicSample) {
       try {
         const rest = await getRestaurantBySlug(slug)
         if (rest) {

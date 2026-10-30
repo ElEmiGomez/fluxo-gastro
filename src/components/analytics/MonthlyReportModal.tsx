@@ -19,19 +19,23 @@ interface MonthlyReportModalProps {
 export function MonthlyReportModal({ isOpen, onClose, slug = 'burger-gourmet' }: MonthlyReportModalProps) {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [printMode, setPrintMode] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       setLoading(true)
+      setError(null)
       fetch(`/api/analytics/monthly-report?slug=${slug}`)
         .then(r => r.json())
         .then(res => {
           if (res.success && res.report) {
             setData(res.report)
+          } else {
+            setError(res.error || 'No se pudo generar el reporte en este momento.')
           }
         })
-        .catch(console.error)
+        .catch(() => setError('No se pudo cargar el reporte. Comprueba tu conexión e inténtalo de nuevo.'))
         .finally(() => setLoading(false))
     }
   }, [isOpen, slug])
@@ -98,7 +102,21 @@ export function MonthlyReportModal({ isOpen, onClose, slug = 'burger-gourmet' }:
 
         {/* Cuerpo con Scroll */}
         <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 text-xs sm:text-sm print:overflow-visible print:p-0 print:space-y-0 print:text-slate-900 print:h-auto">
-          {loading || !data ? (
+          {error ? (
+            <div className="py-16 text-center space-y-4">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto text-lg font-black">
+                !
+              </div>
+              <p className="text-slate-300 font-bold max-w-md mx-auto">{error}</p>
+              <button
+                onClick={onClose}
+                type="button"
+                className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-black border border-slate-700 transition-colors cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          ) : loading || !data ? (
             <div className="py-20 text-center space-y-3">
               <div className="w-8 h-8 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-slate-400 font-bold">Generando auditoría y métricas de eficiencia con IA...</p>
