@@ -18,8 +18,7 @@ import {
   Star,
   Gift,
   Sparkles,
-  MessageCircle,
-  Phone
+  MessageCircle
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
@@ -716,26 +715,6 @@ export default function LandingPage() {
                     </button>
                   </div>
 
-                  {/* Contacto directo en 1 toque: WhatsApp y llamada */}
-                  <div className="pt-1 flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <a
-                      href="https://wa.me/5493585187430?text=Hola%20Emiliano,%20quiero%20informaci%C3%B3n%20para%20probar%20el%20piloto%20de%2014%20d%C3%ADas%20de%20Fluxo%20en%20mi%20local"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-black text-white bg-emerald-500 hover:bg-emerald-600 shadow-md shadow-emerald-500/25 transition-colors active:scale-95"
-                    >
-                      <MessageCircle className="w-5 h-5 flex-shrink-0" />
-                      <span>Hablar por WhatsApp ahora</span>
-                    </a>
-                    <a
-                      href="tel:+34711573870"
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 hover:border-blue-400 shadow-sm transition-colors active:scale-95"
-                    >
-                      <Phone className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                      <span>Llamar +34 711 573 870</span>
-                    </a>
-                  </div>
-
                   <p className="text-xs text-slate-500 pt-2 font-medium">
                     0 € durante el piloto &middot; Sin tarjeta ni permanencia &middot; Puesta en marcha incluida
                   </p>
@@ -828,14 +807,6 @@ export default function LandingPage() {
             >
               <MessageCircle className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
               <span>Hablar por WhatsApp</span>
-            </a>
-
-            <a
-              href="tel:+34711573870"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 hover:border-blue-400 text-slate-700 hover:text-blue-600 font-bold transition-all shadow-xs group"
-            >
-              <Phone className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
-              <span>Llamar</span>
             </a>
 
             <button
