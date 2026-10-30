@@ -465,7 +465,7 @@ export default function CRMAdminPage() {
               onClick={() => setViewMode('kanban')}
               className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 apple-smooth ${
                 viewMode === 'kanban'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-[0_6px_20px_rgba(59,130,246,0.4)]'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-[0_6px_20px_rgba(59,130,246,0.4)] ring-1 ring-white/25'
                   : 'text-slate-300/90 hover:bg-white/10 hover:text-white'
               }`}
             >
@@ -477,7 +477,7 @@ export default function CRMAdminPage() {
               onClick={() => setViewMode('table')}
               className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 apple-smooth ${
                 viewMode === 'table'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-[0_6px_20px_rgba(59,130,246,0.4)]'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-[0_6px_20px_rgba(59,130,246,0.4)] ring-1 ring-white/25'
                   : 'text-slate-300/90 hover:bg-white/10 hover:text-white'
               }`}
             >
@@ -489,7 +489,7 @@ export default function CRMAdminPage() {
               onClick={() => setViewMode('map')}
               className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 apple-smooth ${
                 viewMode === 'map'
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-[0_6px_20px_rgba(59,130,246,0.4)]'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-500 text-white shadow-[0_6px_20px_rgba(59,130,246,0.4)] ring-1 ring-white/25'
                   : 'text-slate-300/90 hover:bg-white/10 hover:text-white'
               }`}
             >
@@ -843,9 +843,9 @@ export default function CRMAdminPage() {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setShowAllEvents(!showAllEvents)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 border ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 apple-smooth active:scale-95 border ${
                     isLight
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                      ? 'bg-white/55 hover:bg-white/85 text-slate-700 border-white/75 backdrop-blur-md'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                   }`}
                 >
@@ -875,11 +875,11 @@ export default function CRMAdminPage() {
                 {NOIA_COMMERCIAL_EVENTS.map((ev, i) => (
                   <div
                     key={ev.id}
-                    className={`p-3 rounded-2xl border text-xs space-y-1.5 ${
+                    className={`p-3 rounded-2xl border text-xs space-y-1.5 apple-smooth ${
                       i === 0
                         ? 'bg-blue-500/10 border-blue-400 text-blue-900'
                         : isLight
-                        ? 'bg-slate-50 border-slate-200 text-slate-700'
+                        ? 'bg-white/55 border-white/75 backdrop-blur-md hover:bg-white/80 hover:border-blue-300 text-slate-700'
                         : 'bg-slate-900/60 border-slate-800 text-slate-300'
                     }`}
                   >
