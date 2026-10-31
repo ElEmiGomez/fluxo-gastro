@@ -4,8 +4,6 @@ import React, { useState } from 'react'
 import {
   XCircle,
   CheckCircle2,
-  AlertOctagon,
-  Sparkles,
   Zap,
   ArrowRight,
   TrendingDown,
@@ -73,23 +71,15 @@ const COMPARISON_ROWS: ComparisonRow[] = [
   },
 ]
 
-type Mode = 'caos' | 'comparativa' | 'fluxo'
-
 export function BeforeAfterCard() {
-  // 3 Modos: 'caos' | 'comparativa' | 'fluxo'
-  const [mode, setMode] = useState<Mode>('comparativa')
-  
   // Sobrescrituras individuales por tarjeta al hacer clic
   const [cardOverrides, setCardOverrides] = useState<Record<string, boolean>>({})
 
-  // Determinar si una fila está activa en modo Fluxo
+  // Determinar si una fila está activa en modo Fluxo (por defecto siempre solución Con Fluxo)
   const isCardFluxo = (rowId: string) => {
     if (cardOverrides[rowId] !== undefined) {
       return cardOverrides[rowId]
     }
-    if (mode === 'fluxo') return true
-    if (mode === 'caos') return false
-    // En modo comparativa: por defecto mostramos la solución o permitimos alternar
     return true
   }
 
@@ -98,12 +88,6 @@ export function BeforeAfterCard() {
       ...prev,
       [rowId]: !isCardFluxo(rowId),
     }))
-  }
-
-  const handleModeChange = (newMode: Mode) => {
-    setMode(newMode)
-    // Limpiar overrides individuales para que el modo global mande
-    setCardOverrides({})
   }
 
   return (
@@ -126,56 +110,21 @@ export function BeforeAfterCard() {
           </p>
         </div>
 
-        {/* ── CONMUTADOR (SWITCH) INTERACTIVO DE 3 MODOS ── */}
+        {/* ── COMPARATIVA INTERACTIVA: OPERACIÓN CON FLUXO (CONTROL TOTAL) ── */}
         <div className="relative z-10 flex flex-col items-center gap-2 mb-8">
           <div
-            className="inline-flex flex-wrap items-center justify-center p-1.5 rounded-2xl bg-slate-100 border border-slate-200 shadow-inner gap-1"
+            className="inline-flex items-center justify-center p-1.5 rounded-2xl bg-slate-100 border border-slate-200 shadow-inner"
             role="group"
-            aria-label="Conmutador de comparativa"
+            aria-label="Operación con Fluxo (Control Total)"
           >
-            {/* Modo 1: El Caos */}
             <button
               type="button"
-              onClick={() => handleModeChange('caos')}
-              aria-pressed={mode === 'caos'}
-              className={`inline-flex items-center gap-1.5 px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all duration-300 cursor-pointer ${
-                mode === 'caos'
-                  ? 'bg-rose-600 text-white shadow-md ring-1 ring-rose-400 scale-[1.02]'
-                  : 'text-slate-600 hover:text-rose-700 hover:bg-slate-200/60'
-              }`}
-            >
-              <AlertOctagon className="w-4 h-4 text-white" />
-              <span>🔴 Operación Tradicional (El Caos)</span>
-            </button>
-
-            {/* Modo 2: Comparativa Interactiva */}
-            <button
-              type="button"
-              onClick={() => handleModeChange('comparativa')}
-              aria-pressed={mode === 'comparativa'}
-              className={`inline-flex items-center gap-1.5 px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all duration-300 cursor-pointer ${
-                mode === 'comparativa'
-                  ? 'bg-blue-600 text-white shadow-md ring-1 ring-blue-400 scale-[1.02]'
-                  : 'text-slate-600 hover:text-blue-700 hover:bg-slate-200/60'
-              }`}
+              onClick={() => setCardOverrides({})}
+              className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-black bg-blue-600 hover:bg-blue-700 text-white shadow-md ring-1 ring-blue-400 transition-all cursor-pointer active:scale-95"
+              title="Restablecer todas las tarjetas a Con Fluxo"
             >
               <Zap className="w-4 h-4 text-amber-300" />
-              <span>⚡ Comparativa Interactiva</span>
-            </button>
-
-            {/* Modo 3: Con Fluxo */}
-            <button
-              type="button"
-              onClick={() => handleModeChange('fluxo')}
-              aria-pressed={mode === 'fluxo'}
-              className={`inline-flex items-center gap-1.5 px-3.5 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all duration-300 cursor-pointer ${
-                mode === 'fluxo'
-                  ? 'bg-emerald-600 text-white shadow-md ring-1 ring-emerald-400 scale-[1.02]'
-                  : 'text-slate-600 hover:text-emerald-700 hover:bg-slate-200/60'
-              }`}
-            >
-              <Sparkles className="w-4 h-4 text-white" />
-              <span>🟢 Operación con Fluxo (Control Total)</span>
+              <span>Operación con Fluxo (Control Total)</span>
             </button>
           </div>
 

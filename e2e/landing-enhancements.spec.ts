@@ -34,24 +34,22 @@ test.describe('Landing Page Enhancements (6 Bloques)', () => {
     await expect(restartBtn).toBeVisible()
   })
 
-  test('Bloque 2: Antes vs. Después con conmutador de 3 modos e insignias', async ({ page }) => {
+  test('Bloque 2: Antes vs. Después con Comparativa Interactiva Operación con Fluxo', async ({ page }) => {
     await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' })
 
-    const caosBtn = page.locator('button:has-text("Operación Tradicional")')
-    const compBtn = page.locator('button:has-text("Comparativa Interactiva")')
-    const fluxoBtn = page.locator('button:has-text("Operación con Fluxo")')
-
-    await expect(caosBtn).toBeVisible()
-    await expect(compBtn).toBeVisible()
+    const fluxoBtn = page.locator('button:has-text("Operación con Fluxo (Control Total)")')
     await expect(fluxoBtn).toBeVisible()
 
-    // Conmutar a modo Fluxo
-    await fluxoBtn.click()
     const container = page.locator('#antes-despues')
     await expect(container.getByText('-15 min de espera')).toBeVisible()
     await expect(container.getByText('0 € en hardware', { exact: true })).toBeVisible()
     await expect(container.getByText('+4.9★ en Google')).toBeVisible()
     await expect(container.getByText('100% cuadrado')).toBeVisible()
+
+    // Tocar una tarjeta para alternar a dolor y resetear con el botón principal
+    await container.getByText('Pantalla de cocina (KDS)').click()
+    await fluxoBtn.click()
+    await expect(container.getByText('-15 min de espera')).toBeVisible()
   })
 
   test('Bloque 3: Engranajes sticky stack en móvil (< 768px)', async ({ page }) => {
