@@ -76,7 +76,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white text-slate-900 selection:bg-blue-600 selection:text-white font-sans antialiased flex flex-col">
       
       {/* ── 1. HEADER / NAVBAR DE MARCA ── */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-white sm:bg-white/90 border-b border-slate-200/80 shadow-xs">
+      <header className="sticky top-0 z-[60] backdrop-blur-md bg-white sm:bg-white/90 border-b border-slate-200/80 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           
           {/* Isotipo & Marca Fluxo */}
@@ -730,7 +730,7 @@ export default function LandingPage() {
       {popupsBlocked && (
         <aside 
           aria-label="Aviso de ventanas bloqueadas"
-          className="fixed bottom-6 right-6 z-50 max-w-sm bg-white/95 border-2 border-amber-500/80 rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5"
+          className="fixed bottom-6 right-6 z-[70] max-w-sm bg-white/95 border-2 border-amber-500/80 rounded-2xl p-4 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5"
         >
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center flex-shrink-0 mt-0.5">

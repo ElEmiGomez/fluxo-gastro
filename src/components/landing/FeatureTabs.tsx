@@ -138,7 +138,7 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
     <section
       ref={sectionRef}
       id="modulos"
-      className="py-12 sm:py-20 bg-slate-50 border-t border-slate-200"
+      className="py-12 sm:py-20 bg-slate-50 border-t border-slate-200 relative z-10"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <ScrollReveal distance={24}>
@@ -195,11 +195,11 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
             //  el top/zIndex no aplican y md:!mb-0 anula el margen inline)
             // Mazo de cartas en móvil (< 768px): sticky incremental escalonado
             const mobileStickyClasses = [
-              'max-md:sticky max-md:top-20 max-md:z-10',
-              'max-md:sticky max-md:top-24 max-md:z-20',
-              'max-md:sticky max-md:top-28 max-md:z-30',
-              'max-md:sticky max-md:top-32 max-md:z-40',
-              'max-md:sticky max-md:top-36 max-md:z-50',
+              'max-md:sticky max-md:top-20 max-md:z-[10]',
+              'max-md:sticky max-md:top-24 max-md:z-[15]',
+              'max-md:sticky max-md:top-28 max-md:z-[20]',
+              'max-md:sticky max-md:top-32 max-md:z-[25]',
+              'max-md:sticky max-md:top-36 max-md:z-[30]',
             ][i]
             const stickyStyle = {
               marginBottom: `calc(${(5 - 1 - i) * 12}px)`,
