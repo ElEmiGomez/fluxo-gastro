@@ -62,6 +62,7 @@ import { CRMAuthModal } from '@/components/crm/CRMAuthModal'
 import { CRMQuickAddModal } from '@/components/crm/CRMQuickAddModal'
 import { CRMLeadDetailModal } from '@/components/crm/CRMLeadDetailModal'
 import { CRMContactCardModal } from '@/components/crm/CRMContactCardModal'
+import { CRMTemplateQRModal } from '@/components/crm/CRMTemplateQRModal'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 
 const STATUS_COLUMNS: { id: CRMStatus; title: string; color: string; badgeBg: string; badgeBgLight: string }[] = [
@@ -128,6 +129,7 @@ export default function CRMAdminPage() {
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isContactCardOpen, setIsContactCardOpen] = useState(false)
+  const [isTemplateQrOpen, setIsTemplateQrOpen] = useState(false)
   const [showAllEvents, setShowAllEvents] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [isOnline, setIsOnline] = useState<boolean>(true)
@@ -633,6 +635,14 @@ export default function CRMAdminPage() {
             >
               <QrCode className="w-4 h-4 text-blue-400" />
               <span>Mi Tarjeta QR</span>
+            </button>
+
+            <button
+              onClick={() => setIsTemplateQrOpen(true)}
+              className="w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15] text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth"
+            >
+              <QrCode className="w-4 h-4 text-emerald-400" />
+              <span>Template Carta QR</span>
             </button>
 
             <button
@@ -1714,6 +1724,11 @@ export default function CRMAdminPage() {
       <CRMContactCardModal
         isOpen={isContactCardOpen}
         onClose={() => setIsContactCardOpen(false)}
+      />
+
+      <CRMTemplateQRModal
+        isOpen={isTemplateQrOpen}
+        onClose={() => setIsTemplateQrOpen(false)}
       />
     </div>
   )

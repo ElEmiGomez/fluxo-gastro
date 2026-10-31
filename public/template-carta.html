@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="gl" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Local · Carta Digital Demo | Fluxo</title>
+  
+  <!-- Favicon Isotipo Invertido Oficial Fluxo (Fondo blanco, F en degradado azul #2563EB -> #1D4ED8) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width='64' height='64' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563EB'/%3E%3Cstop offset='100%25' stop-color='%231D4ED8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%23FFFFFF' stroke='%23E2E8F0' stroke-width='2'/%3E%3Cpath d='M23 48V16H45 M23 31H38' stroke='url(%23g)' stroke-width='8.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='39' cy='46' r='4.2' fill='%230EA5E9'/%3E%3C/svg%3E">
+  
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          boxShadow: {
+            'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+            'card': '0 2px 8px -2px rgba(15, 23, 42, 0.06), 0 1px 4px -1px rgba(15, 23, 42, 0.04)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background-color: #F8FAFC;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .smooth-spring {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900 pb-36 font-sans antialiased selection:bg-blue-100 selection:text-blue-900" style="touch-action: manipulation;">
+
+  <!-- 1. HEADER FLUXO (Local · Mesa X · Logo Fluxo · Botones Bloqueados) -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
+    <div class="max-w-2xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2">
+      
+      <!-- Logo y Datos del Local -->
+      <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+        <div class="flex-shrink-0 cursor-default" title="Fluxo Gastronomic System">
+          <!-- Isotipo Oficial Fluxo 32px -->
+          <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xs">
+            <defs>
+              <linearGradient id="fluxoInvertedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#2563EB" />
+                <stop offset="100%" stop-color="#1D4ED8" />
+              </linearGradient>
+            </defs>
+            <rect width="64" height="64" rx="18" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2" />
+            <path d="M23 48V16H45 M23 31H38" stroke="url(#fluxoInvertedGrad)" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="39" cy="46" r="4.2" fill="#0EA5E9" />
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <h1 id="restaurant-name-header" class="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight truncate">
+            Local
+          </h1>
+          <div class="flex items-center gap-1.5 mt-0.5">
+            <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/80 uppercase whitespace-nowrap">
+              <span id="badge-mesa">Mesa X</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+            </span>
+            <span class="inline-flex items-center gap-0.5 text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200">
+              <span>🔒 Demo</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones de Cabecera: Llamar Mozo Bloqueado + Selector de Idiomas -->
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        
+        <!-- Botón Llamar Camarero Bloqueado -->
+        <button
+          type="button"
+          onclick="openBlockedModal('waiter')"
+          class="px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 hover:border-amber-300 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+          title="Llamar al camarero (Modo Demostración)"
+        >
+          <svg class="w-3.5 h-3.5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <span class="text-[11px] font-black hidden sm:inline" id="btn-call-waiter-label">Mozo</span>
+          <span class="text-[10px]">🔒</span>
+        </button>
+
+        <!-- Selector de Idiomas Desplegable -->
+        <div class="relative">
+          <button
+            type="button"
+            id="lang-dropdown-btn"
+            onclick="toggleLangDropdown()"
+            class="px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+            title="Cambiar idioma / Change language"
+          >
+            <span id="current-lang-flag" class="text-xs">🔵</span>
+            <span id="current-lang-code" class="uppercase text-[11px] font-black tracking-tight">GL</span>
+            <svg class="w-3 h-3 text-slate-500 transition-transform duration-200" id="lang-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+
+          <div id="lang-menu" class="hidden absolute right-0 top-full mt-1.5 w-36 bg-white rounded-2xl shadow-xl border border-slate-200 py-1 z-50 overflow-hidden">
+            <button type="button" onclick="selectLang('gl')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors hover:bg-slate-50 text-slate-700">
+              <span class="flex items-center gap-2"><span>🔵</span><span>Galego</span></span>
+              <span id="check-gl" class="text-blue-900 font-bold">✓</span>
+            </button>
+            <button type="button" onclick="selectLang('es')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors hover:bg-slate-50 text-slate-700">
+              <span class="flex items-center gap-2"><span>🇪🇸</span><span>Español</span></span>
+              <span id="check-es" class="hidden text-blue-900 font-bold">✓</span>
+            </button>
+            <button type="button" onclick="selectLang('en')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors hover:bg-slate-50 text-slate-700">
+              <span class="flex items-center gap-2"><span>🇬🇧</span><span>English</span></span>
+              <span id="check-en" class="hidden text-blue-900 font-bold">✓</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </header>
+
+  <!-- 2. CARTA GASTRONÓMICA DEMOSTRATIVA -->
+  <main class="max-w-2xl mx-auto px-3.5 pt-3 space-y-3.5">
+
+    <!-- Buscador & Controles de Vista -->
+    <div class="flex items-center gap-2">
+      <div class="relative flex-1">
+        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input
+          type="text"
+          id="search-input"
+          oninput="handleSearch(this.value)"
+          placeholder="Buscar pratos, bebidas..."
+          class="w-full pl-9 pr-3 py-2 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 shadow-xs transition-all"
+        />
+      </div>
+
+      <div class="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 flex-shrink-0">
+        <button
+          type="button"
+          id="btn-view-list"
+          onclick="setViewMode('list')"
+          class="p-1.5 rounded-xl transition-all bg-white text-blue-600 shadow-xs cursor-pointer"
+          title="Vista Carta Detallada"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <button
+          type="button"
+          id="btn-view-grid"
+          onclick="setViewMode('grid')"
+          class="p-1.5 rounded-xl transition-all text-slate-500 hover:text-slate-900 cursor-pointer"
+          title="Vista Galería de Fotos"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Carrusel de Categorías con Filtros Dietéticos -->
+    <div id="menu-category-tabs" class="space-y-1.5 scroll-mt-16">
+      <div id="categories-container" class="flex space-x-1.5 overflow-x-auto no-scrollbar py-0.5 touch-pan-x">
+        <!-- Generado dinámicamente -->
+      </div>
+
+      <!-- Píldoras Dietéticas -->
+      <div class="flex items-center gap-1.5 px-0.5">
+        <span class="text-[10px] text-slate-400 font-semibold" id="filters-title">Filtros:</span>
+        <button
+          type="button"
+          id="filter-sintacc-btn"
+          onclick="toggleDietaryFilter('sintacc')"
+          class="px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-white text-slate-500 border border-slate-200 hover:text-slate-800 cursor-pointer"
+          title="Filtrar platos aptos Sin Gluten / Sin TACC"
+        >
+          <span>🌾</span> <span id="label-filter-sintacc">Sen Glute</span>
+        </button>
+        <button
+          type="button"
+          id="filter-veggie-btn"
+          onclick="toggleDietaryFilter('veggie')"
+          class="px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-white text-slate-500 border border-slate-200 hover:text-slate-800 cursor-pointer"
+          title="Filtrar platos vegetarianos"
+        >
+          <span>🌱</span> <span id="label-filter-veggie">Vexetariano</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Sugerencia Inteligente del Chef -->
+    <div id="chef-suggestion-banner" class="p-3 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl shadow-xs flex items-center gap-3">
+      <div class="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
+        <svg class="w-4 h-4 text-slate-950" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.4 7.2h7.6l-6.1 4.5 2.3 7.3-6.2-4.6-6.2 4.6 2.3-7.3-6.1-4.5h7.6z"/></svg>
+      </div>
+      <div class="min-w-0 flex-1">
+        <span id="chef-suggestion-tag" class="text-[10px] font-black uppercase tracking-wider text-amber-300 block">
+          Recomendado para Comezar
+        </span>
+        <p id="chef-suggestion-text" class="text-xs text-slate-100 font-semibold leading-tight mt-0.5">
+          Proba o noso Combo Parella con 2 Burgers Dobres e 2 Pintas ben frías.
+        </p>
+      </div>
+    </div>
+
+    <!-- Contenedor Principal de Platos (Lista o Grid con Botones Bloqueados) -->
+    <div id="products-catalog-container">
+      <!-- Generado dinámicamente -->
+    </div>
+
+    <!-- Estado Vacío -->
+    <div id="empty-state" class="hidden text-center py-16 text-slate-400 space-y-2 bg-white rounded-3xl border border-slate-200 p-8 shadow-xs">
+      <svg class="w-12 h-12 mx-auto stroke-[1.2] text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <p id="empty-state-text" class="text-sm font-semibold text-slate-600">
+        Non atopamos pratos con esa busca
+      </p>
+    </div>
+
+    <!-- Footer Legal Informativo -->
+    <footer class="pt-6 pb-24 text-center space-y-2">
+      <div class="p-3.5 bg-white rounded-2xl border border-slate-200/80 text-[11px] text-slate-500 shadow-xs space-y-1.5 text-left">
+        <p class="font-bold text-slate-800 flex items-center gap-1.5">
+          <span>ℹ️</span> <span id="footer-legal-title">Información ao Consumidor</span>
+        </p>
+        <p id="footer-legal-notice" class="text-[10px] text-slate-500 leading-relaxed">
+          Tódolos prezos inclúen o 10% de IVE. Se padece algunha alerxia ou intolerancia alimentaria, solicite a nosa táboa oficial de alérxenos ao persoal de sala antes de consumir.
+        </p>
+        <div class="pt-1.5 border-t border-slate-100">
+          <p id="footer-anisakis" class="text-[9px] text-slate-400 leading-relaxed">
+            🐟 <span class="font-semibold">Prevención de Anisakis:</span> En cumprimento do RD 1021/2022, os nosos produtos da pesca consumidos crus ou pouco cociñados foron conxelados previamente a -20ºC polo menos 24h.
+          </p>
+        </div>
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+          <span class="text-[10px] font-bold text-blue-900">
+            🔒 Carta Oficial e Regulamentaria
+          </span>
+          <span class="text-[9px] text-slate-400 font-medium">Fluxo &mdash; Sistema Gastronómico</span>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- 3. BARRA FLOTANTE INFERIOR CON PEDIDO A COCINA BLOQUEADO -->
+  <div class="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 pointer-events-auto">
+    <div class="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 border border-slate-800">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 flex items-center justify-center flex-shrink-0 border border-blue-500/20">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        </div>
+        <div class="min-w-0">
+          <span id="bottom-bar-title" class="text-[10px] font-black uppercase tracking-wider text-blue-400 block leading-tight">
+            Carta Digital Demostrativa
+          </span>
+          <p id="bottom-bar-desc" class="text-xs text-slate-200 font-medium leading-tight truncate sm:whitespace-normal">
+            Mesa X activa · Consulta de pratos e alerxias en tempo real
+          </p>
+        </div>
+      </div>
+
+      <!-- Botón Pedir a Cocina Bloqueado -->
+      <button
+        type="button"
+        onclick="openBlockedModal('order')"
+        class="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-1.5 shadow-md shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
+      >
+        <span id="bottom-bar-order-btn">Pedir a Cocina</span>
+        <span>🔒</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 4. MODAL COMERCIAL DE BLOQUEO (Al pulsar botones de Mozo o Cocina) -->
+  <div id="blocked-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div class="relative w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 text-center space-y-4">
+      
+      <!-- Icono Destacado -->
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      </div>
+
+      <!-- Título y Texto Dinámico -->
+      <div class="space-y-1.5">
+        <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-black uppercase tracking-wider">
+          <span>Modo Demostración</span>
+        </div>
+        <h3 id="blocked-modal-title" class="text-base font-extrabold text-slate-900">
+          Función de Demostración
+        </h3>
+        <p id="blocked-modal-desc" class="text-xs text-slate-600 leading-relaxed">
+          En un restaurante real con Fluxo activo, este botón envía la comanda al instante a las pantallas de Cocina (KDS) o avisa directamente al Comandero del mozo en sala.
+        </p>
+      </div>
+
+      <!-- Píldora de Valor Gastronómico -->
+      <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-700 font-semibold space-y-1 text-left">
+        <div class="flex items-center gap-1.5 text-blue-700">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span class="font-bold">Cero comandas o bebidas perdidas</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-blue-700">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span class="font-bold">Servicio un 40% más rápido en sala</span>
+        </div>
+      </div>
+
+      <!-- Botón de Cierre Limpio -->
+      <button
+        type="button"
+        onclick="closeBlockedModal()"
+        class="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+      >
+        Cerrar / Entendido
+      </button>
+
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT REACTIVO (Catálogo Completo Oficial · Modo Demostración) -->
+  <script>
+    const TRANSLATIONS = {
+      gl: {
+        badgeTable: "Mesa X",
+        searchPlaceholder: "Buscar pratos, bebidas...",
+        allCategories: "Todas as Categorías",
+        sinTacc: "Sen Glute",
+        veggie: "Vexetariano",
+        chefTag: "Recomendado para Comezar",
+        chefText: "Proba o noso Combo Parella con 2 Burgers Dobres e 2 Pintas ben frías.",
+        emptyText: "Non atopamos pratos con esa busca",
+        legalTitle: "Información ao Consumidor",
+        legalNotice: "Tódolos prezos inclúen o 10% de IVE. Se padece algunha alerxia ou intolerancia alimentaria, solicite a nosa táboa oficial de alérxenos ao persoal de sala antes de consumir.",
+        anisakis: "Prevención de Anisakis: En cumprimento do RD 1021/2022, os nosos produtos da pesca foron conxelados previamente a -20ºC.",
+        bottomTitle: "Carta Digital Demostrativa",
+        bottomDesc: "Mesa X activa · Consulta de pratos e alerxias en tempo real",
+        bottomOrderBtn: "Pedir a Cocina",
+        callWaiterLabel: "Mozo",
+        freshPrepared: "Plato elaborado ao momento con ingredientes frescos",
+        byWeight: "ao peso",
+        addButton: "+ Engadir",
+        modalTitle: "Función de Demostración",
+        modalDescWaiter: "Nun restaurante real con Fluxo activo, este botón notifica en menos de 1 segundo ao Comandero móbil do camareiro asignado á Mesa X.",
+        modalDescOrder: "Nun restaurante real con Fluxo activo, este botón envía a comanda ao instante á pantalla de Cociña (KDS) e á impresora térmica da barra.",
+        modalDescBill: "Nun restaurante real con Fluxo activo, este botón solicita a conta ao camareiro e prepara o ticket de mesa sen esperas."
+      },
+      es: {
+        badgeTable: "Mesa X",
+        searchPlaceholder: "Buscar platos, bebidas...",
+        allCategories: "Todas las Categorías",
+        sinTacc: "Sin Gluten",
+        veggie: "Vegetariano",
+        chefTag: "Recomendado para Comenzar",
+        chefText: "Prueba nuestro Combo Pareja con 2 Burgers Dobles y 2 Pintas bien frías.",
+        emptyText: "No encontramos platos con esa búsqueda",
+        legalTitle: "Información al Consumidor",
+        legalNotice: "Todos los precios incluyen el 10% de IVA. Si padece alguna alergia o intolerancia alimentaria, solicite nuestra tabla oficial de alérgenos al personal de sala antes de consumir.",
+        anisakis: "Prevención de Anisakis: En cumplimiento del RD 1021/2022, nuestros productos de la pesca fueron congelados previamente a -20ºC.",
+        bottomTitle: "Carta Digital Demostrativa",
+        bottomDesc: "Mesa X activa · Consulta de platos y alérgenos en tiempo real",
+        bottomOrderBtn: "Pedir a Cocina",
+        callWaiterLabel: "Mozo",
+        freshPrepared: "Plato elaborado al momento con ingredientes frescos",
+        byWeight: "al peso",
+        addButton: "+ Añadir",
+        modalTitle: "Función de Demostración",
+        modalDescWaiter: "En un restaurante real con Fluxo activo, este botón notifica en menos de 1 segundo al Comandero móvil del mozo asignado a la Mesa X.",
+        modalDescOrder: "En un restaurante real con Fluxo activo, este botón envía la comanda al instante a la pantalla de Cocina (KDS) y a la impresora térmica de barra.",
+        modalDescBill: "En un restaurante real con Fluxo activo, este botón solicita la cuenta al mozo y prepara el ticket de mesa sin esperas."
+      },
+      en: {
+        badgeTable: "Table X",
+        searchPlaceholder: "Search dishes, drinks...",
+        allCategories: "All Categories",
+        sinTacc: "Gluten Free",
+        veggie: "Vegetarian",
+        chefTag: "Recommended to Start",
+        chefText: "Try our Couple Combo with 2 Double Burgers and 2 fresh Pints.",
+        emptyText: "No dishes found matching your search",
+        legalTitle: "Consumer Information",
+        legalNotice: "All prices include 10% VAT. If you suffer from any food allergy or intolerance, please request our official allergen chart from our staff before ordering.",
+        anisakis: "Anisakis Prevention: In compliance with RD 1021/2022, all seafood served raw or lightly cooked has been deep-frozen at -20ºC.",
+        bottomTitle: "Demo Digital Menu",
+        bottomDesc: "Table X active · Real-time dish & allergen catalog",
+        bottomOrderBtn: "Send to Kitchen",
+        callWaiterLabel: "Waiter",
+        freshPrepared: "Freshly prepared dish made to order",
+        byWeight: "by weight",
+        addButton: "+ Add",
+        modalTitle: "Demonstration Feature",
+        modalDescWaiter: "In a live restaurant with Fluxo, this button instantly alerts the waiter's handheld device for Table X.",
+        modalDescOrder: "In a live restaurant with Fluxo, this button sends the order immediately to the Kitchen Display System (KDS) and bar thermal printer.",
+        modalDescBill: "In a live restaurant with Fluxo, this button requests the check without delays."
+      }
+    };
+
+    const CATEGORIES = [
+      { id: 'cat-1', name_gl: 'As Nosas Promos', name_es: 'Nuestras Promos', name_en: 'Our Promos' },
+      { id: 'cat-2', name_gl: 'Entradas', name_es: 'Entradas', name_en: 'Starters' },
+      { id: 'cat-5', name_gl: 'Pratos Principais', name_es: 'Platos Principales', name_en: 'Main Courses' },
+      { id: 'cat-7', name_gl: 'Burgers', name_es: 'Burgers', name_en: 'Burgers' },
+      { id: 'cat-10', name_gl: 'Sobremesas', name_es: 'Postres', name_en: 'Desserts' },
+      { id: 'cat-12', name_gl: 'Bebidas', name_es: 'Bebidas', name_en: 'Drinks' }
+    ];
+
+    const PRODUCTS = [
+      {
+        id: 'p-promo-1',
+        category_id: 'cat-1',
+        price: 24.50,
+        image_url: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Combo Parella: 2 Burgers Dobres + Patacas + 2 Pintas',
+        name_es: 'Combo Pareja: 2 Burgers Dobles + Papas + 2 Pintas',
+        name_en: 'Couple Combo: 2 Double Burgers + Fries + 2 Pints',
+        desc_gl: '2 Burgers Doble Monster con touciño e cheddar, porción xigante de patacas rústicas e 2 cervexas artesás.',
+        desc_es: '2 Burgers Doble Monster con panceta y cheddar, porción gigante de papas rústicas y 2 cervezas artesanales.',
+        desc_en: '2 Double Monster burgers with bacon and cheddar, giant portion of rustic fries and 2 craft beers.',
+        is_sintacc: false,
+        is_veggie: false,
+        allergens: ['Gluten', 'Lácteos']
+      },
+      {
+        id: 'p-ent-1',
+        category_id: 'cat-2',
+        price: 7.20,
+        image_url: 'https://images.unsplash.com/photo-1531749668029-2db88e4276c7?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Bastóns de Mozzarella Crocantes',
+        name_es: 'Bastones de Mozzarella Crocantes',
+        name_en: 'Crispy Mozzarella Sticks',
+        desc_gl: '6 bastóns empanados en panko xaponés con dip de mollo marinara caseiro.',
+        desc_es: '6 bastones empanados en panko japonés con dip de salsa marinara casera.',
+        desc_en: '6 mozzarella sticks breaded in panko with homemade marinara dip.',
+        is_sintacc: false,
+        is_veggie: true,
+        allergens: ['Gluten', 'Lácteos', 'Huevos']
+      },
+      {
+        id: 'p-ent-2',
+        category_id: 'cat-2',
+        price: 18.90,
+        image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Táboa Gourmet Picada Quente (Para 3)',
+        name_es: 'Tabla Gourmet Picada Caliente (Para 3)',
+        name_en: 'Gourmet Hot Sharing Board (For 3)',
+        desc_gl: 'Nuggets crocantes, tequeños de queixo, patacas cheddar con touciño, aros de cebola e variedade de dips.',
+        desc_es: 'Nuggets crocantes, tequeños de queso, papas cheddar con bacon, aros de cebolla y variedad de dips.',
+        desc_en: 'Crispy chicken bites, cheese tequeños, cheddar bacon fries, onion rings and dips.',
+        is_sintacc: false,
+        is_veggie: false,
+        allergens: ['Gluten', 'Lácteos', 'Huevos']
+      },
+      {
+        id: 'p-ent-3',
+        category_id: 'cat-2',
+        price: 4.80,
+        image_url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Patacas Fritas / Rústicas Crocantes',
+        name_es: 'Papas Fritas / Rústicas Crujientes',
+        name_en: 'Crispy Hand-cut Rustic Fries',
+        desc_gl: 'Porción abundante de patacas gallegas cortadas a man, fritidas ao momento con sal mariña.',
+        desc_es: 'Porción abundante de patatas gallegas cortadas a mano, fritas al momento con sal marina.',
+        desc_en: 'Generous portion of hand-cut local potatoes, freshly fried with sea salt flakes.',
+        is_sintacc: true,
+        is_veggie: true,
+        allergens: []
+      },
+      {
+        id: 'p-prin-1',
+        category_id: 'cat-5',
+        price: 9.50,
+        image_url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Ensalada Caesar con Polo Asado',
+        name_es: 'Ensalada Caesar con Pollo Grillado',
+        name_en: 'Grilled Chicken Caesar Salad',
+        desc_gl: 'Mix de leitugas crocantes, peituga á grella, croutons dourados, lascas de parmesano e aderezo caesar.',
+        desc_es: 'Mix de lechugas crocantes, pechuga grillada, croutons dorados, lascas de parmesano y aderezo caesar tradicional.',
+        desc_en: 'Crisp romaine, grilled chicken breast, garlic croutons, shaved parmesan and classic caesar dressing.',
+        is_sintacc: false,
+        is_veggie: false,
+        allergens: ['Gluten', 'Lácteos', 'Huevos', 'Mostaza']
+      },
+      {
+        id: 'p-prin-2',
+        category_id: 'cat-5',
+        price: 12.50,
+        image_url: '/images/milanesa-napolitana.jpg',
+        name_gl: 'Milanesa Napolitana con Guarnición',
+        name_es: 'Milanesa Napolitana con Guarnición',
+        name_en: 'Neapolitan Schnitzel with Side',
+        desc_gl: 'Suprema ou tenreira tenra con mollo de tomate caseiro, xamón cocido e queixo mozzarella gratinado.',
+        desc_es: 'Suprema o ternera tiernizada con salsa de tomate casera, jamón cocido y queso mozzarella gratinado.',
+        desc_en: 'Tender beef or chicken cutlet with homemade tomato sauce, ham and melted mozzarella.',
+        is_sintacc: false,
+        is_veggie: false,
+        allergens: ['Gluten', 'Lácteos', 'Huevos']
+      },
+      {
+        id: 'p-prin-3',
+        category_id: 'cat-5',
+        price: 48.00,
+        price_unit: 'kg',
+        image_url: 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Chuletón de Vaca Rubia Galega (ao peso)',
+        name_es: 'Chuletón de Vaca Rubia Gallega (al peso)',
+        name_en: 'Galician Blonde Beef Ribeye (by weight)',
+        desc_gl: 'Madurado 45 días, asado á brasa con escamas de sal de Arousa.',
+        desc_es: 'Madurado 45 días, asado a la brasa con escamas de sal de Arousa.',
+        desc_en: 'Dry-aged 45 days, char-grilled with Arousa sea salt flakes.',
+        is_sintacc: true,
+        is_veggie: false,
+        allergens: []
+      },
+      {
+        id: 'p-bur-1',
+        category_id: 'cat-7',
+        price: 13.90,
+        image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Bacon Cheese Dobre Monster',
+        name_es: 'Bacon Cheese Doble Monster',
+        name_en: 'Double Monster Bacon Cheese',
+        desc_gl: 'Dobre medallón de 160g de blend de asado, cuádruplo cheddar fundido, touciño crocante e mollo barbacoa en pan brioche.',
+        desc_es: 'Doble medallón de 160g de blend de asado, cuádruple cheddar fundido, panceta crocante y salsa barbacoa en pan brioche.',
+        desc_en: 'Double 160g beef patty, quadruple melted cheddar, crispy bacon and BBQ sauce on a brioche bun.',
+        is_sintacc: false,
+        is_veggie: false,
+        allergens: ['Gluten', 'Lácteos']
+      },
+      {
+        id: 'p-bur-2',
+        category_id: 'cat-7',
+        price: 15.50,
+        image_url: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Burger Gallaecia: Rubia Galega & San Simón',
+        name_es: 'Burger Gallaecia: Rubia Gallega & San Simón',
+        name_en: 'Burger Gallaecia: Galician Beef & Smoked Cheese',
+        desc_gl: '180g de carne de Rubia Galega madurada, queixo San Simón da Costa afumado fundido, cebola caramelizada ao Mencía e rúcula en pan brioche.',
+        desc_es: '180g de carne de Rubia Gallega madurada, queso San Simón da Costa ahumado fundido, cebolla caramelizada al Mencía y rúcula en pan brioche artesano.',
+        desc_en: '180g aged Galician beef, melted smoked San Simón cheese, Mencía wine caramelized onion and arugula on artisan brioche.',
+        is_sintacc: false,
+        is_veggie: false,
+        allergens: ['Gluten', 'Lácteos']
+      },
+      {
+        id: 'p-bur-3',
+        category_id: 'cat-7',
+        price: 12.80,
+        image_url: 'https://images.unsplash.com/photo-1520072959219-c595dc870360?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Burger Vexetal da Horta',
+        name_es: 'Burger Veggie del Huerto',
+        name_en: 'Garden Veggie Burger',
+        desc_gl: 'Medallón artesán de garavanzos, espinacas e cogomelos, queixo vegano, tomate asado e maionesa de aguacate.',
+        desc_es: 'Medallón artesano de garbanzos, espinacas y setas, queso vegano, tomate asado y mayonesa de aguacate.',
+        desc_en: 'Artisan chickpea, spinach and mushroom patty, vegan cheese, roasted tomato and avocado mayo.',
+        is_sintacc: false,
+        is_veggie: true,
+        allergens: ['Gluten']
+      },
+      {
+        id: 'p-pos-1',
+        category_id: 'cat-10',
+        price: 6.50,
+        image_url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Tarta de Queixo Artesá da Ría',
+        name_es: 'Tarta de Queso Artesana de la Ría',
+        name_en: 'Creamy Baked Artisan Cheesecake',
+        desc_gl: 'Forneada ao estilo tradicional con corazón cremoso e coulis de froitas do bosque naturais.',
+        desc_es: 'Cheesecake cremoso horneado estilo tradicional con coulis casero de frutos del bosque.',
+        desc_en: 'San Sebastian style baked cheesecake with creamy center and fresh forest berry coulis.',
+        is_sintacc: true,
+        is_veggie: true,
+        allergens: ['Lácteos', 'Huevos']
+      },
+      {
+        id: 'p-pos-2',
+        category_id: 'cat-10',
+        price: 6.20,
+        image_url: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Volcán de Chocolate con Xelado de Vainilla',
+        name_es: 'Volcán de Chocolate con Helado de Vainilla',
+        name_en: 'Warm Chocolate Lava Cake with Ice Cream',
+        desc_gl: 'Biscoito morno recheo de chocolate negro fundido, acompañado de xelado artesán.',
+        desc_es: 'Bizcochuelo tibio relleno de chocolate amargo fundido, acompañado de helado artesanal.',
+        desc_en: 'Warm chocolate fondant with molten center, served with artisan vanilla gelato.',
+        is_sintacc: false,
+        is_veggie: true,
+        allergens: ['Gluten', 'Lácteos', 'Huevos']
+      },
+      {
+        id: 'p-pos-3',
+        category_id: 'cat-10',
+        price: 5.50,
+        image_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Tarta de Santiago Tradicional',
+        name_es: 'Tarta de Santiago Artesanal',
+        name_en: 'Traditional Galician Almond Cake',
+        desc_gl: 'Receita tradicional con 100% améndoa seleccionada marcona, ovos campeiros e azucre glas con Cruz de Santiago.',
+        desc_es: 'Receta tradicional con 100% almendra seleccionada marcona, huevos camperos y azúcar glas con Cruz de Santiago.',
+        desc_en: 'Traditional recipe with 100% marcona almonds, free-range eggs and Santiago Cross powdered sugar.',
+        is_sintacc: true,
+        is_veggie: true,
+        allergens: ['Frutos de cáscara', 'Huevos']
+      },
+      {
+        id: 'p-beb-1',
+        category_id: 'cat-12',
+        price: 3.50,
+        image_url: 'https://images.unsplash.com/photo-1608270118837-12b48fa886ef?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Estrella Galicia 1906 Reserva Especial (33cl)',
+        name_es: 'Estrella Galicia 1906 Reserva Especial (33cl)',
+        name_en: 'Estrella Galicia 1906 Special Reserve (33cl)',
+        desc_gl: 'Cervexa tostada extra con notas a caramelo e malte tostado.',
+        desc_es: 'Cerveza tostada extra con notas a caramelo y malta tostada.',
+        desc_en: 'Galician dark lager with roasted malt and caramel notes.',
+        is_sintacc: false,
+        is_veggie: true,
+        allergens: ['Gluten']
+      },
+      {
+        id: 'p-beb-2',
+        category_id: 'cat-12',
+        price: 1.80,
+        image_url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Café de Especialidade (Só / Cortado / Con Leite)',
+        name_es: 'Café de Especialidad (Solo / Cortado / Con Leche)',
+        name_en: 'Specialty Coffee (Espresso / Macchiato / Latte)',
+        desc_gl: '100% Arábica de torrado natural en gran recén moído.',
+        desc_es: '100% Arábica de tueste natural en grano recién molido.',
+        desc_en: '100% freshly ground Arabica beans, made to order.',
+        is_sintacc: true,
+        is_veggie: true,
+        allergens: ['Lácteos']
+      }
+    ];
+
+    let currentLang = 'gl';
+    let selectedCategory = 'all';
+    let searchQuery = '';
+    let dietaryFilter = null; // 'sintacc' | 'veggie' | null
+    let viewMode = 'list'; // 'list' | 'grid'
+    let expandedProductIds = {};
+
+    function formatCurrency(amount) {
+      return amount.toFixed(2).replace('.', ',') + ' €';
+    }
+
+    function toggleLangDropdown() {
+      const menu = document.getElementById('lang-menu');
+      const chevron = document.getElementById('lang-chevron');
+      menu.classList.toggle('hidden');
+      chevron.classList.toggle('rotate-180');
+    }
+
+    function selectLang(lang) {
+      currentLang = lang;
+      
+      const flags = { gl: '🔵', es: '🇪🇸', en: '🇬🇧' };
+      document.getElementById('current-lang-flag').textContent = flags[lang];
+      document.getElementById('current-lang-code').textContent = lang.toUpperCase();
+      
+      ['gl', 'es', 'en'].forEach(l => {
+        const el = document.getElementById(`check-${l}`);
+        if (el) {
+          if (l === lang) el.classList.remove('hidden');
+          else el.classList.add('hidden');
+        }
+      });
+
+      document.getElementById('lang-menu').classList.add('hidden');
+      document.getElementById('lang-chevron').classList.remove('rotate-180');
+
+      updateStaticTexts();
+      renderCategories();
+      renderProducts();
+    }
+
+    function updateStaticTexts() {
+      const t = TRANSLATIONS[currentLang];
+      document.getElementById('search-input').placeholder = t.searchPlaceholder;
+      document.getElementById('label-filter-sintacc').textContent = t.sinTacc;
+      document.getElementById('label-filter-veggie').textContent = t.veggie;
+      document.getElementById('chef-suggestion-tag').textContent = t.chefTag;
+      document.getElementById('chef-suggestion-text').textContent = t.chefText;
+      document.getElementById('empty-state-text').textContent = t.emptyText;
+      document.getElementById('footer-legal-title').textContent = t.legalTitle;
+      document.getElementById('footer-legal-notice').textContent = t.legalNotice;
+      document.getElementById('footer-anisakis').innerHTML = `🐟 <span class="font-semibold">Prevención de Anisakis:</span> ${t.anisakis}`;
+      document.getElementById('bottom-bar-title').textContent = t.bottomTitle;
+      document.getElementById('bottom-bar-desc').textContent = t.bottomDesc;
+      document.getElementById('bottom-bar-order-btn').textContent = t.bottomOrderBtn;
+      document.getElementById('badge-mesa').textContent = t.badgeTable;
+      document.getElementById('btn-call-waiter-label').textContent = t.callWaiterLabel;
+    }
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      const btnList = document.getElementById('btn-view-list');
+      const btnGrid = document.getElementById('btn-view-grid');
+
+      if (mode === 'list') {
+        btnList.className = 'p-1.5 rounded-xl transition-all bg-white text-blue-600 shadow-xs cursor-pointer';
+        btnGrid.className = 'p-1.5 rounded-xl transition-all text-slate-500 hover:text-slate-900 cursor-pointer';
+      } else {
+        btnGrid.className = 'p-1.5 rounded-xl transition-all bg-white text-blue-600 shadow-xs cursor-pointer';
+        btnList.className = 'p-1.5 rounded-xl transition-all text-slate-500 hover:text-slate-900 cursor-pointer';
+      }
+      renderProducts();
+    }
+
+    function toggleDietaryFilter(type) {
+      if (dietaryFilter === type) {
+        dietaryFilter = null;
+      } else {
+        dietaryFilter = type;
+      }
+
+      const btnSintacc = document.getElementById('filter-sintacc-btn');
+      const btnVeggie = document.getElementById('filter-veggie-btn');
+
+      if (dietaryFilter === 'sintacc') {
+        btnSintacc.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-amber-500 text-white shadow-xs cursor-pointer';
+        btnVeggie.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-white text-slate-500 border border-slate-200 hover:text-slate-800 cursor-pointer';
+      } else if (dietaryFilter === 'veggie') {
+        btnVeggie.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-emerald-600 text-white shadow-xs cursor-pointer';
+        btnSintacc.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-white text-slate-500 border border-slate-200 hover:text-slate-800 cursor-pointer';
+      } else {
+        btnSintacc.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-white text-slate-500 border border-slate-200 hover:text-slate-800 cursor-pointer';
+        btnVeggie.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-white text-slate-500 border border-slate-200 hover:text-slate-800 cursor-pointer';
+      }
+
+      renderProducts();
+    }
+
+    function handleSearch(val) {
+      searchQuery = val.trim().toLowerCase();
+      renderProducts();
+    }
+
+    function selectCategory(catId) {
+      selectedCategory = catId;
+      searchQuery = '';
+      document.getElementById('search-input').value = '';
+      renderCategories();
+      renderProducts();
+    }
+
+    function toggleExpand(productId) {
+      expandedProductIds[productId] = !expandedProductIds[productId];
+      renderProducts();
+    }
+
+    function renderCategories() {
+      const container = document.getElementById('categories-container');
+      const t = TRANSLATIONS[currentLang];
+      
+      let html = `
+        <button
+          type="button"
+          onclick="selectCategory('all')"
+          class="px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 cursor-pointer ${
+            selectedCategory === 'all'
+              ? 'bg-blue-600 text-white shadow-xs'
+              : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-200 shadow-xs'
+          }"
+        >
+          ${t.allCategories}
+        </button>
+      `;
+
+      CATEGORIES.forEach(cat => {
+        const isSel = selectedCategory === cat.id;
+        const name = cat[`name_${currentLang}`] || cat.name_es;
+        html += `
+          <button
+            type="button"
+            onclick="selectCategory('${cat.id}')"
+            class="px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 cursor-pointer ${
+              isSel
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-slate-700 border border-slate-200 hover:border-blue-200 shadow-xs'
+            }"
+          >
+            ${name}
+          </button>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function renderProducts() {
+      const container = document.getElementById('products-catalog-container');
+      const empty = document.getElementById('empty-state');
+      const t = TRANSLATIONS[currentLang];
+
+      const filtered = PRODUCTS.filter(p => {
+        const matchCat = selectedCategory === 'all' || p.category_id === selectedCategory;
+        const name = (p[`name_${currentLang}`] || p.name_es).toLowerCase();
+        const desc = (p[`desc_${currentLang}`] || p.desc_es).toLowerCase();
+        const matchSearch = !searchQuery || name.includes(searchQuery) || desc.includes(searchQuery);
+        
+        let matchDietary = true;
+        if (dietaryFilter === 'sintacc') matchDietary = p.is_sintacc;
+        if (dietaryFilter === 'veggie') matchDietary = p.is_veggie;
+
+        return matchCat && matchSearch && matchDietary;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+
+      if (viewMode === 'list') {
+        let html = '<div class="space-y-2.5">';
+        filtered.forEach(p => {
+          const isExp = Boolean(expandedProductIds[p.id]);
+          const name = p[`name_${currentLang}`] || p.name_es;
+          const desc = p[`desc_${currentLang}`] || p.desc_es;
+          const priceStr = p.price_unit ? `${formatCurrency(p.price)} / ${p.price_unit}` : formatCurrency(p.price);
+
+          html += `
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden transition-all duration-200" data-dish-id="${p.id}">
+              <div 
+                onclick="toggleExpand('${p.id}')"
+                class="p-3.5 flex items-center justify-between gap-3 cursor-pointer select-none"
+              >
+                ${p.image_url && !isExp ? `
+                  <div class="w-[62px] h-[62px] min-w-[62px] min-h-[62px] rounded-[14px] overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-100 relative">
+                    <img src="${p.image_url}" alt="${name}" class="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                ` : ''}
+
+                <div class="flex-1 min-w-0 pr-1 space-y-0.5">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <h3 class="font-extrabold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2">
+                      ${name}
+                    </h3>
+                  </div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-black text-xs sm:text-sm text-blue-700 tabular-nums">
+                      ${priceStr}
+                    </span>
+                    ${p.price_unit ? `
+                      <span class="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-900 text-[10px] font-extrabold border border-blue-200">
+                        ⚖️ ${t.byWeight}
+                      </span>
+                    ` : ''}
+                    ${p.is_sintacc ? `<span class="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-800 text-[9px] font-black border border-amber-200">🌾 ${t.sinTacc}</span>` : ''}
+                    ${p.is_veggie ? `<span class="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 text-[9px] font-black border border-emerald-200">🌱 ${t.veggie}</span>` : ''}
+                  </div>
+                  ${desc ? `
+                    <p class="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                      ${desc}
+                    </p>
+                  ` : ''}
+                </div>
+
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <!-- Botón Añadir Bloqueado -->
+                  <button
+                    type="button"
+                    onclick="event.stopPropagation(); openBlockedModal('order')"
+                    class="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-black flex items-center gap-1 active:scale-95 transition-all shadow-xs cursor-pointer"
+                    title="Añadir a comanda (Modo Demostración)"
+                  >
+                    <span>${t.addButton}</span>
+                    <span class="text-[10px]">🔒</span>
+                  </button>
+
+                  <!-- Botón Chevron Expandir -->
+                  <button
+                    type="button"
+                    onclick="event.stopPropagation(); toggleExpand('${p.id}')"
+                    class="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-500 hover:text-blue-700 border border-slate-200/80 transition-all duration-300 ${
+                      isExp ? 'rotate-180 text-blue-700 bg-blue-50 border-blue-200' : ''
+                    }"
+                    title="Ver foto y detalles"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              ${isExp ? `
+                <div class="px-3.5 pb-3.5 pt-1 border-t border-slate-100 space-y-3 bg-slate-50/50 animate-in fade-in">
+                  ${p.image_url ? `
+                    <div class="w-full h-[200px] max-h-[240px] rounded-[14px] overflow-hidden bg-slate-100 border border-slate-200 shadow-inner relative">
+                      <img src="${p.image_url}" alt="${name}" class="w-full h-full object-cover" />
+                    </div>
+                  ` : ''}
+
+                  <div class="p-3 bg-white rounded-xl border border-slate-200/80 space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                      <span class="font-semibold flex items-center gap-1.5 text-slate-700">
+                        <span class="text-amber-500">✨</span>
+                        ${t.freshPrepared}
+                      </span>
+                      <span class="font-black text-blue-700 text-sm">
+                        ${priceStr}
+                      </span>
+                    </div>
+
+                    ${p.allergens && p.allergens.length > 0 ? `
+                      <div class="pt-1.5 border-t border-slate-100 flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[10px] font-extrabold uppercase text-slate-400">Alérgenos:</span>
+                        ${p.allergens.map(a => `<span class="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-bold">⚠️ ${a}</span>`).join('')}
+                      </div>
+                    ` : `
+                      <div class="pt-1.5 border-t border-slate-100">
+                        <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">✓ Sin alérgenos declarados</span>
+                      </div>
+                    `}
+
+                    <!-- Botón Pedir Comanda Bloqueado dentro de Ficha -->
+                    <div class="pt-2 border-t border-slate-100 flex justify-end">
+                      <button
+                        type="button"
+                        onclick="openBlockedModal('order')"
+                        class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <span>Pedir plato a Cocina</span>
+                        <span>🔒</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      } else {
+        // VISTA GRID (GALERÍA 2 COLUMNAS)
+        let html = '<div class="grid grid-cols-2 gap-3">';
+        filtered.forEach(p => {
+          const name = p[`name_${currentLang}`] || p.name_es;
+          const desc = p[`desc_${currentLang}`] || p.desc_es;
+          const priceStr = p.price_unit ? `${formatCurrency(p.price)} / ${p.price_unit}` : formatCurrency(p.price);
+
+          html += `
+            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between" data-dish-id="${p.id}">
+              <div>
+                ${p.image_url ? `
+                  <div class="w-full h-[120px] bg-slate-100 overflow-hidden relative cursor-pointer" onclick="toggleExpand('${p.id}')">
+                    <img src="${p.image_url}" alt="${name}" class="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                ` : ''}
+                <div class="p-3 space-y-1">
+                  <div class="flex items-start justify-between gap-1">
+                    <h3 class="font-bold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2">
+                      ${name}
+                    </h3>
+                  </div>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="font-black text-xs text-blue-700 tabular-nums">
+                      ${priceStr}
+                    </span>
+                    ${p.is_sintacc ? `<span class="px-1 py-0.2 rounded bg-amber-50 text-amber-800 text-[8px] font-black border border-amber-200">🌾</span>` : ''}
+                    ${p.is_veggie ? `<span class="px-1 py-0.2 rounded bg-emerald-50 text-emerald-800 text-[8px] font-black border border-emerald-200">🌱</span>` : ''}
+                  </div>
+                  ${desc ? `
+                    <p class="text-[10px] text-slate-500 font-normal line-clamp-2 leading-relaxed">
+                      ${desc}
+                    </p>
+                  ` : ''}
+                </div>
+              </div>
+
+              <div class="p-3 pt-0">
+                <button
+                  type="button"
+                  onclick="openBlockedModal('order')"
+                  class="w-full py-2 px-2.5 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 text-center text-xs font-black text-blue-700 flex items-center justify-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <span>${t.addButton}</span>
+                  <span class="text-[10px]">🔒</span>
+                </button>
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      }
+    }
+
+    // Modal de Bloqueo Comercial
+    function openBlockedModal(type) {
+      const modal = document.getElementById('blocked-modal');
+      const title = document.getElementById('blocked-modal-title');
+      const desc = document.getElementById('blocked-modal-desc');
+      const t = TRANSLATIONS[currentLang];
+
+      title.textContent = t.modalTitle;
+      if (type === 'waiter') {
+        desc.textContent = t.modalDescWaiter;
+      } else if (type === 'order') {
+        desc.textContent = t.modalDescOrder;
+      } else {
+        desc.textContent = t.modalDescBill;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeBlockedModal() {
+      const modal = document.getElementById('blocked-modal');
+      modal.classList.add('hidden');
+    }
+
+    // Cerrar modal al hacer clic en el backdrop
+    document.addEventListener('click', (e) => {
+      const modal = document.getElementById('blocked-modal');
+      if (e.target === modal) {
+        closeBlockedModal();
+      }
+    });
+
+    // Inicialización al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      updateStaticTexts();
+      renderCategories();
+      renderProducts();
+    });
+  </script>
+</body>
+</html>

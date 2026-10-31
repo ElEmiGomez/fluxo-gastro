@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>Carta Fija Plantilla</title>
+  <title>Local · Carta Digital Demo | Fluxo</title>
   
   <!-- Favicon Isotipo Invertido Oficial Fluxo (Fondo blanco, F en degradado azul #2563EB -> #1D4ED8) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width='64' height='64' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563EB'/%3E%3Cstop offset='100%25' stop-color='%231D4ED8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%23FFFFFF' stroke='%23E2E8F0' stroke-width='2'/%3E%3Cpath d='M23 48V16H45 M23 31H38' stroke='url(%23g)' stroke-width='8.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='39' cy='46' r='4.2' fill='%230EA5E9'/%3E%3C/svg%3E">
@@ -51,13 +51,13 @@
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900 pb-36 font-sans antialiased selection:bg-blue-100 selection:text-blue-900" style="touch-action: manipulation;">
 
-  <!-- 1. HEADER FLUXO (Idéntico a /menu/[slug]) -->
+  <!-- 1. HEADER FLUXO (Local · Mesa X · Logo Fluxo · Botones Bloqueados) -->
   <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
     <div class="max-w-2xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2">
       
       <!-- Logo y Datos del Local -->
       <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
-        <div class="flex-shrink-0" title="Fluxo Gastronomic System">
+        <div class="flex-shrink-0 cursor-default" title="Fluxo Gastronomic System">
           <!-- Isotipo Oficial Fluxo 32px -->
           <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xs">
             <defs>
@@ -73,51 +73,71 @@
         </div>
         <div class="min-w-0 flex-1">
           <h1 id="restaurant-name-header" class="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight truncate">
-            Burger Gourmet Noia
+            Local
           </h1>
           <div class="flex items-center gap-1.5 mt-0.5">
             <span class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/80 uppercase whitespace-nowrap">
-              <span id="badge-carta-fija">Carta Digital Informativa</span>
-              <span class="w-1.5 h-1.5 rounded-full bg-blue-600 flex-shrink-0"></span>
+              <span id="badge-mesa">Mesa X</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+            </span>
+            <span class="inline-flex items-center gap-0.5 text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md border border-slate-200">
+              <span>🔒 Demo</span>
             </span>
           </div>
         </div>
       </div>
 
-      <!-- Selector de Idiomas Desplegable (Idéntico a Fluxo) -->
-      <div class="flex items-center gap-1.5 flex-shrink-0 relative">
+      <!-- Acciones de Cabecera: Llamar Mozo Bloqueado + Selector de Idiomas -->
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        
+        <!-- Botón Llamar Camarero Bloqueado -->
         <button
           type="button"
-          id="lang-dropdown-btn"
-          onclick="toggleLangDropdown()"
-          class="px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
-          title="Cambiar idioma / Change language"
+          onclick="openBlockedModal('waiter')"
+          class="px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 hover:border-amber-300 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+          title="Llamar al camarero (Modo Demostración)"
         >
-          <span id="current-lang-flag" class="text-xs">🔵</span>
-          <span id="current-lang-code" class="uppercase text-[11px] font-black tracking-tight">GL</span>
-          <svg class="w-3 h-3 text-slate-500 transition-transform duration-200" id="lang-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+          <svg class="w-3.5 h-3.5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <span class="text-[11px] font-black hidden sm:inline" id="btn-call-waiter-label">Mozo</span>
+          <span class="text-[10px]">🔒</span>
         </button>
 
-        <div id="lang-menu" class="hidden absolute right-0 top-full mt-1.5 w-36 bg-white rounded-2xl shadow-xl border border-slate-200 py-1 z-50 overflow-hidden">
-          <button type="button" onclick="selectLang('gl')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors hover:bg-slate-50 text-slate-700">
-            <span class="flex items-center gap-2"><span>🔵</span><span>Galego</span></span>
-            <span id="check-gl" class="text-blue-900 font-bold">✓</span>
+        <!-- Selector de Idiomas Desplegable -->
+        <div class="relative">
+          <button
+            type="button"
+            id="lang-dropdown-btn"
+            onclick="toggleLangDropdown()"
+            class="px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl font-black text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+            title="Cambiar idioma / Change language"
+          >
+            <span id="current-lang-flag" class="text-xs">🔵</span>
+            <span id="current-lang-code" class="uppercase text-[11px] font-black tracking-tight">GL</span>
+            <svg class="w-3 h-3 text-slate-500 transition-transform duration-200" id="lang-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
           </button>
-          <button type="button" onclick="selectLang('es')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors hover:bg-slate-50 text-slate-700">
-            <span class="flex items-center gap-2"><span>🇪🇸</span><span>Español</span></span>
-            <span id="check-es" class="hidden text-blue-900 font-bold">✓</span>
-          </button>
-          <button type="button" onclick="selectLang('en')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors hover:bg-slate-50 text-slate-700">
-            <span class="flex items-center gap-2"><span>🇬🇧</span><span>English</span></span>
-            <span id="check-en" class="hidden text-blue-900 font-bold">✓</span>
-          </button>
+
+          <div id="lang-menu" class="hidden absolute right-0 top-full mt-1.5 w-36 bg-white rounded-2xl shadow-xl border border-slate-200 py-1 z-50 overflow-hidden">
+            <button type="button" onclick="selectLang('gl')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors hover:bg-slate-50 text-slate-700">
+              <span class="flex items-center gap-2"><span>🔵</span><span>Galego</span></span>
+              <span id="check-gl" class="text-blue-900 font-bold">✓</span>
+            </button>
+            <button type="button" onclick="selectLang('es')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors hover:bg-slate-50 text-slate-700">
+              <span class="flex items-center gap-2"><span>🇪🇸</span><span>Español</span></span>
+              <span id="check-es" class="hidden text-blue-900 font-bold">✓</span>
+            </button>
+            <button type="button" onclick="selectLang('en')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between transition-colors hover:bg-slate-50 text-slate-700">
+              <span class="flex items-center gap-2"><span>🇬🇧</span><span>English</span></span>
+              <span id="check-en" class="hidden text-blue-900 font-bold">✓</span>
+            </button>
+          </div>
         </div>
+
       </div>
 
     </div>
   </header>
 
-  <!-- 2. CARTA GASTRONÓMICA (Idéntica a /menu/[slug]) -->
+  <!-- 2. CARTA GASTRONÓMICA DEMOSTRATIVA -->
   <main class="max-w-2xl mx-auto px-3.5 pt-3 space-y-3.5">
 
     <!-- Buscador & Controles de Vista -->
@@ -155,15 +175,15 @@
       </div>
     </div>
 
-    <!-- Carrusel de Categorías Gastronómicas con Filtros Dietéticos Sutiles -->
+    <!-- Carrusel de Categorías con Filtros Dietéticos -->
     <div id="menu-category-tabs" class="space-y-1.5 scroll-mt-16">
       <div id="categories-container" class="flex space-x-1.5 overflow-x-auto no-scrollbar py-0.5 touch-pan-x">
         <!-- Generado dinámicamente -->
       </div>
 
-      <!-- Píldoras Dietéticas Ultra-Discretas -->
+      <!-- Píldoras Dietéticas -->
       <div class="flex items-center gap-1.5 px-0.5">
-        <span class="text-[10px] text-slate-400 font-semibold">Filtros:</span>
+        <span class="text-[10px] text-slate-400 font-semibold" id="filters-title">Filtros:</span>
         <button
           type="button"
           id="filter-sintacc-btn"
@@ -185,7 +205,7 @@
       </div>
     </div>
 
-    <!-- Sugerencia Inteligente del Chef Según Categoría -->
+    <!-- Sugerencia Inteligente del Chef -->
     <div id="chef-suggestion-banner" class="p-3 bg-gradient-to-r from-blue-900 to-indigo-900 text-white rounded-2xl shadow-xs flex items-center gap-3">
       <div class="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center flex-shrink-0 font-black shadow-xs">
         <svg class="w-4 h-4 text-slate-950" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.4 7.2h7.6l-6.1 4.5 2.3 7.3-6.2-4.6-6.2 4.6 2.3-7.3-6.1-4.5h7.6z"/></svg>
@@ -195,12 +215,12 @@
           Recomendado para Comezar
         </span>
         <p id="chef-suggestion-text" class="text-xs text-slate-100 font-semibold leading-tight mt-0.5">
-          Proba o noso Combo Parella con 2 Dobles Monster e 2 Pintas ben frías.
+          Proba o noso Combo Parella con 2 Burgers Dobres e 2 Pintas ben frías.
         </p>
       </div>
     </div>
 
-    <!-- Contenedor Principal de Platos (Lista o Grid) -->
+    <!-- Contenedor Principal de Platos (Lista o Grid con Botones Bloqueados) -->
     <div id="products-catalog-container">
       <!-- Generado dinámicamente -->
     </div>
@@ -213,7 +233,7 @@
       </p>
     </div>
 
-    <!-- Footer Legal Informativo: Alérgenos, Precios con IVA y Aviso Sanitario Anisakis (Idéntico a Fluxo) -->
+    <!-- Footer Legal Informativo -->
     <footer class="pt-6 pb-24 text-center space-y-2">
       <div class="p-3.5 bg-white rounded-2xl border border-slate-200/80 text-[11px] text-slate-500 shadow-xs space-y-1.5 text-left">
         <p class="font-bold text-slate-800 flex items-center gap-1.5">
@@ -237,7 +257,7 @@
     </footer>
   </main>
 
-  <!-- 3. BARRA FLOTANTE INFERIOR FIJA INFORMATIVA (Plan Carta - No Transaccional) -->
+  <!-- 3. BARRA FLOTANTE INFERIOR CON PEDIDO A COCINA BLOQUEADO -->
   <div class="fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40 pointer-events-auto">
     <div class="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 border border-slate-800">
       <div class="flex items-center gap-2.5 min-w-0">
@@ -246,81 +266,155 @@
         </div>
         <div class="min-w-0">
           <span id="bottom-bar-title" class="text-[10px] font-black uppercase tracking-wider text-blue-400 block leading-tight">
-            Carta Digital Informativa
+            Carta Digital Demostrativa
           </span>
           <p id="bottom-bar-desc" class="text-xs text-slate-200 font-medium leading-tight truncate sm:whitespace-normal">
-            Para realizar o teu pedido ou consultar dúbidas sobre alérxenos, avisa ao teu camareiro.
+            Mesa X activa · Consulta de pratos e alerxias en tempo real
           </p>
         </div>
       </div>
+
+      <!-- Botón Pedir a Cocina Bloqueado -->
+      <button
+        type="button"
+        onclick="openBlockedModal('order')"
+        class="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-1.5 shadow-md shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
+      >
+        <span id="bottom-bar-order-btn">Pedir a Cocina</span>
+        <span>🔒</span>
+      </button>
     </div>
   </div>
 
-  <!-- JAVASCRIPT REACTIVO (Mismo catálogo y lógica trilingüe de Fluxo) -->
+  <!-- 4. MODAL COMERCIAL DE BLOQUEO (Al pulsar botones de Mozo o Cocina) -->
+  <div id="blocked-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div class="relative w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 text-center space-y-4">
+      
+      <!-- Icono Destacado -->
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/30">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      </div>
+
+      <!-- Título y Texto Dinámico -->
+      <div class="space-y-1.5">
+        <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-black uppercase tracking-wider">
+          <span>Modo Demostración</span>
+        </div>
+        <h3 id="blocked-modal-title" class="text-base font-extrabold text-slate-900">
+          Función de Demostración
+        </h3>
+        <p id="blocked-modal-desc" class="text-xs text-slate-600 leading-relaxed">
+          En un restaurante real con Fluxo activo, este botón envía la comanda al instante a las pantallas de Cocina (KDS) o avisa directamente al Comandero del mozo en sala.
+        </p>
+      </div>
+
+      <!-- Píldora de Valor Gastronómico -->
+      <div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-700 font-semibold space-y-1 text-left">
+        <div class="flex items-center gap-1.5 text-blue-700">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span class="font-bold">Cero comandas o bebidas perdidas</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-blue-700">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <span class="font-bold">Servicio un 40% más rápido en sala</span>
+        </div>
+      </div>
+
+      <!-- Botón de Cierre Limpio -->
+      <button
+        type="button"
+        onclick="closeBlockedModal()"
+        class="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+      >
+        Cerrar / Entendido
+      </button>
+
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT REACTIVO (Catálogo Completo Oficial · Modo Demostración) -->
   <script>
     const TRANSLATIONS = {
       gl: {
-        badge: "Carta Digital Informativa",
+        badgeTable: "Mesa X",
         searchPlaceholder: "Buscar pratos, bebidas...",
         allCategories: "Todas as Categorías",
         sinTacc: "Sen Glute",
         veggie: "Vexetariano",
         chefTag: "Recomendado para Comezar",
-        chefText: "Proba o noso Combo Parella con 2 Dobles Monster e 2 Pintas ben frías.",
+        chefText: "Proba o noso Combo Parella con 2 Burgers Dobres e 2 Pintas ben frías.",
         emptyText: "Non atopamos pratos con esa busca",
         legalTitle: "Información ao Consumidor",
         legalNotice: "Tódolos prezos inclúen o 10% de IVE. Se padece algunha alerxia ou intolerancia alimentaria, solicite a nosa táboa oficial de alérxenos ao persoal de sala antes de consumir.",
         anisakis: "Prevención de Anisakis: En cumprimento do RD 1021/2022, os nosos produtos da pesca foron conxelados previamente a -20ºC.",
-        bottomTitle: "Carta Digital Informativa",
-        bottomDesc: "Para realizar o teu pedido ou consultar dúbidas sobre alérxenos, avisa ao teu camareiro.",
+        bottomTitle: "Carta Digital Demostrativa",
+        bottomDesc: "Mesa X activa · Consulta de pratos e alerxias en tempo real",
+        bottomOrderBtn: "Pedir a Cocina",
+        callWaiterLabel: "Mozo",
         freshPrepared: "Plato elaborado ao momento con ingredientes frescos",
-        byWeight: "ao peso"
+        byWeight: "ao peso",
+        addButton: "+ Engadir",
+        modalTitle: "Función de Demostración",
+        modalDescWaiter: "Nun restaurante real con Fluxo activo, este botón notifica en menos de 1 segundo ao Comandero móbil do camareiro asignado á Mesa X.",
+        modalDescOrder: "Nun restaurante real con Fluxo activo, este botón envía a comanda ao instante á pantalla de Cociña (KDS) e á impresora térmica da barra.",
+        modalDescBill: "Nun restaurante real con Fluxo activo, este botón solicita a conta ao camareiro e prepara o ticket de mesa sen esperas."
       },
       es: {
-        badge: "Carta Digital Informativa",
+        badgeTable: "Mesa X",
         searchPlaceholder: "Buscar platos, bebidas...",
         allCategories: "Todas las Categorías",
         sinTacc: "Sin Gluten",
         veggie: "Vegetariano",
         chefTag: "Recomendado para Comenzar",
-        chefText: "Prueba nuestro Combo Pareja con 2 Dobles Monster y 2 Pintas bien frías.",
+        chefText: "Prueba nuestro Combo Pareja con 2 Burgers Dobles y 2 Pintas bien frías.",
         emptyText: "No encontramos platos con esa búsqueda",
         legalTitle: "Información al Consumidor",
         legalNotice: "Todos los precios incluyen el 10% de IVA. Si padece alguna alergia o intolerancia alimentaria, solicite nuestra tabla oficial de alérgenos al personal de sala antes de consumir.",
         anisakis: "Prevención de Anisakis: En cumplimiento del RD 1021/2022, nuestros productos de la pesca fueron congelados previamente a -20ºC.",
-        bottomTitle: "Carta Digital Informativa",
-        bottomDesc: "Para realizar tu pedido o consultar dudas sobre alérgenos, avisa a tu camarero.",
+        bottomTitle: "Carta Digital Demostrativa",
+        bottomDesc: "Mesa X activa · Consulta de platos y alérgenos en tiempo real",
+        bottomOrderBtn: "Pedir a Cocina",
+        callWaiterLabel: "Mozo",
         freshPrepared: "Plato elaborado al momento con ingredientes frescos",
-        byWeight: "al peso"
+        byWeight: "al peso",
+        addButton: "+ Añadir",
+        modalTitle: "Función de Demostración",
+        modalDescWaiter: "En un restaurante real con Fluxo activo, este botón notifica en menos de 1 segundo al Comandero móvil del mozo asignado a la Mesa X.",
+        modalDescOrder: "En un restaurante real con Fluxo activo, este botón envía la comanda al instante a la pantalla de Cocina (KDS) y a la impresora térmica de barra.",
+        modalDescBill: "En un restaurante real con Fluxo activo, este botón solicita la cuenta al mozo y prepara el ticket de mesa sin esperas."
       },
       en: {
-        badge: "Informative Digital Menu",
+        badgeTable: "Table X",
         searchPlaceholder: "Search dishes, drinks...",
         allCategories: "All Categories",
         sinTacc: "Gluten Free",
         veggie: "Vegetarian",
         chefTag: "Recommended to Start",
-        chefText: "Try our Couple Combo with 2 Double Monster Burgers and 2 fresh Pints.",
+        chefText: "Try our Couple Combo with 2 Double Burgers and 2 fresh Pints.",
         emptyText: "No dishes found matching your search",
         legalTitle: "Consumer Information",
         legalNotice: "All prices include 10% VAT. If you suffer from any food allergy or intolerance, please request our official allergen chart from our staff before ordering.",
         anisakis: "Anisakis Prevention: In compliance with RD 1021/2022, all seafood served raw or lightly cooked has been deep-frozen at -20ºC.",
-        bottomTitle: "Informative Digital Menu",
-        bottomDesc: "To place your order or ask questions about allergens, please notify your waiter.",
+        bottomTitle: "Demo Digital Menu",
+        bottomDesc: "Table X active · Real-time dish & allergen catalog",
+        bottomOrderBtn: "Send to Kitchen",
+        callWaiterLabel: "Waiter",
         freshPrepared: "Freshly prepared dish made to order",
-        byWeight: "by weight"
+        byWeight: "by weight",
+        addButton: "+ Add",
+        modalTitle: "Demonstration Feature",
+        modalDescWaiter: "In a live restaurant with Fluxo, this button instantly alerts the waiter's handheld device for Table X.",
+        modalDescOrder: "In a live restaurant with Fluxo, this button sends the order immediately to the Kitchen Display System (KDS) and bar thermal printer.",
+        modalDescBill: "In a live restaurant with Fluxo, this button requests the check without delays."
       }
     };
 
     const CATEGORIES = [
       { id: 'cat-1', name_gl: 'As Nosas Promos', name_es: 'Nuestras Promos', name_en: 'Our Promos' },
       { id: 'cat-2', name_gl: 'Entradas', name_es: 'Entradas', name_en: 'Starters' },
-      { id: 'cat-3', name_gl: 'Táboas', name_es: 'Tablas', name_en: 'Sharing Boards' },
-      { id: 'cat-4', name_gl: 'Ensaladas', name_es: 'Ensaladas', name_en: 'Salads' },
       { id: 'cat-5', name_gl: 'Pratos Principais', name_es: 'Platos Principales', name_en: 'Main Courses' },
-      { id: 'cat-7', name_gl: 'Burgers Gourmet', name_es: 'Burgers Gourmet', name_en: 'Gourmet Burgers' },
+      { id: 'cat-7', name_gl: 'Burgers', name_es: 'Burgers', name_en: 'Burgers' },
       { id: 'cat-10', name_gl: 'Sobremesas', name_es: 'Postres', name_en: 'Desserts' },
-      { id: 'cat-11', name_gl: 'Sen Glute', name_es: 'Sin TACC', name_en: 'Gluten Free' },
       { id: 'cat-12', name_gl: 'Bebidas', name_es: 'Bebidas', name_en: 'Drinks' }
     ];
 
@@ -338,7 +432,7 @@
         desc_en: '2 Double Monster burgers with bacon and cheddar, giant portion of rustic fries and 2 craft beers.',
         is_sintacc: false,
         is_veggie: false,
-        allergens: ['Glute', 'Lácteos']
+        allergens: ['Gluten', 'Lácteos']
       },
       {
         id: 'p-ent-1',
@@ -348,48 +442,63 @@
         name_gl: 'Bastóns de Mozzarella Crocantes',
         name_es: 'Bastones de Mozzarella Crocantes',
         name_en: 'Crispy Mozzarella Sticks',
-        desc_gl: '6 bastóns empanados en panko con dip de mollo marinara caseiro.',
-        desc_es: '6 bastones empanados en panko con dip de salsa marinara casera.',
-        desc_en: '6 panko-breaded sticks with homemade marinara dip.',
+        desc_gl: '6 bastóns empanados en panko xaponés con dip de mollo marinara caseiro.',
+        desc_es: '6 bastones empanados en panko japonés con dip de salsa marinara casera.',
+        desc_en: '6 mozzarella sticks breaded in panko with homemade marinara dip.',
         is_sintacc: false,
         is_veggie: true,
-        allergens: ['Glute', 'Lácteos']
+        allergens: ['Gluten', 'Lácteos', 'Huevos']
       },
       {
-        id: 'p-tab-1',
-        category_id: 'cat-3',
-        price: 19.80,
+        id: 'p-ent-2',
+        category_id: 'cat-2',
+        price: 18.90,
         image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
         name_gl: 'Táboa Gourmet Picada Quente (Para 3)',
         name_es: 'Tabla Gourmet Picada Caliente (Para 3)',
-        name_en: 'Gourmet Hot Fingerfood Platter (For 3)',
-        desc_gl: 'Nuggets crocantes, tequeños de queixo, patacas cheddar con bacon, aros de cebola e variedade de dips.',
+        name_en: 'Gourmet Hot Sharing Board (For 3)',
+        desc_gl: 'Nuggets crocantes, tequeños de queixo, patacas cheddar con touciño, aros de cebola e variedade de dips.',
         desc_es: 'Nuggets crocantes, tequeños de queso, papas cheddar con bacon, aros de cebolla y variedad de dips.',
-        desc_en: 'Crispy nuggets, cheese tequeños, cheddar bacon fries, onion rings and assorted dips.',
+        desc_en: 'Crispy chicken bites, cheese tequeños, cheddar bacon fries, onion rings and dips.',
         is_sintacc: false,
         is_veggie: false,
-        allergens: ['Glute', 'Lácteos', 'Ovo']
+        allergens: ['Gluten', 'Lácteos', 'Huevos']
       },
       {
-        id: 'p-ens-1',
-        category_id: 'cat-4',
-        price: 9.40,
+        id: 'p-ent-3',
+        category_id: 'cat-2',
+        price: 4.80,
+        image_url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Patacas Fritas / Rústicas Crocantes',
+        name_es: 'Papas Fritas / Rústicas Crujientes',
+        name_en: 'Crispy Hand-cut Rustic Fries',
+        desc_gl: 'Porción abundante de patacas gallegas cortadas a man, fritidas ao momento con sal mariña.',
+        desc_es: 'Porción abundante de patatas gallegas cortadas a mano, fritas al momento con sal marina.',
+        desc_en: 'Generous portion of hand-cut local potatoes, freshly fried with sea salt flakes.',
+        is_sintacc: true,
+        is_veggie: true,
+        allergens: []
+      },
+      {
+        id: 'p-prin-1',
+        category_id: 'cat-5',
+        price: 9.50,
         image_url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80',
-        name_gl: 'Ensalada Caesar con Polo Grillado',
+        name_gl: 'Ensalada Caesar con Polo Asado',
         name_es: 'Ensalada Caesar con Pollo Grillado',
-        name_en: 'Caesar Salad with Grilled Chicken',
-        desc_gl: 'Mix de leitugas crocantes, peituga grillada, croutons dourados, lascas de parmesano e aderezo caesar tradicional.',
+        name_en: 'Grilled Chicken Caesar Salad',
+        desc_gl: 'Mix de leitugas crocantes, peituga á grella, croutons dourados, lascas de parmesano e aderezo caesar.',
         desc_es: 'Mix de lechugas crocantes, pechuga grillada, croutons dorados, lascas de parmesano y aderezo caesar tradicional.',
-        desc_en: 'Crisp lettuce mix, grilled chicken breast, golden croutons, parmesan shavings and classic caesar dressing.',
+        desc_en: 'Crisp romaine, grilled chicken breast, garlic croutons, shaved parmesan and classic caesar dressing.',
         is_sintacc: false,
         is_veggie: false,
-        allergens: ['Lácteos', 'Mostaza']
+        allergens: ['Gluten', 'Lácteos', 'Huevos', 'Mostaza']
       },
       {
-        id: 'p-pp-1',
+        id: 'p-prin-2',
         category_id: 'cat-5',
         price: 12.50,
-        image_url: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=800&q=80',
+        image_url: '/images/milanesa-napolitana.jpg',
         name_gl: 'Milanesa Napolitana con Guarnición',
         name_es: 'Milanesa Napolitana con Guarnición',
         name_en: 'Neapolitan Schnitzel with Side',
@@ -398,10 +507,10 @@
         desc_en: 'Tender beef or chicken cutlet with homemade tomato sauce, ham and melted mozzarella.',
         is_sintacc: false,
         is_veggie: false,
-        allergens: ['Glute', 'Lácteos', 'Ovo']
+        allergens: ['Gluten', 'Lácteos', 'Huevos']
       },
       {
-        id: 'p-gal-1',
+        id: 'p-prin-3',
         category_id: 'cat-5',
         price: 48.00,
         price_unit: 'kg',
@@ -429,25 +538,25 @@
         desc_en: 'Double 160g beef patty, quadruple melted cheddar, crispy bacon and BBQ sauce on a brioche bun.',
         is_sintacc: false,
         is_veggie: false,
-        allergens: ['Glute', 'Lácteos']
+        allergens: ['Gluten', 'Lácteos']
       },
       {
-        id: 'p-bur-gallaecia',
+        id: 'p-bur-2',
         category_id: 'cat-7',
         price: 15.50,
         image_url: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=800&q=80',
         name_gl: 'Burger Gallaecia: Rubia Galega & San Simón',
         name_es: 'Burger Gallaecia: Rubia Gallega & San Simón',
         name_en: 'Burger Gallaecia: Galician Beef & Smoked Cheese',
-        desc_gl: '180g de carne de Rubia Galega madurada, queixo San Simón da Costa afumado fundido, cebola caramelizada ao Mencía e rúcula en pan brioche artesán.',
+        desc_gl: '180g de carne de Rubia Galega madurada, queixo San Simón da Costa afumado fundido, cebola caramelizada ao Mencía e rúcula en pan brioche.',
         desc_es: '180g de carne de Rubia Gallega madurada, queso San Simón da Costa ahumado fundido, cebolla caramelizada al Mencía y rúcula en pan brioche artesano.',
         desc_en: '180g aged Galician beef, melted smoked San Simón cheese, Mencía wine caramelized onion and arugula on artisan brioche.',
         is_sintacc: false,
         is_veggie: false,
-        allergens: ['Glute', 'Lácteos']
+        allergens: ['Gluten', 'Lácteos']
       },
       {
-        id: 'p-bur-veggie',
+        id: 'p-bur-3',
         category_id: 'cat-7',
         price: 12.80,
         image_url: 'https://images.unsplash.com/photo-1520072959219-c595dc870360?auto=format&fit=crop&w=800&q=80',
@@ -459,14 +568,44 @@
         desc_en: 'Artisan chickpea, spinach and mushroom patty, vegan cheese, roasted tomato and avocado mayo.',
         is_sintacc: false,
         is_veggie: true,
-        allergens: ['Glute']
+        allergens: ['Gluten']
       },
       {
         id: 'p-pos-1',
         category_id: 'cat-10',
+        price: 6.50,
+        image_url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Tarta de Queixo Artesá da Ría',
+        name_es: 'Tarta de Queso Artesana de la Ría',
+        name_en: 'Creamy Baked Artisan Cheesecake',
+        desc_gl: 'Forneada ao estilo tradicional con corazón cremoso e coulis de froitas do bosque naturais.',
+        desc_es: 'Cheesecake cremoso horneado estilo tradicional con coulis casero de frutos del bosque.',
+        desc_en: 'San Sebastian style baked cheesecake with creamy center and fresh forest berry coulis.',
+        is_sintacc: true,
+        is_veggie: true,
+        allergens: ['Lácteos', 'Huevos']
+      },
+      {
+        id: 'p-pos-2',
+        category_id: 'cat-10',
+        price: 6.20,
+        image_url: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Volcán de Chocolate con Xelado de Vainilla',
+        name_es: 'Volcán de Chocolate con Helado de Vainilla',
+        name_en: 'Warm Chocolate Lava Cake with Ice Cream',
+        desc_gl: 'Biscoito morno recheo de chocolate negro fundido, acompañado de xelado artesán.',
+        desc_es: 'Bizcochuelo tibio relleno de chocolate amargo fundido, acompañado de helado artesanal.',
+        desc_en: 'Warm chocolate fondant with molten center, served with artisan vanilla gelato.',
+        is_sintacc: false,
+        is_veggie: true,
+        allergens: ['Gluten', 'Lácteos', 'Huevos']
+      },
+      {
+        id: 'p-pos-3',
+        category_id: 'cat-10',
         price: 5.50,
         image_url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
-        name_gl: 'Tarta de Santiago Artesanal',
+        name_gl: 'Tarta de Santiago Tradicional',
         name_es: 'Tarta de Santiago Artesanal',
         name_en: 'Traditional Galician Almond Cake',
         desc_gl: 'Receita tradicional con 100% améndoa seleccionada marcona, ovos campeiros e azucre glas con Cruz de Santiago.',
@@ -474,22 +613,7 @@
         desc_en: 'Traditional recipe with 100% marcona almonds, free-range eggs and Santiago Cross powdered sugar.',
         is_sintacc: true,
         is_veggie: true,
-        allergens: ['Froitos de cáscara', 'Ovo']
-      },
-      {
-        id: 'p-pos-2',
-        category_id: 'cat-10',
-        price: 6.00,
-        image_url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80',
-        name_gl: 'Tarta de Queixo Forneada Cremosa',
-        name_es: 'Tarta de Queso Horneada Cremosa',
-        name_en: 'Baked Creamy Cheesecake',
-        desc_gl: 'Forneada ao estilo Donostia con corazón cremoso e coulis de froitas do bosque naturais.',
-        desc_es: 'Horneada al estilo Donostia con corazón cremoso y coulis de frutos del bosque naturales.',
-        desc_en: 'San Sebastian style baked cheesecake with creamy center and fresh forest berry coulis.',
-        is_sintacc: true,
-        is_veggie: true,
-        allergens: ['Lácteos', 'Ovo']
+        allergens: ['Frutos de cáscara', 'Huevos']
       },
       {
         id: 'p-beb-1',
@@ -499,80 +623,66 @@
         name_gl: 'Estrella Galicia 1906 Reserva Especial (33cl)',
         name_es: 'Estrella Galicia 1906 Reserva Especial (33cl)',
         name_en: 'Estrella Galicia 1906 Special Reserve (33cl)',
-        desc_gl: 'Cervexa tostada de cor ámbar brillante, escuma cremosa e notas a maltes caramelizados.',
-        desc_es: 'Cerveza tostada de color ámbar brillante, espuma cremosa y notas a maltas caramelizadas.',
-        desc_en: 'Roasted amber beer with creamy foam and toasted malt notes.',
+        desc_gl: 'Cervexa tostada extra con notas a caramelo e malte tostado.',
+        desc_es: 'Cerveza tostada extra con notas a caramelo y malta tostada.',
+        desc_en: 'Galician dark lager with roasted malt and caramel notes.',
         is_sintacc: false,
         is_veggie: true,
-        allergens: ['Glute']
+        allergens: ['Gluten']
       },
       {
         id: 'p-beb-2',
         category_id: 'cat-12',
-        price: 18.00,
-        image_url: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80',
-        name_gl: 'Botella Albariño D.O. Rías Baixas',
-        name_es: 'Botella Albariño D.O. Rías Baixas',
-        name_en: 'Bottle Albariño D.O. Rías Baixas',
-        desc_gl: 'Viño branco atlántico fresco, aromático e elegante, con notas de mazá verde e cítricos.',
-        desc_es: 'Vino blanco atlántico fresco, aromático y elegante, con notas de manzana verde y cítricos.',
-        desc_en: 'Fresh Atlantic white wine, aromatic and elegant, with green apple and citrus hints.',
+        price: 1.80,
+        image_url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80',
+        name_gl: 'Café de Especialidade (Só / Cortado / Con Leite)',
+        name_es: 'Café de Especialidad (Solo / Cortado / Con Leche)',
+        name_en: 'Specialty Coffee (Espresso / Macchiato / Latte)',
+        desc_gl: '100% Arábica de torrado natural en gran recén moído.',
+        desc_es: '100% Arábica de tueste natural en grano recién molido.',
+        desc_en: '100% freshly ground Arabica beans, made to order.',
         is_sintacc: true,
         is_veggie: true,
-        allergens: ['Sulfitos']
+        allergens: ['Lácteos']
       }
     ];
 
-    // ESTADO DE LA APLICACIÓN
     let currentLang = 'gl';
     let selectedCategory = 'all';
     let searchQuery = '';
-    let dietaryFilter = 'all'; // 'all', 'sintacc', 'veggie'
-    let viewMode = 'list'; // 'list', 'grid'
+    let dietaryFilter = null; // 'sintacc' | 'veggie' | null
+    let viewMode = 'list'; // 'list' | 'grid'
     let expandedProductIds = {};
 
     function formatCurrency(amount) {
-      return Number(amount).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+      return amount.toFixed(2).replace('.', ',') + ' €';
     }
 
     function toggleLangDropdown() {
       const menu = document.getElementById('lang-menu');
       const chevron = document.getElementById('lang-chevron');
-      const isHidden = menu.classList.contains('hidden');
-      if (isHidden) {
-        menu.classList.remove('hidden');
-        chevron.classList.add('rotate-180');
-      } else {
-        menu.classList.add('hidden');
-        chevron.classList.remove('rotate-180');
-      }
+      menu.classList.toggle('hidden');
+      chevron.classList.toggle('rotate-180');
     }
-
-    // Cerrar dropdown al hacer click fuera
-    window.addEventListener('click', (e) => {
-      const btn = document.getElementById('lang-dropdown-btn');
-      const menu = document.getElementById('lang-menu');
-      if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
-        menu.classList.add('hidden');
-        document.getElementById('lang-chevron')?.classList.remove('rotate-180');
-      }
-    });
 
     function selectLang(lang) {
       currentLang = lang;
+      
       const flags = { gl: '🔵', es: '🇪🇸', en: '🇬🇧' };
       document.getElementById('current-lang-flag').textContent = flags[lang];
       document.getElementById('current-lang-code').textContent = lang.toUpperCase();
-
+      
       ['gl', 'es', 'en'].forEach(l => {
-        const check = document.getElementById(`check-${l}`);
-        if (check) {
-          if (l === lang) check.classList.remove('hidden');
-          else check.classList.add('hidden');
+        const el = document.getElementById(`check-${l}`);
+        if (el) {
+          if (l === lang) el.classList.remove('hidden');
+          else el.classList.add('hidden');
         }
       });
 
-      toggleLangDropdown();
+      document.getElementById('lang-menu').classList.add('hidden');
+      document.getElementById('lang-chevron').classList.remove('rotate-180');
+
       updateStaticTexts();
       renderCategories();
       renderProducts();
@@ -580,7 +690,6 @@
 
     function updateStaticTexts() {
       const t = TRANSLATIONS[currentLang];
-      document.getElementById('badge-carta-fija').textContent = t.badge;
       document.getElementById('search-input').placeholder = t.searchPlaceholder;
       document.getElementById('label-filter-sintacc').textContent = t.sinTacc;
       document.getElementById('label-filter-veggie').textContent = t.veggie;
@@ -592,6 +701,9 @@
       document.getElementById('footer-anisakis').innerHTML = `🐟 <span class="font-semibold">Prevención de Anisakis:</span> ${t.anisakis}`;
       document.getElementById('bottom-bar-title').textContent = t.bottomTitle;
       document.getElementById('bottom-bar-desc').textContent = t.bottomDesc;
+      document.getElementById('bottom-bar-order-btn').textContent = t.bottomOrderBtn;
+      document.getElementById('badge-mesa').textContent = t.badgeTable;
+      document.getElementById('btn-call-waiter-label').textContent = t.callWaiterLabel;
     }
 
     function setViewMode(mode) {
@@ -610,13 +722,17 @@
     }
 
     function toggleDietaryFilter(type) {
-      dietaryFilter = dietaryFilter === type ? 'all' : type;
-      
+      if (dietaryFilter === type) {
+        dietaryFilter = null;
+      } else {
+        dietaryFilter = type;
+      }
+
       const btnSintacc = document.getElementById('filter-sintacc-btn');
       const btnVeggie = document.getElementById('filter-veggie-btn');
 
       if (dietaryFilter === 'sintacc') {
-        btnSintacc.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-amber-600 text-white shadow-xs cursor-pointer';
+        btnSintacc.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-amber-500 text-white shadow-xs cursor-pointer';
         btnVeggie.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-white text-slate-500 border border-slate-200 hover:text-slate-800 cursor-pointer';
       } else if (dietaryFilter === 'veggie') {
         btnVeggie.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-emerald-600 text-white shadow-xs cursor-pointer';
@@ -625,6 +741,7 @@
         btnSintacc.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-white text-slate-500 border border-slate-200 hover:text-slate-800 cursor-pointer';
         btnVeggie.className = 'px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1 bg-white text-slate-500 border border-slate-200 hover:text-slate-800 cursor-pointer';
       }
+
       renderProducts();
     }
 
@@ -726,7 +843,7 @@
                 class="p-3.5 flex items-center justify-between gap-3 cursor-pointer select-none"
               >
                 ${p.image_url && !isExp ? `
-                  <div class="w-[58px] h-[58px] min-w-[58px] min-h-[58px] rounded-[14px] overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-100 relative">
+                  <div class="w-[62px] h-[62px] min-w-[62px] min-h-[62px] rounded-[14px] overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-100 relative">
                     <img src="${p.image_url}" alt="${name}" class="w-full h-full object-cover" loading="lazy" />
                   </div>
                 ` : ''}
@@ -746,8 +863,8 @@
                         ⚖️ ${t.byWeight}
                       </span>
                     ` : ''}
-                    ${p.is_sintacc ? `<span class="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-800 text-[9px] font-black border border-amber-200">🌾 Sen Glute</span>` : ''}
-                    ${p.is_veggie ? `<span class="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 text-[9px] font-black border border-emerald-200">🌱 Veggie</span>` : ''}
+                    ${p.is_sintacc ? `<span class="px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-800 text-[9px] font-black border border-amber-200">🌾 ${t.sinTacc}</span>` : ''}
+                    ${p.is_veggie ? `<span class="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-800 text-[9px] font-black border border-emerald-200">🌱 ${t.veggie}</span>` : ''}
                   </div>
                   ${desc ? `
                     <p class="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
@@ -756,14 +873,26 @@
                   ` : ''}
                 </div>
 
-                <div class="flex items-center gap-1.5 flex-shrink-0">
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <!-- Botón Añadir Bloqueado -->
+                  <button
+                    type="button"
+                    onclick="event.stopPropagation(); openBlockedModal('order')"
+                    class="px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-black flex items-center gap-1 active:scale-95 transition-all shadow-xs cursor-pointer"
+                    title="Añadir a comanda (Modo Demostración)"
+                  >
+                    <span>${t.addButton}</span>
+                    <span class="text-[10px]">🔒</span>
+                  </button>
+
+                  <!-- Botón Chevron Expandir -->
                   <button
                     type="button"
                     onclick="event.stopPropagation(); toggleExpand('${p.id}')"
                     class="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 text-slate-500 hover:text-blue-700 border border-slate-200/80 transition-all duration-300 ${
                       isExp ? 'rotate-180 text-blue-700 bg-blue-50 border-blue-200' : ''
                     }"
-                    title="Ver foto e detalles"
+                    title="Ver foto y detalles"
                   >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
                   </button>
@@ -791,14 +920,26 @@
 
                     ${p.allergens && p.allergens.length > 0 ? `
                       <div class="pt-1.5 border-t border-slate-100 flex items-center gap-1.5 flex-wrap">
-                        <span class="text-[10px] font-extrabold uppercase text-slate-400">Alérxenos:</span>
+                        <span class="text-[10px] font-extrabold uppercase text-slate-400">Alérgenos:</span>
                         ${p.allergens.map(a => `<span class="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-bold">⚠️ ${a}</span>`).join('')}
                       </div>
                     ` : `
                       <div class="pt-1.5 border-t border-slate-100">
-                        <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">✓ Sen alérxenos declarados</span>
+                        <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">✓ Sin alérgenos declarados</span>
                       </div>
                     `}
+
+                    <!-- Botón Pedir Comanda Bloqueado dentro de Ficha -->
+                    <div class="pt-2 border-t border-slate-100 flex justify-end">
+                      <button
+                        type="button"
+                        onclick="openBlockedModal('order')"
+                        class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black flex items-center gap-1.5 shadow-md shadow-blue-500/25 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <span>Pedir plato a Cocina</span>
+                        <span>🔒</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ` : ''}
@@ -819,31 +960,40 @@
             <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between" data-dish-id="${p.id}">
               <div>
                 ${p.image_url ? `
-                  <div class="w-full h-[120px] bg-slate-100 overflow-hidden relative">
+                  <div class="w-full h-[120px] bg-slate-100 overflow-hidden relative cursor-pointer" onclick="toggleExpand('${p.id}')">
                     <img src="${p.image_url}" alt="${name}" class="w-full h-full object-cover" loading="lazy" />
                   </div>
                 ` : ''}
-                <div class="p-3.5 space-y-1">
-                  <div class="flex items-start justify-between gap-2">
-                    <h3 class="font-bold text-slate-900 text-xs sm:text-sm leading-snug">
+                <div class="p-3 space-y-1">
+                  <div class="flex items-start justify-between gap-1">
+                    <h3 class="font-bold text-slate-900 text-xs sm:text-sm leading-snug line-clamp-2">
                       ${name}
                     </h3>
-                    <span class="font-black text-xs sm:text-sm text-blue-700 flex-shrink-0 tabular-nums">
+                  </div>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="font-black text-xs text-blue-700 tabular-nums">
                       ${priceStr}
                     </span>
+                    ${p.is_sintacc ? `<span class="px-1 py-0.2 rounded bg-amber-50 text-amber-800 text-[8px] font-black border border-amber-200">🌾</span>` : ''}
+                    ${p.is_veggie ? `<span class="px-1 py-0.2 rounded bg-emerald-50 text-emerald-800 text-[8px] font-black border border-emerald-200">🌱</span>` : ''}
                   </div>
                   ${desc ? `
-                    <p class="text-[11px] text-slate-500 font-normal line-clamp-2 leading-relaxed">
+                    <p class="text-[10px] text-slate-500 font-normal line-clamp-2 leading-relaxed">
                       ${desc}
                     </p>
                   ` : ''}
                 </div>
               </div>
 
-              <div class="p-3.5 pt-0">
-                <div class="py-2 px-3 bg-blue-50/70 rounded-xl border border-blue-100 text-center text-xs font-black text-blue-700">
-                  ${priceStr}
-                </div>
+              <div class="p-3 pt-0">
+                <button
+                  type="button"
+                  onclick="openBlockedModal('order')"
+                  class="w-full py-2 px-2.5 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 text-center text-xs font-black text-blue-700 flex items-center justify-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+                >
+                  <span>${t.addButton}</span>
+                  <span class="text-[10px]">🔒</span>
+                </button>
               </div>
             </div>
           `;
@@ -852,6 +1002,38 @@
         container.innerHTML = html;
       }
     }
+
+    // Modal de Bloqueo Comercial
+    function openBlockedModal(type) {
+      const modal = document.getElementById('blocked-modal');
+      const title = document.getElementById('blocked-modal-title');
+      const desc = document.getElementById('blocked-modal-desc');
+      const t = TRANSLATIONS[currentLang];
+
+      title.textContent = t.modalTitle;
+      if (type === 'waiter') {
+        desc.textContent = t.modalDescWaiter;
+      } else if (type === 'order') {
+        desc.textContent = t.modalDescOrder;
+      } else {
+        desc.textContent = t.modalDescBill;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeBlockedModal() {
+      const modal = document.getElementById('blocked-modal');
+      modal.classList.add('hidden');
+    }
+
+    // Cerrar modal al hacer clic en el backdrop
+    document.addEventListener('click', (e) => {
+      const modal = document.getElementById('blocked-modal');
+      if (e.target === modal) {
+        closeBlockedModal();
+      }
+    });
 
     // Inicialización al cargar la página
     document.addEventListener('DOMContentLoaded', () => {
