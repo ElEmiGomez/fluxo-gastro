@@ -1,41 +1,18 @@
 <!DOCTYPE html>
-<html lang="es" class="scroll-smooth">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>Local · Carta QR Digital Demo | Fluxo</title>
-  
-  <!-- Favicon Isotipo Oficial Fluxo (Fondo azul degradado #2563EB a #1D4ED8, F blanca y punto celeste) -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' width='64' height='64' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%232563EB'/%3E%3Cstop offset='55%25' stop-color='%231D4ED8'/%3E%3Cstop offset='100%25' stop-color='%230EA5E9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23bg)'/%3E%3Cpath d='M23 48V16H45 M23 31H38' stroke='%23FFFFFF' stroke-width='8.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='39' cy='46' r='4.2' fill='%2338BDF8'/%3E%3C/svg%3E">
-  
-  <!-- Google Fonts: Plus Jakarta Sans -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nombre del Local — Carta Digital Interactiva | Fluxo</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-          },
-          boxShadow: {
-            'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            'card': '0 2px 8px -2px rgba(15, 23, 42, 0.06), 0 1px 4px -1px rgba(15, 23, 42, 0.04)',
-          }
-        }
-      }
-    }
-  </script>
-
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-tap-highlight-color: transparent;
-      background-color: #F8FAFC;
     }
     .no-scrollbar::-webkit-scrollbar {
       display: none;
@@ -44,76 +21,93 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+    .cat-fade-mask {
+      -webkit-mask-image: linear-gradient(to right, transparent 0px, black 12px, black calc(100% - 12px), transparent 100%);
+      mask-image: linear-gradient(to right, transparent 0px, black 12px, black calc(100% - 12px), transparent 100%);
+    }
+    #bottom-category-bar.cart-active {
+      bottom: 84px;
+    }
+    @media (min-width: 640px) {
+      #bottom-category-bar.cart-active {
+        bottom: 94px;
+      }
     }
   </style>
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-900 pb-44 font-sans antialiased selection:bg-blue-100 selection:text-blue-900" style="touch-action: manipulation;">
+<body class="min-h-screen bg-slate-50/70 pb-36 relative selection:bg-blue-600 selection:text-white">
 
-  <!-- 1. CABECERA ERGONÓMICA OFICIAL FLUXO -->
-  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-    <div class="max-w-2xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-2">
-      
-      <!-- Logo y Datos de Mesa ("Local" y "MESA #X") -->
-      <div class="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
-        <div class="flex-shrink-0 cursor-default" title="Fluxo Gastronomic System">
-          <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-xs">
+  <!-- TOAST REACTIVO AL AÑADIR AL PEDIDO -->
+  <div id="order-toast" class="hidden fixed top-16 inset-x-4 max-w-md mx-auto z-50 transition-all duration-200">
+    <div class="bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700/80 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span class="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center text-xs font-black flex-shrink-0">✓</span>
+        <p class="text-xs font-bold truncate">
+          <span id="toast-prefix" class="text-slate-300">Añadido al pedido:</span> <span id="toast-product-name" class="text-white font-black"></span>
+        </p>
+      </div>
+      <span id="toast-badge" class="text-[10px] font-black text-blue-300 uppercase tracking-wider flex-shrink-0">En pedido</span>
+    </div>
+  </div>
+
+  <!-- 1. CABECERA STICKY (Paridad 100% con MenuHeader.tsx de Burger House Gourmet) -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-4 py-2.5 sm:py-3 transition-all">
+    <div class="max-w-xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2">
+      <!-- Identidad del Restaurante + Badge de Mesa -->
+      <div class="min-w-0 flex items-center gap-2 sm:gap-2.5">
+        <div class="w-7 h-7 rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0">
+            <rect width="36" height="36" rx="10" fill="url(#fluxo_header_grad_template)"/>
+            <path d="M11 10.5C11 9.67157 11.6716 9 12.5 9H24.5C25.3284 9 26 9.67157 26 10.5V12.5C26 13.3284 25.3284 14 24.5 14H16V16.5H22.5C23.3284 16.5 24 17.1716 24 18V19.5C24 20.3284 23.3284 21 22.5 21H16V25.5C16 26.3284 15.3284 27 14.5 27H12.5C11.6716 27 11 26.3284 11 25.5V10.5Z" fill="white"/>
+            <circle cx="24.5" cy="24.5" r="2.5" fill="#38BDF8"/>
             <defs>
-              <linearGradient id="fluxoHeaderGradTpl" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#2563EB" />
-                <stop offset="55%" stop-color="#1D4ED8" />
-                <stop offset="100%" stop-color="#0EA5E9" />
+              <linearGradient id="fluxo_header_grad_template" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#2563EB"/>
+                <stop offset="0.5" stop-color="#1D4ED8"/>
+                <stop offset="1" stop-color="#0EA5E9"/>
               </linearGradient>
             </defs>
-            <rect width="64" height="64" rx="18" fill="url(#fluxoHeaderGradTpl)" />
-            <path d="M23 48V16H45 M23 31H38" stroke="#FFFFFF" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round" />
-            <circle cx="39" cy="46" r="4.2" fill="#38BDF8" />
           </svg>
         </div>
-        <div class="min-w-0 flex-1">
-          <h1 class="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight truncate">
-            Local
+        <div class="min-w-0 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+          <h1 class="text-xs sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight truncate">
+            Nombre del Local
           </h1>
-          <div class="flex items-center gap-1.5 mt-0.5">
-            <span class="inline-flex items-center gap-1 text-[9px] sm:text-[11px] font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/80 uppercase whitespace-nowrap">
-              <span>MESA #X</span>
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
-            </span>
-          </div>
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200/80 w-fit flex-shrink-0 whitespace-nowrap">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="ui-table-badge">MESA #X</span>
+          </span>
         </div>
       </div>
 
-      <!-- Acciones de Cabecera -->
+      <!-- Acciones Rápidas: Selector Idioma + Premios + Servicio + Llamar al Mozo -->
       <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-        
-        <!-- Selector de Idiomas -->
+        <!-- Selector de Idioma con Desplegable -->
         <div class="relative">
           <button
             type="button"
-            onclick="toggleLangDropdown()"
-            id="lang-dropdown-btn"
-            class="px-2 py-1.5 rounded-xl font-black text-xs bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
-            title="Cambiar idioma"
+            onclick="toggleLangMenu(event)"
+            aria-label="Cambiar idioma"
+            title="Idioma / Language / Lingua"
+            class="flex items-center gap-1 px-2 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-bold text-xs transition-all active:scale-95 border border-slate-200/80 cursor-pointer"
           >
-            <span class="text-xs">🌐</span>
-            <span id="current-lang-code" class="uppercase text-[11px] font-black tracking-tight">ES</span>
-            <svg class="w-3 h-3 text-slate-500 transition-transform duration-200" id="lang-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+            <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            <span id="current-lang-label" class="uppercase text-[11px] font-black tracking-tight">ES</span>
+            <svg id="lang-chevron" class="w-3 h-3 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
           </button>
 
-          <div id="lang-menu" class="hidden absolute right-0 top-full mt-1.5 w-36 bg-white rounded-2xl shadow-xl border border-slate-200 py-1 z-50 overflow-hidden">
-            <button type="button" onclick="selectLang('ES')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between hover:bg-slate-50 text-slate-700">
+          <div id="lang-dropdown" class="hidden absolute right-0 mt-1.5 w-36 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-1.5 z-50">
+            <button type="button" onclick="setLanguage('es')" class="w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer">
               <span class="flex items-center gap-2"><span>🇪🇸</span><span>Español</span></span>
-              <span class="text-blue-700 font-bold">✓</span>
+              <span id="lang-dot-es" class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
             </button>
-            <button type="button" onclick="selectLang('GL')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between hover:bg-slate-50 text-slate-700">
-              <span class="flex items-center gap-2"><span>🔵</span><span>Galego</span></span>
+            <button type="button" onclick="setLanguage('gl')" class="w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer">
+              <span class="flex items-center gap-2"><span>🟦</span><span>Galego</span></span>
+              <span id="lang-dot-gl" class="hidden w-1.5 h-1.5 rounded-full bg-blue-600"></span>
             </button>
-            <button type="button" onclick="selectLang('EN')" class="w-full px-3 py-2 text-left text-xs font-black flex items-center justify-between hover:bg-slate-50 text-slate-700">
+            <button type="button" onclick="setLanguage('en')" class="w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer">
               <span class="flex items-center gap-2"><span>🇬🇧</span><span>English</span></span>
+              <span id="lang-dot-en" class="hidden w-1.5 h-1.5 rounded-full bg-blue-600"></span>
             </button>
           </div>
         </div>
@@ -122,285 +116,572 @@
         <button
           type="button"
           onclick="openBlockedModal('rewards')"
-          class="hidden sm:inline-flex px-2 py-1.5 rounded-xl font-bold text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/90 items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
-          title="Premios y sellos"
+          aria-label="Club de Premios"
+          title="Ver mis puntos y premios"
+          class="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-xl bg-amber-50/90 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-all active:scale-95 border border-amber-200/90 shadow-2xs cursor-pointer"
         >
-          <span>🎁</span>
-          <span class="text-[11px] font-black">Premios</span>
+          <span class="text-sm leading-none">🎁</span>
+          <span id="ui-btn-rewards" class="hidden sm:inline text-[11px] font-extrabold">Premios</span>
         </button>
 
         <!-- Botón Servicio -->
         <button
           type="button"
           onclick="openBlockedModal('service')"
-          class="px-2 py-1.5 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
-          title="Servicio de mesa"
+          aria-label="Solicitar servicio de mesa"
+          title="Pedir servilletas, hielo, cubiertos o cuenta"
+          class="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-bold text-xs transition-all active:scale-95 border border-slate-200/80 cursor-pointer"
         >
-          <span class="text-blue-600">🔔</span>
-          <span class="text-[11px] font-bold hidden min-[400px]:inline">Servicio</span>
+          <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span id="ui-btn-service" class="hidden sm:inline">Servicio</span>
         </button>
 
         <!-- Botón Llamar al Mozo -->
         <button
           type="button"
           onclick="openBlockedModal('waiter')"
-          class="px-2.5 py-1.5 rounded-xl font-bold text-xs bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
-          title="Llamar al mozo"
+          aria-label="Llamar al Mozo"
+          class="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl font-bold text-[11px] sm:text-xs transition-all shadow-xs bg-white text-slate-800 border border-slate-200/90 hover:bg-slate-50 active:scale-95 whitespace-nowrap cursor-pointer"
         >
-          <span class="text-amber-600">🛎️</span>
-          <span class="text-[11px] font-bold">Llamar<span class="hidden min-[420px]:inline"> al Mozo</span></span>
+          <svg class="w-3.5 h-3.5 text-blue-900 animate-pulse flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span id="ui-btn-waiter">Llamar al Mozo</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- 2. CONTENIDO PRINCIPAL -->
-  <main class="max-w-2xl mx-auto px-3.5 pt-3 space-y-3.5">
-    
-    <!-- Micro-Onboarding de 4 Pasos -->
-    <div class="bg-gradient-to-r from-blue-50/90 via-sky-50/70 to-indigo-50/90 border border-blue-200/80 rounded-2xl p-3 shadow-xs">
+  <!-- 2. CONTENEDOR PRINCIPAL -->
+  <main class="max-w-xl mx-auto px-4 pt-3 space-y-4">
+
+    <!-- 2A. MICRO-ONBOARDING BANNER DESPLEGABLE (Paridad 100% con MicroOnboardingBanner.tsx) -->
+    <div id="onboarding-collapsed" class="mb-2">
       <button
         type="button"
-        onclick="toggleSteps()"
-        class="w-full flex items-center justify-between text-left cursor-pointer"
+        onclick="toggleOnboarding(true)"
+        class="w-full flex items-center justify-between px-3.5 py-2 rounded-xl bg-blue-50/80 hover:bg-blue-100/70 border border-blue-200/70 text-blue-900 transition-all text-left group cursor-pointer"
       >
-        <div class="flex items-center gap-2">
-          <span class="text-base">💡</span>
-          <span class="text-xs font-black text-blue-950">¿Cómo pedir? (4 pasos)</span>
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-sm">💡</span>
+          <span id="ui-howto-title" class="text-xs font-extrabold tracking-tight truncate">
+            ¿Cómo pedir? (4 pasos)
+          </span>
+          <span id="ui-howto-sub" class="hidden sm:inline text-[11px] text-blue-700/80 font-medium truncate">
+            — Elige · Pide · Servicios · Paga
+          </span>
         </div>
-        <div class="flex items-center gap-1 text-[11px] font-bold text-blue-700">
-          <span id="steps-toggle-label">Ver 4 pasos</span>
-          <svg id="steps-chevron" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
-        </div>
+        <span id="ui-howto-pill" class="text-[11px] font-bold text-blue-700 group-hover:translate-x-0.5 transition-transform flex-shrink-0 ml-2 bg-white px-2 py-0.5 rounded-md border border-blue-200/60 shadow-2xs">
+          Ver 4 pasos
+        </span>
       </button>
+    </div>
 
-      <div id="steps-content" class="hidden mt-3 pt-3 border-t border-blue-200/60 grid grid-cols-2 sm:grid-cols-4 gap-2 text-left">
-        <div class="bg-white/90 p-2 rounded-xl border border-blue-100">
-          <div class="text-[10px] font-black text-blue-600 uppercase">Paso 1</div>
-          <div class="text-[11px] font-extrabold text-slate-800">Elige tus platos</div>
-          <p class="text-[10px] text-slate-500 mt-0.5">Explora y pulsa + para sumar</p>
+    <div id="onboarding-expanded" class="hidden mb-3 bg-gradient-to-br from-white via-slate-50 to-blue-50/40 border-2 border-blue-200/90 rounded-3xl p-4 sm:p-5 shadow-md">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xs flex-shrink-0 text-base">
+            ✨
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span id="ui-onb-badge" class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                Guía Rápida en 4 Pasos
+              </span>
+            </div>
+            <h2 id="ui-onb-heading" class="text-sm sm:text-base font-black text-slate-900 tracking-tight mt-0.5">
+              ¿Cómo pedir desde tu mesa?
+            </h2>
+            <p id="ui-onb-sub" class="text-[11px] text-slate-500 font-medium">
+              Desliza o toca cualquier paso para probarlo ahora:
+            </p>
+          </div>
         </div>
-        <div class="bg-white/90 p-2 rounded-xl border border-blue-100">
-          <div class="text-[10px] font-black text-blue-600 uppercase">Paso 2</div>
-          <div class="text-[11px] font-extrabold text-slate-800">Revisa la comanda</div>
-          <p class="text-[10px] text-slate-500 mt-0.5">Toca el botón flotante inferior</p>
-        </div>
-        <div class="bg-white/90 p-2 rounded-xl border border-blue-100">
-          <div class="text-[10px] font-black text-blue-600 uppercase">Paso 3</div>
-          <div class="text-[11px] font-extrabold text-slate-800">Cocina prepara</div>
-          <p class="text-[10px] text-slate-500 mt-0.5">Llega directo a pantalla en <1s</p>
-        </div>
-        <div class="bg-white/90 p-2 rounded-xl border border-blue-100">
-          <div class="text-[10px] font-black text-blue-600 uppercase">Paso 4</div>
-          <div class="text-[11px] font-extrabold text-slate-800">Paga sin esperas</div>
-          <p class="text-[10px] text-slate-500 mt-0.5">Pide la cuenta en un toque</p>
-        </div>
+
+        <button
+          type="button"
+          onclick="toggleOnboarding(false)"
+          aria-label="Minimizar guía"
+          class="flex items-center gap-1 text-[11px] font-bold text-slate-500 hover:text-slate-800 px-2.5 py-1.5 rounded-xl hover:bg-slate-200/60 transition-colors flex-shrink-0 border border-slate-200/80 bg-white shadow-2xs cursor-pointer"
+        >
+          <span id="ui-onb-hide">Ocultar</span> ✕
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-left">
+        <button
+          type="button"
+          onclick="handleOnboardingStep(1)"
+          class="bg-white/95 border border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/40 rounded-2xl p-2.5 shadow-2xs flex flex-col justify-between text-left transition-all active:scale-95 group cursor-pointer"
+        >
+          <div class="flex items-center justify-between gap-1.5 mb-1 w-full">
+            <div class="flex items-center gap-1.5">
+              <span class="text-base leading-none">🍽️</span>
+              <span id="ui-step1-title" class="text-xs font-extrabold text-slate-800 group-hover:text-blue-700">1. Elige</span>
+            </div>
+            <span class="text-[10px] font-bold text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+          </div>
+          <p id="ui-step1-desc" class="text-[11px] text-slate-600 leading-snug font-medium">
+            Explora fotos, alérgenos y personaliza tu plato
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onclick="handleOnboardingStep(2)"
+          class="bg-white/95 border border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/40 rounded-2xl p-2.5 shadow-2xs flex flex-col justify-between text-left transition-all active:scale-95 group cursor-pointer"
+        >
+          <div class="flex items-center justify-between gap-1.5 mb-1 w-full">
+            <div class="flex items-center gap-1.5">
+              <span class="text-base leading-none">🛒</span>
+              <span id="ui-step2-title" class="text-xs font-extrabold text-slate-800 group-hover:text-blue-700">2. Pide</span>
+            </div>
+            <span class="text-[10px] font-bold text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+          </div>
+          <p id="ui-step2-desc" class="text-[11px] text-slate-600 leading-snug font-medium">
+            Revisa tu selección y envíala al mozo
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onclick="handleOnboardingStep(3)"
+          class="bg-white/95 border border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/40 rounded-2xl p-2.5 shadow-2xs flex flex-col justify-between text-left transition-all active:scale-95 group cursor-pointer"
+        >
+          <div class="flex items-center justify-between gap-1.5 mb-1 w-full">
+            <div class="flex items-center gap-1.5">
+              <span class="text-base leading-none">🔔</span>
+              <span id="ui-step3-title" class="text-xs font-extrabold text-slate-800 group-hover:text-blue-700">3. Servicios</span>
+            </div>
+            <span class="text-[10px] font-bold text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+          </div>
+          <p id="ui-step3-desc" class="text-[11px] text-slate-600 leading-snug font-medium">
+            Pide hielo, servilletas o cubiertos en 1 toque
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onclick="handleOnboardingStep(4)"
+          class="bg-white/95 border border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/40 rounded-2xl p-2.5 shadow-2xs flex flex-col justify-between text-left transition-all active:scale-95 group cursor-pointer"
+        >
+          <div class="flex items-center justify-between gap-1.5 mb-1 w-full">
+            <div class="flex items-center gap-1.5">
+              <span class="text-base leading-none">💳</span>
+              <span id="ui-step4-title" class="text-xs font-extrabold text-slate-800 group-hover:text-blue-700">4. Paga</span>
+            </div>
+            <span class="text-[10px] font-bold text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+          </div>
+          <p id="ui-step4-desc" class="text-[11px] text-slate-600 leading-snug font-medium">
+            Solicita la cuenta con tarjeta o efectivo
+          </p>
+        </button>
+      </div>
+
+      <div class="mt-3 pt-2.5 border-t border-blue-200/60 flex items-center justify-between gap-2 text-[11px] text-blue-900">
+        <span id="ui-onb-footer" class="font-medium">
+          🛡️ <strong>¿Te equivocaste o quieres cambiar algo?</strong> El mozo siempre revisará tu pedido antes de marcharlo a cocina.
+        </span>
       </div>
     </div>
 
-    <!-- Barra de Filtros Dietéticos -->
-    <div class="flex items-center gap-1.5 flex-wrap">
-      <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">Filtros:</span>
-      <button
-        type="button"
-        onclick="toggleDietaryFilter('gluten_free')"
-        id="filter-gluten_free"
-        class="dietary-filter px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white text-slate-600 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
-      >
-        <span>🌾</span>
-        <span>Sin TACC / Sin Gluten</span>
-      </button>
-      <button
-        type="button"
-        onclick="toggleDietaryFilter('veggie')"
-        id="filter-veggie"
-        class="dietary-filter px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white text-slate-600 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
-      >
-        <span>🌱</span>
-        <span>Veggie / Vegetariano</span>
-      </button>
+    <!-- 2B. BARRA DE FILTROS DIETÉTICOS (Paridad 100% con MenuCategoryBar.tsx) -->
+    <div class="sticky top-[57px] z-20 bg-slate-50/95 backdrop-blur-md py-2 -mx-4 px-4 border-b border-slate-200/60">
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <span id="ui-filters-label" class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 flex-shrink-0">
+          FILTROS:
+        </span>
+        <button
+          type="button"
+          id="filter-btn-gluten_free"
+          onclick="toggleDietaryFilter('gluten_free')"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
+        >
+          <span>🌾</span>
+          <span id="ui-filter-gf">Sin TACC</span>
+        </button>
+        <button
+          type="button"
+          id="filter-btn-veggie"
+          onclick="toggleDietaryFilter('veggie')"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
+        >
+          <span>🌱</span>
+          <span id="ui-filter-veg">Veggie</span>
+        </button>
+      </div>
     </div>
 
-    <!-- 3. CUADRÍCULA DE PLATOS (Grid de 2 columnas) -->
+    <!-- 3. GRILLA DE PRODUCTOS EN 2 COLUMNAS (Paridad 100% con MenuGridCatalog.tsx) -->
     <div id="catalog-grid" class="grid grid-cols-2 gap-3 pt-1">
-      <!-- Renderizado dinámico vía JavaScript -->
+      <!-- Renderizado dinámico por JS -->
     </div>
+
+    <!-- 4. PIE DE PÁGINA LEGAL UE 1169/2011 (Paridad 100% con MenuFooterLegal.tsx) -->
+    <footer class="mt-10 pt-6 pb-8 border-t border-slate-200/80 text-center px-4 space-y-2">
+      <p id="ui-legal-1" class="text-[11px] font-semibold text-slate-600">
+        📋 Información sobre Alérgenos (Reglamento UE 1169/2011) disponible en cada plato.
+      </p>
+      <p id="ui-legal-2" class="text-[11px] text-slate-400 max-w-md mx-auto leading-relaxed">
+        Precios con IVA incluido. Si padece alguna alergia o intolerancia alimentaria no listada, consulte con nuestro personal de sala antes de confirmar su pedido.
+      </p>
+      <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-1">
+        Powered by Fluxo Gastronomic System
+      </p>
+    </footer>
 
   </main>
 
-  <!-- 4. BARRA FLOTANTE INFERIOR DE CATEGORÍAS -->
-  <nav class="fixed bottom-3 inset-x-3 z-40 max-w-lg mx-auto pointer-events-auto">
-    <div class="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-xl p-1.5 flex items-center gap-1 overflow-x-auto no-scrollbar">
+  <!-- 5. BARRA INFERIOR DE CATEGORÍAS CON FLECHAS Y DESPLAZAMIENTO REACTIVO (Paridad 100% con MenuBottomCategoryBar.tsx) -->
+  <div
+    id="bottom-category-bar"
+    aria-label="Categorías de la carta"
+    class="fixed inset-x-3 sm:inset-x-4 max-w-xl mx-auto z-30 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] bottom-3 sm:bottom-4"
+  >
+    <div class="relative bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.12)] p-1.5 flex items-center gap-1">
+      <!-- Flecha Izquierda -->
       <button
         type="button"
-        onclick="selectCategory('all')"
-        id="bottom-cat-all"
-        class="bottom-cat-btn px-3 py-1.5 rounded-xl text-xs font-black bg-blue-600 text-white shadow-xs flex-shrink-0 flex items-center gap-1 transition-all"
+        id="cat-scroll-left"
+        onclick="scrollCategories('left')"
+        aria-label="Desplazar categorías a la izquierda"
+        class="w-7 h-8 rounded-xl bg-slate-100/90 hover:bg-slate-200 text-slate-700 flex items-center justify-center flex-shrink-0 transition-all active:scale-90 border border-slate-200/80 shadow-2xs cursor-pointer"
       >
-        <span>🍴</span>
-        <span>Todos</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
       </button>
+
+      <!-- Carrusel de Categorías -->
+      <div
+        id="category-scroll-container"
+        onscroll="updateCatScrollButtons()"
+        class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-0.5 px-1 scroll-smooth flex-1 cat-fade-mask"
+      >
+        <button
+          type="button"
+          onclick="selectCategory('all')"
+          data-cat="all"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-blue-600 text-white font-black shadow-xs ring-1 ring-blue-500 scale-[1.02]"
+        >
+          🍴 <span class="cat-label" data-cat-key="all">Todos</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('promos')"
+          data-cat="promos"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-amber-50/90 text-amber-800 border border-amber-300 hover:bg-amber-100 font-extrabold"
+        >
+          ✨ <span class="cat-label" data-cat-key="promos">Nuestras Promos</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('entradas')"
+          data-cat="entradas"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          <span class="cat-label" data-cat-key="entradas">Entradas</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('principales')"
+          data-cat="principales"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          <span class="cat-label" data-cat-key="principales">Platos Principales</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('burgers')"
+          data-cat="burgers"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          <span class="cat-label" data-cat-key="burgers">Burgers</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('bebidas')"
+          data-cat="bebidas"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          <span class="cat-label" data-cat-key="bebidas">Bebidas</span>
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('postres')"
+          data-cat="postres"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          <span class="cat-label" data-cat-key="postres">Postres</span>
+        </button>
+      </div>
+
+      <!-- Flecha Derecha -->
       <button
         type="button"
-        onclick="selectCategory('entradas')"
-        id="bottom-cat-entradas"
-        class="bottom-cat-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-transparent text-slate-600 hover:bg-slate-100 flex-shrink-0 flex items-center gap-1 transition-all"
+        id="cat-scroll-right"
+        onclick="scrollCategories('right')"
+        aria-label="Desplazar categorías a la derecha"
+        class="w-7 h-8 rounded-xl bg-slate-100/90 hover:bg-slate-200 text-slate-700 flex items-center justify-center flex-shrink-0 transition-all active:scale-90 border border-slate-200/80 shadow-2xs cursor-pointer"
       >
-        <span>🍟</span>
-        <span>Entradas</span>
-      </button>
-      <button
-        type="button"
-        onclick="selectCategory('principales')"
-        id="bottom-cat-principales"
-        class="bottom-cat-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-transparent text-slate-600 hover:bg-slate-100 flex-shrink-0 flex items-center gap-1 transition-all"
-      >
-        <span>🍔</span>
-        <span>Principales</span>
-      </button>
-      <button
-        type="button"
-        onclick="selectCategory('bebidas')"
-        id="bottom-cat-bebidas"
-        class="bottom-cat-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-transparent text-slate-600 hover:bg-slate-100 flex-shrink-0 flex items-center gap-1 transition-all"
-      >
-        <span>🍹</span>
-        <span>Bebidas</span>
-      </button>
-      <button
-        type="button"
-        onclick="selectCategory('postres')"
-        id="bottom-cat-postres"
-        class="bottom-cat-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-transparent text-slate-600 hover:bg-slate-100 flex-shrink-0 flex items-center gap-1 transition-all"
-      >
-        <span>🍰</span>
-        <span>Postres</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
       </button>
     </div>
-  </nav>
+  </div>
 
-  <!-- 5. BARRA FLOTANTE DE COMANDA -->
-  <div id="floating-cart-bar" class="hidden fixed bottom-16 inset-x-3 z-40 max-w-lg mx-auto">
-    <div class="bg-slate-900 text-white rounded-2xl p-3 shadow-2xl border border-slate-800 flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-300">
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-sm flex-shrink-0">
-          <span id="floating-cart-count">0</span>
+  <!-- 6. BARRA FLOTANTE DE PEDIDO ACTIVO (Paridad 100% con MenuFloatingCartBar.tsx) -->
+  <div id="floating-cart-bar" class="hidden fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40">
+    <div class="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.35)] flex items-center justify-between border border-slate-800">
+      <div class="flex items-center space-x-3 pl-1">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-black text-xs shadow-inner">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 10a4 4 0 0 1-8 0"/></svg>
         </div>
-        <div class="min-w-0">
-          <p class="text-xs font-bold text-slate-300">Comanda en preparación</p>
-          <p id="floating-cart-total" class="text-sm font-black text-white tabular-nums">0,00 €</p>
+        <div>
+          <p id="floating-cart-count" class="text-[11px] font-semibold text-slate-300">
+            0 ítems · Mesa #X
+          </p>
+          <p id="floating-cart-total" class="text-sm sm:text-base font-black text-amber-300 tabular-nums">
+            0,00 €
+          </p>
         </div>
       </div>
+
       <button
         type="button"
         onclick="openCartDrawer()"
-        class="px-4 py-2 rounded-xl text-xs font-extrabold text-slate-950 bg-amber-400 hover:bg-amber-300 active:scale-95 transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+        class="bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl flex items-center space-x-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
       >
-        <span>Ver comanda</span>
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        <span id="ui-view-order-btn">Ver pedido</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
       </button>
     </div>
   </div>
 
-  <!-- 6. MODAL FICHA TÉCNICA DEL PLATO (Idéntico al ProductModifierModal oficial) -->
-  <div id="product-detail-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" style="touch-action: manipulation;">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden border border-slate-200 shadow-2xl flex flex-col max-h-[85vh] text-slate-900">
-      
-      <!-- Cabecera Visual con Altura Fija y Proporción Natural Limpia (Idéntica a ProductModifierModal oficial) -->
-      <div class="relative w-full h-48 sm:h-56 flex-shrink-0 bg-slate-900 overflow-hidden">
-        <img id="modal-product-img" src="" alt="Plato" class="w-full h-full object-cover">
-        <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none"></div>
-        
-        <!-- Botón Cerrar -->
+  <!-- 7. MODAL PERSONALIZADOR DE PLATO COMPLETO (Paridad 100% con ProductModifierModal.tsx) -->
+  <div
+    id="product-detail-modal"
+    onclick="closeProductModal()"
+    class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150"
+  >
+    <div
+      onclick="event.stopPropagation()"
+      class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col"
+    >
+      <!-- Cabecera con Imagen Compacta de Altura Fija (160px / max 180px) sin zoom excesivo -->
+      <div
+        class="relative bg-slate-900 flex-shrink-0"
+        style="position: relative; width: 100%; height: 160px; max-height: 180px; overflow: hidden;"
+      >
+        <img
+          id="modal-product-img"
+          src=""
+          alt="Plato"
+          class="w-full h-full object-cover"
+          style="width: 100%; height: 100%; object-fit: cover; object-position: center; display: block;"
+        >
+        <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent pointer-events-none"></div>
+
         <button
           type="button"
           onclick="closeProductModal()"
-          aria-label="Cerrar ficha de producto"
+          aria-label="Cerrar personalizador"
           class="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 transition-colors shadow-md z-10 cursor-pointer"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18"/><path stroke-linecap="round" stroke-linejoin="round" d="m6 6 12 12"/></svg>
         </button>
 
-        <!-- Título y Precio sobre la Cabecera -->
-        <div class="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-3 z-10">
-          <div class="min-w-0 flex-1">
-            <span id="modal-product-badge" class="text-[10px] font-black uppercase tracking-wider text-blue-300 drop-shadow block"></span>
-            <h3 id="modal-product-name" class="text-base sm:text-lg font-black text-white leading-snug drop-shadow-md truncate"></h3>
+        <div class="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-2 z-10">
+          <div class="min-w-0">
+            <span id="modal-top-kicker" class="text-[10px] font-black uppercase tracking-wider text-blue-300 drop-shadow block">
+              Personaliza tu plato
+            </span>
+            <h3 id="modal-product-name" class="text-lg font-black text-white leading-snug drop-shadow-md truncate"></h3>
           </div>
-          <div class="px-3 py-1.5 rounded-xl bg-white/95 text-blue-900 text-sm font-black shadow-lg tabular-nums flex-shrink-0">
-            <span id="modal-product-price">0,00 €</span>
+          <span id="modal-product-price" class="px-3 py-1 rounded-xl bg-white/95 text-blue-900 font-black text-sm shadow-md flex-shrink-0 tabular-nums">
+            0,00 €
+          </span>
+        </div>
+      </div>
+
+      <!-- Cuerpo de Opciones Desplazable -->
+      <div class="p-4 sm:p-5 overflow-y-auto space-y-5 flex-1">
+        <!-- Descripción del plato -->
+        <p id="modal-product-desc" class="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/80"></p>
+
+        <!-- Bloque Oficial de Alérgenos Reg. UE 1169/2011 -->
+        <div id="modal-allergen-container"></div>
+
+        <!-- 1. Punto de Cocción (Solo Carnes / Burgers) -->
+        <div id="modal-section-cooking" class="hidden">
+          <div class="flex items-center justify-between mb-2">
+            <label id="modal-label-cooking" class="text-xs font-black uppercase tracking-wider text-slate-700">
+              🔥 Punto de Cocción
+            </label>
+            <span id="modal-badge-required" class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+              Obligatorio
+            </span>
+          </div>
+          <div id="modal-cooking-options" class="grid grid-cols-3 gap-2"></div>
+        </div>
+
+        <!-- 2. Guarnición Incluida (Solo Carnes / Burgers con guarnición) -->
+        <div id="modal-section-side" class="hidden">
+          <div class="flex items-center justify-between mb-2">
+            <label id="modal-label-side" class="text-xs font-black uppercase tracking-wider text-slate-700">
+              🍟 Guarnición Incluida
+            </label>
+            <span id="modal-badge-side" class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+              1 opción
+            </span>
+          </div>
+          <div id="modal-side-options" class="grid grid-cols-3 gap-2"></div>
+        </div>
+
+        <!-- 3. Preferencias / Aclaraciones de Cocina -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label id="modal-label-prefs" class="text-xs font-black uppercase tracking-wider text-slate-700">
+              ✨ Preferencias / Aclaraciones de Cocina
+            </label>
+            <span id="modal-badge-prefs" class="text-[10px] font-bold text-slate-400">
+              Opcional múltiple
+            </span>
+          </div>
+          <div id="modal-prefs-options" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- 4. Aviso Operativo -->
+        <div class="p-3 rounded-xl bg-slate-100/80 border border-slate-200/80 flex items-center gap-2.5 text-slate-600">
+          <span class="text-base leading-none">ℹ️</span>
+          <p id="modal-operational-note" class="text-[11px] font-medium leading-snug">
+            ¿Aclaraciones especiales o alergias severas? Comunícaselas verbalmente al mozo al confirmar tu mesa.
+          </p>
+        </div>
+
+        <!-- 5. Selector de Cantidad -->
+        <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+          <span id="modal-label-qty" class="text-xs font-black uppercase tracking-wider text-slate-700">
+            Cantidad
+          </span>
+          <div class="flex items-center space-x-3 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onclick="changeModalQty(-1)"
+              aria-label="Disminuir cantidad"
+              class="w-8 h-8 rounded-lg bg-white text-slate-700 flex items-center justify-center shadow-2xs hover:bg-slate-50 cursor-pointer"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg>
+            </button>
+            <span id="modal-qty-value" class="text-sm font-black text-slate-900 px-2 tabular-nums">1</span>
+            <button
+              type="button"
+              onclick="changeModalQty(1)"
+              aria-label="Aumentar cantidad"
+              class="w-8 h-8 rounded-lg bg-blue-900 text-white flex items-center justify-center shadow-2xs hover:bg-blue-800 cursor-pointer"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14"/></svg>
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Cuerpo del Modal Desplazable -->
-      <div class="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1 bg-slate-50/50">
-        <div class="p-3 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Ingredientes & Preparación:</p>
-          <p id="modal-product-desc" class="text-xs text-slate-700 leading-relaxed font-medium"></p>
-        </div>
-        
+      <!-- Pie Fijo de Confirmación -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
         <div>
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1.5">Alérgenos & Características:</p>
-          <div id="modal-product-allergens" class="flex items-center gap-1.5 flex-wrap"></div>
+          <span id="modal-label-subtotal" class="text-[11px] font-bold text-slate-400 uppercase block">
+            Subtotal
+          </span>
+          <span id="modal-subtotal-value" class="text-lg font-black text-slate-900 tabular-nums">
+            0,00 €
+          </span>
         </div>
 
-        <div class="pt-3 border-t border-slate-200/80">
-          <button
-            type="button"
-            id="modal-add-btn"
-            class="w-full py-3 rounded-2xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span>+ Añadir a mi comanda</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onclick="confirmModalAdd()"
+          class="flex-1 py-3.5 px-5 bg-blue-900 hover:bg-blue-800 text-white font-bold text-sm rounded-xl shadow-md flex items-center justify-center space-x-2 transition-all active:scale-95 cursor-pointer"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+          <span id="modal-confirm-label">Añadir al pedido</span>
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- 7. MODAL DRAWER DE COMANDA -->
-  <div id="cart-drawer-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden border border-slate-200 shadow-2xl flex flex-col max-h-[85vh]">
-      <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-        <div class="flex items-center gap-2">
-          <span class="text-base">📋</span>
-          <div>
-            <h3 class="text-xs sm:text-sm font-black text-slate-900">Mi Comanda en Mesa #X</h3>
-            <p class="text-[10px] text-slate-500">Local · Template Oficial Fluxo</p>
-          </div>
+  <!-- 8. DRAWER / MODAL DE CARRITO Y REVISIÓN DE PEDIDO (Paridad 100% con CartDrawer.tsx) -->
+  <div id="cart-drawer-modal" class="hidden fixed inset-0 z-50 overflow-hidden">
+    <div
+      onclick="closeCartDrawer()"
+      class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+    ></div>
+
+    <div class="fixed inset-x-0 bottom-0 max-w-xl mx-auto bg-white rounded-t-3xl shadow-2xl z-10 max-h-[85vh] flex flex-col justify-between overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h2 id="drawer-title" class="text-lg font-black text-slate-900">Tu Pedido</h2>
+          <p id="drawer-subtitle" class="text-xs text-slate-500">Mesa #X · Revisa tus productos antes de confirmar</p>
         </div>
-        <button
-          type="button"
-          onclick="closeCartDrawer()"
-          class="p-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs"
-        >
-          ✕
-        </button>
+        <div class="flex items-center gap-1.5">
+          <button
+            type="button"
+            onclick="clearCart()"
+            aria-label="Vaciar pedido"
+            class="px-2.5 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 text-[11px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18"/><path stroke-linecap="round" stroke-linejoin="round" d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <span id="drawer-clear-label">Vaciar</span>
+          </button>
+          <button
+            type="button"
+            onclick="closeCartDrawer()"
+            aria-label="Cerrar carrito"
+            class="p-2 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18"/><path stroke-linecap="round" stroke-linejoin="round" d="m6 6 12 12"/></svg>
+          </button>
+        </div>
       </div>
 
-      <div id="cart-drawer-items" class="p-4 overflow-y-auto space-y-2 flex-1 divide-y divide-slate-100"></div>
+      <div id="cart-drawer-items" class="p-5 overflow-y-auto space-y-4 flex-1"></div>
 
-      <div class="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
-        <div class="flex items-center justify-between text-sm font-black text-slate-900">
-          <span>Total a pagar:</span>
-          <span id="cart-drawer-total" class="text-blue-700 text-base">0,00 €</span>
+      <div class="p-5 bg-slate-50 border-t border-slate-200/80 space-y-3">
+        <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-blue-50/90 border border-blue-200/70 text-[11px] text-blue-900">
+          <span id="drawer-reassurance" class="font-medium">
+            🛡️ ¿Te equivocaste al pedir? El mozo puede corregirlo al instante.
+          </span>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <span id="drawer-total-label" class="text-slate-600 font-medium text-sm">Total Estimado</span>
+          <span id="cart-drawer-total" class="text-2xl font-black text-slate-900 tabular-nums">
+            0,00 €
+          </span>
         </div>
 
         <button
           type="button"
           onclick="handleSendOrderToKitchen()"
-          class="w-full py-3 rounded-2xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 active:scale-95 transition-all flex items-center justify-center gap-1.5"
+          class="w-full py-4 px-6 rounded-2xl font-black text-white text-base shadow-lg flex items-center justify-center space-x-2 transition-all bg-blue-600 hover:bg-blue-500 active:scale-[0.99] cursor-pointer"
         >
-          <span>Enviar comanda a cocina</span>
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          <span id="drawer-send-label">Enviar pedido a cocina</span>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/><path stroke-linecap="round" stroke-linejoin="round" d="m12 5 7 7-7 7"/></svg>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 8. MODAL DE BLOQUEO DEMOSTRATIVO -->
-  <div id="blocked-info-modal" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-    <div class="bg-white w-full max-w-sm rounded-3xl p-5 border border-slate-200 shadow-2xl space-y-3 text-left">
+  <!-- 9. MODAL INFORMATIVO DE BLOQUEO DEMOSTRATIVO -->
+  <div
+    id="blocked-info-modal"
+    onclick="closeBlockedModal()"
+    class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+  >
+    <div
+      onclick="event.stopPropagation()"
+      class="bg-white w-full max-w-sm rounded-3xl p-5 border border-slate-200 shadow-2xl space-y-3 text-left"
+    >
       <div class="flex items-center gap-2.5">
         <div id="blocked-modal-icon-bg" class="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 text-xl flex-shrink-0">
           🔒
@@ -416,8 +697,9 @@
       <div class="pt-2 flex items-center gap-2">
         <button
           type="button"
+          id="blocked-modal-btn"
           onclick="closeBlockedModal()"
-          class="w-full py-2.5 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+          class="w-full py-2.5 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 transition-colors cursor-pointer"
         >
           Entendido
         </button>
@@ -425,131 +707,509 @@
     </div>
   </div>
 
+  <!-- 10. CATÁLOGO DEMO DE REFERENCIA (BURGER HOUSE GOURMET) Y LÓGICA DEL SIMULADOR -->
   <script>
+    const EU_ALLERGENS_MAP = {
+      gluten: { id: 'gluten', name: 'Gluten', icon: '🌾' },
+      crustaceans: { id: 'crustaceans', name: 'Crustáceos', icon: '🦐' },
+      eggs: { id: 'eggs', name: 'Huevos', icon: '🥚' },
+      fish: { id: 'fish', name: 'Pescado', icon: '🐟' },
+      peanuts: { id: 'peanuts', name: 'Cacahuetes', icon: '🥜' },
+      soy: { id: 'soy', name: 'Soja', icon: '🌱' },
+      dairy: { id: 'dairy', name: 'Lácteos', icon: '🥛' },
+      nuts: { id: 'nuts', name: 'Frutos de cáscara', icon: '🌰' },
+      celery: { id: 'celery', name: 'Apio', icon: '🥬' },
+      mustard: { id: 'mustard', name: 'Mostaza', icon: '🟡' },
+      sesame: { id: 'sesame', name: 'Sésamo', icon: '⚪' },
+      sulfites: { id: 'sulfites', name: 'Sulfitos', icon: '🍷' },
+      lupin: { id: 'lupin', name: 'Altramuces', icon: '🌿' },
+      molluscs: { id: 'molluscs', name: 'Moluscos', icon: '🦪' }
+    };
+
+    const COOKING_POINTS = ['Jugoso', 'A Punto', 'Bien Cocido'];
+    const SIDE_OPTIONS = ['Papas Fritas', 'Papas Rústicas', 'Ensalada'];
+
+    const PREFS_BY_TYPE = {
+      drink: ['Con hielo', 'Sin hielo', 'Extra hielo', 'Con limón', 'Sin limón', 'Tónica aparte', 'Vaso frío', 'Sin alcohol', 'Sin pajita'],
+      meat: ['Sin Sal', 'Sin Cebolla', 'Sin TACC', 'Sin Tomate', 'Sin Mayonesa', 'Salsa Aparte', 'Para Compartir', 'Extra Queso'],
+      starter: ['Sin Sal', 'Sin Cebolla', 'Sin TACC', 'Salsa Aparte', 'Para Compartir', 'Sin Gluten', 'Sin Picante'],
+      dessert: ['Con nata', 'Sin nata', 'Con sirope', 'Sin sirope', 'Para compartir', 'Cucharas extra', 'Helado aparte']
+    };
+
     const PRODUCTS = [
+      // ── NUESTRAS PROMOS ──
       {
         id: 'combo-pareja',
         name: 'Combo Pareja Gourmet',
-        category: 'principales',
-        price: 24.5,
-        image_url: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80',
-        description: '2 Burgers Doble con panceta y cheddar, porción gigante de papas rústicas y 2 bebidas.',
-        badge: 'Nuestras Promos',
-        allergens: [{ icon: '🌾', name: 'Gluten' }, { icon: '🥛', name: 'Lácteos' }]
+        categories: ['promos', 'burgers'],
+        price: 24.50,
+        image_url: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&h=600&crop=center&q=80',
+        description: '2 Burgers Doble con panceta y cheddar, porción gigante de papas rústicas y 2 bebidas a elección.',
+        allergens: ['gluten', 'dairy', 'eggs', 'sesame'],
+        dietary: [],
+        customizerType: 'meat',
+        hasCookingPoint: true,
+        hasSide: true
       },
+      {
+        id: 'promo-after-office',
+        name: 'Promo 2x1 Cócteles de Autor',
+        categories: ['promos', 'bebidas'],
+        price: 7.00,
+        image_url: 'images/cocktails/mojito.jpg',
+        description: 'Dos cócteles preparados al momento con fruta natural (Mojito, Daiquirí o Piña Colada).',
+        allergens: [],
+        dietary: ['gluten_free', 'veggie'],
+        customizerType: 'drink',
+        hasCookingPoint: false,
+        hasSide: false
+      },
+
+      // ── ENTRADAS ──
       {
         id: 'bastones-mozzarella',
         name: 'Bastones de Mozzarella',
-        category: 'entradas',
-        price: 7.2,
-        image_url: 'https://images.unsplash.com/photo-1531749668029-2db88e4276c7?auto=format&fit=crop&w=800&q=80',
-        description: '6 bastones empanados en panko con dip de salsa marinara casera.',
-        badge: 'Entradas',
-        allergens: [{ icon: '🌾', name: 'Gluten' }, { icon: '🥛', name: 'Lácteos' }]
+        categories: ['entradas'],
+        price: 7.20,
+        image_url: 'images/dishes/tequenos.jpg',
+        description: '6 bastones empanados crujientes con queso fundido y dip de salsa casera.',
+        allergens: ['gluten', 'dairy', 'eggs'],
+        dietary: ['veggie'],
+        customizerType: 'starter',
+        hasCookingPoint: false,
+        hasSide: false
       },
       {
         id: 'patatas-bravas',
         name: 'Patatas Bravas Crujientes',
-        category: 'entradas',
-        price: 6.0,
-        image_url: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=800&q=80',
+        categories: ['entradas'],
+        price: 6.00,
+        image_url: 'images/dishes/patacas-3-salsas.jpg',
         description: 'Patatas pochadas y doradas al punto con salsa brava artesana y alioli.',
-        badge: 'Entradas',
-        allergens: [{ icon: '🌾', name: 'Sin Gluten' }]
+        allergens: ['eggs'],
+        dietary: ['gluten_free', 'veggie'],
+        customizerType: 'starter',
+        hasCookingPoint: false,
+        hasSide: false
       },
       {
-        id: 'smash-burger',
-        name: 'Smash Burger Doble Trufada',
-        category: 'principales',
-        price: 13.5,
-        image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
-        description: 'Doble carne madurada smash, queso cheddar inglés derretido y emulsión trufada.',
-        badge: 'Principales',
-        allergens: [{ icon: '🌾', name: 'Gluten' }, { icon: '🥛', name: 'Lácteos' }]
+        id: 'nachos-guacamole',
+        name: 'Nachos con Guacamole y Cheddar',
+        categories: ['entradas'],
+        price: 9.80,
+        image_url: 'https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?auto=format&fit=crop&w=800&h=600&crop=center&q=80',
+        description: 'Totopos de maíz con guacamole fresco, pico de gallo, crema agria y queso cheddar fundido.',
+        allergens: ['dairy'],
+        dietary: ['gluten_free', 'veggie'],
+        customizerType: 'starter',
+        hasCookingPoint: false,
+        hasSide: false
       },
+
+      // ── PLATOS PRINCIPALES ──
       {
-        id: 'entrecot',
+        id: 'entrecot-brasa',
         name: 'Entrecot a la Brasa',
-        category: 'principales',
-        price: 18.0,
-        image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
-        description: 'Corte selecto de 300g con patatas rústicas y pimientos de padrón.',
-        badge: 'Principales',
-        allergens: [{ icon: '🌾', name: 'Sin Gluten' }]
+        categories: ['principales'],
+        price: 18.00,
+        image_url: 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=800&h=600&crop=center&q=80',
+        description: 'Corte selecto de 300g a la parrilla con patatas rústicas y pimientos.',
+        allergens: [],
+        dietary: ['gluten_free'],
+        customizerType: 'meat',
+        hasCookingPoint: true,
+        hasSide: true
       },
+      {
+        id: 'costillas-bbq',
+        name: 'Costillas BBQ Ahumadas',
+        categories: ['principales'],
+        price: 16.50,
+        image_url: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&h=600&crop=center&q=80',
+        description: 'Costillar de cerdo asado a fuego lento con glaseado barbacoa y guarnición.',
+        allergens: ['mustard'],
+        dietary: ['gluten_free'],
+        customizerType: 'meat',
+        hasCookingPoint: false,
+        hasSide: true
+      },
+
+      // ── BURGERS ──
+      {
+        id: 'smash-burger-trufada',
+        name: 'Smash Burger Doble Trufada',
+        categories: ['burgers'],
+        price: 13.50,
+        image_url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&h=600&crop=center&q=80',
+        description: 'Doble carne madurada smash, queso cheddar inglés derretido y emulsión trufada.',
+        allergens: ['gluten', 'dairy', 'eggs', 'sesame'],
+        dietary: [],
+        customizerType: 'meat',
+        hasCookingPoint: true,
+        hasSide: true
+      },
+      {
+        id: 'burger-bacon-crispy',
+        name: 'Burger Crispy Bacon & Queso',
+        categories: ['burgers'],
+        price: 12.90,
+        image_url: 'https://images.unsplash.com/photo-1553979459-d2229ba7433b?auto=format&fit=crop&w=800&h=600&crop=center&q=80',
+        description: 'Medallón 180g en pan brioche con doble bacon crujiente, cebolla crispy y salsa de la casa.',
+        allergens: ['gluten', 'dairy', 'eggs', 'mustard'],
+        dietary: [],
+        customizerType: 'meat',
+        hasCookingPoint: true,
+        hasSide: true
+      },
+
+      // ── BEBIDAS ──
       {
         id: 'cerveza-ipa',
         name: 'Cerveza Artesana IPA',
-        category: 'bebidas',
-        price: 3.8,
-        image_url: 'https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=800&q=80',
-        description: 'Cerveza artesanal rubia con notas cítricas y amargor equilibrado.',
-        badge: 'Bebidas',
-        allergens: [{ icon: '🍺', name: 'Con Alcohol' }]
+        categories: ['bebidas'],
+        price: 3.80,
+        image_url: 'images/dishes/estrella-galicia.jpg',
+        description: 'Cerveza artesanal rubia tirada bien fría con notas cítricas y amargor equilibrado.',
+        allergens: ['gluten'],
+        dietary: ['veggie'],
+        customizerType: 'drink',
+        hasCookingPoint: false,
+        hasSide: false
       },
       {
-        id: 'mojito-clasico',
-        name: 'Mojito Clásico Cubano',
-        category: 'bebidas',
-        price: 7.0,
-        image_url: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=800&q=80',
-        description: 'Ron, puré de lima natural, hierbabuena fresca y soda.',
-        badge: 'Bebidas',
-        allergens: [{ icon: '🍸', name: 'Con Alcohol' }]
+        id: 'agua-mineral',
+        name: 'Agua Mineral Sin Gas 500ml',
+        categories: ['bebidas'],
+        price: 2.20,
+        image_url: 'images/agua-mineral.jpg',
+        description: 'Botella individual de agua mineral natural de manantial servida bien fría.',
+        allergens: [],
+        dietary: ['gluten_free', 'veggie'],
+        customizerType: 'drink',
+        hasCookingPoint: false,
+        hasSide: false
       },
+
+      // ── POSTRES ──
       {
         id: 'tarta-queso-fluida',
         name: 'Tarta de Queso Fluida',
-        category: 'postres',
-        price: 5.5,
-        image_url: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=800&q=80',
-        description: 'Cremosa al centro con suave aroma a queso curado y base crujiente.',
-        badge: 'Postres',
-        allergens: [{ icon: '🥛', name: 'Lácteos' }]
+        categories: ['postres'],
+        price: 5.50,
+        image_url: 'images/dishes/tarta-queso-horno.jpg',
+        description: 'Cremosa al centro con suave aroma a queso curado y base de galleta artesanal.',
+        allergens: ['gluten', 'dairy', 'eggs'],
+        dietary: ['veggie'],
+        customizerType: 'dessert',
+        hasCookingPoint: false,
+        hasSide: false
       },
       {
         id: 'coulant-chocolate',
         name: 'Coulant de Chocolate Belga',
-        category: 'postres',
-        price: 6.0,
-        image_url: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=800&q=80',
+        categories: ['postres'],
+        price: 6.00,
+        image_url: 'images/dishes/coulant-chocolate.jpg',
         description: 'Bizcocho tibio de chocolate 70% con corazón fundido y helado de vainilla.',
-        badge: 'Postres',
-        allergens: [{ icon: '🥛', name: 'Lácteos' }, { icon: '🥚', name: 'Huevos' }]
+        allergens: ['gluten', 'dairy', 'eggs'],
+        dietary: ['veggie'],
+        customizerType: 'dessert',
+        hasCookingPoint: false,
+        hasSide: false
       }
     ];
+
+    // Traducciones UI completas (ES / GL / EN)
+    const I18N = {
+      es: {
+        tableBadge: 'MESA #X',
+        rewards: 'Premios',
+        service: 'Servicio',
+        callWaiter: 'Llamar al Mozo',
+        howToOrder: '¿Cómo pedir? (4 pasos)',
+        howToSub: '— Elige · Pide · Servicios · Paga',
+        viewSteps: 'Ver 4 pasos',
+        onbBadge: 'Guía Rápida en 4 Pasos',
+        onbHeading: '¿Cómo pedir desde tu mesa?',
+        onbSub: 'Desliza o toca cualquier paso para probarlo ahora:',
+        onbHide: 'Ocultar',
+        step1Title: '1. Elige',
+        step1Desc: 'Explora fotos, alérgenos y personaliza tu plato',
+        step2Title: '2. Pide',
+        step2Desc: 'Revisa tu selección y envíala al mozo',
+        step3Title: '3. Servicios',
+        step3Desc: 'Pide hielo, servilletas o cubiertos en 1 toque',
+        step4Title: '4. Paga',
+        step4Desc: 'Solicita la cuenta con tarjeta o efectivo',
+        onbFooter: '🛡️ <strong>¿Te equivocaste o quieres cambiar algo?</strong> El mozo siempre revisará tu pedido antes de marcharlo a cocina.',
+        filters: 'FILTROS:',
+        glutenFree: 'Sin TACC',
+        veggie: 'Veggie',
+        emptyFiltered: 'No hay productos en esta categoría con el filtro seleccionado.',
+        tapToCustomize: 'Toca para ver detalles',
+        viewOrder: 'Ver pedido',
+        itemSingular: 'ítem · Mesa #X',
+        itemsLabel: 'ítems · Mesa #X',
+        toastPrefix: 'Añadido al pedido:',
+        toastBadge: 'En pedido',
+        customizeKicker: 'Personaliza tu plato',
+        allergenTitle: '⚠️ Alérgenos Presentes (Reg. UE 1169/2011)',
+        allergenSingle: 'declarado',
+        allergenPlural: 'declarados',
+        allergenProtocol: '🛡️ <strong>Protocolo Alimentario:</strong> Si eres alérgico o intolerante, selecciona tus preferencias abajo e informa siempre al personal antes de confirmar.',
+        allergenFree: 'Plato sin alérgenos de declaración obligatoria señalados. Consulta con sala ante cualquier duda.',
+        cookingPoint: '🔥 Punto de Cocción',
+        badgeRequired: 'Obligatorio',
+        includedSide: '🍟 Guarnición Incluida',
+        badgeSide: '1 opción',
+        kitchenPrefs: '✨ Preferencias / Aclaraciones de Cocina',
+        badgePrefs: 'Opcional múltiple',
+        operationalNote: '¿Aclaraciones especiales o alergias severas? Comunícaselas verbalmente al mozo al confirmar tu mesa.',
+        quantity: 'Cantidad',
+        subtotal: 'Subtotal',
+        confirmAdd: 'Añadir al pedido',
+        yourOrder: 'Tu Pedido',
+        reviewOrder: 'Mesa #X · Revisa tus productos antes de confirmar',
+        clearCart: 'Vaciar',
+        drawerReassurance: '🛡️ ¿Te equivocaste al pedir? El mozo puede corregirlo al instante.',
+        estimatedTotal: 'Total Estimado',
+        eachUnit: 'c/u',
+        sendToKitchen: 'Enviar pedido a cocina',
+        legal1: '📋 Información sobre Alérgenos (Reglamento UE 1169/2011) disponible en cada plato.',
+        legal2: 'Precios con IVA incluido. Si padece alguna alergia o intolerancia alimentaria no listada, consulte con nuestro personal de sala antes de confirmar su pedido.',
+        understood: 'Entendido',
+        allergenNames: {
+          gluten: 'Gluten', crustaceans: 'Crustáceos', eggs: 'Huevos', fish: 'Pescado',
+          peanuts: 'Cacahuetes', soy: 'Soja', dairy: 'Lácteos', nuts: 'Frutos de cáscara',
+          celery: 'Apio', mustard: 'Mostaza', sesame: 'Sésamo', sulfites: 'Sulfitos',
+          lupin: 'Altramuces', molluscs: 'Moluscos'
+        },
+        categories: {
+          all: 'Todos',
+          promos: 'Nuestras Promos',
+          entradas: 'Entradas',
+          principales: 'Platos Principales',
+          burgers: 'Burgers',
+          bebidas: 'Bebidas',
+          postres: 'Postres'
+        }
+      },
+      gl: {
+        tableBadge: 'MESA #X',
+        rewards: 'Premios',
+        service: 'Servizo',
+        callWaiter: 'Chamar ao Camareiro',
+        howToOrder: 'Como pedir? (4 pasos)',
+        howToSub: '— Elixe · Pide · Servizos · Paga',
+        viewSteps: 'Ver 4 pasos',
+        onbBadge: 'Guía Rápida en 4 Pasos',
+        onbHeading: 'Como pedir dende a túa mesa?',
+        onbSub: 'Desliza ou toca calquera paso para probalo agora:',
+        onbHide: 'Ocultar',
+        step1Title: '1. Elixe',
+        step1Desc: 'Explora fotos, alérxenos e personaliza o teu prato',
+        step2Title: '2. Pide',
+        step2Desc: 'Revisa a túa selección e envíaa ao camareiro',
+        step3Title: '3. Servizos',
+        step3Desc: 'Pide xeo, panos de mesa ou cubertos nun toque',
+        step4Title: '4. Paga',
+        step4Desc: 'Solicita a conta con tarxeta ou efectivo',
+        onbFooter: '🛡️ <strong>Equivocácheste ou queres cambiar algo?</strong> O camareiro sempre revisará o teu pedido antes de marchalo á cociña.',
+        filters: 'FILTROS:',
+        glutenFree: 'Sen Glute',
+        veggie: 'Vexetal',
+        emptyFiltered: 'Non hai produtos nesta categoría co filtro seleccionado.',
+        tapToCustomize: 'Toca para ver detalles',
+        viewOrder: 'Ver pedido',
+        itemSingular: 'ítem · Mesa #X',
+        itemsLabel: 'ítems · Mesa #X',
+        toastPrefix: 'Engadido ao pedido:',
+        toastBadge: 'En pedido',
+        customizeKicker: 'Personaliza o teu prato',
+        allergenTitle: '⚠️ Alérxenos Presentes (Reg. UE 1169/2011)',
+        allergenSingle: 'declarado',
+        allergenPlural: 'declarados',
+        allergenProtocol: '🛡️ <strong>Protocolo Alimentario:</strong> Se es alérxico ou intolerante, selecciona as túas preferencias abaixo e informa sempre ao persoal antes de confirmar.',
+        allergenFree: 'Prato sen alérxenos de declaración obrigatoria sinalados. Consulta co persoal ante calquera dúbida.',
+        cookingPoint: '🔥 Punto da Carne',
+        badgeRequired: 'Obrigatorio',
+        includedSide: '🍟 Guarnición Incluída',
+        badgeSide: '1 opción',
+        kitchenPrefs: '✨ Preferencias / Aclaracións de Cociña',
+        badgePrefs: 'Opcional múltiple',
+        operationalNote: 'Aclaracións especiais ou alerxias severas? Comunícallas verbalmente ao camareiro ao confirmar a túa mesa.',
+        quantity: 'Cantidade',
+        subtotal: 'Subtotal',
+        confirmAdd: 'Engadir ao pedido',
+        yourOrder: 'O teu Pedido',
+        reviewOrder: 'Mesa #X · Revisa os teus produtos antes de confirmar',
+        clearCart: 'Baleirar',
+        drawerReassurance: '🛡️ Equivocácheste ao pedir? O camareiro pode corrixilo ao instante.',
+        estimatedTotal: 'Total Estimado',
+        eachUnit: 'c/u',
+        sendToKitchen: 'Enviar pedido á cociña',
+        legal1: '📋 Información sobre Alérxenos (Regulamento UE 1169/2011) dispoñible en cada prato.',
+        legal2: 'Prezos con IVE incluído. Se padece algunha alerxia ou intolerancia alimentaria non listada, consulte co noso persoal de sala antes de confirmar o seu pedido.',
+        understood: 'Entendido',
+        allergenNames: {
+          gluten: 'Glute', crustaceans: 'Crustáceos', eggs: 'Ovos', fish: 'Peixe',
+          peanuts: 'Cacahuetes', soy: 'Soia', dairy: 'Lácteos', nuts: 'Froitos de casca',
+          celery: 'Apio', mustard: 'Mostaza', sesame: 'Sésamo', sulfites: 'Sulfitos',
+          lupin: 'Altramuzos', molluscs: 'Moluscos'
+        },
+        categories: {
+          all: 'Todos',
+          promos: 'As Nosas Promos',
+          entradas: 'Entradas',
+          principales: 'Pratos Principais',
+          burgers: 'Burgers',
+          bebidas: 'Bebidas',
+          postres: 'Sobremesas'
+        }
+      },
+      en: {
+        tableBadge: 'TABLE #X',
+        rewards: 'Rewards',
+        service: 'Service',
+        callWaiter: 'Call Waiter',
+        howToOrder: 'How to order? (4 steps)',
+        howToSub: '— Choose · Order · Service · Pay',
+        viewSteps: 'See 4 steps',
+        onbBadge: '4-Step Quick Guide',
+        onbHeading: 'How to order from your table?',
+        onbSub: 'Tap any step to try it right now:',
+        onbHide: 'Hide',
+        step1Title: '1. Choose',
+        step1Desc: 'Browse photos, allergens and customize your dish',
+        step2Title: '2. Order',
+        step2Desc: 'Review your selection and send it to your waiter',
+        step3Title: '3. Service',
+        step3Desc: 'Request ice, napkins or cutlery in 1 tap',
+        step4Title: '4. Pay',
+        step4Desc: 'Request the bill by card or cash anytime',
+        onbFooter: '🛡️ <strong>Made a mistake or want to change something?</strong> Your waiter will always review your order before sending it to the kitchen.',
+        filters: 'FILTERS:',
+        glutenFree: 'Gluten-Free',
+        veggie: 'Veggie',
+        emptyFiltered: 'No products found in this category with the selected filter.',
+        tapToCustomize: 'Tap for details',
+        viewOrder: 'View order',
+        itemSingular: 'item · Table #X',
+        itemsLabel: 'items · Table #X',
+        toastPrefix: 'Added to order:',
+        toastBadge: 'In order',
+        customizeKicker: 'Customize your dish',
+        allergenTitle: '⚠️ Present Allergens (EU Reg. 1169/2011)',
+        allergenSingle: 'declared',
+        allergenPlural: 'declared',
+        allergenProtocol: '🛡️ <strong>Food Safety Protocol:</strong> If you have an allergy or intolerance, select your preferences below and always inform our staff before confirming.',
+        allergenFree: 'No mandatory declarable allergens listed for this dish. Ask our staff if in doubt.',
+        cookingPoint: '🔥 Cooking Point',
+        badgeRequired: 'Required',
+        includedSide: '🍟 Included Side',
+        badgeSide: '1 option',
+        kitchenPrefs: '✨ Kitchen Preferences / Notes',
+        badgePrefs: 'Multiple optional',
+        operationalNote: 'Special requests or severe allergies? Please inform your waiter directly when confirming your table.',
+        quantity: 'Quantity',
+        subtotal: 'Subtotal',
+        confirmAdd: 'Add to order',
+        yourOrder: 'Your Order',
+        reviewOrder: 'Table #X · Review your items before sending',
+        clearCart: 'Clear',
+        drawerReassurance: '🛡️ Made a mistake ordering? Your waiter can fix it right away.',
+        estimatedTotal: 'Estimated Total',
+        eachUnit: 'ea.',
+        sendToKitchen: 'Send order to kitchen',
+        legal1: '📋 Allergen Information (EU Regulation 1169/2011) available on every dish.',
+        legal2: 'VAT included. If you have any unlisted food allergy or intolerance, please consult our staff before confirming your order.',
+        understood: 'Got it',
+        allergenNames: {
+          gluten: 'Gluten', crustaceans: 'Crustaceans', eggs: 'Eggs', fish: 'Fish',
+          peanuts: 'Peanuts', soy: 'Soy', dairy: 'Dairy', nuts: 'Tree nuts',
+          celery: 'Celery', mustard: 'Mustard', sesame: 'Sesame', sulfites: 'Sulfites',
+          lupin: 'Lupin', molluscs: 'Molluscs'
+        },
+        categories: {
+          all: 'All',
+          promos: 'Special Promos',
+          entradas: 'Starters',
+          principales: 'Main Courses',
+          burgers: 'Burgers',
+          bebidas: 'Drinks',
+          postres: 'Desserts'
+        }
+      }
+    };
 
     let cart = [];
     let selectedCategory = 'all';
     let activeDietaryFilter = null;
+    let currentLang = 'es';
+
+    let activeModalProduct = null;
+    let modalCookingPoint = 'A Punto';
+    let modalSide = 'Papas Fritas';
+    let modalPrefs = [];
+    let modalQty = 1;
+    let toastTimer = null;
 
     const formatEuro = (n) => `${n.toFixed(2).replace('.', ',')} €`;
 
+    function getAllergenObj(id) {
+      const base = EU_ALLERGENS_MAP[id];
+      if (!base) return null;
+      const t = I18N[currentLang];
+      return {
+        id: base.id,
+        icon: base.icon,
+        name: (t.allergenNames && t.allergenNames[id]) ? t.allergenNames[id] : base.name
+      };
+    }
+
+    function getProductCartQty(productId) {
+      return cart
+        .filter(item => item.product.id === productId)
+        .reduce((sum, item) => sum + item.quantity, 0);
+    }
+
     function renderCatalog() {
       const grid = document.getElementById('catalog-grid');
-      
+      const t = I18N[currentLang];
+
       let filtered = PRODUCTS;
       if (selectedCategory !== 'all') {
-        filtered = filtered.filter(p => p.category === selectedCategory);
+        filtered = filtered.filter(p => p.categories.includes(selectedCategory));
       }
 
       if (activeDietaryFilter === 'gluten_free') {
-        filtered = filtered.filter(p => p.allergens.some(a => a.name.includes('Sin Gluten')));
+        filtered = filtered.filter(p => p.dietary.includes('gluten_free') || !p.allergens.includes('gluten'));
       } else if (activeDietaryFilter === 'veggie') {
-        filtered = filtered.filter(p => !p.allergens.some(a => a.name.includes('Carne')));
+        filtered = filtered.filter(p => p.dietary.includes('veggie'));
+      }
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-2 text-center py-12 bg-white rounded-2xl border border-slate-200/60 p-6">
+            <p class="text-slate-400 font-medium text-sm">${t.emptyFiltered}</p>
+          </div>
+        `;
+        updateBottomBars();
+        return;
       }
 
       grid.innerHTML = filtered.map(product => {
-        const cartItem = cart.find(i => i.id === product.id);
-        const qty = cartItem ? cartItem.qty : 0;
+        const qty = getProductCartQty(product.id);
+        const allergenTags = (product.allergens || [])
+          .map(id => getAllergenObj(id))
+          .filter(Boolean);
 
         return `
           <div
             onclick="openProductModal('${product.id}')"
-            class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between cursor-pointer active:scale-[0.99] select-none"
+            class="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between cursor-pointer active:scale-[0.99] select-none"
           >
             <div>
-              <!-- Imagen 4:3 Full-Bleed Limpia Oficial -->
               <div class="relative w-full aspect-[4/3] overflow-hidden bg-slate-100">
                 <img
                   src="${product.image_url}"
@@ -572,51 +1232,58 @@
                   ${product.description}
                 </p>
 
-                <div class="flex items-center gap-1 flex-wrap pt-1">
-                  ${product.allergens.map(a => `
-                    <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/80 text-[10px] font-bold">
-                      <span>${a.icon}</span>
-                      <span>${a.name}</span>
-                    </span>
-                  `).join('')}
-                </div>
+                ${allergenTags.length > 0 ? `
+                  <div class="flex items-center gap-1 flex-wrap pt-1" aria-label="Alérgenos declarados">
+                    ${allergenTags.map(a => `
+                      <span
+                        title="${a.name}"
+                        class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/80 text-[10px] font-bold"
+                      >
+                        <span>${a.icon}</span>
+                        <span>${a.name}</span>
+                      </span>
+                    `).join('')}
+                  </div>
+                ` : ''}
               </div>
             </div>
 
             <div class="p-3.5 pt-0 flex items-center justify-between gap-2" onclick="event.stopPropagation()">
               <span class="text-[10px] font-bold text-slate-400">
-                Toca para ver detalles
+                ${t.tapToCustomize}
               </span>
 
               <div class="flex items-center">
                 ${qty === 0 ? `
                   <button
                     type="button"
-                    onclick="addToCart('${product.id}')"
-                    aria-label="Añadir ${product.name} a la comanda"
-                    title="Añadir a la comanda"
-                    class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-700 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-xs cursor-pointer active:scale-95"
+                    onclick="openProductModal('${product.id}')"
+                    aria-label="Personalizar y agregar ${product.name}"
+                    title="Personalizar y agregar"
+                    class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-900 hover:text-white flex items-center justify-center transition-colors border border-blue-100/80 shadow-2xs cursor-pointer"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14"/></svg>
                   </button>
                 ` : `
                   <div class="flex items-center space-x-1 bg-blue-50/90 p-0.5 rounded-xl border border-blue-100">
                     <button
                       type="button"
-                      onclick="removeFromCart('${product.id}')"
+                      onclick="decrementProductFromGrid('${product.id}')"
                       aria-label="Disminuir ${product.name}"
-                      class="w-7 h-7 rounded-lg bg-white text-blue-700 flex items-center justify-center shadow-xs hover:bg-blue-100 transition-colors cursor-pointer"
+                      class="w-7 h-7 rounded-lg bg-white text-blue-900 flex items-center justify-center shadow-2xs hover:bg-blue-100 transition-colors cursor-pointer"
                     >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"/></svg>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg>
                     </button>
-                    <span class="text-xs font-black text-blue-900 px-1 tabular-nums">${qty}</span>
+                    <span class="text-xs font-black text-blue-950 px-1 tabular-nums">
+                      ${qty}
+                    </span>
                     <button
                       type="button"
-                      onclick="addToCart('${product.id}')"
-                      aria-label="Aumentar ${product.name}"
-                      class="w-7 h-7 rounded-lg bg-blue-700 text-white flex items-center justify-center shadow-xs hover:bg-blue-800 transition-colors cursor-pointer"
+                      onclick="openProductModal('${product.id}')"
+                      aria-label="Agregar otra variante de ${product.name}"
+                      class="w-7 h-7 rounded-lg bg-blue-900 text-white flex items-center justify-center shadow-2xs hover:bg-blue-800 transition-colors cursor-pointer"
                     >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14"/></svg>
                     </button>
                   </div>
                 `}
@@ -626,235 +1293,648 @@
         `;
       }).join('');
 
-      updateFloatingCart();
+      updateBottomBars();
     }
 
-    function addToCart(productId) {
-      const product = PRODUCTS.find(p => p.id === productId);
-      if (!product) return;
-      const found = cart.find(i => i.id === productId);
-      if (found) {
-        found.qty += 1;
-      } else {
-        cart.push({ ...product, qty: 1 });
-      }
-      renderCatalog();
-    }
+    function updateBottomBars() {
+      const totalItems = cart.reduce((acc, i) => acc + i.quantity, 0);
+      const totalAmount = cart.reduce((acc, i) => acc + i.product.price * i.quantity, 0);
+      const floatingCart = document.getElementById('floating-cart-bar');
+      const bottomCatBar = document.getElementById('bottom-category-bar');
+      const t = I18N[currentLang];
 
-    function removeFromCart(productId) {
-      const idx = cart.findIndex(i => i.id === productId);
-      if (idx === -1) return;
-      if (cart[idx].qty <= 1) {
-        cart.splice(idx, 1);
+      if (totalItems > 0) {
+        floatingCart.classList.remove('hidden');
+        const label = totalItems === 1 ? t.itemSingular : t.itemsLabel;
+        document.getElementById('floating-cart-count').textContent = `${totalItems} ${label}`;
+        document.getElementById('floating-cart-total').textContent = formatEuro(totalAmount);
+        bottomCatBar.classList.remove('bottom-3', 'sm:bottom-4');
+        bottomCatBar.classList.add('bottom-[84px]', 'sm:bottom-[94px]', 'cart-active');
       } else {
-        cart[idx].qty -= 1;
-      }
-      renderCatalog();
-    }
-
-    function updateFloatingCart() {
-      const count = cart.reduce((acc, i) => acc + i.qty, 0);
-      const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
-      const bar = document.getElementById('floating-cart-bar');
-      const countEl = document.getElementById('floating-cart-count');
-      const totalEl = document.getElementById('floating-cart-total');
-
-      if (count > 0) {
-        bar.classList.remove('hidden');
-        countEl.textContent = count;
-        totalEl.textContent = formatEuro(total);
-      } else {
-        bar.classList.add('hidden');
+        floatingCart.classList.add('hidden');
+        bottomCatBar.classList.remove('bottom-[84px]', 'sm:bottom-[94px]', 'cart-active');
+        bottomCatBar.classList.add('bottom-3', 'sm:bottom-4');
       }
     }
 
-    function selectCategory(cat) {
-      selectedCategory = cat;
-      document.querySelectorAll('.bottom-cat-btn').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-xs', 'font-black');
-        btn.classList.add('bg-transparent', 'text-slate-600', 'font-bold');
+    function updateCatScrollButtons() {
+      const container = document.getElementById('category-scroll-container');
+      const leftBtn = document.getElementById('cat-scroll-left');
+      const rightBtn = document.getElementById('cat-scroll-right');
+      if (!container || !leftBtn || !rightBtn) return;
+
+      const canLeft = container.scrollLeft > 4;
+      const canRight = container.scrollLeft + container.clientWidth < container.scrollWidth - 4;
+
+      leftBtn.disabled = !canLeft;
+      rightBtn.disabled = !canRight;
+      leftBtn.className = `w-7 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
+        canLeft
+          ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-90 shadow-2xs border border-slate-200/80 cursor-pointer'
+          : 'bg-slate-50 text-slate-300 opacity-50 cursor-default'
+      }`;
+      rightBtn.className = `w-7 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
+        canRight
+          ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-90 shadow-2xs border border-slate-200/80 cursor-pointer'
+          : 'bg-slate-50 text-slate-300 opacity-50 cursor-default'
+      }`;
+    }
+
+    function selectCategory(catId) {
+      selectedCategory = catId;
+      let activeBtn = null;
+      document.querySelectorAll('.cat-pill').forEach(btn => {
+        const c = btn.getAttribute('data-cat');
+        const isActive = c === catId;
+        const isPromos = c === 'promos';
+
+        if (isActive) {
+          activeBtn = btn;
+          btn.className = 'cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-blue-600 text-white font-black shadow-xs ring-1 ring-blue-500 scale-[1.02]';
+        } else if (isPromos) {
+          btn.className = 'cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-amber-50/90 text-amber-800 border border-amber-300 hover:bg-amber-100 font-extrabold';
+        } else {
+          btn.className = 'cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80';
+        }
       });
-      const activeBtn = document.getElementById(`bottom-cat-${cat}`);
-      if (activeBtn) {
-        activeBtn.classList.remove('bg-transparent', 'text-slate-600', 'font-bold');
-        activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-xs', 'font-black');
+
+      if (activeBtn && typeof activeBtn.scrollIntoView === 'function') {
+        activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
       }
+      setTimeout(updateCatScrollButtons, 260);
       renderCatalog();
     }
 
-    function toggleDietaryFilter(filterType) {
-      const btn = document.getElementById(`filter-${filterType}`);
-      if (activeDietaryFilter === filterType) {
+    function scrollCategories(direction) {
+      const container = document.getElementById('category-scroll-container');
+      if (!container) return;
+      const step = Math.max(160, Math.round(container.clientWidth * 0.65));
+      container.scrollBy({
+        left: direction === 'left' ? -step : step,
+        behavior: 'smooth'
+      });
+      setTimeout(updateCatScrollButtons, 280);
+    }
+
+    window.addEventListener('resize', updateCatScrollButtons);
+
+    function toggleDietaryFilter(filterKey) {
+      if (activeDietaryFilter === filterKey) {
         activeDietaryFilter = null;
-        btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
-        btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200/90');
       } else {
-        activeDietaryFilter = filterType;
-        document.querySelectorAll('.dietary-filter').forEach(b => {
-          b.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
-          b.classList.add('bg-white', 'text-slate-600', 'border-slate-200/90');
-        });
-        btn.classList.remove('bg-white', 'text-slate-600', 'border-slate-200/90');
-        btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+        activeDietaryFilter = filterKey;
       }
+
+      const gfBtn = document.getElementById('filter-btn-gluten_free');
+      const vegBtn = document.getElementById('filter-btn-veggie');
+      const t = I18N[currentLang];
+
+      if (activeDietaryFilter === 'gluten_free') {
+        gfBtn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-amber-100 text-amber-900 border-amber-300 shadow-2xs cursor-pointer';
+        gfBtn.innerHTML = `<span>🌾</span><span>${t.glutenFree}</span><span class="ml-0.5 text-xs">×</span>`;
+      } else {
+        gfBtn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer';
+        gfBtn.innerHTML = `<span>🌾</span><span>${t.glutenFree}</span>`;
+      }
+
+      if (activeDietaryFilter === 'veggie') {
+        vegBtn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-emerald-100 text-emerald-900 border-emerald-300 shadow-2xs cursor-pointer';
+        vegBtn.innerHTML = `<span>🌱</span><span>${t.veggie}</span><span class="ml-0.5 text-xs">×</span>`;
+      } else {
+        vegBtn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer';
+        vegBtn.innerHTML = `<span>🌱</span><span>${t.veggie}</span>`;
+      }
+
       renderCatalog();
     }
 
-    function toggleSteps() {
-      const content = document.getElementById('steps-content');
-      const chevron = document.getElementById('steps-chevron');
-      const label = document.getElementById('steps-toggle-label');
-      const isHidden = content.classList.contains('hidden');
-
-      if (isHidden) {
-        content.classList.remove('hidden');
-        chevron.classList.add('rotate-180');
-        label.textContent = 'Ocultar pasos';
+    function toggleOnboarding(expand) {
+      const col = document.getElementById('onboarding-collapsed');
+      const exp = document.getElementById('onboarding-expanded');
+      if (expand) {
+        col.classList.add('hidden');
+        exp.classList.remove('hidden');
       } else {
-        content.classList.add('hidden');
-        chevron.classList.remove('rotate-180');
-        label.textContent = 'Ver 4 pasos';
+        exp.classList.add('hidden');
+        col.classList.remove('hidden');
       }
+    }
+
+    function handleOnboardingStep(stepNum) {
+      if (stepNum === 1) {
+        const grid = document.getElementById('catalog-grid');
+        if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (stepNum === 2) {
+        if (cart.length > 0) {
+          openCartDrawer();
+        } else {
+          const grid = document.getElementById('catalog-grid');
+          if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } else if (stepNum === 3 || stepNum === 4) {
+        openBlockedModal('service');
+      }
+    }
+
+    function toggleLangMenu(e) {
+      e.stopPropagation();
+      const dd = document.getElementById('lang-dropdown');
+      const chev = document.getElementById('lang-chevron');
+      const isHidden = dd.classList.contains('hidden');
+      if (isHidden) {
+        dd.classList.remove('hidden');
+        chev.classList.add('rotate-180');
+      } else {
+        dd.classList.add('hidden');
+        chev.classList.remove('rotate-180');
+      }
+    }
+
+    document.addEventListener('click', () => {
+      const dd = document.getElementById('lang-dropdown');
+      const chev = document.getElementById('lang-chevron');
+      if (dd && !dd.classList.contains('hidden')) {
+        dd.classList.add('hidden');
+        chev.classList.remove('rotate-180');
+      }
+    });
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      const t = I18N[lang];
+      document.getElementById('current-lang-label').textContent = lang.toUpperCase();
+      ['es', 'gl', 'en'].forEach(code => {
+        const dot = document.getElementById(`lang-dot-${code}`);
+        if (dot) dot.classList.toggle('hidden', code !== lang);
+      });
+
+      document.getElementById('ui-table-badge').textContent = t.tableBadge;
+      document.getElementById('ui-btn-rewards').textContent = t.rewards;
+      document.getElementById('ui-btn-service').textContent = t.service;
+      document.getElementById('ui-btn-waiter').textContent = t.callWaiter;
+      document.getElementById('ui-howto-title').textContent = t.howToOrder;
+      document.getElementById('ui-howto-sub').textContent = t.howToSub;
+      document.getElementById('ui-howto-pill').textContent = t.viewSteps;
+
+      document.getElementById('ui-onb-badge').textContent = t.onbBadge;
+      document.getElementById('ui-onb-heading').textContent = t.onbHeading;
+      document.getElementById('ui-onb-sub').textContent = t.onbSub;
+      document.getElementById('ui-onb-hide').textContent = t.onbHide;
+      document.getElementById('ui-step1-title').textContent = t.step1Title;
+      document.getElementById('ui-step1-desc').textContent = t.step1Desc;
+      document.getElementById('ui-step2-title').textContent = t.step2Title;
+      document.getElementById('ui-step2-desc').textContent = t.step2Desc;
+      document.getElementById('ui-step3-title').textContent = t.step3Title;
+      document.getElementById('ui-step3-desc').textContent = t.step3Desc;
+      document.getElementById('ui-step4-title').textContent = t.step4Title;
+      document.getElementById('ui-step4-desc').textContent = t.step4Desc;
+      document.getElementById('ui-onb-footer').innerHTML = t.onbFooter;
+
+      document.getElementById('ui-filters-label').textContent = t.filters;
+      document.getElementById('ui-view-order-btn').textContent = t.viewOrder;
+      document.getElementById('ui-legal-1').textContent = t.legal1;
+      document.getElementById('ui-legal-2').textContent = t.legal2;
+      document.getElementById('toast-prefix').textContent = t.toastPrefix;
+      document.getElementById('toast-badge').textContent = t.toastBadge;
+      document.getElementById('drawer-reassurance').textContent = t.drawerReassurance;
+      document.getElementById('drawer-total-label').textContent = t.estimatedTotal;
+      document.getElementById('blocked-modal-btn').textContent = t.understood;
+
+      document.querySelectorAll('.cat-label').forEach(el => {
+        const key = el.getAttribute('data-cat-key');
+        if (key && t.categories[key]) {
+          el.textContent = t.categories[key];
+        }
+      });
+
+      const prevFilter = activeDietaryFilter;
+      activeDietaryFilter = null;
+      if (prevFilter) toggleDietaryFilter(prevFilter);
+      else {
+        document.getElementById('filter-btn-gluten_free').innerHTML = `<span>🌾</span><span>${t.glutenFree}</span>`;
+        document.getElementById('filter-btn-veggie').innerHTML = `<span>🌱</span><span>${t.veggie}</span>`;
+        renderCatalog();
+      }
+      setTimeout(updateCatScrollButtons, 100);
     }
 
     function openProductModal(productId) {
       const product = PRODUCTS.find(p => p.id === productId);
       if (!product) return;
 
+      activeModalProduct = product;
+      modalCookingPoint = 'A Punto';
+      modalSide = 'Papas Fritas';
+      modalPrefs = [];
+      modalQty = 1;
+
+      const t = I18N[currentLang];
+      document.getElementById('modal-top-kicker').textContent = t.customizeKicker;
       document.getElementById('modal-product-img').src = product.image_url;
+      document.getElementById('modal-product-img').alt = product.name;
       document.getElementById('modal-product-name').textContent = product.name;
-      document.getElementById('modal-product-badge').textContent = product.badge;
       document.getElementById('modal-product-price').textContent = formatEuro(product.price);
       document.getElementById('modal-product-desc').textContent = product.description;
 
-      const allergensCont = document.getElementById('modal-product-allergens');
-      allergensCont.innerHTML = product.allergens.map(a => `
-        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold">
-          <span>${a.icon}</span>
-          <span>${a.name}</span>
-        </span>
-      `).join('');
+      const declaredAllergens = (product.allergens || []).map(id => getAllergenObj(id)).filter(Boolean);
+      const allergenContainer = document.getElementById('modal-allergen-container');
+      if (declaredAllergens.length > 0) {
+        allergenContainer.innerHTML = `
+          <div class="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200/90 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+                ${t.allergenTitle}
+              </span>
+              <span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                ${declaredAllergens.length} ${declaredAllergens.length === 1 ? t.allergenSingle : t.allergenPlural}
+              </span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              ${declaredAllergens.map(alg => `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white text-amber-950 border border-amber-300/80 text-xs font-extrabold shadow-2xs">
+                  <span class="text-sm leading-none">${alg.icon}</span>
+                  <span>${alg.name}</span>
+                </span>
+              `).join('')}
+            </div>
+            <p class="text-[10px] font-semibold text-amber-800/90 leading-snug pt-0.5">
+              ${t.allergenProtocol}
+            </p>
+          </div>
+        `;
+      } else {
+        allergenContainer.innerHTML = `
+          <div class="px-3 py-2 rounded-xl bg-emerald-50/70 border border-emerald-200/70 flex items-center gap-2 text-emerald-900">
+            <span class="text-sm">✅</span>
+            <p class="text-[11px] font-semibold leading-tight">
+              ${t.allergenFree}
+            </p>
+          </div>
+        `;
+      }
 
-      const addBtn = document.getElementById('modal-add-btn');
-      addBtn.onclick = () => {
-        addToCart(product.id);
-        closeProductModal();
-      };
+      const cookingSection = document.getElementById('modal-section-cooking');
+      if (product.hasCookingPoint) {
+        cookingSection.classList.remove('hidden');
+        document.getElementById('modal-label-cooking').textContent = t.cookingPoint;
+        document.getElementById('modal-badge-required').textContent = t.badgeRequired;
+        renderModalCookingOptions();
+      } else {
+        cookingSection.classList.add('hidden');
+      }
+
+      const sideSection = document.getElementById('modal-section-side');
+      if (product.hasSide) {
+        sideSection.classList.remove('hidden');
+        document.getElementById('modal-label-side').textContent = t.includedSide;
+        document.getElementById('modal-badge-side').textContent = t.badgeSide;
+        renderModalSideOptions();
+      } else {
+        sideSection.classList.add('hidden');
+      }
+
+      document.getElementById('modal-label-prefs').textContent = t.kitchenPrefs;
+      document.getElementById('modal-badge-prefs').textContent = t.badgePrefs;
+      renderModalPrefsOptions();
+
+      document.getElementById('modal-operational-note').textContent = t.operationalNote;
+      document.getElementById('modal-label-qty').textContent = t.quantity;
+      document.getElementById('modal-label-subtotal').textContent = t.subtotal;
+      document.getElementById('modal-confirm-label').textContent = t.confirmAdd;
+      updateModalQtyAndSubtotal();
 
       document.getElementById('product-detail-modal').classList.remove('hidden');
     }
 
+    function renderModalCookingOptions() {
+      const container = document.getElementById('modal-cooking-options');
+      container.innerHTML = COOKING_POINTS.map(pt => {
+        const active = modalCookingPoint === pt;
+        return `
+          <button
+            type="button"
+            onclick="selectModalCooking('${pt}')"
+            class="py-2.5 px-3 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+              active
+                ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }"
+          >
+            ${active ? '<svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>' : ''}
+            <span>${pt}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectModalCooking(pt) {
+      modalCookingPoint = pt;
+      renderModalCookingOptions();
+    }
+
+    function renderModalSideOptions() {
+      const container = document.getElementById('modal-side-options');
+      container.innerHTML = SIDE_OPTIONS.map(s => {
+        const active = modalSide === s;
+        return `
+          <button
+            type="button"
+            onclick="selectModalSide('${s}')"
+            class="py-2.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center space-x-1 cursor-pointer ${
+              active
+                ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+            }"
+          >
+            ${active ? '<svg class="w-3.5 h-3.5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>' : ''}
+            <span class="truncate">${s}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectModalSide(s) {
+      modalSide = s;
+      renderModalSideOptions();
+    }
+
+    function renderModalPrefsOptions() {
+      if (!activeModalProduct) return;
+      const prefs = PREFS_BY_TYPE[activeModalProduct.customizerType] || PREFS_BY_TYPE.starter;
+      const container = document.getElementById('modal-prefs-options');
+      container.innerHTML = prefs.map(pref => {
+        const active = modalPrefs.includes(pref);
+        return `
+          <button
+            type="button"
+            onclick="toggleModalPref('${pref}')"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+              active
+                ? 'bg-blue-900 text-white border-blue-900 shadow-xs'
+                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+            }"
+          >
+            ${active ? '✓ ' : '+ '}${pref}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function toggleModalPref(pref) {
+      if (modalPrefs.includes(pref)) {
+        modalPrefs = modalPrefs.filter(p => p !== pref);
+      } else {
+        modalPrefs.push(pref);
+      }
+      renderModalPrefsOptions();
+    }
+
+    function changeModalQty(delta) {
+      modalQty = Math.max(1, modalQty + delta);
+      updateModalQtyAndSubtotal();
+    }
+
+    function updateModalQtyAndSubtotal() {
+      if (!activeModalProduct) return;
+      document.getElementById('modal-qty-value').textContent = String(modalQty);
+      document.getElementById('modal-subtotal-value').textContent = formatEuro(activeModalProduct.price * modalQty);
+    }
+
     function closeProductModal() {
       document.getElementById('product-detail-modal').classList.add('hidden');
+      activeModalProduct = null;
+    }
+
+    function confirmModalAdd() {
+      if (!activeModalProduct) return;
+      const product = activeModalProduct;
+
+      const modifiers = [];
+      if (product.hasCookingPoint && modalCookingPoint) {
+        modifiers.push(`Punto: ${modalCookingPoint}`);
+      }
+      if (product.hasSide && modalSide) {
+        modifiers.push(`Guarnición: ${modalSide}`);
+      }
+      modalPrefs.forEach(p => modifiers.push(p));
+
+      const signature = `${product.id}::${modifiers.slice().sort().join('|')}`;
+      const existing = cart.find(item => item.signature === signature);
+      if (existing) {
+        existing.quantity += modalQty;
+      } else {
+        cart.push({
+          cartItemId: `ci-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          signature,
+          product,
+          quantity: modalQty,
+          modifiers
+        });
+      }
+
+      closeProductModal();
+      renderCatalog();
+      showToast(product.name);
+    }
+
+    function showToast(productName) {
+      const toast = document.getElementById('order-toast');
+      document.getElementById('toast-product-name').textContent = productName;
+      toast.classList.remove('hidden');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2400);
+    }
+
+    function decrementProductFromGrid(productId) {
+      for (let i = cart.length - 1; i >= 0; i--) {
+        if (cart[i].product.id === productId) {
+          if (cart[i].quantity > 1) {
+            cart[i].quantity -= 1;
+          } else {
+            cart.splice(i, 1);
+          }
+          break;
+        }
+      }
+      renderCatalog();
     }
 
     function openCartDrawer() {
-      const modal = document.getElementById('cart-drawer-modal');
-      const list = document.getElementById('cart-drawer-items');
-      const totalEl = document.getElementById('cart-drawer-total');
-      const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+      if (cart.length === 0) return;
+      const t = I18N[currentLang];
+      document.getElementById('drawer-title').textContent = t.yourOrder;
+      document.getElementById('drawer-subtitle').textContent = t.reviewOrder;
+      document.getElementById('drawer-clear-label').textContent = t.clearCart;
+      document.getElementById('drawer-reassurance').textContent = t.drawerReassurance;
+      document.getElementById('drawer-total-label').textContent = t.estimatedTotal;
+      document.getElementById('drawer-send-label').textContent = t.sendToKitchen;
 
-      list.innerHTML = cart.map(item => `
-        <div class="py-2.5 flex items-center justify-between gap-2">
-          <div class="min-w-0 flex-1">
-            <h4 class="text-xs font-black text-slate-900 truncate">${item.name}</h4>
-            <p class="text-[11px] font-bold text-slate-500">${formatEuro(item.price)} ud.</p>
-          </div>
-          <div class="flex items-center space-x-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200">
-            <button
-              type="button"
-              onclick="removeFromCart('${item.id}'); openCartDrawer();"
-              class="w-6 h-6 rounded-lg bg-white text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs"
-            >
-              -
-            </button>
-            <span class="text-xs font-black text-slate-900 px-1.5 tabular-nums">${item.qty}</span>
-            <button
-              type="button"
-              onclick="addToCart('${item.id}'); openCartDrawer();"
-              class="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs"
-            >
-              +
-            </button>
-          </div>
-          <span class="text-xs font-black text-slate-900 tabular-nums w-14 text-right">
-            ${formatEuro(item.price * item.qty)}
-          </span>
-        </div>
-      `).join('');
-
-      totalEl.textContent = formatEuro(total);
-      modal.classList.remove('hidden');
+      renderCartDrawerItems();
+      document.getElementById('cart-drawer-modal').classList.remove('hidden');
     }
 
     function closeCartDrawer() {
       document.getElementById('cart-drawer-modal').classList.add('hidden');
     }
 
-    function handleSendOrderToKitchen() {
-      closeCartDrawer();
-      const count = cart.reduce((acc, i) => acc + i.qty, 0);
-      const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    function renderCartDrawerItems() {
+      const container = document.getElementById('cart-drawer-items');
+      const totalAmount = cart.reduce((acc, i) => acc + i.product.price * i.quantity, 0);
+      const t = I18N[currentLang];
+      document.getElementById('cart-drawer-total').textContent = formatEuro(totalAmount);
 
-      openBlockedModal('order_sent', { count, total });
-    }
-
-    function openBlockedModal(type, extraData) {
-      const modal = document.getElementById('blocked-info-modal');
-      const title = document.getElementById('blocked-modal-title');
-      const subtitle = document.getElementById('blocked-modal-subtitle');
-      const body = document.getElementById('blocked-modal-body');
-
-      if (type === 'order_sent') {
-        title.textContent = 'Comanda Local Registrada';
-        subtitle.textContent = `Mesa #X · ${extraData.count} platos (${formatEuro(extraData.total)})`;
-        body.innerHTML = `
-          <span class="font-bold text-blue-700">¡Pedido guardado correctamente en tu comanda!</span><br><br>
-          En este <span class="font-bold">template interactivo</span>, el envío a cocina y la llamada al camarero están bloqueados.<br><br>
-          En el restaurante en producción con Fluxo activo, este pedido se despacha en menos de 1 segundo directamente a la pantalla de cocina (KDS) y al comandero del camarero.
-        `;
-      } else if (type === 'waiter') {
-        title.textContent = 'Llamada al Mozo Desactivada';
-        subtitle.textContent = 'Mesa #X · Modo Demostración';
-        body.innerHTML = `
-          En un local con Fluxo activo, al presionar este botón el camarero asignado a la mesa recibe una notificación y vibración instantánea en su móvil con el número de mesa.
-        `;
-      } else if (type === 'service') {
-        title.textContent = 'Peticiones de Servicio';
-        subtitle.textContent = 'Servilletas, Hielo, Condimentos';
-        body.innerHTML = `
-          Permite al comensal solicitar hielo, servilletas o la cuenta con un solo toque sin tener que esperar a que el camarero pase por la sala.
-        `;
-      } else if (type === 'rewards') {
-        title.textContent = 'Fidelización y Premios';
-        subtitle.textContent = 'Cartilla Digital de 5 Visitas';
-        body.innerHTML = `
-          Cada comensal acumula sellos automáticos al abonar su cuenta y puede canjear promociones exclusivas en su próxima visita.
-        `;
+      if (cart.length === 0) {
+        closeCartDrawer();
+        renderCatalog();
+        return;
       }
 
-      modal.classList.remove('hidden');
+      container.innerHTML = cart.map(item => `
+        <div class="flex flex-col p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3 pr-2">
+              <img
+                src="${item.product.image_url}"
+                alt="${item.product.name}"
+                class="w-12 h-12 rounded-xl object-cover flex-shrink-0 bg-slate-200"
+              >
+              <div>
+                <h4 class="text-sm font-bold text-slate-800 leading-tight">${item.product.name}</h4>
+                <p class="text-xs font-extrabold text-blue-600 mt-0.5 tabular-nums">
+                  ${formatEuro(item.product.price * item.quantity)}
+                  ${item.quantity > 1 ? `<span class="text-[10px] font-medium text-slate-400 ml-1">(${formatEuro(item.product.price)} ${t.eachUnit})</span>` : ''}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+              <div class="flex items-center space-x-1.5 bg-white px-2 py-1 rounded-xl border border-slate-200/80">
+                <button
+                  type="button"
+                  onclick="updateCartItemQty('${item.cartItemId}', -1)"
+                  aria-label="Disminuir cantidad"
+                  class="w-6 h-6 rounded-lg text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg>
+                </button>
+                <span class="text-xs font-black w-5 text-center text-slate-900 tabular-nums">${item.quantity}</span>
+                <button
+                  type="button"
+                  onclick="updateCartItemQty('${item.cartItemId}', 1)"
+                  aria-label="Aumentar cantidad"
+                  class="w-6 h-6 rounded-lg text-blue-600 hover:bg-blue-50 flex items-center justify-center cursor-pointer"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14"/></svg>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onclick="removeCartItem('${item.cartItemId}')"
+                aria-label="Eliminar ítem"
+                class="p-1.5 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18"/><path stroke-linecap="round" stroke-linejoin="round" d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              </button>
+            </div>
+          </div>
+
+          ${item.modifiers && item.modifiers.length > 0 ? `
+            <div class="flex flex-wrap gap-1 pt-1 border-t border-slate-200/60">
+              ${item.modifiers.map(mod => `
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-900 rounded-md text-[10px] font-bold border border-blue-200/60">
+                  ${mod}
+                </span>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+
+    function updateCartItemQty(cartItemId, delta) {
+      const idx = cart.findIndex(i => i.cartItemId === cartItemId);
+      if (idx === -1) return;
+      cart[idx].quantity += delta;
+      if (cart[idx].quantity <= 0) {
+        cart.splice(idx, 1);
+      }
+      renderCartDrawerItems();
+      renderCatalog();
+    }
+
+    function removeCartItem(cartItemId) {
+      cart = cart.filter(i => i.cartItemId !== cartItemId);
+      renderCartDrawerItems();
+      renderCatalog();
+    }
+
+    function clearCart() {
+      cart = [];
+      closeCartDrawer();
+      renderCatalog();
+    }
+
+    function handleSendOrderToKitchen() {
+      closeCartDrawer();
+      openBlockedModal('send-order');
+    }
+
+    function openBlockedModal(reason) {
+      const titleEl = document.getElementById('blocked-modal-title');
+      const subEl = document.getElementById('blocked-modal-subtitle');
+      const bodyEl = document.getElementById('blocked-modal-body');
+      const iconEl = document.getElementById('blocked-modal-icon-bg');
+
+      const config = {
+        'waiter': {
+          icon: '🔔',
+          title: 'Aviso al Mozo (Modo Demostración)',
+          sub: 'Nombre del Local · Prototipo Comercial',
+          body: 'En el sistema Fluxo activo en sala, este botón envía una alerta instantánea con vibración al reloj o comandero del camarero asignado a tu Mesa #X.'
+        },
+        'service': {
+          icon: '🧊',
+          title: 'Servicios de Mesa en 1 Toque',
+          sub: 'Hielo, servilletas, cubiertos o cuenta',
+          body: 'En la versión activa en el local, aquí puedes solicitar servilletas, hielo extra, cubiertos o pedir la cuenta (efectivo o tarjeta) directamente desde tu mesa.'
+        },
+        'rewards': {
+          icon: '🎁',
+          title: 'Club de Fidelización y Premios',
+          sub: 'Puntos automáticos en cada visita',
+          body: 'Con Fluxo activo en el restaurante, los comensales acumulan puntos automáticamente con cada comanda y los canjean por cócteles, postres o descuentos.'
+        },
+        'send-order': {
+          icon: '🚀',
+          title: 'Envío a Cocina y Barra Deshabilitado en Demo',
+          sub: 'Plantilla de Carta Digital Interactiva',
+          body: '¡Has configurado tu pedido con éxito! En el restaurante con Fluxo activo, al pulsar "Enviar pedido" tu comanda entra en tiempo real al monitor de cocina y al comandero de barra.'
+        }
+      }[reason] || {
+        icon: '🔒',
+        title: 'Función Demostrativa',
+        sub: 'Nombre del Local · Prototipo',
+        body: 'Esta acción está reservada para el sistema operativo conectado en vivo en el restaurante.'
+      };
+
+      iconEl.textContent = config.icon;
+      titleEl.textContent = config.title;
+      subEl.textContent = config.sub;
+      bodyEl.textContent = config.body;
+      document.getElementById('blocked-modal-btn').textContent = I18N[currentLang].understood;
+
+      document.getElementById('blocked-info-modal').classList.remove('hidden');
     }
 
     function closeBlockedModal() {
       document.getElementById('blocked-info-modal').classList.add('hidden');
     }
 
-    function toggleLangDropdown() {
-      const menu = document.getElementById('lang-menu');
-      const chevron = document.getElementById('lang-chevron');
-      menu.classList.toggle('hidden');
-      chevron.classList.toggle('rotate-180');
-    }
-
-    function selectLang(code) {
-      document.getElementById('current-lang-code').textContent = code;
-      toggleLangDropdown();
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      renderCatalog();
-    });
+    renderCatalog();
+    setTimeout(updateCatScrollButtons, 80);
   </script>
 </body>
 </html>
