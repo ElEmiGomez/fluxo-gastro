@@ -469,15 +469,15 @@ export function PilotRequestModal({
               <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-center">
                 <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-emerald-700">
                   <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="whitespace-nowrap">0€ (14 días)</span>
+                  <span className="whitespace-nowrap">{mode === 'question' ? 'Respuesta < 2h' : '0€ (14 días)'}</span>
                 </div>
                 <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-600 border-x border-slate-200 px-1">
                   <Check className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                  <span className="whitespace-nowrap">Sin permanencia</span>
+                  <span className="whitespace-nowrap">{mode === 'question' ? '100% Correo' : 'Sin permanencia'}</span>
                 </div>
                 <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-600">
                   <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                  <span className="whitespace-nowrap">Setup incluido</span>
+                  <span className="whitespace-nowrap">{mode === 'question' ? 'Sin compromiso' : 'Setup incluido'}</span>
                 </div>
               </div>
 
@@ -503,7 +503,7 @@ export function PilotRequestModal({
                   </>
                 ) : (
                   <>
-                    <span>SOLICITAR PILOTO DE 14 DÍAS (0€)</span>
+                    <span>{mode === 'question' ? 'ENVIAR CONSULTA POR CORREO' : 'SOLICITAR PILOTO DE 14 DÍAS (0€)'}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}

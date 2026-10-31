@@ -143,7 +143,7 @@ export function FaqSection({ onOpenContact }: FaqSectionProps) {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 text-xs font-bold transition-all flex-shrink-0 cursor-pointer shadow-xs active:scale-95"
           >
             <Mail className="w-4 h-4 text-blue-600" />
-            <span>Consultar por Correo</span>
+            <span>Consultar por Correo ✉️</span>
           </button>
         </div>
 

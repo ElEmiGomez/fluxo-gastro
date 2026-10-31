@@ -193,22 +193,21 @@ export function FeatureTabs({ onOpenPilotModal }: FeatureTabsProps) {
             // (clases literales completas: Tailwind no genera clases dinámicas;
             //  top/zIndex/marginBottom en style dinámico: en PC el li es static,
             //  el top/zIndex no aplican y md:!mb-0 anula el margen inline)
-            const stickyCls = [
-              'max-md:sticky max-md:min-h-[360px]',
-              'max-md:sticky max-md:min-h-[360px]',
-              'max-md:sticky max-md:min-h-[360px]',
-              'max-md:sticky max-md:min-h-[360px]',
-              'max-md:sticky max-md:min-h-[360px]',
+            // Mazo de cartas en móvil (< 768px): sticky incremental escalonado
+            const mobileStickyClasses = [
+              'max-md:sticky max-md:top-20 max-md:z-10',
+              'max-md:sticky max-md:top-24 max-md:z-20',
+              'max-md:sticky max-md:top-28 max-md:z-30',
+              'max-md:sticky max-md:top-32 max-md:z-40',
+              'max-md:sticky max-md:top-36 max-md:z-50',
             ][i]
             const stickyStyle = {
-              top: `calc(76px + ${i * 12}px)`,
               marginBottom: `calc(${(5 - 1 - i) * 12}px)`,
-              zIndex: 20 + i,
             }
             return (
               <React.Fragment key={m.title}>
                 <li
-                  className={`${stickyCls} md:!mb-0 max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)] rounded-2xl lg:flex-1 lg:min-w-0`}
+                  className={`${mobileStickyClasses} md:!mb-0 max-md:min-h-[340px] max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.08)] rounded-2xl lg:flex-1 lg:min-w-0 transition-all duration-300`}
                   style={stickyStyle}
                 >
                   <button

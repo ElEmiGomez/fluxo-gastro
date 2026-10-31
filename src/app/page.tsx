@@ -18,8 +18,7 @@ import {
   Star,
   Gift,
   Sparkles,
-  MessageCircle
-} from 'lucide-react'
+  } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 import { PilotRequestModal } from '@/components/landing/PilotRequestModal'
 import { MonthlyReportModal } from '@/components/analytics/MonthlyReportModal'
@@ -239,10 +238,10 @@ export default function LandingPage() {
               
               {/* Tarjeta 1: Carta QR Visual y Ventas Sugeridas */}
               <ScrollReveal delay={0} distance={32} instant className="flex flex-col h-full max-md:sticky md:!mb-0 max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)]" style={{ top: `calc(76px + ${0 * 14}px)`, marginBottom: `calc(${(3 - 1 - 0) * 14}px)`, zIndex: 30 + 0 }}>
-                <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 overflow-hidden border border-slate-200 hover:border-emerald-500/50 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
+                <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 overflow-hidden border border-slate-200 hover:border-blue-400/60 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="w-14 h-14 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                      <div className="w-14 h-14 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 group-hover:text-blue-600 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors flex items-center justify-center flex-shrink-0">
                         <TrendingUp className="w-7 h-7" />
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -286,10 +285,10 @@ export default function LandingPage() {
 
               {/* Tarjeta 2: Comandero Ágil en Cualquier Móvil */}
               <ScrollReveal delay={150} distance={32} instant className="flex flex-col h-full max-md:sticky md:!mb-0 max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)]" style={{ top: `calc(76px + ${1 * 14}px)`, marginBottom: `calc(${(3 - 1 - 1) * 14}px)`, zIndex: 30 + 1 }}>
-                <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 overflow-hidden border border-slate-200 hover:border-blue-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
+                <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 overflow-hidden border border-slate-200 hover:border-blue-400/60 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 group-hover:text-blue-600 group-hover:bg-blue-100/70 group-hover:border-blue-300 transition-colors flex items-center justify-center">
                         <Smartphone className="w-7 h-7" />
                       </div>
                       <span className="px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase bg-blue-50 text-blue-700 border border-blue-200">
@@ -333,10 +332,10 @@ export default function LandingPage() {
 
               {/* Tarjeta 3: Monitor KDS por Estaciones */}
               <ScrollReveal delay={300} distance={32} instant className="flex flex-col h-full max-md:sticky md:!mb-0 max-md:shadow-[0_-6px_16px_-4px_rgba(15,23,42,0.08),0_12px_24px_-6px_rgba(15,23,42,0.12)]" style={{ top: `calc(76px + ${2 * 14}px)`, marginBottom: `calc(${(3 - 1 - 2) * 14}px)`, zIndex: 30 + 2 }}>
-                <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 overflow-hidden border border-slate-200 hover:border-amber-400 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
+                <div className="bg-white max-md:min-h-[430px] hover:bg-slate-50 overflow-hidden border border-slate-200 hover:border-blue-400/60 rounded-2xl p-5 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 hover:shadow-xl group h-full">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-14 h-14 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 group-hover:text-blue-600 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors flex items-center justify-center">
                         <ChefHat className="w-7 h-7" />
                       </div>
                       <span className="px-3 py-1 rounded-full text-[11px] font-black tracking-wider uppercase bg-amber-50 text-amber-700 border border-amber-200">
@@ -411,7 +410,7 @@ export default function LandingPage() {
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
-                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
+                  className="bg-white border border-slate-200 hover:border-blue-400/60 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-slate-100 border border-slate-300 text-slate-800 group-hover:bg-emerald-50 group-hover:border-emerald-300 group-hover:text-emerald-700 text-[11px] font-black tracking-wide shadow-xs flex items-center gap-1.5 z-20 transition-colors duration-300">
@@ -485,7 +484,7 @@ export default function LandingPage() {
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
-                  className="bg-white border border-slate-200 hover:border-emerald-500 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
+                  className="bg-white border border-slate-200 hover:border-blue-400/60 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 group-hover:bg-emerald-50 group-hover:border-emerald-300 group-hover:text-emerald-700 text-[11px] font-black tracking-wide shadow-xs flex items-center gap-1.5 z-20 transition-colors duration-300">
@@ -559,7 +558,7 @@ export default function LandingPage() {
               <ScrollReveal delay={300} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Full (Recomendado)')}
-                  className="bg-white border-2 border-blue-600 hover:border-emerald-500 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-xl ring-4 ring-blue-500/10 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-300 hover:-translate-y-1.5 lg:hover:-translate-y-2.5 active:-translate-y-1 group relative lg:-translate-y-2 cursor-pointer h-full"
+                  className="bg-white border-2 border-blue-600 hover:border-blue-500 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-xl ring-4 ring-blue-500/10 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1.5 lg:hover:-translate-y-2.5 active:-translate-y-1 group relative lg:-translate-y-2 cursor-pointer h-full"
                 >
                   {/* Badge Recomendado */}
                   <div className="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md z-20 flex items-center gap-1.5">
@@ -798,16 +797,6 @@ export default function LandingPage() {
               <ShieldCheck className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
               <span>Aviso Legal &amp; RGPD</span>
             </Link>
-
-            <a
-              href="https://wa.me/5493585187430?text=Hola%20Emiliano,%20quiero%20informaci%C3%B3n%20para%20probar%20el%20piloto%20de%2014%20d%C3%ADas%20de%20Fluxo%20en%20mi%20local"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-400 text-slate-700 hover:text-emerald-600 font-bold transition-all shadow-xs group"
-            >
-              <MessageCircle className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-              <span>Hablar por WhatsApp</span>
-            </a>
 
             <button
               type="button"
