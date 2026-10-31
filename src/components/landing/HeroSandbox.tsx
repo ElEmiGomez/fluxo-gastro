@@ -72,11 +72,8 @@ interface HeroSandboxProps {
 }
 
 export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
-  // Inicializamos con 1 smash y 1 ipa por defecto para que el usuario pueda probar con 1 solo clic en "Enviar pedido"
-  const [cart, setCart] = useState<CartLine[]>([
-    { id: 'smash', name: 'Smash Burger Doble Trufada', qty: 1, price: 13.5, station: 'cocina', course: '2° Principales' },
-    { id: 'ipa', name: 'Cerveza Artesana IPA', qty: 1, price: 3.8, station: 'barra', course: 'Bebidas' }
-  ])
+  // Inicializamos con carrito vacío por defecto para que el usuario elija libremente sus platos
+  const [cart, setCart] = useState<CartLine[]>([])
   const [stage, setStage] = useState<Stage>('carrito')
   const [elapsed, setElapsed] = useState(64) // Empezar con cronómetro natural ~1 min
   const [pulse, setPulse] = useState<'carta' | 'mozo' | 'cocina' | null>(null)
@@ -117,6 +114,16 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
     })
   }
 
+  const removeDish = (dish: Dish) => {
+    if (!canEditCart) return
+    setCart((prev) => {
+      const found = prev.find((l) => l.id === dish.id)
+      if (!found) return prev
+      if (found.qty <= 1) return prev.filter((l) => l.id !== dish.id)
+      return prev.map((l) => (l.id === dish.id ? { ...l, qty: l.qty - 1 } : l))
+    })
+  }
+
   // Paso 1: Comensal envía comanda -> avanza a Paso 2 (Mozo valida)
   const sendOrder = () => {
     if (cart.length === 0) return
@@ -143,12 +150,9 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
     flash('carta')
   }
 
-  // Reiniciar simulador
+  // Reiniciar simulador (vuelve a 0 selecciones)
   const reset = () => {
-    setCart([
-      { id: 'smash', name: 'Smash Burger Doble Trufada', qty: 1, price: 13.5, station: 'cocina', course: '2° Principales' },
-      { id: 'ipa', name: 'Cerveza Artesana IPA', qty: 1, price: 3.8, station: 'barra', course: 'Bebidas' }
-    ])
+    setCart([])
     setStage('carrito')
     setElapsed(64)
     setPulse(null)
@@ -275,19 +279,38 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
                           </span>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => addDish(d)}
-                        disabled={!canEditCart}
-                        className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors cursor-pointer active:scale-95"
-                      >
-                        + Pedir
-                        {qty > 0 && (
-                          <span className="ml-0.5 min-w-[16px] h-4 px-1 rounded-full bg-white text-blue-700 text-[10px] flex items-center justify-center font-black tabular-nums">
-                            {qty}
-                          </span>
-                        )}
-                      </button>
+                      {qty === 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => addDish(d)}
+                          disabled={!canEditCart}
+                          className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors cursor-pointer active:scale-95"
+                        >
+                          + Pedir
+                        </button>
+                      ) : (
+                        <div className="flex items-center space-x-1 bg-blue-50 p-0.5 rounded-lg border border-blue-200 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => removeDish(d)}
+                            disabled={!canEditCart}
+                            aria-label={`Disminuir ${d.name}`}
+                            className="w-5 h-5 rounded bg-white text-blue-700 flex items-center justify-center font-black text-xs hover:bg-blue-100 transition-colors shadow-xs cursor-pointer"
+                          >
+                            -
+                          </button>
+                          <span className="text-[11px] font-black text-blue-900 px-1 tabular-nums">{qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => addDish(d)}
+                            disabled={!canEditCart}
+                            aria-label={`Aumentar ${d.name}`}
+                            className="w-5 h-5 rounded bg-blue-700 text-white flex items-center justify-center font-black text-xs hover:bg-blue-800 transition-colors shadow-xs cursor-pointer"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -305,7 +328,11 @@ export function HeroSandbox({ onOpenAllDashboards }: HeroSandboxProps) {
                     disabled={cart.length === 0}
                     className="w-full py-2.5 rounded-xl text-xs font-black text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-500/25 cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
                   >
-                    <span>Enviar pedido ({itemsCount}) &middot; {formatEuro(total)}</span>
+                    <span>
+                      {cart.length === 0
+                        ? 'Enviar pedido (Selecciona platos)'
+                        : `Enviar pedido (${itemsCount}) ${String.fromCharCode(183)} ${formatEuro(total)}`}
+                    </span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}

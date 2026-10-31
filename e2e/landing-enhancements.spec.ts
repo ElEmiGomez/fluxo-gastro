@@ -6,6 +6,10 @@ test.describe('Landing Page Enhancements (6 Bloques)', () => {
   test('Bloque 1: Simulador interactivo de 5 pasos con celebración esmeralda', async ({ page }) => {
     await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' })
 
+    // Añadir al menos 1 plato para activar el pedido interactivo
+    const addDishBtn = page.locator('button:has-text("+ Pedir")').first()
+    await addDishBtn.click()
+
     // Paso 1: Enviar pedido
     const sendOrderBtn = page.locator('button:has-text("Enviar pedido")')
     await expect(sendOrderBtn).toBeVisible()
@@ -32,6 +36,12 @@ test.describe('Landing Page Enhancements (6 Bloques)', () => {
     await expect(page.locator('text=⭐ Valorar en Google Maps (+1 sello extra)')).toBeVisible()
     const restartBtn = page.locator('button:has-text("Probar otro pedido en el simulador")')
     await expect(restartBtn).toBeVisible()
+    await restartBtn.click()
+
+    // Verificar que al reiniciar, el simulador vuelve a 0 platos seleccionados
+    const emptyOrderBtn = page.locator('button:has-text("Enviar pedido (Selecciona platos)")')
+    await expect(emptyOrderBtn).toBeVisible()
+    await expect(emptyOrderBtn).toBeDisabled()
   })
 
   test('Bloque 2: Antes vs. Después con Comparativa Interactiva Operación con Fluxo', async ({ page }) => {
