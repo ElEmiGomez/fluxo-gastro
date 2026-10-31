@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { data, error } = await supabase
       .from('qr_dinamicos')
-      .select('target_url')
+      .select('target_url, click_count')
       .eq('id', id)
       .single()
 
