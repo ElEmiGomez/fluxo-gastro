@@ -64,16 +64,39 @@ flowchart TD
 ┌────────────────────────────────────▼────────────────────────────────────┐
 │ ⚙️ 4. INGENIERÍA & PRODUCTO — [PROGRAM DATA] (Desarrollo & Software)    │
 │  ├─ [x] Hitos Fundacionales Consolidados (v1.0 & v1.2 completados)         │
-│  ├─ [x] Tarea 1: Lógica Compleja de Mozo y Cocina consolidada       │
-│  │     (Auditoría y simulación integral: estados, sincronización y cierre) │
-│  ├─ [📋 Tarea 2] QR Dinámico y Personalizable para Muestras Comerciales    │
-│        (Soporte de demo redireccionable/configurable para cartas por nicho)│
-│  ├─ [📋 Tarea 3] Hacer Vídeo de Landing Page                              │
-│        (Guion, captura del flujo de terraza/cocina y maquetación web)      │
-│  ├─ [📋 Tarea 4] Accionar Plan de Marketing y Validación en Campo          │
-│        (Salida a calle con Carta QR, prospección y feedback de Fluxo)     │
-│  └─ [📋 Tarea 5] Implementar FAQ en la Landing Page                        │
-│        (Preguntas frecuentes y derribo de objeciones comerciales)         │
+│  ├─ [x] Tarea 1: Lógica Compleja de Mozo y Cocina consolidada              │
+│  ├─ [📋 Tarea 2] Hacer Vídeo de Landing Page                              │
+│  │     (Guion, captura del flujo de terraza/cocina y maquetación web)      │
+│  ├─ [📋 Tarea 3] Accionar Plan de Marketing y Validación en Campo          │
+│  │     (Salida a calle con Carta QR, prospección y feedback de Fluxo)     │
+│  │                                                                         │
+│  ├─ 📌 FASE 1: CIERRE DEL BLOQUE COMERCIAL Y PLATAFORMA                    │
+│  │  ├─ [📋 Tarea 4] Smoke Test y Validación en Local (Pruebas de Flujo)   │
+│  │  │     • Flujo completo /activar/[slug] (21% IVA, bloqueo pago manual,  │
+│  │  │       selector de día 1 a 5)                                         │
+│  │  │     • Render /web/[slug] a 60 fps (desktop/móvil 390x844, neblinas   │
+│  │  │       y fluidez de <canvas> por scroll)                              │
+│  │  │     • Descarga CRM a 300 DPI de lámina física /demo y tarjeta 9:16   │
+│  │  └─ [📋 Tarea 5] Enrutamiento Multi-Dominio (Baja Urgencia)             │
+│  │        • Middleware Next.js para reescribir dominios propios por local  │
+│  │          (ej. casamardavila.es -> /web/casa-mar-da-vila) [OpenCode]     │
+│  │                                                                         │
+│  └─ 🚀 FASE 2: SPRINT OPERATIVO (SALA, COCINA Y ONBOARDING)                │
+│     ├─ [📋 Tarea 6] Onboarding «Llave en Mano» con Visión IA (Crítica)     │
+│     │     • POST /api/onboarding/parse-menu: digitalización de foto/PDF     │
+│     │       con visión multimodal, validación Zod de 14 alérgenos UE y     │
+│     │       auto-aprovisionamiento en Supabase < 30s con QRs               │
+│     ├─ [📋 Tarea 7] Comandero Móvil Offline-First & División de Cuentas    │
+│     │     • Motor SyncQueue (IndexedDB + optimista) para terrazas, traslado│
+│     │       y fusión de mesas en 2 toques, división proporcional/táctil    │
+│     │       y liberación de QR con saldo 0,00 € [Prioridad Alta]           │
+│     ├─ [📋 Tarea 8] Monitor KDS Manos Libres por Hardware (Prioridad Media)│
+│     │     • Cola FIFO (espacio/pedal USB), buffer undo 10s (Ctrl+Z), voz   │
+│     │       push-to-talk («Oído/Listo mesa X») y filtro acústico selectivo │
+│     └─ [📋 Tarea 9] Motor de Upselling Reactivo en Carta QR (Comercial)    │
+│           • Cadena (Principal -> Bebida -> Entrante -> Postre) con filtro  │
+│             de alérgenos/stock, modificadores rápidos y carrusel de café   │
+│             y postre a los 22-25 min de servicio                          │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐

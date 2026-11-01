@@ -6,6 +6,23 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-01 02:35] — Reestructuración Integral de Backlog: Cierre Comercial (Fase 1) y Sprint Operativo (Fase 2)
+* **Departamentos Sincronizados:** Dirección General (Depto 1), Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
+* **Ajustes de Tareas Anteriores:**
+  - **Eliminadas del backlog:** Antigua Tarea 2 (QR dinámico muestras) y Antigua Tarea 5 (FAQ Landing Page).
+  - **Reordenadas:** Hacer Vídeo de Landing Page (pasa a Tarea 2) y Accionar Plan de Marketing y Validación en Campo (pasa a Tarea 3).
+* **Nuevas Tareas Incorporadas:**
+  - **FASE 1: Cierre del Bloque Comercial y Plataforma**
+    - **Tarea 4 (Smoke Test y Validación en Local):** Flujo completo `/activar/[slug]` (IVA 21%, bloqueo de pago manual sin archivo, selector días 1-5); inspección 60 fps de `/web/[slug]` (390x844 móvil y desktop, neblinas y scroll canvas); descarga CRM a 300 DPI de lámina física para `/demo` y tarjeta 9:16 de Casa Mar Da Vila.
+    - **Tarea 5 (Enrutamiento Multi-Dominio):** Configuración de `middleware.ts` en Next.js para reescritura de dominios propios de restaurantes (ej. `casamardavila.es` $\rightarrow$ `/web/casa-mar-da-vila`) [Baja urgencia / OpenCode].
+  - **FASE 2: Sprint Operativo (Sala, Cocina y Onboarding)**
+    - **Tarea 6 (Onboarding «Llave en Mano» con Visión IA - Crítica):** Endpoint `POST /api/onboarding/parse-menu` con visión multimodal, extracción estricta con esquemas Zod de los 14 alérgenos de la UE y auto-aprovisionamiento en Supabase < 30s con QRs listos [OpenCode + Antigravity].
+    - **Tarea 7 (Comandero Móvil Offline-First & División de Cuentas - Alta):** Motor SyncQueue (IndexedDB con actualizaciones optimistas para terrazas), fusión/traslado de mesas en 2 toques, división proporcional o táctil de cuentas y liberación automática de QR con saldo 0,00 € [OpenCode].
+    - **Tarea 8 (Monitor KDS Manos Libres por Hardware - Media):** Cola FIFO por espacio o pedal USB, buffer de 10s de deshacer (Ctrl+Z), comandos push-to-talk («Oído mesa X» / «Listo mesa X») y filtro acústico selectivo cocina/barra [OpenCode].
+    - **Tarea 9 (Motor de Upselling Reactivo en Carta QR - Comercial):** Cadena reactiva de venta cruzada (Principal $\rightarrow$ Bebida $\rightarrow$ Entrante $\rightarrow$ Postre) en carrito con respeto de alérgenos y stock, y reapertura contextual tras 22-25 min de servicio [OpenCode + Antigravity].
+
+---
+
 ### [2026-10-27 11:15] — Registro de Nueva Tarea: Implementar FAQ en Landing Page (Tarea 5)
 * **Departamentos Sincronizados:** Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto (Depto 4).
 * **Alcance de la Tarea:**
