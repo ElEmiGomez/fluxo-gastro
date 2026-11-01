@@ -6,6 +6,19 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-01 17:35] — Activación de Tareas a Estado «EN CURSO»: Tareas 5, 7, 8 y 9
+* **Departamentos Sincronizados:** Dirección General (Depto 1) e Ingeniería & Producto (Depto 4).
+* **Cambio de Estado Operativo:**
+  - **Tarea 5 (Enrutamiento Multi-Dominio):** Marcada como `[⏳ EN CURSO]` (configuración de middleware en Next.js para subdominios y dominios propios de restaurantes).
+  - **Tarea 7 (Comandero Móvil Offline-First & División de Cuentas):** Marcada como `[⏳ EN CURSO]` (motor SyncQueue IndexedDB, optimista, fusión/traslado y split bill).
+  - **Tarea 8 (Monitor KDS Manos Libres por Hardware):** Marcada como `[⏳ EN CURSO]` (cola FIFO por barra espaciadora/pedal USB, Ctrl+Z y filtro sonoro selectivo).
+  - **Tarea 9 (Motor de Upselling Reactivo en Carta QR):** Marcada como `[⏳ EN CURSO]` (cadena de upselling en carrito y reapertura contextual tras 22-25 min).
+* **Backlog Restante:**
+  - Pendientes: Tarea 2 (Vídeo Landing), Tarea 3 (Plan Marketing Calle), Tarea 4 (Smoke Test Local), Tarea 6 (Onboarding Visión IA).
+  - Completadas: Tarea 1 (Lógica Mozo/Cocina).
+
+---
+
 ### [2026-11-01 02:35] — Reestructuración Integral de Backlog: Cierre Comercial (Fase 1) y Sprint Operativo (Fase 2)
 * **Departamentos Sincronizados:** Dirección General (Depto 1), Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
 * **Ajustes de Tareas Anteriores:**
