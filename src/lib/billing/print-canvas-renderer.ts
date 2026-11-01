@@ -223,17 +223,48 @@ export function drawFluxoIsotypeWhite(
 }
 
 /**
+ * Dibuja un logo circular de local en el pie (p. ej. Casa Mar da Vila)
+ * en lugar del isotipo de Fluxo.
+ */
+export function drawLocalLogoCircle(
+  ctx: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  cx: number,
+  cy: number,
+  boxSize: number
+): void {
+  ctx.save()
+  const r = boxSize / 2
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.closePath()
+  ctx.clip()
+  ctx.drawImage(image, cx - r, cy - r, boxSize, boxSize)
+  ctx.restore()
+
+  // Anillo blanco sutil perimetral
+  ctx.save()
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
+  ctx.lineWidth = Math.max(2, boxSize * 0.03)
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.restore()
+}
+
+/**
  * Frente comercial de la lámina, dibujado en el espacio de diseño
  * 1748x2480 (el caller aplica translate + scale).
  * Composición ultra-limpia y minimalista:
  * 1. Cabecera a una sola frase: "Escanea para acceder a la carta" en blanco puro
  * 2. Tarjeta blanca QR centrada verticalmente con mayor aire perimetral
- * 3. Isotipo "F." blanco puro en el pie respirando con holgura
+ * 3. Isotipo en el pie: Isotipo "F." blanco puro de Fluxo o logo circular del local
  */
 function drawFrontDesign(
   ctx: CanvasRenderingContext2D,
   includeQrCode: boolean,
-  targetUrl: string
+  targetUrl: string,
+  bottomLogoImage?: CanvasImageSource | null
 ): void {
   const W = DESIGN_W
   const H = DESIGN_H
@@ -308,11 +339,15 @@ function drawFrontDesign(
     }
   }
 
-  // 3. ISOTIPO "F." EN BLANCO PURO EN EL PIE
+  // 3. LOGO EN EL PIE: Isotipo "F." en blanco puro o logo circular del local
   // Sin textos "FLUXO" ni "GASTRONOMIC SYSTEM". Margen inferior generoso (8-10% del alto).
   const logoBoxSize = W * 0.095
   const logoCenterY = H * 0.915
-  drawFluxoIsotypeWhite(ctx, W / 2, logoCenterY, logoBoxSize)
+  if (bottomLogoImage) {
+    drawLocalLogoCircle(ctx, bottomLogoImage, W / 2, logoCenterY, logoBoxSize)
+  } else {
+    drawFluxoIsotypeWhite(ctx, W / 2, logoCenterY, logoBoxSize)
+  }
 }
 
 /**
@@ -395,7 +430,8 @@ export function drawStreetKit(
   canvas: HTMLCanvasElement,
   format: StreetKitFormat,
   includeQrCode: boolean,
-  targetUrl: string
+  targetUrl: string,
+  bottomLogoImage?: CanvasImageSource | null
 ): void {
   const { w: W, h: H } = STREET_KIT_SIZES[format]
   canvas.width = W
@@ -415,7 +451,7 @@ export function drawStreetKit(
     const sFront = Math.min(W / DESIGN_W, half / DESIGN_H)
     ctx.translate((W - DESIGN_W * sFront) / 2, (half - DESIGN_H * sFront) / 2)
     ctx.scale(sFront, sFront)
-    drawFrontDesign(ctx, includeQrCode, targetUrl)
+    drawFrontDesign(ctx, includeQrCode, targetUrl, bottomLogoImage)
     ctx.restore()
 
     // Marcas de corte de toda la hoja
@@ -461,7 +497,7 @@ export function drawStreetKit(
     ctx.save()
     ctx.translate((W - DESIGN_W * s) / 2, (H - DESIGN_H * s) / 2)
     ctx.scale(s, s)
-    drawFrontDesign(ctx, includeQrCode, targetUrl)
+    drawFrontDesign(ctx, includeQrCode, targetUrl, bottomLogoImage)
     ctx.restore()
   }
 }

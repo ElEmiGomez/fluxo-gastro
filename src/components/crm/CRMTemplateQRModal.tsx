@@ -42,7 +42,7 @@ export function CRMTemplateQRModal({
   const origin = typeof window !== 'undefined'
     ? window.location.origin
     : 'https://fluxo-gastro.vercel.app'
-  const targetPath = isTemplate ? '/template-carta' : '/casamar-da-vila'
+  const targetPath = isTemplate ? '/carta-prototipo' : '/carta-casamar'
   const targetUrl = `${origin}${targetPath}`
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&data=${encodeURIComponent(
