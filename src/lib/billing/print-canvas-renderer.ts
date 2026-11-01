@@ -167,26 +167,68 @@ function paintFaceBackground(
   const bg = ctx.createLinearGradient(0, 0, W, H)
   bg.addColorStop(0, '#070d1a')
   bg.addColorStop(0.55, '#0b1426')
-  bg.addColorStop(1, '#101a30')
+  bg.addColorStop(0, '#070d1a')
+  bg.addColorStop(0.55, '#0b131e')
+  bg.addColorStop(1, '#0b131e')
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, W, H)
 
-  const glow = ctx.createRadialGradient(W / 2, -H * 0.15, 0, W / 2, -H * 0.15, H * 0.9)
-  glow.addColorStop(0, 'rgba(34, 211, 238, 0.10)')
+  const glow = ctx.createRadialGradient(W / 2, H * 0.48, 0, W / 2, H * 0.48, W * 0.85)
+  glow.addColorStop(0, 'rgba(34, 211, 238, 0.08)')
   glow.addColorStop(1, 'rgba(34, 211, 238, 0)')
   ctx.fillStyle = glow
   ctx.fillRect(0, 0, W, H)
 }
 
-const INDICATORS: Array<[string, string]> = [
-  ['⚡', 'Sin descargar PDFs pesados'],
-  ['🌍', 'Multi-idioma automático ES · GAL · EN'],
-  ['🛡️', 'Filtro interactivo de alérgenos y lonja'],
-]
+/**
+ * Dibuja el isotipo oficial "F." en color blanco puro (`#FFFFFF`)
+ * mediante Canvas 2D nativo vectorial, respetando las proporciones
+ * exactas del viewBox 0 0 64 64 de Fluxo:
+ * Trazo "F" de grosor 8.5 con terminaciones redondeadas (M23 48V16H45 M23 31H38)
+ * y punto circular r=4.2 en (39, 46).
+ */
+export function drawFluxoIsotypeWhite(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  boxSize: number
+): void {
+  ctx.save()
+  const scale = boxSize / 64
+  // Desplazar para que (cx, cy) sea el centro del icono (32, 32 en viewBox)
+  ctx.translate(cx - 32 * scale, cy - 32 * scale)
+  ctx.scale(scale, scale)
+
+  ctx.strokeStyle = '#ffffff'
+  ctx.fillStyle = '#ffffff'
+  ctx.lineWidth = 8.5
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+
+  // Trazo principal de la "F"
+  ctx.beginPath()
+  ctx.moveTo(23, 48)
+  ctx.lineTo(23, 16)
+  ctx.lineTo(45, 16)
+  ctx.moveTo(23, 31)
+  ctx.lineTo(38, 31)
+  ctx.stroke()
+
+  // Punto circular característico en el hueco inferior derecho
+  ctx.beginPath()
+  ctx.arc(39, 46, 4.2, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.restore()
+}
 
 /**
  * Frente comercial de la lámina, dibujado en el espacio de diseño
  * 1748x2480 (el caller aplica translate + scale).
+ * Composición ultra-limpia y minimalista:
+ * 1. Cabecera a una sola frase: "Escanea para acceder a la carta" en blanco puro
+ * 2. Tarjeta blanca QR centrada verticalmente con mayor aire perimetral
+ * 3. Isotipo "F." blanco puro en el pie respirando con holgura
  */
 function drawFrontDesign(
   ctx: CanvasRenderingContext2D,
@@ -196,53 +238,48 @@ function drawFrontDesign(
   const W = DESIGN_W
   const H = DESIGN_H
   ctx.textBaseline = 'alphabetic'
-
-  // Badge superior
-  const badgeText = 'DEMOSTRACIÓN EN VIVO · HOSTELERÍA'
-  const badgeFont = fitFontSize(ctx, badgeText, 800, W * 0.034, W * 0.52)
-  const badgeW = ctx.measureText(badgeText).width + W * 0.06
-  const badgeH = H * 0.03
-  const badgeX = (W - badgeW) / 2
-  const badgeY = H * 0.07
-  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2)
-  ctx.fillStyle = 'rgba(16, 185, 129, 0.16)'
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(52, 211, 153, 0.45)'
-  ctx.lineWidth = W * 0.0028
-  ctx.stroke()
-  ctx.fillStyle = '#34d399'
   ctx.textAlign = 'center'
-  ctx.fillText(badgeText, W / 2, badgeY + badgeH * 0.68)
 
-  // Titular de alto impacto (ajustado por medición, jamás desborda)
-  const line1 = 'Escanea con tu cámara'
-  const line2 = 'Tu carta en 0,2 segundos'
-  const hSize =
-    Math.min(
-      fitFontSize(ctx, line1, 900, W * 0.088, W * 0.84),
-      fitFontSize(ctx, line2, 900, W * 0.088, W * 0.92)
-    )
-  const line1Y = H * 0.135
-  const line2Y = line1Y + hSize * 1.22
+  // 1. CABECERA SIMPLIFICADA A UNA SOLA FRASE
+  // Titular centrado "Escanea para acceder a la carta" en dos líneas equilibradas
+  const line1 = 'Escanea para'
+  const line2 = 'acceder a la carta'
+  const hSize = Math.min(
+    fitFontSize(ctx, line1, 800, W * 0.076, W * 0.84),
+    fitFontSize(ctx, line2, 800, W * 0.076, W * 0.86)
+  )
+  ctx.font = FONT(800, hSize)
   ctx.fillStyle = '#ffffff'
+
+  // Margen superior amplio (aprox 14-16% de la altura total)
+  const line1Y = H * 0.145
+  const line2Y = line1Y + hSize * 1.25 // line-height equilibrado de 1.25
   ctx.fillText(line1, W / 2, line1Y)
-  ctx.fillStyle = '#22d3ee'
   ctx.fillText(line2, W / 2, line2Y)
 
-  // Contenedor central del QR
-  const qrBox = W * 0.72
+  // 2. CONTENEDOR CENTRAL DEL QR (Centrado ópticamente en el eje vertical)
+  // Con la eliminación de los 3 bullets, se aprovecha el espacio para centrar el QR con aire perimetral
+  const qrBox = W * 0.76
   const qrX = (W - qrBox) / 2
-  const qrY = H * 0.27
+  const qrY = H * 0.285
 
-  roundRect(ctx, qrX, qrY, qrBox, qrBox, qrBox * 0.06)
+  // Sombra / resplandor sutil para flotar sobre el fondo azul noche
+  ctx.save()
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.45)'
+  ctx.shadowBlur = W * 0.03
+  ctx.shadowOffsetY = W * 0.015
+  roundRect(ctx, qrX, qrY, qrBox, qrBox, qrBox * 0.065)
   ctx.fillStyle = '#ffffff'
   ctx.fill()
-  ctx.strokeStyle = 'rgba(94, 234, 212, 0.65)'
-  ctx.lineWidth = W * 0.006
+  ctx.restore()
+
+  // Borde sutil y limpio
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+  ctx.lineWidth = W * 0.003
   ctx.stroke()
 
   if (includeQrCode) {
-    const pad = qrBox * 0.07
+    const pad = qrBox * 0.075
     const matrix = getQrMatrix(targetUrl)
     drawQrMatrix(ctx, matrix, qrX + pad, qrY + pad, qrBox - pad * 2)
   } else {
@@ -271,30 +308,11 @@ function drawFrontDesign(
     }
   }
 
-  // Indicadores bajo el QR (orden vertical garantizado, sin pisar el pie)
-  ctx.textAlign = 'left'
-  const textMaxW = W * 0.68
-  const indFontBase = W * 0.036
-  const iconFont = W * 0.034
-  const indYs = [H * 0.805, H * 0.855, H * 0.905]
-  INDICATORS.forEach(([icon, text], i) => {
-    const y = indYs[i]
-    const fontSize = fitFontSize(ctx, text, 600, indFontBase, textMaxW)
-    ctx.fillStyle = '#ffffff'
-    ctx.font = FONT(400, iconFont)
-    ctx.fillText(icon, W * 0.13, y)
-    ctx.fillStyle = '#cbd5e1'
-    ctx.fillText(text, W * 0.13 + W * 0.055, y)
-  })
-  ctx.textAlign = 'center'
-
-  // Pie de marca Fluxo
-  ctx.fillStyle = '#ffffff'
-  ctx.font = FONT(900, W * 0.048)
-  ctx.fillText('FLUXO', W / 2, H * 0.958)
-  ctx.fillStyle = 'rgba(148, 163, 184, 0.85)'
-  ctx.font = FONT(500, W * 0.026)
-  ctx.fillText('GASTRONOMIC SYSTEM', W / 2, H * 0.985)
+  // 3. ISOTIPO "F." EN BLANCO PURO EN EL PIE
+  // Sin textos "FLUXO" ni "GASTRONOMIC SYSTEM". Margen inferior generoso (8-10% del alto).
+  const logoBoxSize = W * 0.095
+  const logoCenterY = H * 0.915
+  drawFluxoIsotypeWhite(ctx, W / 2, logoCenterY, logoBoxSize)
 }
 
 /**
