@@ -82,7 +82,7 @@ flowchart TD
 │  │          (ej. casamardavila.es -> /web/casa-mar-da-vila y /carta)       │
 │  │                                                                         │
 │  └─ 🚀 FASE 2: SPRINT OPERATIVO (SALA, COCINA Y ONBOARDING)                │
-│     ├─ [📋 Tarea 6] Onboarding «Llave en Mano» con Visión IA (Crítica)     │
+│     ├─ [x] Tarea 6: Onboarding «Llave en Mano» con Visión IA               │
 │     │     • POST /api/onboarding/parse-menu: digitalización de foto/PDF     │
 │     │       con visión multimodal, validación Zod de 14 alérgenos UE y     │
 │     │       auto-aprovisionamiento en Supabase < 30s con QRs               │

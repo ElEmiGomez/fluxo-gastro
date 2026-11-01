@@ -6,6 +6,15 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-01 21:38] — Cierre de Tarea 6: Onboarding «Llave en Mano» con Visión IA
+* **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4) y Dirección General (Depto 1).
+* **Módulo Completado:**
+  - Endpoint `POST /api/onboarding/parse-menu` con visión multimodal y extracción tipada con Zod de los 14 alérgenos obligatorios de la UE.
+  - Auto-aprovisionamiento en Supabase con generación instantánea de QR.
+* **Estado:** Marcada como completada `[x]`.
+
+---
+
 ### [2026-11-01 21:30] — Cierre e Implementación Exitosa: Tareas 5, 7, 8 y 9
 * **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4), Dirección General (Depto 1) y Marketing & Ventas (Depto 2).
 * **Módulos Entregados y Certificados:**
