@@ -1,0 +1,2282 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FLUXO — Motor Cinemático de Webs Gastronómicas v4 (Método Antigravity)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Plus Jakarta Sans, Instrument Serif, Anton, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* =========================================================================
+       FLUXO CINEMATIC ENGINE V4 — REGLAS ANTIGRAVITY + APPLE-DESIGN
+       1. Cero barra superior de administración: La web empieza en (0,0)
+       2. Uniones fundidas en neblina ("Mist Fades") hacia #F6F3EC (cero cortes duros)
+       3. Desaparición del rectángulo en Bloque 2 (Plato recortado flotando con sombra)
+       4. Números tabulares y tracking negativo en titulares
+       ========================================================================= */
+    :root {
+      --warm-paper: #F6F3EC;
+      --warm-card: #EFECE4;
+      --warm-border: rgba(24, 24, 22, 0.1);
+      --ink-primary: #151513;
+      --ink-secondary: #5C5A54;
+      --accent-brand: #0E5A6A;
+      --accent-gold: #B8894A;
+      --spring: cubic-bezier(0.22, 1, 0.36, 1);
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-serif: 'Instrument Serif', Georgia, serif;
+      --font-display: 'Anton', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-variant-numeric: tabular-nums;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      background-color: var(--warm-paper);
+      color: var(--ink-primary);
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+      margin: 0;
+    }
+
+    .font-editorial {
+      font-family: var(--font-serif);
+      letter-spacing: -0.02em;
+    }
+
+    .font-impact {
+      font-family: var(--font-display);
+      letter-spacing: 0.01em;
+      line-height: 0.94;
+    }
+
+    .font-mono-code {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .headline-tight {
+      letter-spacing: -0.035em;
+      line-height: 1.03;
+    }
+
+    /* Neblina de fusión inferior del Hero hacia el fondo cálido #F6F3EC */
+    .hero-mist-bottom {
+      background: linear-gradient(
+        180deg,
+        rgba(246, 243, 236, 0) 0%,
+        rgba(246, 243, 236, 0.18) 32%,
+        rgba(246, 243, 236, 0.65) 68%,
+        rgba(246, 243, 236, 0.94) 88%,
+        #F6F3EC 100%
+      );
+    }
+
+    /* Neblina de entrada y salida para el Bloque 3 (Scroll-Scrubbing Canvas) */
+    .canvas-mist-top {
+      background: linear-gradient(
+        180deg,
+        #F6F3EC 0%,
+        rgba(246, 243, 236, 0.85) 28%,
+        rgba(246, 243, 236, 0.25) 68%,
+        rgba(246, 243, 236, 0) 100%
+      );
+    }
+
+    .canvas-mist-bottom {
+      background: linear-gradient(
+        0deg,
+        #F6F3EC 0%,
+        rgba(246, 243, 236, 0.88) 28%,
+        rgba(246, 243, 236, 0.28) 68%,
+        rgba(246, 243, 236, 0) 100%
+      );
+    }
+
+    /* Sombra de contacto realista para el plato recortado sin fondo rectangular */
+    .cutout-floating-shadow {
+      filter: drop-shadow(0 36px 42px rgba(20, 18, 14, 0.22))
+              drop-shadow(0 12px 16px rgba(20, 18, 14, 0.14));
+      transition: transform 0.65s var(--spring), filter 0.65s var(--spring);
+    }
+    .cutout-floating-shadow:hover {
+      transform: translateY(-6px) scale(1.015);
+      filter: drop-shadow(0 44px 52px rgba(20, 18, 14, 0.26))
+              drop-shadow(0 16px 20px rgba(20, 18, 14, 0.15));
+    }
+
+    /* Ticket térmico troquelado para el modo personalizador (Arquetipo 03) */
+    .perforated-ticket {
+      background: #FCFBF7;
+      color: #161614;
+      position: relative;
+      box-shadow: 0 24px 48px -12px rgba(20, 18, 14, 0.16);
+      border-left: 1px solid rgba(0,0,0,0.08);
+      border-right: 1px solid rgba(0,0,0,0.08);
+    }
+    .perforated-ticket::before,
+    .perforated-ticket::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 10px;
+      background-size: 18px 18px;
+    }
+    .perforated-ticket::before {
+      top: -10px;
+      background-image: radial-gradient(circle at 9px 0, transparent 5.5px, #FCFBF7 6px);
+    }
+    .perforated-ticket::after {
+      bottom: -10px;
+      background-image: radial-gradient(circle at 9px 18px, transparent 5.5px, #FCFBF7 6px);
+    }
+
+    /* Animación de ruta a pie en el mapa de Noia */
+    @keyframes walkPulse {
+      to {
+        stroke-dashoffset: -28;
+      }
+    }
+    .noia-walk-path {
+      stroke-dasharray: 8 6;
+      animation: walkPulse 1.1s linear infinite;
+    }
+
+    /* Ocultar scrollbars en barras horizontales */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="selection:bg-stone-900 selection:text-stone-100">
+
+  <!-- =========================================================================
+       NAVEGACIÓN FLOTANTE EN CÁPSULA (FULL-BLEED DESDE EL PÍXEL 0,0)
+       Inspirada en los 4 vídeos de Rodrigo Olivares y AMBRE
+       ========================================================================= -->
+  <header class="fixed top-4 sm:top-6 inset-x-0 z-40 px-4 sm:px-8 pointer-events-none">
+    <div class="max-w-[1360px] mx-auto flex items-center justify-between gap-3">
+      
+      <!-- Cápsula Izquierda: Identidad del Restaurante + Semáforo en Vivo -->
+      <div class="pointer-events-auto flex items-center gap-3 px-4 py-2.5 rounded-full bg-stone-950/75 backdrop-blur-xl border border-white/15 text-stone-100 shadow-xl">
+        <a href="#block-1-hero" class="flex items-center gap-2.5">
+          <span id="nav-brand-dot" class="w-2.5 h-2.5 rounded-full bg-[#38BDF8]"></span>
+          <span id="nav-brand-name" class="font-bold text-xs sm:text-sm tracking-tight">O PAZO DA RÍA</span>
+        </a>
+        <span class="h-3.5 w-px bg-white/15 hidden sm:inline-block"></span>
+        <button onclick="toggleLiveSemaphore()" class="hidden sm:inline-flex items-center gap-2 text-[11px] font-mono-code text-stone-200 hover:text-white transition" title="Toca para simular estado Abierto / Cerrado">
+          <span id="nav-sem-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="nav-sem-label">Abierto · Cocina hasta 16:00</span>
+        </button>
+      </div>
+
+      <!-- Cápsula Central: Los 5 Bloques Cinemáticos -->
+      <nav class="pointer-events-auto hidden lg:flex items-center gap-1 px-2 py-1.5 rounded-full bg-stone-950/75 backdrop-blur-xl border border-white/15 text-stone-300 text-xs shadow-xl">
+        <a href="#block-2-cutout" class="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition">01. El Plato</a>
+        <a href="#block-3-scrub" class="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition">02. Recorrido</a>
+        <a href="#block-4-3d" class="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition">03. Espacios 3D</a>
+        <a href="#block-4-noia" class="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition">04. Entorno Noia</a>
+        <a href="#block-5-booking" class="px-3.5 py-1.5 rounded-full hover:bg-white/10 hover:text-white transition">05. Reserva & FAQ</a>
+      </nav>
+
+      <!-- Cápsula Derecha: Auto-Idioma + Carta Fija con Precios Reales -->
+      <div class="pointer-events-auto flex items-center gap-2">
+        <div class="hidden sm:flex items-center bg-stone-950/75 backdrop-blur-xl border border-white/15 rounded-full p-1 text-[11px] font-mono-code text-stone-300 shadow-xl">
+          <button onclick="setLanguage('es')" id="lang-pill-es" class="px-2.5 py-1 rounded-full bg-white text-stone-950 font-bold transition">ES</button>
+          <button onclick="setLanguage('gal')" id="lang-pill-gal" class="px-2.5 py-1 rounded-full hover:text-white transition">GAL</button>
+          <button onclick="setLanguage('en')" id="lang-pill-en" class="px-2.5 py-1 rounded-full hover:text-white transition">EN</button>
+        </div>
+
+        <button onclick="openCartaDrawer()" class="px-4 py-2.5 rounded-full bg-[#F6F3EC] hover:bg-white text-stone-950 font-semibold text-xs shadow-xl transition flex items-center gap-2 border border-stone-300">
+          <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+          <span id="nav-cta-carta">Ver Carta y Precios</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       BLOQUE 1: HERO CINEMÁTICO EN TRÍPODE (16:9 CON AIRE INTENCIONAL +
+       MICRO-LOOP VIVO EN CANVAS + NEBLINA DE FUSIÓN INFERIOR SIN CORTE DURO)
+       ========================================================================= -->
+  <section id="block-1-hero" class="relative w-full h-screen min-h-[680px] overflow-hidden flex flex-col justify-between select-none">
+    
+    <!-- Fotografía 16:9 Reencuadrada con Aire Intencional (Cámara Fija en Trípode) -->
+    <div class="absolute inset-0 z-0 bg-stone-950">
+      <img id="hero-bg-photo" src="https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=1800&q=85" alt="Portada en trípode" class="w-full h-full object-cover object-center opacity-85 transition-opacity duration-700" onerror="this.src='https://placehold.co/1800x1000/101820/F6F3EC?text=FLUXO+CINEMATIC+HERO'" />
+      <!-- Gradiente direccional para garantizar espacio negativo limpio ("Aire Intencional") -->
+      <div id="hero-air-gradient" class="absolute inset-0 bg-gradient-to-r from-stone-950/85 via-stone-950/40 to-transparent"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-stone-950/50 via-transparent to-transparent"></div>
+    </div>
+
+    <!-- Canvas HTML5 de Alta Densidad: Micro-Loop Vivo en Trípode (Agua Ría / Brasas / Vapor) -->
+    <canvas id="hero-tripod-canvas" class="absolute inset-0 z-10 w-full h-full pointer-events-none"></canvas>
+
+    <!-- Etiqueta Pedagógica del Método Antigravity (Ocultable desde el Dock) -->
+    <div class="antigravity-layer-badge hidden relative z-30 mt-24 mx-auto max-w-[1360px] w-full px-4 sm:px-8 pointer-events-none">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-amber-400/95 text-stone-950 font-mono-code text-[11px] font-bold shadow-lg">
+        <span>CAPA 01 (RODRIGO OLIVARES)</span>
+        <span>·</span>
+        <span>Cámara fija en trípode + Aire negativo arriba/izquierda + Neblina inferior fundida a #F6F3EC</span>
+      </div>
+    </div>
+
+    <!-- Contenido Principal del Hero ubicado en la Zona de Aire Intencional -->
+    <div class="relative z-20 max-w-[1360px] w-full mx-auto px-4 sm:px-8 my-auto pt-16">
+      <div class="max-w-2xl space-y-6">
+        
+        <!-- Micro-kicker con coordenadas reales de Noia -->
+        <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-stone-100 text-xs font-mono-code">
+          <span id="hero-kicker-badge" class="text-sky-300 font-semibold">LONJA DE TESTAL · NOIA</span>
+          <span>·</span>
+          <span id="hero-kicker-coords">42°47'06"N 8°53'14"W</span>
+        </div>
+
+        <!-- Titular con Aire Intencional (Cero palabras forzadas en cursiva IA) -->
+        <h1 id="hero-main-title" class="headline-tight text-5xl sm:text-7xl lg:text-[82px] font-extrabold text-white tracking-tight">
+          El mar de Noia, servido en calma.
+        </h1>
+
+        <!-- Copy corto e intencional (Máximo 2 líneas limpias) -->
+        <p id="hero-main-subtitle" class="text-base sm:text-xl text-stone-200/90 font-normal leading-relaxed max-w-xl">
+          Marisco vivo de las mariscadoras de la cofradía y pescados salvajes a la brasa de encina frente al Malecón.
+        </p>
+
+        <!-- Botones de Acción Inmediata (Transparentes y Directos) -->
+        <div class="flex flex-wrap items-center gap-3.5 pt-2">
+          <a href="#block-4-3d" class="px-6 py-4 rounded-full bg-[#F6F3EC] hover:bg-white text-stone-950 font-bold text-xs sm:text-sm tracking-tight transition shadow-2xl flex items-center gap-2">
+            <span id="hero-btn-primary">Explorar Salones en 3D y Reservar</span>
+            <i data-lucide="arrow-down-right" class="w-4 h-4"></i>
+          </a>
+          <button onclick="openCartaDrawer()" class="px-6 py-4 rounded-full bg-stone-950/65 hover:bg-stone-950/90 text-white border border-white/25 backdrop-blur-md font-semibold text-xs sm:text-sm tracking-tight transition flex items-center gap-2">
+            <span id="hero-btn-secondary">Consultar Carta y Precios de Hoy</span>
+            <span class="font-mono-code text-[11px] text-emerald-300">🌊 Lonja</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Indicador Minimalista de Micro-Loop + Neblina de Fusión Inferior (190px) -->
+    <div class="relative z-20 w-full">
+      <div class="max-w-[1360px] mx-auto px-4 sm:px-8 pb-6 flex items-center justify-between text-xs font-mono-code text-stone-300/80">
+        <span id="hero-loop-caption">● MICRO-LOOP EN TRÍPODE ACTIVO: BRISA Y AGUA DE LA RÍA (60 FPS)</span>
+        <span class="hidden sm:inline">DESLIZA PARA FUNDIR CON EL PLATO ESTRELLA ↓</span>
+      </div>
+      <!-- Neblina suave que funde el Hero directamente con el color #F6F3EC del Bloque 2 -->
+      <div class="hero-mist-bottom w-full h-36 sm:h-48 pointer-events-none"></div>
+    </div>
+
+  </section>
+
+  <!-- =========================================================================
+       BLOQUE 2: PAUSA EDITORIAL CON PLATO ESTRELLA RECORTADO
+       ("Desaparición del Rectángulo": El plato flota directamente sobre #F6F3EC)
+       ========================================================================= -->
+  <section id="block-2-cutout" class="relative py-16 sm:py-28 px-4 sm:px-8 bg-[#F6F3EC] text-[#151513]">
+    <div class="max-w-[1320px] mx-auto">
+      
+      <!-- Etiqueta Pedagógica del Método Antigravity -->
+      <div class="antigravity-layer-badge hidden mb-8">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-amber-400 text-stone-950 font-mono-code text-[11px] font-bold shadow">
+          <span>CAPA 02 (RODRIGO OLIVARES)</span>
+          <span>·</span>
+          <span>Desaparición del rectángulo: Plato recortado sin fondo flotando sobre #F6F3EC con sombra de contacto</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
+        
+        <!-- Columna Izquierda (5 cols): Copy Corto, Intencional y Selector de Ángulo/Capas -->
+        <div class="lg:col-span-5 space-y-6">
+          <div class="inline-flex items-center gap-2 text-xs font-mono-code uppercase tracking-widest text-stone-500">
+            <span id="b2-kicker-num">01 // PIEZA INSIGNIA DE LA CASA</span>
+            <span>·</span>
+            <span id="b2-kicker-tag" class="text-stone-900 font-semibold">SIN CAJAS NI BORDES</span>
+          </div>
+
+          <h2 id="b2-dish-title" class="headline-tight text-4xl sm:text-5xl lg:text-6xl font-bold text-stone-950">
+            Centolla de la Ría & Berberecho de Testal.
+          </h2>
+
+          <p id="b2-dish-copy" class="text-base sm:text-lg text-stone-600 leading-relaxed">
+            Seleccionada cada mañana a las 08:00h en la lonja de Noia y cocida en agua de mar con laurel fresco. Sin artificios, respetando el sabor puro del Atlántico.
+          </p>
+
+          <!-- Selector de Inspección Visual del Plato Recortado -->
+          <div class="pt-2">
+            <span class="font-mono-code text-[11px] uppercase tracking-wider text-stone-500 block mb-2.5">
+              INSPECCIONAR PLATO RECORTADO:
+            </span>
+            <div class="inline-flex flex-wrap gap-2 bg-[#EFECE4] p-1.5 rounded-2xl border border-stone-300/80">
+              <button onclick="setCutoutInspectMode('main')" id="cutout-mode-main" class="px-4 py-2 rounded-xl text-xs font-semibold bg-stone-950 text-white transition">
+                1. Emplatado Cenital
+              </button>
+              <button onclick="setCutoutInspectMode('detail')" id="cutout-mode-detail" class="px-4 py-2 rounded-xl text-xs font-semibold text-stone-700 hover:text-stone-950 transition">
+                2. Detalle & Calibre
+              </button>
+              <button onclick="setCutoutInspectMode('origin')" id="cutout-mode-origin" class="px-4 py-2 rounded-xl text-xs font-semibold text-stone-700 hover:text-stone-950 transition">
+                3. Trazabilidad & Lonja
+              </button>
+            </div>
+          </div>
+
+          <!-- Interruptores Rápidos de Ingredientes / Capas (Se reflejan en vivo sobre el plato recortado) -->
+          <div class="pt-2">
+            <span class="font-mono-code text-[11px] uppercase tracking-wider text-stone-500 block mb-2.5">
+               ELEMENTOS DEL EMPLATADO (TOCA PARA RESALTAR):
+            </span>
+            <div id="b2-layer-pills" class="flex flex-wrap gap-2">
+              <!-- Renderizado por JS -->
+            </div>
+          </div>
+
+          <!-- Transparencia de Precios a 1 Clic -->
+          <div class="pt-4 flex flex-wrap items-center gap-4">
+            <button onclick="openCartaDrawer()" class="px-6 py-3.5 rounded-full bg-stone-950 hover:bg-stone-800 text-[#F6F3EC] text-xs sm:text-sm font-semibold transition flex items-center gap-2.5 shadow-lg">
+              <span>Ver Precio Actualizado en Carta Fija</span>
+              <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+            </button>
+            <span id="b2-lonja-note" class="text-xs font-mono-code text-stone-500">
+              🌊 Sincronizado con /p/[slug] al instante
+            </span>
+          </div>
+        </div>
+
+        <!-- Columna Central/Derecha (7 cols): El Plato Recortado Flotando Sin Rectángulo + Ticket Opcional -->
+        <div class="lg:col-span-7 flex flex-col xl:flex-row items-center justify-center gap-8">
+          
+          <!-- Lienzo Transparente de Alta Resolución: Plato Recortado sin Bordes Rectangulares -->
+          <div class="relative flex flex-col items-center justify-center w-full max-w-[460px]">
+            <div class="relative w-[320px] h-[320px] sm:w-[410px] sm:h-[410px] flex items-center justify-center">
+              <!-- Fotografía circular/orgánica recortada + Canvas de detalles de emplatado encima -->
+              <div id="cutout-plate-wrapper" class="cutout-floating-shadow relative w-[295px] h-[295px] sm:w-[375px] sm:h-[375px] rounded-full flex items-center justify-center">
+                <!-- Base cerámica artesanal sin ningún marco rectangular -->
+                <div id="cutout-ceramic-rim" class="w-full h-full rounded-full p-3.5 sm:p-5 bg-gradient-to-br from-[#232220] via-[#171615] to-[#0D0D0C] shadow-inner flex items-center justify-center relative">
+                  <div class="w-full h-full rounded-full overflow-hidden relative border border-white/10">
+                    <img id="cutout-dish-img" src="https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?auto=format&fit=crop&w=900&q=85" alt="Plato Estrella Recortado" class="w-full h-full object-cover scale-110 transition-transform duration-700" />
+                    <div class="absolute inset-0 bg-radial from-transparent via-transparent to-black/35"></div>
+                  </div>
+                  <!-- Canvas superpuesto para guarniciones interactivas, vapor y pines de trazabilidad -->
+                  <canvas id="cutout-overlay-canvas" width="420" height="420" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+                </div>
+              </div>
+
+              <!-- Etiquetas Flotantes en el Aire alrededor del Plato Recortado (Solo Escritorio para no tapar en móvil) -->
+              <div id="cutout-callout-1" class="hidden sm:flex absolute -top-2 -left-4 px-3.5 py-2 rounded-2xl bg-white/90 backdrop-blur-md border border-stone-300/80 shadow-lg items-center gap-2 text-xs">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span id="callout-text-1" class="font-medium text-stone-900">Captura del día · 08:00h</span>
+              </div>
+
+              <div id="cutout-callout-2" class="hidden sm:flex absolute -bottom-2 -right-4 px-3.5 py-2 rounded-2xl bg-white/90 backdrop-blur-md border border-stone-300/80 shadow-lg items-center gap-2 text-xs">
+                <span class="font-mono-code font-bold text-stone-900" id="callout-text-2">100% Ría de Noia</span>
+              </div>
+            </div>
+
+            <!-- Lista limpia debajo del plato para Móvil (Regla #6 de Rodrigo Olivares: no tapar el producto en móvil) -->
+            <div class="flex sm:hidden items-center justify-center gap-3 mt-4 text-xs font-mono-code text-stone-600">
+              <span id="mobile-callout-1">● Captura 08:00h</span>
+              <span>·</span>
+              <span id="mobile-callout-2">● 100% Ría de Noia</span>
+            </div>
+          </div>
+
+          <!-- Ficha de Trazabilidad / Ticket Térmico Troquelado de Consulta -->
+          <div class="w-full max-w-[290px] shrink-0">
+            <div class="perforated-ticket p-5 rounded-sm font-mono-code text-xs space-y-3.5">
+              <div class="border-b border-dashed border-stone-300 pb-2.5 flex items-center justify-between">
+                <div>
+                  <span id="ticket-brand-header" class="font-bold text-xs block text-stone-950">O PAZO DA RÍA</span>
+                  <span class="text-[10px] text-stone-500">FICHA TÉCNICA DE PLATO</span>
+                </div>
+                <span id="ticket- inspect-badge" class="px-2 py-0.5 rounded bg-stone-900 text-white text-[10px] font-bold">LONJA</span>
+              </div>
+
+              <div>
+                <span class="text-[10px] text-stone-400 uppercase block">PIEZA SELECCIONADA:</span>
+                <p id="ticket-cutout-title" class="font-bold text-sm text-stone-950 mt-0.5">Centolla & Berberecho Testal</p>
+              </div>
+
+              <div class="border-t border-dashed border-stone-300 pt-2.5">
+                <span class="text-[10px] text-stone-400 uppercase block mb-1.5">ELEMENTOS ACTIVOS:</span>
+                <ul id="ticket-cutout-layers" class="space-y-1 text-[11px] text-stone-700">
+                  <!-- Dinámico por JS -->
+                </ul>
+              </div>
+
+              <div class="border-t border-dashed border-stone-300 pt-2.5 flex items-center justify-between text-[11px]">
+                <span class="text-stone-500">MARIDAJE:</span>
+                <span id="ticket-cutout-pairing" class="font-semibold text-stone-900">Albariño Sobre Lías</span>
+              </div>
+
+              <div class="border-t-2 border-stone-900 pt-3">
+                <button onclick="openCartaDrawer()" class="w-full py-2.5 rounded bg-stone-950 hover:bg-stone-800 text-white font-bold text-[11px] uppercase tracking-wider transition">
+                  Consultar Precio Hoy →
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       BLOQUE 3: RECORRIDO DE CÁMARA CONTROLADO POR SCROLL EN <CANVAS>
+       (Fotograma Inicial 000 → Fotograma Final 120 con Uniones Fundidas en Neblina)
+       ========================================================================= -->
+  <section id="block-3-scrub" class="relative w-full h-[270vh] bg-[#F6F3EC]">
+    
+    <!-- Contenedor Sticky 100vh donde el Canvas interpola los 120 fotogramas -->
+    <div class="sticky top-0 w-full h-screen overflow-hidden flex flex-col justify-between">
+      
+      <!-- Neblina Superior: Funde el fondo #F6F3EC suavemente con el Canvas (Cero corte duro) -->
+      <div class="canvas-mist-top relative z-20 w-full h-28 sm:h-36 pointer-events-none"></div>
+
+      <!-- Canvas HTML5 del Viaje de Cámara (Frame 000 a Frame 120) -->
+      <canvas id="scrub-camera-canvas" class="absolute inset-0 z-0 w-full h-full"></canvas>
+
+      <!-- Tarjetas de Narrativa Corta Sincronizadas con los Fotogramas (15%, 50%, 85%) -->
+      <div class="relative z-20 max-w-[1320px] w-full mx-auto px-4 sm:px-8 my-auto pointer-events-none">
+        
+        <!-- Etiqueta Pedagógica del Método Antigravity -->
+        <div class="antigravity-layer-badge hidden mb-4 pointer-events-auto">
+          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-amber-400 text-stone-950 font-mono-code text-[11px] font-bold shadow">
+            <span>CAPA 03 (RODRIGO OLIVARES)</span>
+            <span>·</span>
+            <span>Secuencia de vídeo en &lt;canvas&gt; controlada por la rueda del ratón (Fotograma Inicial → Fotograma Final)</span>
+          </div>
+        </div>
+
+        <div class="max-w-lg bg-stone-950/75 backdrop-blur-xl border border-white/15 rounded-3xl p-6 sm:p-8 text-stone-100 shadow-2xl pointer-events-auto transition-all duration-300">
+          <div class="flex items-center justify-between text-[11px] font-mono-code text-amber-300 mb-2">
+            <span id="scrub-frame-counter">FOTOGRAMA 000 / 120 · PLANO GENERAL 24MM</span>
+            <span id="scrub-percent-badge">0%</span>
+          </div>
+
+          <h3 id="scrub-story-title" class="headline-tight text-2xl sm:text-4xl font-bold text-white mb-2.5">
+            Del Malecón de Noia al corazón del comedor.
+          </h3>
+
+          <p id="scrub-story-desc" class="text-sm sm:text-base text-stone-300 leading-relaxed">
+            Haz scroll con la rueda del ratón (o mueve el deslizador inferior) para avanzar la cámara desde la entrada hasta el detalle de la mesa servida.
+          </p>
+
+          <!-- Control Interactivo de Fotogramas + Botón Auto-Play para Probar al Instante -->
+          <div class="mt-5 pt-4 border-t border-white/15 space-y-3">
+            <div class="flex items-center gap-3">
+              <button onclick="playScrubSequence()" id="scrub-autoplay-btn" class="px-3.5 py-1.5 rounded-full bg-white text-stone-950 hover:bg-amber-300 font-mono-code text-xs font-bold transition flex items-center gap-1.5 shrink-0">
+                <span>▶ Simular Scroll</span>
+              </button>
+              <input type="range" id="scrub-manual-slider" min="0" max="120" value="0" oninput="manualScrubFrame(this.value)" class="w-full accent-amber-400 cursor-pointer" />
+            </div>
+            <div class="flex items-center justify-between text-[10px] font-mono-code text-stone-400">
+              <span>000 · Entrada Exterior</span>
+              <span>060 · Cruce de Salón</span>
+              <span>120 · Macro en Mesa</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Neblina Inferior: Funde el final del Canvas suavemente de vuelta hacia #F6F3EC -->
+      <div class="canvas-mist-bottom relative z-20 w-full h-28 sm:h-36 pointer-events-none"></div>
+
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       BLOQUE 4: ESCENA INTERACTIVA EN 3D (MAQUETA ROTABLE + CONTROL DE LUZ
+       SOLAR/NOCTURNA + FOTOS EXTERIOR/INTERIOR CONECTADAS A LA RESERVA)
+       ========================================================================= -->
+  <section id="block-4-3d" class="relative py-16 sm:py-24 px-4 sm:px-8 bg-[#F6F3EC] text-[#151513]">
+    <div class="max-w-[1320px] mx-auto">
+      
+      <!-- Etiqueta Pedagógica del Método Antigravity -->
+      <div class="antigravity-layer-badge hidden mb-6">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-amber-400 text-stone-950 font-mono-code text-[11px] font-bold shadow">
+          <span>CAPA 04 (LADERA & JERICOACOARA)</span>
+          <span>·</span>
+          <span>Escena 3D rotable con control de luz solar + Fotos Exterior/Interior coherentes + Conexión directa al formulario</span>
+        </div>
+      </div>
+
+      <!-- Encabezado de Sección Limpio -->
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+        <div>
+          <span class="font-mono-code text-xs uppercase tracking-widest text-stone-500 block mb-2">
+            03 // EXPLORADOR ESPACIAL 3D & LUZ EN TIEMPO REAL
+          </span>
+          <h2 class="headline-tight text-3xl sm:text-5xl font-bold text-stone-950">
+            Elige tu espacio y la luz de tu reserva.
+          </h2>
+        </div>
+        <p class="text-sm text-stone-600 max-w-md">
+          Gira la maqueta 3D, simula la luz del mediodía o la cena y selecciona tu zona favorita: quedará cargada automáticamente en tu solicitud de reserva.
+        </p>
+      </div>
+
+      <!-- Grid Principal: Visor 3D + Controles Fuera del Área de Arrastre (7 cols) y Ficha Conectada (5 cols) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        
+        <!-- Columna Izquierda (7 cols): Escena 3D Interactiva + Barra Inferior Limpia -->
+        <div class="lg:col-span-7 flex flex-col justify-between bg-[#141619] text-stone-100 rounded-3xl border border-stone-300 overflow-hidden shadow-xl">
+          
+          <!-- Barra Superior del Visor 3D -->
+          <div class="px-5 py-3.5 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs font-mono-code">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span id="viewer-3d-status">ARRASTRA PARA ROTAR 360° · TOCA UNA MESA</span>
+            </div>
+            <button onclick="toggleCoherentPhotosModal()" class="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-[11px] transition flex items-center gap-1.5">
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+              <span>Ver Fotos Reales (Exterior / Interior)</span>
+            </button>
+          </div>
+
+          <!-- Lienzo 3D Interactivo (Cámara alejada automáticamente en móvil para no cortar la maqueta) -->
+          <div class="relative flex-1 min-h-[330px] sm:min-h-[390px] w-full flex items-center justify-center">
+            <canvas id="spatial-3d-canvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+
+            <!-- Mini-visor superpuesto opcional de Fotos Coherentes (Exterior e Interior del mismo espacio) -->
+            <div id="coherent-photos-overlay" class="hidden absolute inset-4 bg-stone-950/95 backdrop-blur-xl rounded-2xl border border-white/15 p-4 sm:p-5 flex-col justify-between z-20">
+              <div class="flex items-center justify-between mb-3">
+                <span id="coherent-photos-title" class="font-mono-code text-xs text-amber-300 uppercase">
+                  FOTOGRAFÍAS REALES COHERENTES · TERRAZA SOBRE LA RÍA
+                </span>
+                <button onclick="toggleCoherentPhotosModal()" class="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs">
+                  Volver al 3D ✕
+                </button>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+                <div class="relative rounded-xl overflow-hidden border border-white/10">
+                  <img id="coherent-img-ext" src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=700&q=80" alt="Vista Exterior" class="w-full h-48 sm:h-full object-cover" />
+                  <span class="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-black/80 text-white font-mono-code text-[10px]">
+                    01. VISTA EXTERIOR DEL ESPACIO
+                  </span>
+                </div>
+                <div class="relative rounded-xl overflow-hidden border border-white/10">
+                  <img id="coherent-img-int" src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=700&q=80" alt="Vista Interior" class="w-full h-48 sm:h-full object-cover" />
+                  <span class="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded bg-black/80 text-white font-mono-code text-[10px]">
+                    02. VISTA INTERIOR DE LA MESA
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controles Inferiores Fuera del Lienzo 3D (Selector de Espacio + Control de Luz Solar/Nocturna) -->
+          <div class="p-4 sm:p-5 bg-stone-950 border-t border-white/10 space-y-4">
+            
+            <!-- 1. Pestañas de los 3 Espacios -->
+            <div id="space-3d-tabs" class="grid grid-cols-3 gap-2">
+              <!-- Renderizado por JS -->
+            </div>
+
+            <!-- 2. Control Deslizante de Luz Solar y Atmósfera (Estilo Ladera Arquitectura) -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-white/10 text-xs">
+              <div class="flex items-center gap-2 font-mono-code">
+                <i data-lucide="sun" class="w-4 h-4 text-amber-400"></i>
+                <span>LUZ Y HORARIO:</span>
+                <strong id="sun-time-label" class="text-amber-300">14:00h · Comida (Sol del Atlántico)</strong>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-[10px] font-mono-code text-stone-400">12:00</span>
+                <input type="range" id="sun-hour-slider" min="12" max="23" step="0.5" value="14" oninput="update3dSunHour(this.value)" class="w-36 sm:w-44 accent-amber-400 cursor-pointer" />
+                <span class="text-[10px] font-mono-code text-stone-400">23:00</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Columna Derecha (5 cols): Ficha del Espacio Seleccionado Conectada al Cierre -->
+        <div class="lg:col-span-5 bg-[#EFECE4] rounded-3xl border border-stone-300/90 p-6 sm:p-9 flex flex-col justify-between">
+          <div class="space-y-5">
+            <div class="flex items-center justify-between">
+              <span id="space-card-badge" class="px-3 py-1 rounded-full bg-stone-900 text-white font-mono-code text-[11px] font-semibold">
+                ESPACIO 01 / 03
+              </span>
+              <span class="font-mono-code text-xs text-emerald-700 font-semibold">● Disponible hoy</span>
+            </div>
+
+            <h3 id="space-card-title" class="headline-tight text-3xl sm:text-4xl font-bold text-stone-950">
+              Terraza Acristalada sobre la Ría
+            </h3>
+
+            <p id="space-card-desc" class="text-sm sm:text-base text-stone-600 leading-relaxed">
+              Primera línea frente al Malecón de Noia. Cristaleras retráctiles climatizadas para disfrutar de la brisa marina a mediodía o de la puesta de sol sobre la ría en el turno de cena.
+            </p>
+
+            <!-- Especificaciones Claras y Cortas -->
+            <div class="grid grid-cols-2 gap-4 pt-4 border-t border-stone-300 text-xs">
+              <div>
+                <span class="text-stone-500 block font-mono-code uppercase text-[10px]">CAPACIDAD POR MESA</span>
+                <span id="space-spec-pax" class="text-base font-bold text-stone-900">De 2 a 8 comensales</span>
+              </div>
+              <div>
+                <span class="text-stone-500 block font-mono-code uppercase text-[10px]">ATMÓSFERA SELECCIONADA</span>
+                <span id="space-spec-light" class="text-base font-bold text-stone-900">14:00h · Luz Mediodía</span>
+              </div>
+              <div>
+                <span class="text-stone-500 block font-mono-code uppercase text-[10px]">RECOMENDACIÓN EN MESA</span>
+                <span id="space-spec-dish" class="text-sm font-semibold text-stone-900">Mariscada & Arroz Bogavante</span>
+              </div>
+              <div>
+                <span class="text-stone-500 block font-mono-code uppercase text-[10px]">CONFORT</span>
+                <span id="space-spec-comfort" class="text-sm font-semibold text-stone-900">Climatizada & Vistas Ría</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botón que Conecta Directamente la Elección 3D con el Formulario Final (Regla #5 de Rodrigo Olivares) -->
+          <div class="pt-8 space-y-3">
+            <button onclick="commitSpaceToBooking()" class="w-full py-4 px-6 rounded-2xl bg-stone-950 hover:bg-stone-800 text-[#F6F3EC] font-bold text-xs sm:text-sm uppercase tracking-wider transition shadow-xl flex items-center justify-center gap-2">
+              <span>Elegir este espacio para mi reserva</span>
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+            </button>
+            <button onclick="toggleCoherentPhotosModal()" class="w-full py-3 px-4 rounded-xl border border-stone-400/80 hover:border-stone-900 text-stone-800 font-semibold text-xs uppercase tracking-wider transition">
+              Ver fotografías Exterior e Interior de esta zona
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       BLOQUE 4B: PRUEBA SOCIAL DE GOOGLE MAPS + "LO MEJOR DE NOIA, A UN PASO"
+       ========================================================================= -->
+  <section id="block-4-noia" class="py-14 sm:py-20 px-4 sm:px-8 bg-[#F6F3EC] border-t border-stone-300/70">
+    <div class="max-w-[1320px] mx-auto space-y-16">
+      
+      <!-- 1. Reseñas Reales de Google Maps (Cortas y Verificadas) -->
+      <div>
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-3">
+          <div>
+            <span class="font-mono-code text-xs uppercase tracking-widest text-stone-500 block mb-1">PRUEBA SOCIAL VERIFICADA</span>
+            <h3 class="headline-tight text-2xl sm:text-4xl font-bold text-stone-950">4.9 ★ en Google Maps en Noia</h3>
+          </div>
+          <span class="font-mono-code text-xs text-stone-500">Opiniones reales de comensales que reservaron desde la web</span>
+        </div>
+        <div id="reviews-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Renderizado por JS -->
+        </div>
+      </div>
+
+      <!-- 2. "Lo mejor de Noia, a un paso" (Distancias reales a pie en minutos + Plano Vectorial) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center pt-6 border-t border-stone-300/70">
+        <div class="lg:col-span-5 space-y-5">
+          <span class="font-mono-code text-xs uppercase tracking-widest text-stone-500 block">04 // UBICACIÓN Y DISTANCIAS A PIE</span>
+          <h3 class="headline-tight text-3xl sm:text-5xl font-bold text-stone-950">
+            Lo mejor de Noia, a un paso.
+          </h3>
+          <p class="text-sm text-stone-600 leading-relaxed">
+            Toca cualquier punto emblemático de Noia para trazar el recorrido a pie desde nuestra puerta.
+          </p>
+
+          <div class="divide-y divide-stone-300/80 border-t border-b border-stone-300/80">
+            <button onclick="selectNoiaPoi('alameda')" class="w-full py-3 flex items-center justify-between text-left hover:pl-1.5 transition-all">
+              <span class="text-sm font-semibold text-stone-900">Alameda de Noia</span>
+              <span class="font-mono-code text-xs font-bold text-stone-900 bg-stone-200/90 px-2.5 py-1 rounded-full">2 min a pie</span>
+            </button>
+            <button onclick="selectNoiaPoi('tapal')" class="w-full py-3 flex items-center justify-between text-left hover:pl-1.5 transition-all">
+              <span class="text-sm font-semibold text-stone-900">Igrexa de San Martiño / Praza do Tapal</span>
+              <span class="font-mono-code text-xs font-bold text-stone-900 bg-stone-200/90 px-2.5 py-1 rounded-full">3 min a pie</span>
+            </button>
+            <button onclick="selectNoiaPoi('parking')" class="w-full py-3 flex items-center justify-between text-left hover:pl-1.5 transition-all">
+              <span class="text-sm font-semibold text-stone-900">Parking Público Gratuito</span>
+              <span class="font-mono-code text-xs font-bold text-stone-900 bg-stone-200/90 px-2.5 py-1 rounded-full">3 min a pie</span>
+            </button>
+            <button onclick="selectNoiaPoi('malecon')" class="w-full py-3 flex items-center justify-between text-left hover:pl-1.5 transition-all">
+              <span class="text-sm font-semibold text-stone-900">Paseo Marítimo & Malecón de San Lázaro</span>
+              <span class="font-mono-code text-xs font-bold text-stone-900 bg-stone-200/90 px-2.5 py-1 rounded-full">4 min a pie</span>
+            </button>
+            <button onclick="selectNoiaPoi('testal')" class="w-full py-3 flex items-center justify-between text-left hover:pl-1.5 transition-all">
+              <span class="text-sm font-semibold text-stone-900">Lonja & Playa de Testal</span>
+              <span class="font-mono-code text-xs font-bold text-stone-900 bg-stone-200/90 px-2.5 py-1 rounded-full">12 min a pie</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Plano Cartográfico Limpio de Noia -->
+        <div class="lg:col-span-7">
+          <div class="rounded-3xl overflow-hidden border border-stone-300 bg-[#141619] p-4 sm:p-6 text-white shadow-xl">
+            <div class="flex items-center justify-between text-xs font-mono-code text-stone-400 mb-3">
+              <span>CARTOGRAFÍA · CASCO HISTÓRICO & RÍA DE NOIA</span>
+              <span id="noia-map-status" class="text-emerald-400">Ruta activa: Alameda de Noia (2 min)</span>
+            </div>
+            <svg viewBox="0 0 680 340" class="w-full h-[250px] sm:h-[300px] rounded-2xl bg-[#1C1F24] border border-white/10">
+              <path d="M 0,0 L 210,0 C 195,110 175,220 130,340 L 0,340 Z" fill="#0F172A" />
+              <text x="35" y="180" fill="#38BDF8" opacity="0.45" font-family="JetBrains Mono" font-size="10" transform="rotate(-90 45 180)">RÍA DE MUROS E NOIA</text>
+              <g stroke="rgba(255,255,255,0.07)" stroke-width="14" fill="none" stroke-linecap="round">
+                <path d="M 190,45 L 640,45" />
+                <path d="M 185,125 L 640,125" />
+                <path d="M 175,205 L 640,205" />
+                <path d="M 155,285 L 640,285" />
+                <path d="M 260,15 L 235,325" />
+                <path d="M 400,15 L 385,325" />
+                <path d="M 540,15 L 530,325" />
+              </g>
+              <path id="noia-svg-route" d="M 390,205 L 400,125 L 510,125" fill="none" stroke="#34D399" stroke-width="3.5" class="noia-walk-path" />
+              <g onclick="selectNoiaPoi('alameda')" class="cursor-pointer">
+                <circle cx="510" cy="125" r="8" fill="#34D399" />
+                <text x="510" y="106" text-anchor="middle" fill="#FFFFFF" font-family="JetBrains Mono" font-size="10">Alameda (2m)</text>
+              </g>
+              <g onclick="selectNoiaPoi('tapal')" class="cursor-pointer">
+                <circle cx="398" cy="125" r="7" fill="#A1A1AA" />
+                <text x="398" y="106" text-anchor="middle" fill="#D4D4D8" font-family="JetBrains Mono" font-size="10">San Martiño (3m)</text>
+              </g>
+              <g onclick="selectNoiaPoi('parking')" class="cursor-pointer">
+                <circle cx="535" cy="255" r="7" fill="#A1A1AA" />
+                <text x="535" y="276" text-anchor="middle" fill="#D4D4D8" font-family="JetBrains Mono" font-size="10">Parking Gratis (3m)</text>
+              </g>
+              <g onclick="selectNoiaPoi('malecon')" class="cursor-pointer">
+                <circle cx="245" cy="170" r="7" fill="#A1A1AA" />
+                <text x="255" y="153" text-anchor="middle" fill="#D4D4D8" font-family="JetBrains Mono" font-size="10">Malecón (4m)</text>
+              </g>
+              <g onclick="selectNoiaPoi('testal')" class="cursor-pointer">
+                <circle cx="180" cy="295" r="7" fill="#A1A1AA" />
+                <text x="230" y="315" text-anchor="middle" fill="#D4D4D8" font-family="JetBrains Mono" font-size="10">Lonja Testal (12m)</text>
+              </g>
+              <g>
+                <circle cx="390" cy="205" r="16" fill="rgba(245, 158, 11, 0.25)" />
+                <circle cx="390" cy="205" r="7" fill="#F59E0B" stroke="#FFFFFF" stroke-width="2" />
+                <rect x="308" y="218" width="164" height="24" rx="5" fill="#FFFFFF" />
+                <text id="noia-svg-brand" x="390" y="234" text-anchor="middle" fill="#111111" font-family="JetBrains Mono" font-weight="700" font-size="10">📍 O PAZO DA RÍA</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =========================================================================
+       BLOQUE 5: CIERRE CON RESERVA PRE-CARGADA A WHATSAPP + BOTÓN COPIAR +
+       PREGUNTAS FRECUENTES (FAQ) CON AIRE INTENCIONAL ANTES DEL FOOTER
+       ========================================================================= -->
+  <section id="block-5-booking" class="py-16 sm:py-28 pb-28 sm:pb-36 px-4 sm:px-8 bg-[#F6F3EC] border-t border-stone-300/80">
+    <div class="max-w-[1320px] mx-auto">
+      
+      <!-- Etiqueta Pedagógica del Método Antigravity -->
+      <div class="antigravity-layer-badge hidden mb-8">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-amber-400 text-stone-950 font-mono-code text-[11px] font-bold shadow">
+          <span>CAPA 05 (CIERRE JERICOACOARA & LADERA)</span>
+          <span>·</span>
+          <span>Recibe automáticamente el espacio y luz del Visor 3D + Envío a WhatsApp o Copiar Consulta + FAQ con aire</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        
+        <!-- Columna Izquierda (7 cols): Formulario Pre-cargado desde la Escena 3D -->
+        <div class="lg:col-span-7 bg-white rounded-3xl border border-stone-300/90 p-6 sm:p-10 shadow-sm space-y-6">
+          
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-stone-200">
+            <div>
+              <span class="font-mono-code text-xs uppercase tracking-widest text-stone-500">05 // RESERVA DIRECTA SIN INTERMEDIARIOS</span>
+              <h2 class="headline-tight text-3xl sm:text-4xl font-bold text-stone-950 mt-1">
+                Confirma tu mesa en 15 segundos.
+              </h2>
+            </div>
+            <span id="booking-3d-sync-pill" class="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 font-mono-code text-[11px] font-semibold">
+              ✓ Sincronizado con Maqueta 3D
+            </span>
+          </div>
+
+          <!-- Espacio y Luz Pre-cargados desde el Bloque 4 -->
+          <div class="p-4 rounded-2xl bg-[#F6F3EC] border border-stone-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span class="font-mono-code text-[10px] uppercase text-stone-500 block">ESPACIO Y ATMÓSFERA ELEGIDOS EN EL VISOR 3D:</span>
+              <strong id="booking-preloaded-space" class="text-base text-stone-950">Terraza Acristalada sobre la Ría · 14:00h (Sol Mediodía)</strong>
+            </div>
+            <a href="#block-4-3d" class="text-xs font-mono-code underline text-stone-700 hover:text-stone-950 shrink-0">
+              Cambiar en 3D ↑
+            </a>
+          </div>
+
+          <!-- Selector de Fecha, Turno y Comensales -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="font-mono-code text-[11px] uppercase text-stone-500 block mb-1.5">1. Fecha</label>
+              <select id="booking-date-sel" onchange="updateBookingMessagePreview()" class="w-full px-3.5 py-3 rounded-xl bg-[#F6F3EC] border border-stone-300 text-xs font-semibold text-stone-900">
+                <option value="Hoy, Sábado 31 Oct">Hoy, Sábado 31 Oct</option>
+                <option value="Mañana, Domingo 1 Nov" selected>Mañana, Domingo 1 Nov</option>
+                <option value="Viernes 6 Nov">Viernes 6 Nov</option>
+                <option value="Sábado 7 Nov">Sábado 7 Nov</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="font-mono-code text-[11px] uppercase text-stone-500 block mb-1.5">2. Turno / Hora</label>
+              <select id="booking-time-sel" onchange="updateBookingMessagePreview()" class="w-full px-3.5 py-3 rounded-xl bg-[#F6F3EC] border border-stone-300 text-xs font-semibold text-stone-900">
+                <option value="13:45h (Comida)">13:45h (Comida)</option>
+                <option value="14:15h (Comida)" selected>14:15h (Comida)</option>
+                <option value="15:00h (Comida)">15:00h (Comida)</option>
+                <option value="21:00h (Cena)">21:00h (Cena)</option>
+                <option value="21:45h (Cena)">21:45h (Cena)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="font-mono-code text-[11px] uppercase text-stone-500 block mb-1.5">3. Comensales</label>
+              <select id="booking-guests-sel" onchange="updateBookingMessagePreview()" class="w-full px-3.5 py-3 rounded-xl bg-[#F6F3EC] border border-stone-300 text-xs font-semibold text-stone-900">
+                <option value="2 personas">2 personas</option>
+                <option value="4 personas" selected>4 personas</option>
+                <option value="6 personas">6 personas</option>
+                <option value="Grupo (8+ personas)">Grupo (8+ personas)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="font-mono-code text-[11px] uppercase text-stone-500 block mb-1.5">4. Tu Nombre*</label>
+              <input type="text" id="booking-name-input" oninput="updateBookingMessagePreview()" value="Martín Barreiro" class="w-full px-3.5 py-2.5 rounded-xl bg-[#F6F3EC] border border-stone-300 text-sm font-medium text-stone-900" />
+            </div>
+            <div>
+              <label class="font-mono-code text-[11px] uppercase text-stone-500 block mb-1.5">Nota / Alergias / Carrito bebé</label>
+              <input type="text" id="booking-note-input" oninput="updateBookingMessagePreview()" placeholder="Ej. Reserva arroz bogavante, sin gluten..." class="w-full px-3.5 py-2.5 rounded-xl bg-[#F6F3EC] border border-stone-300 text-sm font-medium text-stone-900" />
+            </div>
+          </div>
+
+          <!-- Previsualización del Mensaje Estructurado -->
+          <div class="p-4 rounded-2xl bg-stone-950 text-stone-100 space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-mono-code text-emerald-400">
+              <span>● MENSAJE ESTRUCTURADO PARA EL WHATSAPP DEL LOCAL</span>
+              <span id="copy-toast-feedback" class="text-amber-300 font-bold"></span>
+            </div>
+            <pre id="booking-wa-preview-box" class="font-mono-code text-xs text-stone-200 whitespace-pre-wrap leading-relaxed"></pre>
+          </div>
+
+          <!-- Doble Acción: Enviar por WhatsApp o Copiar Consulta (Como en Jericoacoara / Ladera) -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+            <button onclick="sendStructuredWhatsApp()" class="flex-1 py-4 px-6 rounded-2xl bg-stone-950 hover:bg-stone-800 text-white font-bold text-xs sm:text-sm uppercase tracking-wider transition shadow-xl flex items-center justify-center gap-2">
+              <span>📲 Enviar Reserva por WhatsApp</span>
+              <span>→</span>
+            </button>
+            <button onclick="copyStructuredInquiry()" class="py-4 px-5 rounded-2xl border border-stone-400 hover:border-stone-950 text-stone-900 font-semibold text-xs uppercase tracking-wider transition flex items-center justify-center gap-2">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+              <span>Copiar Consulta</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Columna Derecha (5 cols): Preguntas Frecuentes (FAQ) Desplegables con Mucho Aire -->
+        <div class="lg:col-span-5 space-y-6">
+          <div>
+            <span class="font-mono-code text-xs uppercase tracking-widest text-stone-500 block mb-1">DUDAS RÁPIDAS ANTES DE VENIR</span>
+            <h3 class="headline-tight text-2xl sm:text-3xl font-bold text-stone-950">
+              Preguntas frecuentes.
+            </h3>
+          </div>
+
+          <div class="space-y-3">
+            <!-- FAQ 1 -->
+            <div class="rounded-2xl bg-[#EFECE4] border border-stone-300/80 overflow-hidden">
+              <button onclick="toggleFaqItem(1)" class="w-full p-5 text-left flex items-center justify-between gap-4 font-semibold text-sm text-stone-950">
+                <span>¿Dónde puedo aparcar gratis cerca del restaurante?</span>
+                <span id="faq-icon-1" class="font-mono-code text-lg">−</span>
+              </button>
+              <div id="faq-body-1" class="px-5 pb-5 text-xs sm:text-sm text-stone-600 leading-relaxed">
+                A solo 3 minutos a pie (250 metros) dispones del Parking Público Gratuito junto a la Alameda y el Malecón de San Lázaro.
+              </div>
+            </div>
+
+            <!-- FAQ 2 -->
+            <div class="rounded-2xl bg-[#EFECE4] border border-stone-300/80 overflow-hidden">
+              <button onclick="toggleFaqItem(2)" class="w-full p-5 text-left flex items-center justify-between gap-4 font-semibold text-sm text-stone-950">
+                <span>¿La terraza está cubierta si llueve o refresca por la noche?</span>
+                <span id="faq-icon-2" class="font-mono-code text-lg">+</span>
+              </button>
+              <div id="faq-body-2" class="hidden px-5 pb-5 text-xs sm:text-sm text-stone-600 leading-relaxed">
+                Sí. Nuestra terraza cuenta con cerramiento acristalado panorámico y climatización, por lo que puedes reservar con vistas a la ría cualquier mes del año.
+              </div>
+            </div>
+
+            <!-- FAQ 3 -->
+            <div class="rounded-2xl bg-[#EFECE4] border border-stone-300/80 overflow-hidden">
+              <button onclick="toggleFaqItem(3)" class="w-full p-5 text-left flex items-center justify-between gap-4 font-semibold text-sm text-stone-950">
+                <span>¿Cómo funcionan los precios según lonja y los alérgenos?</span>
+                <span id="faq-icon-3" class="font-mono-code text-lg">+</span>
+              </button>
+              <div id="faq-body-3" class="hidden px-5 pb-5 text-xs sm:text-sm text-stone-600 leading-relaxed">
+                Actualizamos el precio exacto de cada marisco y pescado salvaje todos los días tras la subasta de las 08:00h. Puedes consultarlos con total transparencia pulsando en «Ver Carta y Precios».
+              </div>
+            </div>
+          </div>
+
+          <!-- Tarjeta de Contacto Directo -->
+          <div class="p-6 rounded-2xl bg-stone-900 text-stone-100 space-y-2">
+            <span class="font-mono-code text-[11px] text-amber-300 uppercase">¿SOIS UN GRUPO DE MÁS DE 10 PERSONAS?</span>
+            <p class="text-xs text-stone-300 leading-relaxed">
+              Llámanos directamente o envíanos el mensaje por WhatsApp para prepararos una mesa corrida en el salón principal.
+            </p>
+            <div class="pt-2 font-mono-code text-xs text-white font-bold">
+              📞 +34 711 573 870 · Noia, A Coruña
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER EDITORIAL OSCURO (CON MARGEN DE RESPIRACIÓN PARA EL DOCK) -->
+  <footer class="bg-stone-950 text-stone-400 py-14 pb-28 px-4 sm:px-8 text-xs border-t border-white/10">
+    <div class="max-w-[1320px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3 font-mono-code">
+        <span id="footer-brand-name" class="text-white font-bold">© 2026 O PAZO DA RÍA · NOIA</span>
+        <span>·</span>
+        <span>Motor Web Cinemático & Carta Sincronizada por <strong class="text-white">FLUXO</strong></span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="toggleDesignModal()" class="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-stone-200 font-mono-code transition">
+          Inspeccionar DESIGN.md & Schema.org
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =========================================================================
+       DOCK FLOTANTE INFERIOR COLAPSABLE ("FLUXO STUDIO DOCK" — APPLE GLASS)
+       Permite alternar entre los 3 Arquetipos sin ensuciar la parte superior
+       ========================================================================= -->
+  <div class="fixed bottom-4 inset-x-0 z-50 flex justify-center px-3 pointer-events-none">
+    <div class="pointer-events-auto bg-stone-950/90 backdrop-blur-2xl border border-white/20 rounded-full p-1.5 shadow-[0_24px_60px_rgba(0,0,0,0.65)] flex items-center gap-1.5 max-w-full overflow-x-auto no-scrollbar text-stone-200">
+      
+      <!-- Logo Fluxo Studio -->
+      <div class="flex items-center gap-2 pl-2.5 pr-2 py-1">
+        <span class="w-5 h-5 rounded-full bg-amber-400 text-stone-950 font-black text-[10px] flex items-center justify-center">FX</span>
+        <span class="font-mono-code text-[11px] font-bold text-white hidden md:inline">FLUXO v4</span>
+      </div>
+
+      <!-- Botones de los 3 Arquetipos -->
+      <button onclick="switchArchetype('pazo')" id="dock-btn-pazo" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white text-stone-950 transition whitespace-nowrap">
+        01 · O Pazo da Ría (Lonja)
+      </button>
+      <button onclick="switchArchetype('ladera')" id="dock-btn-ladera" class="px-3.5 py-1.5 rounded-full text-xs font-medium text-stone-300 hover:text-white transition whitespace-nowrap">
+        02 · Ladera & Brasa (Asador)
+      </button>
+      <button onclick="switchArchetype('brava')" id="dock-btn-brava" class="px-3.5 py-1.5 rounded-full text-xs font-medium text-stone-300 hover:text-white transition whitespace-nowrap">
+        03 · Brava // Forno & Smash
+      </button>
+
+      <span class="h-4 w-px bg-white/15 mx-1"></span>
+
+      <!-- Botón para Mostrar/Ocultar las Etiquetas de Capas del Método Antigravity -->
+      <button onclick="toggleAntigravityBadges()" id="dock-btn-layers" class="px-3 py-1.5 rounded-full text-[11px] font-mono-code bg-white/10 hover:bg-amber-400 hover:text-stone-950 text-amber-300 transition whitespace-nowrap flex items-center gap-1.5">
+        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+        <span class="hidden sm:inline">Capas Antigravity</span>
+      </button>
+
+      <!-- Acceso rápido a la Carta Fija con Precios -->
+      <button onclick="openCartaDrawer()" class="px-3.5 py-1.5 rounded-full text-[11px] font-mono-code bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition whitespace-nowrap">
+        🌊 Carta + Precios
+      </button>
+
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       DRAWER LATERAL: CARTA FIJA DE CONSULTA CON PRECIOS REALES (/p/[slug])
+       ========================================================================= -->
+  <div id="carta-backdrop" onclick="closeCartaDrawer()" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden opacity-0 transition-opacity duration-300"></div>
+
+  <aside id="carta-drawer" class="fixed top-0 right-0 h-full w-full max-w-2xl z-50 transform translate-x-full transition-transform duration-300 ease-out flex flex-col bg-[#111214] text-stone-100 border-l border-white/15 shadow-2xl">
+    <div class="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between gap-4 bg-stone-950">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono-code font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            ● Sincronizada con /p/[slug]
+          </span>
+          <span class="text-xs text-stone-400 font-mono-code">Modo Consulta Web (Sin llamada a mozo ni cocina)</span>
+        </div>
+        <h3 id="carta-drawer-heading" class="text-xl sm:text-2xl font-bold mt-1">Carta Completa y Precios Actualizados</h3>
+      </div>
+      <button onclick="closeCartaDrawer()" class="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center hover:bg-white/10 transition">
+        ✕
+      </button>
+    </div>
+
+    <!-- Filtro de Alérgenos -->
+    <div class="px-5 sm:px-6 py-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs bg-stone-900/60">
+      <span class="font-mono-code text-[11px] text-stone-400">OCULTAR ALÉRGENO:</span>
+      <div class="flex flex-wrap gap-1.5 font-mono-code">
+        <button onclick="toggleAllergenFilter('gluten')" id="alg-pill-gluten" class="px-2.5 py-1 rounded-full border border-white/15 text-stone-300 transition">🌾 Gluten</button>
+        <button onclick="toggleAllergenFilter('marisco')" id="alg-pill-marisco" class="px-2.5 py-1 rounded-full border border-white/15 text-stone-300 transition">🦐 Marisco</button>
+        <button onclick="toggleAllergenFilter('lacteos')" id="alg-pill-lacteos" class="px-2.5 py-1 rounded-full border border-white/15 text-stone-300 transition">🧀 Lácteos</button>
+      </div>
+    </div>
+
+    <div id="carta-drawer-list" class="flex-1 overflow-y-auto p-5 sm:p-6 space-y-7">
+      <!-- Renderizado por JS -->
+    </div>
+
+    <div class="p-4 sm:p-5 border-t border-white/10 bg-stone-950 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <span class="text-stone-400">Precios con IVA incluido actualizados desde el Panel del Dueño de Fluxo.</span>
+      <button onclick="closeCartaDrawer()" class="px-5 py-2 rounded-full bg-white text-stone-950 font-bold w-full sm:w-auto">
+        Cerrar Carta
+      </button>
+    </div>
+  </aside>
+
+  <!-- =========================================================================
+       MODAL INSPECTOR: DESIGN.MD + MÉTODO ANTIGRAVITY & SCHEMA.ORG
+       ========================================================================= -->
+  <div id="design-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="bg-stone-950 border border-white/15 rounded-3xl max-w-3xl w-full p-6 sm:p-8 text-stone-200 space-y-5 max-h-[88vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-white/10 pb-4">
+        <div>
+          <span class="font-mono-code text-xs text-amber-300 uppercase">ARQUITECTURA POR CAPAS (RODRIGO OLIVARES + APPLE-DESIGN)</span>
+          <h3 class="text-xl font-bold text-white mt-0.5">Especificación DESIGN.md & Schema.org/Restaurant</h3>
+        </div>
+        <button onclick="toggleDesignModal()" class="px-3 py-1 rounded-full border border-white/15 text-xs hover:bg-white/10">Cerrar ✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="p-4 rounded-2xl bg-emerald-950/25 border border-emerald-500/30 space-y-2">
+          <span class="font-mono-code font-bold text-emerald-400 block">✓ 5 CAPAS CINEMÁTICAS APLICADAS</span>
+          <ul class="space-y-1.5 text-stone-300 list-disc pl-4">
+            <li><strong>Bloque 1:</strong> Cámara en trípode 16:9 con aire negativo + neblina inferior fundida a <code>#F6F3EC</code>.</li>
+            <li><strong>Bloque 2:</strong> Plato estrella recortado sin rectángulo flotando con sombra de contacto.</li>
+            <li><strong>Bloque 3:</strong> Secuencia de 120 fotogramas en <code>&lt;canvas&gt;</code> controlada por scroll.</li>
+            <li><strong>Bloque 4 y 5:</strong> Escena 3D con control de luz solar conectada a la reserva de WhatsApp + FAQ.</li>
+          </ul>
+        </div>
+        <div class="p-4 rounded-2xl bg-rose-950/25 border border-rose-500/30 space-y-2">
+          <span class="font-mono-code font-bold text-rose-400 block">✕ ELIMINADO POR COMPLETO</span>
+          <ul class="space-y-1.5 text-stone-300 list-disc pl-4">
+            <li>Cero barras de administración arriba (la web empieza en el píxel 0,0).</li>
+            <li>Cero cortes rectangulares bruscos entre vídeo oscuro y secciones claras.</li>
+            <li>Cero cajas cuadradas alrededor del plato insignia y cero muros de texto.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <span class="font-mono-code text-xs text-stone-400 block mb-2">JSON-LD Schema.org/Restaurant activo para SEO Local en Noia:</span>
+        <pre id="schema-json-box" class="p-4 rounded-2xl bg-black border border-white/10 text-emerald-400 font-mono-code text-xs overflow-x-auto"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MOTOR JAVASCRIPT: 3 ARQUETIPOS, MICRO-LOOP EN TRÍPODE, PLATO RECORTADO,
+       SCROLL-SCRUBBING DE 120 FOTOGRAMAS Y ESCENA 3D CON CONTROL DE SOL
+       ========================================================================= -->
+  <script>
+    let currentArch = 'pazo';
+    let currentLang = 'es';
+    let isKitchenOpen = true;
+    let showAntigravityLayers = false;
+    let cutoutInspectMode = 'main';
+    let activeCutoutLayers = new Set([0, 1, 2, 3]);
+    let currentScrubFrame = 0;
+    let scrubAutoTimer = null;
+    let selected3dSpaceIdx = 0;
+    let sunHour = 14.0;
+    let rotYaw = -0.45;
+    let rotPitch = 0.52;
+    let isDragging3d = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let excludedAllergens = new Set();
+
+    // Base de datos completa de los 3 Arquetipos Cinemáticos
+    const ARCHETYPES = {
+      pazo: {
+        name: "O PAZO DA RÍA",
+        dotColor: "#38BDF8",
+        kickerBadge: "LONJA DE TESTAL · NOIA",
+        coords: "42°47'06\"N 8°53'14\"W",
+        heroTitle: "El mar de Noia, servido en calma.",
+        heroSubtitle: "Marisco vivo de las mariscadoras de la cofradía y pescados salvajes a la brasa de encina frente al Malecón.",
+        heroPhoto: "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=1800&q=85",
+        loopCaption: "● MICRO-LOOP EN TRÍPODE ACTIVO: BRISA Y REFLEJOS DE LA RÍA DE NOIA (60 FPS)",
+        loopType: "estuary",
+        cutout: {
+          title: "Centolla de la Ría & Berberecho de Testal.",
+          copy: "Seleccionada cada mañana a las 08:00h en la lonja de Noia y cocida en agua de mar con laurel fresco. Sin artificios ni cajas, respetando el Atlántico.",
+          imgMain: "https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?auto=format&fit=crop&w=900&q=85",
+          imgDetail: "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=900&q=85",
+          imgOrigin: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=900&q=85",
+          callout1: "Subasta diaria · 08:00h",
+          callout2: "Cofradía de Noia",
+          pairing: "Albariño Rías Baixas Sobre Lías",
+          layers: [
+            { name: "Berberecho Gigante de Testal", tag: "Calibre Extra" },
+            { name: "Coral y Carne de Centolla de Ría", tag: "100% Local" },
+            { name: "Infusión de Laurel & Agua Marina", tag: "Cocción Justa" },
+            { name: "Gotas de AOVE Gallego", tag: "Toque Final" }
+          ]
+        },
+        scrubStories: [
+          { range: [0, 40], title: "01. La brisa del Malecón al cruzar la puerta.", desc: "El recorrido comienza frente a la ría de Muros e Noia, donde las barcas descargan la captura cada mañana." },
+          { range: [41, 85], title: "02. Sillería de piedra gallega y luz natural.", desc: "A medida que avanzas por el comedor, los ventanales enmarcan la marea alta con privacidad entre mesas." },
+          { range: [86, 120], title: "03. El plato servido en el centro de tu mesa.", desc: "Primer plano de la pieza recién salida de cocción lista para disfrutar con vinos de parcela." }
+        ],
+        spaces3d: [
+          {
+            name: "Terraza Acristalada sobre la Ría",
+            short: "01. Terraza Ría",
+            desc: "Primera línea frente al Malecón de Noia. Cristaleras retráctiles climatizadas para disfrutar de la luz sobre el agua al mediodía o al atardecer.",
+            pax: "De 2 a 8 comensales",
+            dish: "Mariscada & Arroz Bogavante",
+            comfort: "Climatizada & Vistas Ría",
+            extImg: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80",
+            intImg: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            name: "Salón Principal de Piedra Gallega",
+            short: "02. Salón Piedra",
+            desc: "Comedor histórico con muros de granito original, acústica cuidada y amplia separación entre mesas vestidas.",
+            pax: "De 2 a 12 comensales",
+            dish: "Rodaballo Salvaje a la Brasa",
+            comfort: "Insonorizado & Privado",
+            extImg: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+            intImg: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            name: "Mesa de Lonja & Cava de Vinos",
+            short: "03. Mesa Lonja",
+            desc: "Experiencia gastronómica junto al vivero de marisco vivo y nuestra cava con más de 120 referencias gallegas.",
+            pax: "De 2 a 6 comensales",
+            dish: "Menú Degustación de Lonja",
+            comfort: "Frente a Cava & Vivero",
+            extImg: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80",
+            intImg: "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=800&q=80"
+          }
+        ],
+        reviews: [
+          { author: "Elena Varela", date: "Hace 2 días", text: "Elegimos la Terraza Acristalada con luz de mediodía en el visor 3D y al llegar teníamos exactamente esa mesa frente a la ría. Berberechos memorables." },
+          { author: "Javier Santamaría", date: "Hace 4 días", text: "Una web comodísima y transparente: vimos los precios reales de lonja en la carta fija y enviamos la reserva por WhatsApp en un segundo." },
+          { author: "Marta & Pedro", date: "Hace 1 semana", text: "El arroz con bogavante azul y el rodaballo a la brasa son espectaculares. Aparcamos gratis a 3 minutos." }
+        ],
+        menu: [
+          {
+            category: "Mariscos de la Lonja de Testal (Cotización de Hoy)",
+            items: [
+              { name: "Berberechos Gigantes de Noia al Vapor", desc: "Capturados por las mariscadoras de Testal y abiertos al momento", price: "22,00 €", badge: "🌊 Precio según lonja (Hoy)", allergens: ["marisco"] },
+              { name: "Almeja Babosa de la Ría a la Marinera", desc: "Salsa ligada lentamente con Albariño sobre lías", price: "28,50 €", badge: "🌊 Precio según lonja (Hoy)", allergens: ["marisco", "gluten"] },
+              { name: "Zamburiñas de la Ría a la Plancha (Docena)", desc: "Con emulsión de perejil fresco y ajo laminado", price: "24,00 €", badge: "⭐ Especialidad", allergens: ["marisco"] }
+            ]
+          },
+          {
+            category: "Arroces y Pescados Salvajes a la Brasa",
+            items: [
+              { name: "Arroz Caldoso de Bogavante Azul (Por persona)", desc: "Mínimo 2 raciones. Fondo de roca de 6 horas.", price: "36,00 € / p.", badge: "👑 Insignia", allergens: ["marisco"] },
+              { name: "Rodaballo Salvaje de la Ría a la Brasa de Encina", desc: "Pieza de subasta diaria con bilbaína suave", price: "29,00 €", badge: "🌊 Precio según lonja (Hoy)", allergens: [] }
+            ]
+          }
+        ]
+      },
+
+      ladera: {
+        name: "LADERA & BRASA",
+        dotColor: "#F59E0B",
+        kickerBadge: "ASADOR & BISTRÓ ATLÁNTICO · NOIA",
+        coords: "PRAZA DO TAPAL · CASCO HISTÓRICO",
+        heroTitle: "Fuego lento de encina y huerta gallega.",
+        heroSubtitle: "Cortes de vaca rubia madurados en cámara propia, brasas vivas a la vista y 40 vinos de pequeños viticultores.",
+        heroPhoto: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1800&q=85",
+        loopCaption: "● MICRO-LOOP EN TRÍPODE ACTIVO: PAVESAS Y CALOR DE BRASA DE ENCINA (60 FPS)",
+        loopType: "embers",
+        cutout: {
+          title: "Lomo Alto de Vaca Rubia Gallega 60 Días.",
+          copy: "Atemperado 2 horas antes del servicio y sellado a fuego vivo sobre parrilla inclinada de encina y sarmiento. Servido trinchado en plato de barro caliente.",
+          imgMain: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=85",
+          imgDetail: "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=900&q=85",
+          imgOrigin: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=900&q=85",
+          callout1: "Maduración · 60 Días Dry-Aged",
+          callout2: "Brasa de Encina & Sarmiento",
+          pairing: "Mencía Ribeira Sacra Barrica",
+          layers: [
+            { name: "Chuletón Vaca Rubia Trinchado", tag: "Maduración 60d" },
+            { name: "Escamas de Sal Marina Atlántica", tag: "Cristal Puro" },
+            { name: "Pimientos de Herbón Asados al Carbón", tag: "Huerta Local" },
+            { name: "Patata Agria de Coristanco al Romero", tag: "Guarnición" }
+          ]
+        },
+        scrubStories: [
+          { range: [0, 40], title: "01. La Praza do Tapal al caer la tarde.", desc: "Nuestro bistró recibe a los comensales frente a la iglesia gótica de San Martiño en pleno casco antiguo." },
+          { range: [41, 85], title: "02. La parrilla vista en el centro de la sala.", desc: "El aroma a leña de encina y sarmiento envuelve las mesas de roble macizo." },
+          { range: [86, 120], title: "03. Costra dorada por fuera, punto rojo exacto.", desc: "Acercamiento final al corte trinchado segundos antes de posarse en tu mesa." }
+        ],
+        spaces3d: [
+          {
+            name: "Mesas Frente a la Parrilla de Encina",
+            short: "01. Frente Parrilla",
+            desc: "Vive el espectáculo del maestro parrillero controlando las alturas de la brasa en directo desde tu mesa.",
+            pax: "De 2 a 6 comensales",
+            dish: "Lomo Alto Vaca Rubia 60 Días",
+            comfort: "Vista directa al fuego",
+            extImg: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80",
+            intImg: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            name: "Terraza de Piedra en Praza do Tapal",
+            short: "02. Terraza Tapal",
+            desc: "Mesas exteriores bajo soportales históricos iluminados con luz cálida al atardecer.",
+            pax: "De 2 a 8 comensales",
+            dish: "Pulpo a la Brasa & Croquetas",
+            comfort: "Soportales Históricos",
+            extImg: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+            intImg: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            name: "Reservado de Cava & Mesa Grande",
+            short: "03. Mesa Cava",
+            desc: "Mesa única de castaño gallego rodeada de botellas de pequeños productores para cenas pausadas.",
+            pax: "De 6 a 12 comensales",
+            dish: "Chuletón & Vino de Parcela",
+            comfort: "Privacidad Total",
+            extImg: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80",
+            intImg: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80"
+          }
+        ],
+        reviews: [
+          { author: "Sofía Méndez", date: "Hace 1 día", text: "Simulamos la luz de las 21:30h en la maqueta 3D y elegimos mesa frente a la parrilla. La carne rubia gallega es de otro planeta." },
+          { author: "Antón L.", date: "Hace 3 días", text: "Diseño web limpísimo, vimos la carta con precios reales en un clic y dejamos la reserva cerrada por WhatsApp." },
+          { author: "Laura G.", date: "Hace 1 semana", text: "El pulpo braseado sobre parmentier de San Simón y las croquetas líquidas son obligatorios en Noia." }
+        ],
+        menu: [
+          {
+            category: "Entrantes de Brasa & Temporada",
+            items: [
+              { name: "Croquetas Líquidas de Centolla de la Ría (6 uds.)", desc: "Bechamel fluida de coral con cobertura panko crujiente", price: "12,50 €", badge: "⭐ Imprescindible", allergens: ["gluten", "marisco", "lacteos"] },
+              { name: "Pulpo de Lonja a la Brasa & Parmentier San Simón", desc: "Terminado al carbón sobre crema tibia de patata gallega", price: "19,80 €", badge: "🔥 Brasa Viva", allergens: ["marisco", "lacteos"] }
+            ]
+          },
+          {
+            category: "Carnes Maduradas a la Parrilla de Encina",
+            items: [
+              { name: "Lomo Alto de Vaca Rubia Gallega 60 Días (1 Kg)", desc: "Incluye patatas de Coristanco y pimientos asados al carbón", price: "64,00 € / Kg", badge: "👑 Cámara Propia", allergens: [] },
+              { name: "Solomillo de Vaca Mayor a la Brasa", desc: "Con jugo reducido de carne y chalotas glaseadas", price: "26,50 €", badge: "", allergens: ["lacteos"] }
+            ]
+          }
+        ]
+      },
+
+      brava: {
+        name: "BRAVA // FORNO & SMASH",
+        dotColor: "#FF5500",
+        kickerBadge: "HORNO DE LEÑA 450°C & SMASH · NOIA",
+        coords: "RÚA DO CURRO 14 · ZONA ALAMEDA",
+        heroTitle: "Masa madre 72h y costra smash al momento.",
+        heroSubtitle: "Harinas molidas a la piedra, vaca rubia picada cada mañana en el local y quesos gallegos fundidos a 450 grados.",
+        heroPhoto: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1800&q=85",
+        loopCaption: "● MICRO-LOOP EN TRÍPODE ACTIVO: VAPOR ARTESANO Y FUEGO DE HORNO A 450°C (60 FPS)",
+        loopType: "steam",
+        cutout: {
+          title: "Napolitana Brava & Doble Smash San Simón.",
+          copy: "Elige o combina nuestras dos joyas urbanas: masa fermentada 72 horas con borde alveolado de leopardo o doble smash de vaca rubia con queso San Simón.",
+          imgMain: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=85",
+          imgDetail: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=85",
+          imgOrigin: "https://images.unsplash.com/photo-1576107232684-1279f3908594?auto=format&fit=crop&w=900&q=85",
+          callout1: "Fermentación · 72 Horas",
+          callout2: "Horno Piedra 450°C · 90s",
+          pairing: "IPA Artesana Gallega de Barril",
+          layers: [
+            { name: "Masa Madre 72h / Brioche Tostado", tag: "Base Artesana" },
+            { name: "Queixo San Simón & Fior di Latte", tag: "Doble Fundido" },
+            { name: "Chourizo Porco Celta / Panceta", tag: "Crujiente" },
+            { name: "Miel Picante de Brezo Gallego", tag: "Toque Brava" }
+          ]
+        },
+        scrubStories: [
+          { range: [0, 40], title: "01. Rúa do Curro a las nueve de la noche.", desc: "El calor del horno napolitano y la plancha de hierro fundido dan la bienvenida desde la calle." },
+          { range: [41, 85], title: "02. 90 segundos a 450 grados de fuego vivo.", desc: "La cámara se acerca a la boca del horno mientras el borde de masa madre sube y se dora." },
+          { range: [86, 120], title: "03. Queso San Simón fundido y miel picante.", desc: "Primer plano del plato recién salido, humeante y listo para compartir." }
+        ],
+        spaces3d: [
+          {
+            name: "Mesa Alta Frente al Horno y Plancha",
+            short: "01. Frente Horno",
+            desc: "Asientos en primera fila para ver cómo estiramos la masa a mano y plancheamos las smash burgers al segundo.",
+            pax: "De 2 a 6 personas",
+            dish: "La Gallega Doble Smash + Napolitana",
+            comfort: "Ambiente Urbano & Fuego",
+            extImg: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80",
+            intImg: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            name: "Terraza Cubierta Rúa do Curro",
+            short: "02. Terraza Curro",
+            desc: "Mesas exteriores climatizadas a 2 minutos de la Alameda, perfectas para grupos y cañas artesanas.",
+            pax: "De 2 a 10 personas",
+            dish: "Patatas de Coristanco & Pizzas",
+            comfort: "Cubierta & Pet-Friendly",
+            extImg: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+            intImg: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80"
+          },
+          {
+            name: "Bancada Corrida para Grupos",
+            short: "03. Mesa Grupos",
+            desc: "Mesa larga de madera y acero pensada para compartir pizzas de metro, burgers y jarras de cerveza.",
+            pax: "De 6 a 12 personas",
+            dish: "Combo Forno & Smash",
+            comfort: "Ideal Amigos & Cumpleaños",
+            extImg: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80",
+            intImg: "https://images.unsplash.com/photo-1576107232684-1279f3908594?auto=format&fit=crop&w=800&q=80"
+          }
+        ],
+        reviews: [
+          { author: "Brais Domínguez", date: "Hace 2 días", text: "Increíble ver el plato recortado sin cajas raras en la web y elegir la mesa frente al horno en 3D. Las mejores smash y pizzas de Noia." },
+          { author: "Lucía Ríos", date: "Hace 5 días", text: "Reservamos para 6 amigos con el mensaje pre-cargado a WhatsApp y todo estaba listo al llegar. Las bravas de Coristanco son top." },
+          { author: "Carlos M.", date: "Hace 1 semana", text: "Precios súper claros en la carta fija de la web y una masa napolitana de 72 horas espectacular." }
+        ],
+        menu: [
+          {
+            category: "Para Picar al Centro",
+            items: [
+              { name: "Patatas de Coristanco Bravas & Alioli Ajo Negro", desc: "Cortadas a mano en doble fritura con salsa brava ahumada", price: "7,50 €", badge: "⭐ Top Ventas", allergens: ["lacteos"] },
+              { name: "Tequeños Artesanos de Queixo Tetilla (6 uds.)", desc: "Con emulsión tibia de pimientos de Padrón", price: "8,90 €", badge: "", allergens: ["gluten", "lacteos"] }
+            ]
+          },
+          {
+            category: "Smash Burgers (Vaca Rubia Gallega 45 Días)",
+            items: [
+              { name: "La Gallega Doble Smash & San Simón", desc: "Doble disco 180g, queso San Simón, panceta celta y patatas fritas", price: "13,90 €", badge: "🔥 #1 de la Casa", allergens: ["gluten", "lacteos"] },
+              { name: "Oklahoma Crispy Onion & Arzúa-Ulloa", desc: "Cebolla plancheada en la carne y doble crema de queso Arzúa", price: "12,90 €", badge: "", allergens: ["gluten", "lacteos"] }
+            ]
+          },
+          {
+            category: "Pizzas Napolitanas (Horno de Piedra 450°C)",
+            items: [
+              { name: "Napolitana Brava & Chourizo de Porco Celta", desc: "Masa madre 72h, San Marzano, fior di latte y miel picante", price: "14,50 €", badge: "🪵 72h Fermentación", allergens: ["gluten", "lacteos"] }
+            ]
+          }
+        ]
+      }
+    };
+
+    const NOIA_ROUTES = {
+      alameda: { path: "M 390,205 L 400,125 L 510,125", label: "Ruta activa: Alameda de Noia (2 min a pie)" },
+      tapal: { path: "M 390,205 L 398,125", label: "Ruta activa: Igrexa de San Martiño / Praza do Tapal (3 min a pie)" },
+      parking: { path: "M 390,205 L 535,205 L 535,255", label: "Ruta activa: Parking Público Gratuito (3 min a pie)" },
+      malecon: { path: "M 390,205 L 250,205 L 245,170", label: "Ruta activa: Paseo Marítimo & Malecón (4 min a pie)" },
+      testal: { path: "M 390,205 L 245,205 L 235,295 L 180,295", label: "Ruta activa: Lonja & Playa de Testal (12 min a pie)" }
+    };
+
+    // Partículas para el Micro-Loop en Trípode (Bloque 1)
+    let tripodParticles = [];
+    // Imágenes pre-cargadas para el Canvas de Scroll-Scrubbing (Bloque 3)
+    let scrubImageWide = new Image();
+    let scrubImageMacro = new Image();
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Auto-detectar idioma del navegador
+      const browserLang = (navigator.language || 'es').toLowerCase();
+      if (browserLang.startsWith('gl')) currentLang = 'gal';
+      else if (browserLang.startsWith('en')) currentLang = 'en';
+      else currentLang = 'es';
+      setLanguage(currentLang);
+
+      initTripodParticles();
+      init3dInteractionEvents();
+      switchArchetype('pazo');
+
+      requestAnimationFrame(animateTripodHeroLoop);
+      window.addEventListener('scroll', onWindowScrollScrub, { passive: true });
+      window.addEventListener('resize', () => {
+        drawCutoutOverlayCanvas();
+        drawScrubCameraFrame(currentScrubFrame);
+        drawSpatial3dScene();
+      });
+    });
+
+    // =========================================================================
+    // CAMBIO ENTRE LOS 3 ARQUETIPOS DESDE EL DOCK FLOTANTE INFERIOR
+    // =========================================================================
+    function switchArchetype(archKey) {
+      currentArch = archKey;
+      const data = ARCHETYPES[archKey];
+
+      // Actualizar botones del Dock
+      ['pazo', 'ladera', 'brava'].forEach(k => {
+        const btn = document.getElementById(`dock-btn-${k}`);
+        if (k === archKey) {
+          btn.className = "px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white text-stone-950 transition whitespace-nowrap shadow";
+        } else {
+          btn.className = "px-3.5 py-1.5 rounded-full text-xs font-medium text-stone-300 hover:text-white transition whitespace-nowrap";
+        }
+      });
+
+      // Bloque 1: Hero en Trípode
+      document.getElementById('nav-brand-dot').style.backgroundColor = data.dotColor;
+      document.getElementById('nav-brand-name').textContent = data.name;
+      document.getElementById('hero-kicker-badge').textContent = data.kickerBadge;
+      document.getElementById('hero-kicker-coords').textContent = data.coords;
+      document.getElementById('hero-main-title').textContent = data.heroTitle;
+      document.getElementById('hero-main-subtitle').textContent = data.heroSubtitle;
+      document.getElementById('hero-bg-photo').src = data.heroPhoto;
+      document.getElementById('hero-loop-caption').textContent = data.loopCaption;
+
+      // Bloque 2: Plato Estrella Recortado sin Rectángulo
+      activeCutoutLayers = new Set([0, 1, 2, 3]);
+      cutoutInspectMode = 'main';
+      renderBlock2Cutout();
+
+      // Bloque 3: Pre-cargar imágenes para la secuencia de 120 fotogramas
+      scrubImageWide.crossOrigin = "anonymous";
+      scrubImageMacro.crossOrigin = "anonymous";
+      scrubImageWide.src = data.heroPhoto;
+      scrubImageMacro.src = data.cutout.imgMain;
+      scrubImageWide.onload = () => drawScrubCameraFrame(currentScrubFrame);
+      scrubImageMacro.onload = () => drawScrubCameraFrame(currentScrubFrame);
+      updateScrubNarrative(currentScrubFrame);
+
+      // Bloque 4: Escena 3D y Espacios
+      selected3dSpaceIdx = 0;
+      renderBlock4Spaces();
+      drawSpatial3dScene();
+
+      // Bloque 4B: Reseñas y Mapa de Noia
+      renderReviews();
+      document.getElementById('noia-svg-brand').textContent = `📍 ${data.name.split('//')[0].trim()}`;
+      document.getElementById('footer-brand-name').textContent = `© 2026 ${data.name} · NOIA`;
+
+      // Bloque 5: Reserva Pre-cargada
+      updateBookingMessagePreview();
+      renderCartaDrawer();
+      updateSchemaModal();
+      lucide.createIcons();
+    }
+
+    // =========================================================================
+    // BLOQUE 1: MICRO-LOOP EN TRÍPODE (60 FPS EN <CANVAS>)
+    // =========================================================================
+    function initTripodParticles() {
+      tripodParticles = [];
+      for (let i = 0; i < 42; i++) {
+        tripodParticles.push({
+          x: Math.random(),
+          y: Math.random(),
+          r: 1.2 + Math.random() * 2.8,
+          speedY: 0.0003 + Math.random() * 0.0008,
+          speedX: (Math.random() - 0.5) * 0.0004,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    function animateTripodHeroLoop(timestamp) {
+      const canvas = document.getElementById('hero-tripod-canvas');
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        if (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+          canvas.width = Math.floor(rect.width);
+          canvas.height = Math.floor(rect.height);
+        }
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const mode = ARCHETYPES[currentArch].loopType;
+        const t = timestamp * 0.001;
+
+        if (mode === 'estuary') {
+          // Ondas suaves de agua de la Ría de Noia en el tercio inferior + brisa marina
+          for (let i = 0; i < 7; i++) {
+            const yBase = h * (0.58 + i * 0.055);
+            ctx.beginPath();
+            for (let x = 0; x <= w; x += 24) {
+              const wave = Math.sin(x * 0.008 + t * 1.4 + i) * (4 + i * 1.2);
+              if (x === 0) ctx.moveTo(x, yBase + wave);
+              else ctx.lineTo(x, yBase + wave);
+            }
+            ctx.strokeStyle = `rgba(125, 211, 252, ${0.06 + i * 0.015})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+        }
+
+        // Partículas vivas según el arquetipo (Brisa marina / Pavesas de encina / Vapor de horno)
+        tripodParticles.forEach(p => {
+          p.y -= p.speedY;
+          p.x += p.speedX + Math.sin(t + p.phase) * 0.0002;
+          if (p.y < 0.05) {
+            p.y = 0.92;
+            p.x = Math.random();
+          }
+
+          const px = p.x * w;
+          const py = p.y * h;
+          const alpha = 0.25 + 0.35 * Math.sin(t * 2 + p.phase);
+
+          ctx.beginPath();
+          ctx.arc(px, py, p.r, 0, Math.PI * 2);
+          if (mode === 'estuary') {
+            ctx.fillStyle = `rgba(186, 230, 253, ${alpha * 0.7})`;
+          } else if (mode === 'embers') {
+            ctx.fillStyle = `rgba(251, 146, 60, ${alpha})`;
+          } else {
+            ctx.fillStyle = `rgba(255, 237, 213, ${alpha * 0.8})`;
+          }
+          ctx.fill();
+        });
+      }
+      requestAnimationFrame(animateTripodHeroLoop);
+    }
+
+    // =========================================================================
+    // BLOQUE 2: PLATO ESTRELLA RECORTADO SIN RECTÁNGULO
+    // =========================================================================
+    function renderBlock2Cutout() {
+      const c = ARCHETYPES[currentArch].cutout;
+      document.getElementById('b2-dish-title').textContent = c.title;
+      document.getElementById('b2-dish-copy').textContent = c.copy;
+      document.getElementById('callout-text-1').textContent = c.callout1;
+      document.getElementById('callout-text-2').textContent = c.callout2;
+      document.getElementById('mobile-callout-1').textContent = `● ${c.callout1}`;
+      document.getElementById('mobile-callout-2').textContent = `● ${c.callout2}`;
+      document.getElementById('ticket-brand-header').textContent = ARCHETYPES[currentArch].name;
+      document.getElementById('ticket-cutout-title').textContent = c.title.replace('.', '');
+      document.getElementById('ticket-cutout-pairing').textContent = c.pairing;
+
+      // Imagen según el ángulo seleccionado
+      const imgEl = document.getElementById('cutout-dish-img');
+      if (cutoutInspectMode === 'main') {
+        imgEl.src = c.imgMain;
+        imgEl.style.transform = 'scale(1.08) rotate(0deg)';
+      } else if (cutoutInspectMode === 'detail') {
+        imgEl.src = c.imgDetail;
+        imgEl.style.transform = 'scale(1.26) rotate(4deg)';
+      } else {
+        imgEl.src = c.imgOrigin;
+        imgEl.style.transform = 'scale(1.14) rotate(-3deg)';
+      }
+
+      // Píldoras de elementos del emplatado
+      const pillsBox = document.getElementById('b2-layer-pills');
+      pillsBox.innerHTML = c.layers.map((l, idx) => {
+        const isOn = activeCutoutLayers.has(idx);
+        return `
+          <button onclick="toggleCutoutLayer(${idx})" class="px-3.5 py-2 rounded-xl text-xs font-medium border transition flex items-center gap-2 ${
+            isOn
+              ? 'bg-stone-950 text-white border-stone-950 shadow-sm'
+              : 'bg-transparent text-stone-400 border-stone-300 line-through'
+          }">
+            <span>${isOn ? '✓' : '+'} ${l.name}</span>
+          </button>
+        `;
+      }).join('');
+
+      // Actualizar ficha técnica lateral
+      const ticketList = document.getElementById('ticket-cutout-layers');
+      ticketList.innerHTML = c.layers
+        .filter((_, idx) => activeCutoutLayers.has(idx))
+        .map(l => `
+          <li class="flex items-center justify-between">
+            <span>• ${l.name}</span>
+            <span class="text-stone-400">${l.tag}</span>
+          </li>
+        `).join('');
+
+      drawCutoutOverlayCanvas();
+    }
+
+    function setCutoutInspectMode(mode) {
+      cutoutInspectMode = mode;
+      ['main', 'detail', 'origin'].forEach(m => {
+        const btn = document.getElementById(`cutout-mode-${m}`);
+        if (m === mode) {
+          btn.className = "px-4 py-2 rounded-xl text-xs font-semibold bg-stone-950 text-white transition";
+        } else {
+          btn.className = "px-4 py-2 rounded-xl text-xs font-semibold text-stone-700 hover:text-stone-950 transition";
+        }
+      });
+      renderBlock2Cutout();
+    }
+
+    function toggleCutoutLayer(idx) {
+      if (activeCutoutLayers.has(idx)) {
+        if (activeCutoutLayers.size > 1) activeCutoutLayers.delete(idx);
+      } else {
+        activeCutoutLayers.add(idx);
+      }
+      renderBlock2Cutout();
+    }
+
+    function drawCutoutOverlayCanvas() {
+      const canvas = document.getElementById('cutout-overlay-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // Anillo sutil de luz de estudio y marcadores de capas activas sobre el plato recortado
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(w / 2, h / 2, w * 0.43, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const coords = [
+        { x: w * 0.34, y: h * 0.36 },
+        { x: w * 0.64, y: h * 0.38 },
+        { x: w * 0.42, y: h * 0.64 },
+        { x: w * 0.62, y: h * 0.62 }
+      ];
+
+      coords.forEach((pt, idx) => {
+        if (!activeCutoutLayers.has(idx)) return;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 11, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(21, 21, 19, 0.82)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#F6F3EC';
+        ctx.stroke();
+
+        ctx.fillStyle = '#F6F3EC';
+        ctx.font = 'bold 10px "JetBrains Mono"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`0${idx + 1}`, pt.x, pt.y);
+      });
+    }
+
+    // =========================================================================
+    // BLOQUE 3: RECORRIDO DE CÁMARA POR SCROLL EN <CANVAS> (000 A 120 FRAMES)
+    // =========================================================================
+    function onWindowScrollScrub() {
+      const section = document.getElementById('block-3-scrub');
+      if (!section) return;
+      const rect = section.getBoundingClientRect();
+      const scrollable = rect.height - window.innerHeight;
+      if (scrollable <= 0) return;
+
+      const rawProgress = -rect.top / scrollable;
+      const clamped = Math.max(0, Math.min(1, rawProgress));
+      const frame = Math.round(clamped * 120);
+
+      if (frame !== currentScrubFrame) {
+        currentScrubFrame = frame;
+        const slider = document.getElementById('scrub-manual-slider');
+        if (slider) slider.value = frame;
+        drawScrubCameraFrame(frame);
+        updateScrubNarrative(frame);
+      }
+    }
+
+    function manualScrubFrame(val) {
+      currentScrubFrame = parseInt(val, 10) || 0;
+      drawScrubCameraFrame(currentScrubFrame);
+      updateScrubNarrative(currentScrubFrame);
+    }
+
+    function playScrubSequence() {
+      const btn = document.getElementById('scrub-autoplay-btn');
+      if (scrubAutoTimer) {
+        clearInterval(scrubAutoTimer);
+        scrubAutoTimer = null;
+        btn.innerHTML = '<span>▶ Simular Scroll</span>';
+        return;
+      }
+      if (currentScrubFrame >= 118) currentScrubFrame = 0;
+      btn.innerHTML = '<span>⏸ Pausar</span>';
+
+      scrubAutoTimer = setInterval(() => {
+        if (currentScrubFrame < 120) {
+          currentScrubFrame += 1;
+          const slider = document.getElementById('scrub-manual-slider');
+          if (slider) slider.value = currentScrubFrame;
+          drawScrubCameraFrame(currentScrubFrame);
+          updateScrubNarrative(currentScrubFrame);
+        } else {
+          clearInterval(scrubAutoTimer);
+          scrubAutoTimer = null;
+          btn.innerHTML = '<span>▶ Simular Scroll</span>';
+        }
+      }, 28);
+    }
+
+    function updateScrubNarrative(frame) {
+      const stories = ARCHETYPES[currentArch].scrubStories;
+      const pct = Math.round((frame / 120) * 100);
+      const padded = String(frame).padStart(3, '0');
+      const lens = frame < 40 ? 'PLANO GENERAL 24MM' : frame < 85 ? 'TRAVELLING SALA 50MM' : 'MACRO DETALLE 85MM';
+
+      document.getElementById('scrub-frame-counter').textContent = `FOTOGRAMA ${padded} / 120 · ${lens}`;
+      document.getElementById('scrub-percent-badge').textContent = `${pct}%`;
+
+      const activeStory = stories.find(s => frame >= s.range[0] && frame <= s.range[1]) || stories[0];
+      document.getElementById('scrub-story-title').textContent = activeStory.title;
+      document.getElementById('scrub-story-desc').textContent = activeStory.desc;
+    }
+
+    function drawScrubCameraFrame(frame) {
+      const canvas = document.getElementById('scrub-camera-canvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      const p = frame / 120; // 0.0 -> 1.0
+
+      ctx.fillStyle = '#121316';
+      ctx.fillRect(0, 0, w, h);
+
+      // Capa 1: Plano General con Zoom-In progresivo de cámara (1.0x a 1.55x)
+      if (scrubImageWide.complete && scrubImageWide.naturalWidth > 0) {
+        ctx.save();
+        const scaleWide = 1 + p * 0.55;
+        ctx.translate(w / 2, h / 2);
+        ctx.scale(scaleWide, scaleWide);
+        ctx.globalAlpha = Math.max(0, 1 - Math.max(0, (p - 0.45) * 1.7));
+        drawCoverImage(ctx, scrubImageWide, -w / 2, -h / 2, w, h);
+        ctx.restore();
+      }
+
+      // Capa 2: Transición espacial hacia el Macro del Plato en Mesa (Frame 50 a 120)
+      if (p > 0.35 && scrubImageMacro.complete && scrubImageMacro.naturalWidth > 0) {
+        ctx.save();
+        const macroAlpha = Math.min(1, (p - 0.35) / 0.55);
+        const scaleMacro = 0.84 + p * 0.36;
+        ctx.translate(w / 2, h / 2);
+        ctx.scale(scaleMacro, scaleMacro);
+        ctx.globalAlpha = macroAlpha;
+        drawCoverImage(ctx, scrubImageMacro, -w / 2, -h / 2, w, h);
+        ctx.restore();
+      }
+
+      // Capa 3: Pórtico Arquitectónico en Parallax que la cámara atraviesa al hacer scroll
+      const portalOpening = 1 + p * 2.4;
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(portalOpening, portalOpening);
+      ctx.strokeStyle = `rgba(246, 243, 236, ${Math.max(0, 0.38 - p * 0.35)})`;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-w * 0.34, -h * 0.32, w * 0.68, h * 0.64);
+      ctx.restore();
+
+      // Viñeta cinematográfica suave
+      const grad = ctx.createRadialGradient(w / 2, h / 2, w * 0.18, w / 2, h / 2, w * 0.75);
+      grad.addColorStop(0, 'rgba(15, 15, 18, 0.12)');
+      grad.addColorStop(1, 'rgba(15, 15, 18, 0.68)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function drawCoverImage(ctx, img, x, y, w, h) {
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const winRatio = w / h;
+      let drawW = w;
+      let drawH = h;
+      if (winRatio > imgRatio) {
+        drawH = w / imgRatio;
+      } else {
+        drawW = h * imgRatio;
+      }
+      ctx.drawImage(img, x + (w - drawW) / 2, y + (h - drawH) / 2, drawW, drawH);
+    }
+
+    // =========================================================================
+    // BLOQUE 4: ESCENA INTERACTIVA EN 3D CON CONTROL DE LUZ SOLAR Y ESPACIOS
+    // =========================================================================
+    function renderBlock4Spaces() {
+      const spaces = ARCHETYPES[currentArch].spaces3d;
+      const current = spaces[selected3dSpaceIdx];
+
+      // Botones de los 3 espacios debajo del visor 3D
+      const tabsEl = document.getElementById('space-3d-tabs');
+      tabsEl.innerHTML = spaces.map((sp, i) => `
+        <button onclick="select3dSpace(${i})" class="py-2.5 px-3 rounded-xl font-mono-code text-xs font-semibold transition text-center border ${
+          i === selected3dSpaceIdx
+            ? 'bg-amber-400 text-stone-950 border-amber-400 shadow'
+            : 'bg-white/5 text-stone-300 border-white/10 hover:bg-white/10'
+        }">
+          ${sp.short}
+        </button>
+      `).join('');
+
+      // Actualizar ficha lateral derecha
+      document.getElementById('space-card-badge').textContent = `ESPACIO 0${selected3dSpaceIdx + 1} / 03`;
+      document.getElementById('space-card-title').textContent = current.name;
+      document.getElementById('space-card-desc').textContent = current.desc;
+      document.getElementById('space-spec-pax').textContent = current.pax;
+      document.getElementById('space-spec-dish').textContent = current.dish;
+      document.getElementById('space-spec-comfort').textContent = current.comfort;
+
+      // Actualizar fotos coherentes (Exterior e Interior del mismo espacio)
+      document.getElementById('coherent-photos-title').textContent = `FOTOGRAFÍAS REALES COHERENTES · ${current.name.toUpperCase()}`;
+      document.getElementById('coherent-img-ext').src = current.extImg;
+      document.getElementById('coherent-img-int').src = current.intImg;
+
+      update3dSunHour(sunHour);
+    }
+
+    function select3dSpace(idx) {
+      selected3dSpaceIdx = idx;
+      renderBlock4Spaces();
+      drawSpatial3dScene();
+      updateBookingMessagePreview();
+    }
+
+    function update3dSunHour(val) {
+      sunHour = parseFloat(val);
+      const hours = Math.floor(sunHour);
+      const mins = (sunHour % 1) === 0.5 ? '30' : '00';
+      let period = 'Comida (Sol del Atlántico)';
+      if (sunHour >= 18 && sunHour < 21) period = 'Atardecer Dorado en la Ría';
+      else if (sunHour >= 21) period = 'Servicio de Cena (Iluminación Cálida)';
+
+      const labelStr = `${hours}:${mins}h · ${period}`;
+      document.getElementById('sun-time-label').textContent = labelStr;
+      document.getElementById('space-spec-light').textContent = `${hours}:${mins}h · ${sunHour < 18 ? 'Mediodía' : sunHour < 21 ? 'Atardecer' : 'Noche'}`;
+
+      drawSpatial3dScene();
+      updateBookingMessagePreview();
+    }
+
+    function init3dInteractionEvents() {
+      const canvas = document.getElementById('spatial-3d-canvas');
+      if (!canvas) return;
+
+      canvas.addEventListener('pointerdown', e => {
+        isDragging3d = true;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        canvas.setPointerCapture(e.pointerId);
+      });
+
+      canvas.addEventListener('pointermove', e => {
+        if (!isDragging3d) return;
+        const dx = e.clientX - lastMouseX;
+        const dy = e.clientY - lastMouseY;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+        rotYaw += dx * 0.0085;
+        rotPitch = Math.max(0.28, Math.min(0.95, rotPitch + dy * 0.006));
+        drawSpatial3dScene();
+      });
+
+      canvas.addEventListener('pointerup', () => {
+        isDragging3d = false;
+      });
+    }
+
+    function projectIso3D(x, y, z, cx, cy, scale) {
+      const cosY = Math.cos(rotYaw);
+      const sinY = Math.sin(rotYaw);
+      const rx = x * cosY - z * sinY;
+      const rz = x * sinY + z * cosY;
+
+      const cosP = Math.cos(rotPitch);
+      const sinP = Math.sin(rotPitch);
+      const sx = cx + rx * scale;
+      const sy = cy + (rz * sinP - y * cosP) * scale;
+      return { x: sx, y: sy };
+    }
+
+    function drawSpatial3dScene() {
+      const canvas = document.getElementById('spatial-3d-canvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width) || canvas.height !== Math.floor(rect.height)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      // Atmósfera dinámica según la hora del sol (12:00 a 23:00)
+      const isDay = sunHour < 18.5;
+      const isSunset = sunHour >= 18.5 && sunHour < 21;
+      const bgTop = isDay ? '#1B2838' : isSunset ? '#2A1B24' : '#0D1017';
+      const bgBot = isDay ? '#0F1722' : isSunset ? '#171219' : '#08090D';
+
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, bgTop);
+      skyGrad.addColorStop(1, bgBot);
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // En móvil alejamos ligeramente la cámara (Regla #6 de Rodrigo Olivares)
+      const scale = Math.min(w, h) * (w < 520 ? 0.25 : 0.31);
+      const cx = w * 0.5;
+      const cy = h * 0.56;
+
+      // Sombra proyectada según el ángulo del sol
+      const sunOffset = (sunHour - 15) * 0.14;
+      const shadowPts = [
+        projectIso3D(-1.35 + sunOffset, 0, -0.95 + 0.15, cx, cy, scale),
+        projectIso3D(1.35 + sunOffset, 0, -0.95 + 0.15, cx, cy, scale),
+        projectIso3D(1.35 + sunOffset, 0, 0.95 + 0.15, cx, cy, scale),
+        projectIso3D(-1.35 + sunOffset, 0, 0.95 + 0.15, cx, cy, scale)
+      ];
+      ctx.beginPath();
+      shadowPts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
+      ctx.fill();
+
+      // Losa Base del Restaurante
+      const floorPts = [
+        projectIso3D(-1.35, 0, -0.95, cx, cy, scale),
+        projectIso3D(1.35, 0, -0.95, cx, cy, scale),
+        projectIso3D(1.35, 0, 0.95, cx, cy, scale),
+        projectIso3D(-1.35, 0, 0.95, cx, cy, scale)
+      ];
+      ctx.beginPath();
+      floorPts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.fillStyle = isDay ? '#EAE5DC' : '#C8C0B4';
+      ctx.fill();
+      ctx.strokeStyle = '#B8894A';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Dibujar las 3 Zonas 3D del Restaurante (0: Terraza/Frente, 1: Salón Piedra, 2: Lonja/Cava)
+      const zones3D = [
+        { idx: 0, x1: -1.25, z1: 0.12, x2: 0.35, z2: 0.85, h: 0.25, label: "01" },
+        { idx: 1, x1: -1.25, z1: -0.85, x2: 0.35, z2: 0.02, h: 0.55, label: "02" },
+        { idx: 2, x1: 0.45, z1: -0.85, x2: 1.25, z2: 0.85, h: 0.62, label: "03" }
+      ];
+
+      zones3D.forEach(z => {
+        const isSel = z.idx === selected3dSpaceIdx;
+        const base = [
+          projectIso3D(z.x1, 0, z.z1, cx, cy, scale),
+          projectIso3D(z.x2, 0, z.z1, cx, cy, scale),
+          projectIso3D(z.x2, 0, z.z2, cx, cy, scale),
+          projectIso3D(z.x1, 0, z.z2, cx, cy, scale)
+        ];
+        const top = [
+          projectIso3D(z.x1, z.h, z.z1, cx, cy, scale),
+          projectIso3D(z.x2, z.h, z.z1, cx, cy, scale),
+          projectIso3D(z.x2, z.h, z.z2, cx, cy, scale),
+          projectIso3D(z.x1, z.h, z.z2, cx, cy, scale)
+        ];
+
+        // Alfombra de zona en planta
+        ctx.beginPath();
+        base.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+        ctx.closePath();
+        ctx.fillStyle = isSel
+          ? (sunHour >= 20 ? 'rgba(245, 158, 11, 0.45)' : 'rgba(14, 90, 106, 0.32)')
+          : 'rgba(20, 20, 20, 0.08)';
+        ctx.fill();
+        ctx.strokeStyle = isSel ? '#F59E0B' : 'rgba(20,20,20,0.22)';
+        ctx.lineWidth = isSel ? 2.5 : 1;
+        ctx.stroke();
+
+        // Paredes translúcidas tipo maqueta de arquitectura
+        ctx.beginPath();
+        top.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+        ctx.closePath();
+        ctx.fillStyle = isSel ? 'rgba(251, 191, 36, 0.16)' : 'rgba(255, 255, 255, 0.06)';
+        ctx.fill();
+        ctx.strokeStyle = isSel ? '#FBBF24' : 'rgba(255, 255, 255, 0.22)';
+        ctx.lineWidth = isSel ? 2 : 1;
+        ctx.stroke();
+
+        // Aristas verticales
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.moveTo(base[i].x, base[i].y);
+          ctx.lineTo(top[i].x, top[i].y);
+          ctx.stroke();
+        }
+
+        // Marcador flotante encima de cada espacio
+        const centerTop = projectIso3D((z.x1 + z.x2) / 2, z.h + 0.18, (z.z1 + z.z2) / 2, cx, cy, scale);
+        ctx.beginPath();
+        ctx.arc(centerTop.x, centerTop.y, isSel ? 15 : 11, 0, Math.PI * 2);
+        ctx.fillStyle = isSel ? '#F59E0B' : '#18181B';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.stroke();
+
+        ctx.fillStyle = isSel ? '#111111' : '#FFFFFF';
+        ctx.font = 'bold 10px "JetBrains Mono"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(z.label, centerTop.x, centerTop.y);
+      });
+    }
+
+    function toggleCoherentPhotosModal() {
+      const overlay = document.getElementById('coherent-photos-overlay');
+      overlay.classList.toggle('hidden');
+      overlay.classList.toggle('flex');
+    }
+
+    function commitSpaceToBooking() {
+      updateBookingMessagePreview();
+      const pill = document.getElementById('booking-3d-sync-pill');
+      pill.textContent = '✓ Espacio y luz actualizados desde el 3D';
+      document.getElementById('block-5-booking').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // =========================================================================
+    // BLOQUE 4B & 5: RESEÑAS, MAPA DE NOIA, RESERVA PRE-CARGADA Y FAQ
+    // =========================================================================
+    function renderReviews() {
+      const revs = ARCHETYPES[currentArch].reviews;
+      document.getElementById('reviews-cards-container').innerHTML = revs.map(r => `
+        <article class="p-6 rounded-3xl bg-[#EFECE4] border border-stone-300/80 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-xs mb-3">
+              <span class="text-amber-500 font-bold tracking-widest">★★★★★</span>
+              <span class="font-mono-code text-stone-500">${r.date} · Google</span>
+            </div>
+            <p class="text-sm text-stone-800 leading-relaxed">“${r.text}”</p>
+          </div>
+          <div class="pt-3 border-t border-stone-300/70 flex items-center justify-between text-xs">
+            <strong class="text-stone-950">${r.author}</strong>
+            <span class="font-mono-code text-[11px] text-stone-500">Reseña Verificada · Noia</span>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function selectNoiaPoi(key) {
+      const route = NOIA_ROUTES[key];
+      if (!route) return;
+      document.getElementById('noia-svg-route').setAttribute('d', route.path);
+      document.getElementById('noia-map-status').textContent = route.label;
+    }
+
+    function updateBookingMessagePreview() {
+      const arch = ARCHETYPES[currentArch];
+      const space = arch.spaces3d[selected3dSpaceIdx];
+      const hours = Math.floor(sunHour);
+      const mins = (sunHour % 1) === 0.5 ? '30' : '00';
+      const lightTag = `${hours}:${mins}h (${sunHour < 18 ? 'Luz Mediodía' : sunHour < 21 ? 'Atardecer' : 'Cena'})`;
+
+      document.getElementById('booking-preloaded-space').textContent = `${space.name} · ${lightTag}`;
+
+      const dateVal = document.getElementById('booking-date-sel')?.value || 'Mañana';
+      const timeVal = document.getElementById('booking-time-sel')?.value || '14:15h';
+      const guestsVal = document.getElementById('booking-guests-sel')?.value || '4 personas';
+      const nameVal = document.getElementById('booking-name-input')?.value || 'Cliente';
+      const noteVal = document.getElementById('booking-note-input')?.value || '';
+
+      const msg = [
+        `Hola *${arch.name}*, solicito reserva desde vuestra web:`,
+        `🏛️ *Espacio elegido en 3D:* ${space.name}`,
+        `☀️ *Atmósfera:* ${lightTag}`,
+        `📅 *Fecha y Turno:* ${dateVal} · ${timeVal}`,
+        `👥 *Comensales:* ${guestsVal}`,
+        `👤 *A nombre de:* ${nameVal}`,
+        noteVal ? `📝 *Nota / Alergias:* ${noteVal}` : null
+      ].filter(Boolean).join('\n');
+
+      const previewBox = document.getElementById('booking-wa-preview-box');
+      if (previewBox) previewBox.textContent = msg;
+      return msg;
+    }
+
+    function sendStructuredWhatsApp() {
+      const msg = updateBookingMessagePreview();
+      window.open(`https://wa.me/34711573870?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+    }
+
+    function copyStructuredInquiry() {
+      const msg = updateBookingMessagePreview();
+      const tempInput = document.createElement('textarea');
+      tempInput.value = msg;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      const toast = document.getElementById('copy-toast-feedback');
+      toast.textContent = '✓ ¡Copiado al portapapeles!';
+      setTimeout(() => {
+        toast.textContent = '';
+      }, 3000);
+    }
+
+    function toggleFaqItem(idx) {
+      const body = document.getElementById(`faq-body-${idx}`);
+      const icon = document.getElementById(`faq-icon-${idx}`);
+      const isHidden = body.classList.contains('hidden');
+      if (isHidden) {
+        body.classList.remove('hidden');
+        icon.textContent = '−';
+      } else {
+        body.classList.add('hidden');
+        icon.textContent = '+';
+      }
+    }
+
+    // =========================================================================
+    // CONTROLES GLOBALES: SEMÁFORO, IDIOMA, CAPAS ANTIGRAVITY Y CARTA FIJA
+    // =========================================================================
+    function toggleLiveSemaphore() {
+      isKitchenOpen = !isKitchenOpen;
+      const dot = document.getElementById('nav-sem-dot');
+      const label = document.getElementById('nav-sem-label');
+      if (isKitchenOpen) {
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        label.textContent = "Abierto · Cocina hasta 16:00";
+      } else {
+        dot.className = "w-2 h-2 rounded-full bg-rose-500";
+        label.textContent = "Cerrado por descanso · Reservas web activas";
+      }
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      ['es', 'gal', 'en'].forEach(l => {
+        const pill = document.getElementById(`lang-pill-${l}`);
+        if (pill) {
+          pill.className = l === lang
+            ? "px-2.5 py-1 rounded-full bg-white text-stone-950 font-bold transition"
+            : "px-2.5 py-1 rounded-full hover:text-white transition";
+        }
+      });
+
+      const ctaText = {
+        es: "Ver Carta y Precios",
+        gal: "Ver Carta e Prezos",
+        en: "View Menu & Prices"
+      };
+      document.getElementById('nav-cta-carta').textContent = ctaText[lang] || ctaText.es;
+    }
+
+    function toggleAntigravityBadges() {
+      showAntigravityLayers = !showAntigravityLayers;
+      document.querySelectorAll('.antigravity-layer-badge').forEach(el => {
+        el.classList.toggle('hidden', !showAntigravityLayers);
+      });
+      const btn = document.getElementById('dock-btn-layers');
+      btn.className = showAntigravityLayers
+        ? "px-3 py-1.5 rounded-full text-[11px] font-mono-code bg-amber-400 text-stone-950 font-bold transition whitespace-nowrap flex items-center gap-1.5"
+        : "px-3 py-1.5 rounded-full text-[11px] font-mono-code bg-white/10 hover:bg-amber-400 hover:text-stone-950 text-amber-300 transition whitespace-nowrap flex items-center gap-1.5";
+    }
+
+    function openCartaDrawer() {
+      renderCartaDrawer();
+      const backdrop = document.getElementById('carta-backdrop');
+      const drawer = document.getElementById('carta-drawer');
+      backdrop.classList.remove('hidden');
+      setTimeout(() => {
+        backdrop.classList.remove('opacity-0');
+        drawer.classList.remove('translate-x-full');
+      }, 15);
+    }
+
+    function closeCartaDrawer() {
+      const backdrop = document.getElementById('carta-backdrop');
+      const drawer = document.getElementById('carta-drawer');
+      backdrop.classList.add('opacity-0');
+      drawer.classList.add('translate-x-full');
+      setTimeout(() => backdrop.classList.add('hidden'), 300);
+    }
+
+    function toggleAllergenFilter(alg) {
+      const btn = document.getElementById(`alg-pill-${alg}`);
+      if (excludedAllergens.has(alg)) {
+        excludedAllergens.delete(alg);
+        btn.className = "px-2.5 py-1 rounded-full border border-white/15 text-stone-300 transition";
+      } else {
+        excludedAllergens.add(alg);
+        btn.className = "px-2.5 py-1 rounded-full bg-white text-stone-950 font-bold transition";
+      }
+      renderCartaDrawer();
+    }
+
+    function renderCartaDrawer() {
+      const arch = ARCHETYPES[currentArch];
+      document.getElementById('carta-drawer-heading').textContent = `Carta y Precios · ${arch.name}`;
+      const container = document.getElementById('carta-drawer-list');
+
+      container.innerHTML = arch.menu.map(section => {
+        const visibleItems = section.items.filter(it => !it.allergens.some(a => excludedAllergens.has(a)));
+        if (!visibleItems.length) return '';
+        return `
+          <div>
+            <h4 class="font-mono-code text-xs uppercase tracking-wider text-stone-400 pb-2 mb-3 border-b border-white/10">
+              ${section.category}
+            </h4>
+            <div class="space-y-3">
+              ${visibleItems.map(item => `
+                <div class="p-4 rounded-2xl bg-stone-900/90 border border-white/10 flex items-start justify-between gap-4">
+                  <div class="space-y-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="font-bold text-sm sm:text-base text-white">${item.name}</span>
+                      ${item.badge ? `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-mono-code bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">${item.badge}</span>` : ''}
+                    </div>
+                    <p class="text-xs text-stone-400">${item.desc}</p>
+                  </div>
+                  <span class="font-mono-code font-bold text-base sm:text-lg text-white shrink-0 px-3 py-1 rounded-xl bg-white/10">
+                    ${item.price}
+                  </span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateSchemaModal() {
+      const arch = ARCHETYPES[currentArch];
+      const schema = {
+        "@context": "https://schema.org",
+        "@type": "Restaurant",
+        "name": arch.name,
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Noia",
+          "addressRegion": "A Coruña",
+          "postalCode": "15200",
+          "addressCountry": "ES"
+        },
+        "telephone": "+34711573870",
+        "servesCuisine": "Cocina Gallega & Producto de Lonja",
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "540"
+        }
+      };
+      document.getElementById('schema-json-box').textContent = JSON.stringify(schema, null, 2);
+    }
+
+    function toggleDesignModal() {
+      const modal = document.getElementById('design-modal');
+      modal.classList.toggle('hidden');
+      modal.classList.toggle('flex');
+    }
+  </script>
+</body>
+</html>
