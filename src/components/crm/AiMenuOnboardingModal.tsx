@@ -32,6 +32,7 @@ import {
   EUAllergenKey,
   sanitizeSlug,
 } from '@/lib/menu-vision-schema'
+import { CRMTemplateQRModal } from '@/components/crm/CRMTemplateQRModal'
 
 interface AiMenuOnboardingModalProps {
   isOpen: boolean
@@ -48,6 +49,7 @@ export function AiMenuOnboardingModal({
   const [inputMode, setInputMode] = useState<'file' | 'url'>('file')
   const [menuUrl, setMenuUrl] = useState('')
   const [restaurantName, setRestaurantName] = useState('Taberna O Marinheiro')
+  const [showQrCardModal, setShowQrCardModal] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<'fundador' | 'carta' | 'pro'>('fundador')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageBase64, setImageBase64] = useState<string>('')
@@ -615,15 +617,14 @@ export function AiMenuOnboardingModal({
                   </div>
                 </div>
 
-                <a
-                  href={`/carta-prototipo`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-2 rounded-xl bg-white text-slate-900 font-black text-xs flex items-center gap-1.5 hover:bg-slate-100 transition-all shadow-xs flex-shrink-0"
+                <button
+                  type="button"
+                  onClick={() => setShowQrCardModal(true)}
+                  className="px-3 py-2 rounded-xl bg-white text-slate-900 font-black text-xs flex items-center gap-1.5 hover:bg-slate-100 transition-all shadow-xs flex-shrink-0 cursor-pointer active:scale-95"
                 >
                   <QrCode className="w-4 h-4" />
                   <span>Ver Tarjeta QR</span>
-                </a>
+                </button>
               </div>
             </div>
           )}
@@ -677,6 +678,17 @@ export function AiMenuOnboardingModal({
           )}
         </div>
       </div>
+
+      {/* Modal de la Tarjeta QR Acompañadora del Local Aprovisionado */}
+      <CRMTemplateQRModal
+        isOpen={showQrCardModal}
+        onClose={() => setShowQrCardModal(false)}
+        customPrototype={{
+          slug: provisionedSlug,
+          name: restaurantName,
+          isDynamic: true,
+        }}
+      />
     </div>
   )
 }

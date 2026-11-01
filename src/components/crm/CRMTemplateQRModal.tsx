@@ -14,16 +14,24 @@ import { FluxoLogo } from '@/components/common/FluxoLogo'
 
 export type PrototypeKey = 'template' | 'casamar'
 
+export interface CustomPrototypeData {
+  slug: string
+  name: string
+  isDynamic?: boolean
+}
+
 interface CRMTemplateQRModalProps {
   isOpen: boolean
   onClose: () => void
   initialPrototype?: PrototypeKey
+  customPrototype?: CustomPrototypeData
 }
 
 export function CRMTemplateQRModal({
   isOpen,
   onClose,
-  initialPrototype = 'template'
+  initialPrototype = 'template',
+  customPrototype
 }: CRMTemplateQRModalProps) {
   const [activePrototype, setActivePrototype] = useState<PrototypeKey>(initialPrototype)
   const [copiedUrl, setCopiedUrl] = useState(false)
@@ -38,20 +46,24 @@ export function CRMTemplateQRModal({
 
   if (!isOpen) return null
 
-  const isTemplate = activePrototype === 'template'
+  const isCustom = !!customPrototype
+  const isTemplate = !isCustom && activePrototype === 'template'
   const origin = typeof window !== 'undefined'
     ? window.location.origin
     : 'https://fluxo-gastro.vercel.app'
-  const targetPath = isTemplate ? '/carta-prototipo' : '/carta-casamar'
+
+  const targetPath = isCustom
+    ? `/p/${customPrototype.slug}`
+    : (isTemplate ? '/carta-prototipo' : '/carta-casamar')
   const targetUrl = `${origin}${targetPath}`
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&data=${encodeURIComponent(
     targetUrl
   )}`
 
-  const downloadFilename = isTemplate
-    ? 'Fluxo_Template_Carta_QR.png'
-    : 'Casa_Mar_da_Vila_Carta_QR.png'
+  const downloadFilename = isCustom
+    ? `${customPrototype.slug.replace(/[^a-zA-Z0-9_-]/g, '_')}_Carta_QR.png`
+    : (isTemplate ? 'Fluxo_Template_Carta_QR.png' : 'Casa_Mar_da_Vila_Carta_QR.png')
 
   const handleCopyUrl = () => {
     if (typeof navigator !== 'undefined') {
@@ -101,42 +113,46 @@ export function CRMTemplateQRModal({
         </button>
 
         {/* Selector de Pestañas (Segmented Control - Apple Glassmorphism) */}
-        <div className="grid grid-cols-2 p-1 mr-12 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md mb-4">
-          <button
-            type="button"
-            onClick={() => setActivePrototype('template')}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-              isTemplate
-                ? 'bg-white/20 text-white shadow-md border border-white/20 backdrop-blur-lg'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <FluxoLogo size={14} />
-            <span>Template General</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActivePrototype('casamar')}
-            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-              !isTemplate
-                ? 'bg-cyan-500/20 text-cyan-300 shadow-md border border-cyan-400/30 backdrop-blur-lg'
-                : 'text-slate-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <img
-              src="/images/casamar-logo.png"
-              alt="Casa Mar"
-              className="w-3.5 h-3.5 rounded-full object-cover"
-            />
-            <span>Casa Mar da Vila</span>
-          </button>
-        </div>
+        {!isCustom && (
+          <div className="grid grid-cols-2 p-1 mr-12 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md mb-4">
+            <button
+              type="button"
+              onClick={() => setActivePrototype('template')}
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                isTemplate
+                  ? 'bg-white/20 text-white shadow-md border border-white/20 backdrop-blur-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <FluxoLogo size={14} />
+              <span>Template General</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivePrototype('casamar')}
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                !isTemplate
+                  ? 'bg-cyan-500/20 text-cyan-300 shadow-md border border-cyan-400/30 backdrop-blur-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <img
+                src="/images/casamar-logo.png"
+                alt="Casa Mar"
+                className="w-3.5 h-3.5 rounded-full object-cover"
+              />
+              <span>Casa Mar da Vila</span>
+            </button>
+          </div>
+        )}
 
         {/* Encabezado */}
         <div className="flex items-center gap-3 mb-4">
           <div
             className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-colors ${
-              isTemplate
+              isCustom
+                ? 'bg-blue-500/20 border border-blue-400/30 text-blue-400 shadow-blue-500/20'
+                : isTemplate
                 ? 'bg-emerald-500/20 border border-emerald-400/30 text-emerald-400 shadow-emerald-500/20'
                 : 'bg-cyan-500/20 border border-cyan-400/30 text-cyan-400 shadow-cyan-500/20'
             }`}
@@ -146,20 +162,24 @@ export function CRMTemplateQRModal({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-extrabold text-white">
-                {isTemplate ? 'Template Carta QR' : 'Casa Mar da Vila QR'}
+                {isCustom ? `${customPrototype.name} QR` : isTemplate ? 'Template Carta QR' : 'Casa Mar da Vila QR'}
               </h3>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                  isTemplate
+                  isCustom
+                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                    : isTemplate
                     ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                     : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
                 }`}
               >
-                {isTemplate ? 'Estático' : 'Piloto'}
+                {isCustom ? 'Aprovisionado' : isTemplate ? 'Estático' : 'Piloto'}
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              {isTemplate
+              {isCustom
+                ? `Tarjeta de sala lista para imprimir y escanear en ${customPrototype.name}`
+                : isTemplate
                 ? 'Demostración oficial para reuniones y captación'
                 : 'Carta digital con identidad oficial y carta real'}
             </p>
@@ -171,7 +191,12 @@ export function CRMTemplateQRModal({
           {/* Logo y Nombre en Cabecera de la Tarjeta QR */}
           <div className="flex items-center justify-between w-full mb-3 px-1 border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
-              {isTemplate ? (
+              {isCustom ? (
+                <>
+                  <FluxoLogo size={22} />
+                  <span className="text-xs font-black text-slate-900">{customPrototype.name}</span>
+                </>
+              ) : isTemplate ? (
                 <>
                   <FluxoLogo size={22} />
                   <span className="text-xs font-black text-slate-900">Fluxo Gastronomic</span>
@@ -188,15 +213,9 @@ export function CRMTemplateQRModal({
               )}
             </div>
             <div className="flex items-center gap-1.5">
-              {isTemplate ? (
-                <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                  Mesa X
-                </span>
-              ) : (
-                <span className="text-[10px] font-extrabold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
-                  Mesa 1
-                </span>
-              )}
+              <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                {isCustom ? 'Mesa 1' : isTemplate ? 'Mesa X' : 'Mesa 1'}
+              </span>
             </div>
           </div>
 
@@ -204,7 +223,7 @@ export function CRMTemplateQRModal({
           <div className="p-2 bg-white rounded-xl border border-slate-200/80 shadow-xs relative">
             <img
               src={qrImageUrl}
-              alt={isTemplate ? 'QR Estático Template Carta' : 'QR Casa Mar da Vila'}
+              alt={isCustom ? `QR ${customPrototype.name}` : isTemplate ? 'QR Estático Template Carta' : 'QR Casa Mar da Vila'}
               className="w-48 h-48 sm:w-56 sm:h-56 object-contain rounded-lg"
               loading="eager"
             />
@@ -213,12 +232,16 @@ export function CRMTemplateQRModal({
           {/* Subtítulo bajo el QR */}
           <div className="mt-3 text-center space-y-0.5">
             <p className="text-xs font-extrabold text-slate-900">
-              {isTemplate
+              {isCustom
+                ? `Escanea para acceder a la carta de ${customPrototype.name}`
+                : isTemplate
                 ? 'Escanea para abrir la carta demostrativa'
                 : 'Escanea para abrir la carta de Casa Mar da Vila'}
             </p>
             <p className="text-[11px] text-slate-500">
-              {isTemplate
+              {isCustom
+                ? `Local: "${customPrototype.name}" · Carta escaneada y sincronizada en tiempo real`
+                : isTemplate
                 ? 'Local: "Local" · Acciones de Cocina y Mozo bloqueadas'
                 : 'Local: "Casa Mar da Vila" · Carta gastronómica en alta fidelidad'}
             </p>
