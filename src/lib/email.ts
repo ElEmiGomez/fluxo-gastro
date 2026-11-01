@@ -50,11 +50,8 @@ export async function sendPilotLeadNotification(data: PilotLeadEmailData): Promi
         (data.notes ? '<p style="margin: 0 0 8px 0;"><strong>Notas / Carta:</strong> <span style="color: #94a3b8;">' + data.notes + '</span></p>' : '') +
       '</div>' +
       '<div style="text-align: center; margin-top: 24px;">' +
-        '<a href="' + whatsappUrl + '" style="display: inline-block; padding: 14px 22px; background-color: #10b981; color: #ffffff; text-decoration: none; font-weight: bold; border-radius: 10px; font-size: 14px; margin-right: 10px;">' +
-          'Abrir Chat de WhatsApp' +
-        '</a>' +
-        '<a href="tel:' + data.phone + '" style="display: inline-block; padding: 14px 22px; background-color: #0284c7; color: #ffffff; text-decoration: none; font-weight: bold; border-radius: 10px; font-size: 14px;">' +
-          'Llamar por Telefono' +
+        '<a href="' + whatsappUrl + '" style="display: inline-block; padding: 14px 22px; background-color: #10b981; color: #ffffff; text-decoration: none; font-weight: bold; border-radius: 10px; font-size: 14px;">' +
+          'Abrir Chat de WhatsApp con el Lead' +
         '</a>' +
       '</div>' +
       '<div style="margin-top: 24px; text-align: center; font-size: 11px; color: #64748b;">' +

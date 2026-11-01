@@ -4,7 +4,6 @@ import React, { useState } from 'react'
 import {
   X,
   QrCode,
-  Phone,
   Mail,
   Globe,
   Share2,
@@ -25,7 +24,6 @@ interface CRMContactCardModalProps {
 export function CRMContactCardModal({ isOpen, onClose }: CRMContactCardModalProps) {
   if (!isOpen) return null
 
-  const [copiedSpain, setCopiedSpain] = useState(false)
   const [copiedWA, setCopiedWA] = useState(false)
 
   const founderData = {
@@ -33,28 +31,25 @@ export function CRMContactCardModal({ isOpen, onClose }: CRMContactCardModalProp
     role: 'Fundador & CEO',
     company: 'Fluxo — Gastronomic System',
     location: 'Noia, Galicia',
-    phoneSpain: '+34 711 573 870',      // Llamadas directas en España (sin WhatsApp)
     whatsappArg: '+54 358 518 7430',    // WhatsApp
     rawWhatsappArg: '5493585187430',    // Formato wa.me oficial
     email: 'contactofluxosystem@gmail.com',
     web: 'https://fluxo-gastro.vercel.app/contacto',
   }
 
-  // Formato vCard estándar para descarga .vcf con ambos teléfonos
+  // Formato vCard estándar para descarga .vcf (solo contacto por WhatsApp)
   const vCardContent = [
     'BEGIN:VCARD',
     'VERSION:3.0',
     `FN:${founderData.name}`,
     `ORG:${founderData.company}`,
     `TITLE:${founderData.role}`,
-    `item1.TEL:${founderData.phoneSpain}`,
-    'item1.X-ABLabel:Llamadas (España)',
-    `item2.TEL:+54 9 358 518-7430`,
-    'item2.X-ABLabel:WhatsApp',
+    `item1.TEL:+54 9 358 518-7430`,
+    'item1.X-ABLabel:WhatsApp',
     `EMAIL:${founderData.email}`,
     `URL:https://fluxo-gastro.vercel.app/contacto`,
     'ADR;TYPE=WORK:;;Noia;A Coruña;;Galicia;España',
-    `NOTE:CEO de Fluxo — Digitalización gastronómica. Tel España: ${founderData.phoneSpain} | WhatsApp: ${founderData.whatsappArg}`,
+    `NOTE:CEO de Fluxo — Digitalización gastronómica. Contacto por WhatsApp: ${founderData.whatsappArg}`,
     'END:VCARD',
   ].join('\n')
 
@@ -66,14 +61,6 @@ export function CRMContactCardModal({ isOpen, onClose }: CRMContactCardModalProp
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(
     targetUrl
   )}`
-
-  const handleCopySpain = () => {
-    if (typeof navigator !== 'undefined') {
-      navigator.clipboard.writeText(founderData.phoneSpain)
-      setCopiedSpain(true)
-      setTimeout(() => setCopiedSpain(false), 2000)
-    }
-  }
 
   const handleCopyWA = () => {
     if (typeof navigator !== 'undefined') {
@@ -145,26 +132,9 @@ export function CRMContactCardModal({ isOpen, onClose }: CRMContactCardModalProp
             />
           </div>
 
-          {/* Desglose de ambos números */}
+          {/* Desglose del número de WhatsApp */}
           <div className="w-full p-2.5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-1.5 text-xs text-left">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-xs">📞</span>
-                <div className="truncate">
-                  <span className="text-[10px] text-slate-400 block">Llamadas (España)</span>
-                  <span className="font-mono text-white text-xs font-semibold">{founderData.phoneSpain}</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleCopySpain}
-                className="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-750 text-slate-200 text-[10px] font-bold border border-slate-700"
-              >
-                {copiedSpain ? '¡Copiado!' : 'Copiar'}
-              </button>
-            </div>
-
-            <div className="pt-1.5 border-t border-slate-800/80 flex items-center justify-between">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="text-xs">💬</span>
                 <div className="truncate">
@@ -194,24 +164,14 @@ export function CRMContactCardModal({ isOpen, onClose }: CRMContactCardModalProp
               <span>Abrir WhatsApp ({founderData.whatsappArg})</span>
             </a>
 
-            <div className="grid grid-cols-2 gap-2">
-              <a
-                href={`tel:${founderData.phoneSpain}`}
-                className="py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Llamar (España)</span>
-              </a>
-
-              <button
-                type="button"
-                onClick={handleDownloadVcf}
-                className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-semibold transition flex items-center justify-center gap-1.5 active:scale-95 border border-slate-700"
-              >
-                <Download className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Guardar .vcf</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleDownloadVcf}
+              className="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-semibold transition flex items-center justify-center gap-1.5 active:scale-95 border border-slate-700"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Guardar .vcf</span>
+            </button>
           </div>
         </div>
       </div>

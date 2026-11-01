@@ -463,16 +463,6 @@ export function CRMLeadDetailModal({
                 </a>
               ) : null}
 
-              {contactPhone ? (
-                <a
-                  href={`tel:${contactPhone}`}
-                  className="px-3.5 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 text-xs font-semibold flex items-center gap-2 transition"
-                >
-                  <Phone className="w-4 h-4 text-blue-400" />
-                  <span>Llamar</span>
-                </a>
-              ) : null}
-
               {/* Botón Escanear Carta de Papel [Idea 1] */}
               <button
                 type="button"
