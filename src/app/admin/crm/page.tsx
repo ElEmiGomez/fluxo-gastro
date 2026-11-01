@@ -40,8 +40,7 @@ import {
   Edit3,
   Trash2,
   Landmark,
-  DoorOpen,
-  Printer
+  DoorOpen
 } from 'lucide-react'
 import {
   CRMICP,
@@ -142,6 +141,8 @@ export default function CRMAdminPage() {
   const [viewMode, setViewMode] = useState<
     'kanban' | 'table' | 'map' | 'qr_dinamicos' | 'finanzas' | 'portal' | 'kit'
   >('kanban')
+  // Menú plegable de la sección unificada de Códigos QR
+  const [qrsMenuOpen, setQrsMenuOpen] = useState(false)
 
   // Modo Claro / Oscuro (Tema estilo imagen de referencia por defecto)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
@@ -658,52 +659,87 @@ export default function CRMAdminPage() {
               <Plus className="w-4 h-4" />
               <span>Nuevo Local</span>
             </button>
+          </div>
+
+          {/* Sección Códigos QR (todas las opciones agrupadas y plegables) */}
+          <div className="space-y-1.5">
+            <p className="px-3 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Códigos QR</p>
 
             <button
-              onClick={() => setIsContactCardOpen(true)}
-              className="w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15] text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth"
-            >
-              <QrCode className="w-4 h-4 text-blue-400" />
-              <span>Mi Tarjeta QR</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setTemplateQrProto('template')
-                setIsTemplateQrOpen(true)
-              }}
-              className="w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15] text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth"
-            >
-              <QrCode className="w-4 h-4 text-emerald-400" />
-              <span>Template Carta QR</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setTemplateQrProto('casamar')
-                setIsTemplateQrOpen(true)
-              }}
-              className="w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15] text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth"
-            >
-              <QrCode className="w-4 h-4 text-cyan-400" />
-              <span>QR Casa Mar da Vila</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setViewMode('qr_dinamicos')
-                setSelectedLeadForQr(null)
-                setQrs([])
-              }}
-              className={`w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15] text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth ${
-                viewMode === 'qr_dinamicos'
-                  ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
-                  : ''
+              onClick={() => setQrsMenuOpen((v) => !v)}
+              className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth ${
+                viewMode === 'qr_dinamicos' || viewMode === 'kit'
+                  ? 'bg-purple-500/20 border border-purple-500/40 text-purple-300'
+                  : 'bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15]'
               }`}
             >
-              <QrCode className="w-4 h-4 text-purple-400" />
-              <span>QRs Dinámicos</span>
+              <QrCode className={`w-4 h-4 ${viewMode === 'qr_dinamicos' || viewMode === 'kit' ? 'text-purple-300' : 'text-purple-400'}`} />
+              <span className="flex-1 text-left">Todo de QRs</span>
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-white/10 text-slate-400">5</span>
+              <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${qrsMenuOpen ? 'rotate-90' : ''}`} />
             </button>
+
+            {qrsMenuOpen && (
+              <div className="pl-3 space-y-1 appleFadeIn">
+                <button
+                  onClick={() => setIsContactCardOpen(true)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/[0.1] text-[11px] font-semibold flex items-center gap-2.5 backdrop-blur-md apple-smooth"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Mi Tarjeta QR</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setTemplateQrProto('template')
+                    setIsTemplateQrOpen(true)
+                  }}
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/[0.1] text-[11px] font-semibold flex items-center gap-2.5 backdrop-blur-md apple-smooth"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Template Carta QR</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setTemplateQrProto('casamar')
+                    setIsTemplateQrOpen(true)
+                  }}
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/[0.1] text-[11px] font-semibold flex items-center gap-2.5 backdrop-blur-md apple-smooth"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>QR Casa Mar da Vila</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setViewMode('qr_dinamicos')
+                    setSelectedLeadForQr(null)
+                    setQrs([])
+                  }}
+                  className={`w-full px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/[0.1] text-[11px] font-semibold flex items-center gap-2.5 backdrop-blur-md apple-smooth ${
+                    viewMode === 'qr_dinamicos'
+                      ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                      : ''
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5 text-purple-400" />
+                  <span>QRs Dinámicos</span>
+                </button>
+
+                <button
+                  onClick={() => setViewMode('kit')}
+                  className={`w-full px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/[0.1] text-[11px] font-semibold flex items-center gap-2.5 backdrop-blur-md apple-smooth ${
+                    viewMode === 'kit'
+                      ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                      : ''
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5 text-fuchsia-400" />
+                  <span>Kit de Calle (/demo) &amp; QRs por Local</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Suite Financiera del CRM Fundador */}
@@ -732,18 +768,6 @@ export default function CRMAdminPage() {
             >
               <DoorOpen className="w-4 h-4 text-indigo-400" />
               <span>Portal del Dueño</span>
-            </button>
-
-            <button
-              onClick={() => setViewMode('kit')}
-              className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth ${
-                viewMode === 'kit'
-                  ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
-                  : 'bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15]'
-              }`}
-            >
-              <Printer className="w-4 h-4 text-purple-400" />
-              <span>Kit de Calle &amp; QRs</span>
             </button>
           </div>
 
