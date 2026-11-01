@@ -65,6 +65,7 @@ import { CRMQuickAddModal } from '@/components/crm/CRMQuickAddModal'
 import { CRMLeadDetailModal } from '@/components/crm/CRMLeadDetailModal'
 import { CRMContactCardModal } from '@/components/crm/CRMContactCardModal'
 import { CRMTemplateQRModal } from '@/components/crm/CRMTemplateQRModal'
+import { AiMenuOnboardingModal } from '@/components/crm/AiMenuOnboardingModal'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 
 const STATUS_COLUMNS: { id: CRMStatus; title: string; color: string; badgeBg: string; badgeBgLight: string }[] = [
@@ -156,6 +157,7 @@ export default function CRMAdminPage() {
 
   // Modales y menús
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
+  const [isAiOnboardingOpen, setIsAiOnboardingOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<CRMLead | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isContactCardOpen, setIsContactCardOpen] = useState(false)
@@ -653,11 +655,19 @@ export default function CRMAdminPage() {
             <p className="px-3 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Acciones</p>
 
             <button
+              onClick={() => setIsAiOnboardingOpen(true)}
+              className="w-full px-3.5 py-2.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white border border-white/20 text-xs font-black flex items-center gap-2.5 shadow-md shadow-blue-500/25 backdrop-blur-md apple-smooth active:scale-[0.98]"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              <span>✨ Nuevo Local IA (30s)</span>
+            </button>
+
+            <button
               onClick={() => setIsQuickAddOpen(true)}
               className="w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-white border border-white/[0.15] text-xs font-bold flex items-center gap-3 backdrop-blur-md apple-smooth active:scale-[0.98]"
             >
               <Plus className="w-4 h-4" />
-              <span>Nuevo Local</span>
+              <span>Nuevo Local (Manual)</span>
             </button>
           </div>
 
@@ -958,13 +968,24 @@ export default function CRMAdminPage() {
                 )}
               </div>
 
+              {/* Botón Onboarding IA 30s */}
+              <button
+                onClick={() => setIsAiOnboardingOpen(true)}
+                className="px-3.5 py-2 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs font-black flex items-center gap-1.5 apple-smooth shadow-md shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98] border border-white/20"
+                title="Sube una foto o PDF de la carta y crea el local con QR en 30s"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                <span className="hidden sm:inline">✨ Nuevo Local por Foto IA (30s)</span>
+                <span className="sm:hidden">✨ Foto IA</span>
+              </button>
+
               {/* Botón Nuevo Local */}
               <button
                 onClick={() => setIsQuickAddOpen(true)}
-                className="px-3.5 py-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 apple-smooth shadow-md shadow-blue-500/25 hover:scale-[1.02] active:scale-[0.98]"
+                className="px-3.5 py-2 rounded-full bg-slate-800 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-1.5 apple-smooth hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Nuevo Local</span>
+                <span className="hidden sm:inline">Manual</span>
               </button>
             </div>
           </div>
@@ -1822,6 +1843,21 @@ export default function CRMAdminPage() {
       {/* ==============================================================================
           MODALES DE APOYO
       ============================================================================== */}
+      <AiMenuOnboardingModal
+        isOpen={isAiOnboardingOpen}
+        onClose={() => setIsAiOnboardingOpen(false)}
+        onSuccessProvisioning={({ slug, name }) => {
+          handleCreateLead({
+            name,
+            address: 'Centro Histórico (Aprovisionado por Visión IA)',
+            status: 'piloto_14_dias',
+            plan: 'full_fundador',
+            custom_slug: slug,
+            notes: `Digitalizado en vivo mediante Visión IA. Carta pública: /p/${slug}`,
+          } as any)
+        }}
+      />
+
       <CRMQuickAddModal
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}

@@ -102,14 +102,15 @@ const IDIOMAS: Record<string, Record<string, string>> = {
 
 export default function CartaPrototipoPage() {
   const params = useParams()
-  const [searchParams] = useSearchParams()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const slug = (params?.slug as string) || 'taperia-adega-do-pazo'
-  const preview = searchParams.get('preview') === '1'
+  const preview = searchParams?.get('preview') === '1'
 
   const [prototipo, setPrototipo] = useState<MenuPrototype | null>(null)
   const [cargando, setCargando] = useState(true)
   const [idioma, setIdioma] = useState<'ES' | 'GAL' | 'EN'>('ES')
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>('todas')
   const [alergenoFiltrado, setAlergenoFiltrado] = useState<string>('todos')
   const [busqueda, setBusqueda] = useState('')
   const [platoDetalle, setPlatoDetalle] = useState<MenuPrototypeDish | null>(null)
@@ -124,7 +125,7 @@ export default function CartaPrototipoPage() {
   useEffect(() => {
     async function cargar() {
       try {
-        const dParam = searchParams.get('d')
+        const dParam = searchParams?.get('d')
         if (dParam) {
           try {
             const decoded = JSON.parse(decodeURIComponent(dParam))
@@ -193,12 +194,14 @@ export default function CartaPrototipoPage() {
     if (!prototipo) return []
     return prototipo.platos.filter((p) => {
       const matchSearch = busqueda === '' || p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.categoria.toLowerCase().includes(busqueda.toLowerCase())
+      const matchCategory = categoriaSeleccionada === 'todas' || p.categoria === categoriaSeleccionada
+      if (!matchCategory) return false
       if (alergenoFiltrado !== 'todos') {
         if (!p.alergenos.includes(alergenoFiltrado)) return false
       }
       return matchSearch
     })
-  }, [prototipo, alergenoFiltrado, busqueda])
+  }, [prototipo, categoriaSeleccionada, alergenoFiltrado, busqueda])
 
   const categorias = useMemo(() => {
     if (!prototipo) return ['todas']
@@ -305,7 +308,7 @@ export default function CartaPrototipoPage() {
               {categorias.map((cat) => (
                 <button
                   key={cat}
-                  onClick={() => setAlergenoFiltrado('todos')}
+                  onClick={() => setCategoriaSeleccionada(cat)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${categoriaSeleccionada === cat ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                 >
                   {ICONOS_CATEGORIA[cat]}
