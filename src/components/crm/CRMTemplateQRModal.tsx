@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   X,
   QrCode,
@@ -8,31 +8,50 @@ import {
   CheckCircle2,
   Download,
   ExternalLink,
-  Sparkles,
-  ShieldCheck,
-  Utensils
+  ShieldCheck
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
+
+export type PrototypeKey = 'template' | 'casamar'
 
 interface CRMTemplateQRModalProps {
   isOpen: boolean
   onClose: () => void
+  initialPrototype?: PrototypeKey
 }
 
-export function CRMTemplateQRModal({ isOpen, onClose }: CRMTemplateQRModalProps) {
-  if (!isOpen) return null
-
+export function CRMTemplateQRModal({
+  isOpen,
+  onClose,
+  initialPrototype = 'template'
+}: CRMTemplateQRModalProps) {
+  const [activePrototype, setActivePrototype] = useState<PrototypeKey>(initialPrototype)
   const [copiedUrl, setCopiedUrl] = useState(false)
   const [downloading, setDownloading] = useState(false)
 
-  // URL del template de Carta QR oficial (Local / Mesa X / Botones bloqueados)
-  const targetUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/template-carta`
-    : 'https://fluxo-gastro.vercel.app/template-carta'
+  // Sincronizar activePrototype cuando cambia la prop initialPrototype o al abrir el modal
+  useEffect(() => {
+    if (initialPrototype) {
+      setActivePrototype(initialPrototype)
+    }
+  }, [initialPrototype, isOpen])
+
+  if (!isOpen) return null
+
+  const isTemplate = activePrototype === 'template'
+  const origin = typeof window !== 'undefined'
+    ? window.location.origin
+    : 'https://fluxo-gastro.vercel.app'
+  const targetPath = isTemplate ? '/template-carta' : '/casamar-da-vila'
+  const targetUrl = `${origin}${targetPath}`
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&data=${encodeURIComponent(
     targetUrl
   )}`
+
+  const downloadFilename = isTemplate
+    ? 'Fluxo_Template_Carta_QR.png'
+    : 'Casa_Mar_da_Vila_Carta_QR.png'
 
   const handleCopyUrl = () => {
     if (typeof navigator !== 'undefined') {
@@ -50,7 +69,7 @@ export function CRMTemplateQRModal({ isOpen, onClose }: CRMTemplateQRModalProps)
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', 'Fluxo_Template_Carta_QR.png')
+      link.setAttribute('download', downloadFilename)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -67,7 +86,9 @@ export function CRMTemplateQRModal({ isOpen, onClose }: CRMTemplateQRModalProps)
       <div
         className="relative w-full max-w-md bg-gradient-to-b from-slate-900/95 via-slate-900/95 to-slate-950/95 rounded-3xl p-5 sm:p-6 border border-white/10 shadow-2xl text-white backdrop-blur-2xl"
         style={{
-          boxShadow: '0 20px 50px -10px rgba(0,0,0,0.7), 0 0 40px rgba(16, 185, 129, 0.15)'
+          boxShadow: isTemplate
+            ? '0 20px 50px -10px rgba(0,0,0,0.7), 0 0 40px rgba(16, 185, 129, 0.15)'
+            : '0 20px 50px -10px rgba(0,0,0,0.7), 0 0 40px rgba(6, 182, 212, 0.15)'
         }}
       >
         {/* Botón Cerrar */}
@@ -79,34 +100,103 @@ export function CRMTemplateQRModal({ isOpen, onClose }: CRMTemplateQRModalProps)
           <X className="w-4 h-4" />
         </button>
 
+        {/* Selector de Pestañas (Segmented Control - Apple Glassmorphism) */}
+        <div className="grid grid-cols-2 p-1 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md mb-4">
+          <button
+            type="button"
+            onClick={() => setActivePrototype('template')}
+            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              isTemplate
+                ? 'bg-white/20 text-white shadow-md border border-white/20 backdrop-blur-lg'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <FluxoLogo size={14} />
+            <span>Template General</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActivePrototype('casamar')}
+            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              !isTemplate
+                ? 'bg-cyan-500/20 text-cyan-300 shadow-md border border-cyan-400/30 backdrop-blur-lg'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <img
+              src="/images/casamar-logo.png"
+              alt="Casa Mar"
+              className="w-3.5 h-3.5 rounded-full object-cover"
+            />
+            <span>Casa Mar da Vila</span>
+          </button>
+        </div>
+
         {/* Encabezado */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/20">
+          <div
+            className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-colors ${
+              isTemplate
+                ? 'bg-emerald-500/20 border border-emerald-400/30 text-emerald-400 shadow-emerald-500/20'
+                : 'bg-cyan-500/20 border border-cyan-400/30 text-cyan-400 shadow-cyan-500/20'
+            }`}
+          >
             <QrCode className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-extrabold text-white">Template Carta QR</h3>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider">
-                Estático
+              <h3 className="text-base font-extrabold text-white">
+                {isTemplate ? 'Template Carta QR' : 'Casa Mar da Vila QR'}
+              </h3>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                  isTemplate
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                    : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                }`}
+              >
+                {isTemplate ? 'Estático' : 'Piloto'}
               </span>
             </div>
-            <p className="text-xs text-slate-400">Demostración oficial para reuniones y captación</p>
+            <p className="text-xs text-slate-400">
+              {isTemplate
+                ? 'Demostración oficial para reuniones y captación'
+                : 'Carta digital con identidad oficial y carta real'}
+            </p>
           </div>
         </div>
 
         {/* Tarjeta Visual del QR */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center shadow-inner relative overflow-hidden">
-          {/* Logo Fluxo en Cabecera de la Tarjeta QR */}
+          {/* Logo y Nombre en Cabecera de la Tarjeta QR */}
           <div className="flex items-center justify-between w-full mb-3 px-1 border-b border-slate-100 pb-2">
             <div className="flex items-center gap-2">
-              <FluxoLogo size={22} />
-              <span className="text-xs font-black text-slate-900">Fluxo Gastronomic</span>
+              {isTemplate ? (
+                <>
+                  <FluxoLogo size={22} />
+                  <span className="text-xs font-black text-slate-900">Fluxo Gastronomic</span>
+                </>
+              ) : (
+                <>
+                  <img
+                    src="/images/casamar-logo.png"
+                    alt="Casa Mar da Vila"
+                    className="w-5 h-5 rounded-full object-cover border border-slate-200"
+                  />
+                  <span className="text-xs font-black text-slate-900">Casa Mar da Vila</span>
+                </>
+              )}
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                Mesa X
-              </span>
+              {isTemplate ? (
+                <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  Mesa X
+                </span>
+              ) : (
+                <span className="text-[10px] font-extrabold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded-full border border-cyan-200">
+                  Mesa 1
+                </span>
+              )}
             </div>
           </div>
 
@@ -114,7 +204,7 @@ export function CRMTemplateQRModal({ isOpen, onClose }: CRMTemplateQRModalProps)
           <div className="p-2 bg-white rounded-xl border border-slate-200/80 shadow-xs relative">
             <img
               src={qrImageUrl}
-              alt="QR Estático Template Carta"
+              alt={isTemplate ? 'QR Estático Template Carta' : 'QR Casa Mar da Vila'}
               className="w-48 h-48 sm:w-56 sm:h-56 object-contain rounded-lg"
               loading="eager"
             />
@@ -123,22 +213,36 @@ export function CRMTemplateQRModal({ isOpen, onClose }: CRMTemplateQRModalProps)
           {/* Subtítulo bajo el QR */}
           <div className="mt-3 text-center space-y-0.5">
             <p className="text-xs font-extrabold text-slate-900">
-              Escanea para abrir la carta demostrativa
+              {isTemplate
+                ? 'Escanea para abrir la carta demostrativa'
+                : 'Escanea para abrir la carta de Casa Mar da Vila'}
             </p>
             <p className="text-[11px] text-slate-500">
-              Local: &quot;Local&quot; &middot; Acciones de Cocina y Mozo bloqueadas
+              {isTemplate
+                ? 'Local: "Local" · Acciones de Cocina y Mozo bloqueadas'
+                : 'Local: "Casa Mar da Vila" · Carta gastronómica en alta fidelidad'}
             </p>
           </div>
         </div>
 
         {/* Especificación de Seguridad / Anti-Alucinación */}
         <div className="mt-4 p-3 rounded-2xl bg-white/[0.05] border border-white/10 space-y-1.5 text-xs text-slate-300">
-          <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
+          <div
+            className={`flex items-center gap-1.5 font-bold text-[11px] ${
+              isTemplate ? 'text-emerald-400' : 'text-cyan-400'
+            }`}
+          >
             <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>100% Blindado contra Pedidos Ficticios</span>
+            <span>
+              {isTemplate
+                ? '100% Blindado contra Pedidos Ficticios'
+                : 'Demostración de Marca Verificada'}
+            </span>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed">
-            Al escanear este QR en persona, el hostelero verá exactamente el diseño final de la carta. Si pulsa para pedir o llamar al mozo, verá una explicación comercial limpia sin enviar nada a cocina.
+            {isTemplate
+              ? 'Al escanear este QR en persona, el hostelero verá exactamente el diseño final de la carta. Si pulsa para pedir o llamar al mozo, verá una explicación comercial limpia sin enviar nada a cocina.'
+              : 'Al escanear este QR, el cliente accede directamente al prototipo con el logotipo oficial, la selección gastronómica de la ría y el diseño exclusivo para Casa Mar da Vila.'}
           </p>
         </div>
 
@@ -146,14 +250,20 @@ export function CRMTemplateQRModal({ isOpen, onClose }: CRMTemplateQRModalProps)
         <div className="mt-4 space-y-2">
           {/* Fila de URL directa */}
           <div className="p-2.5 rounded-xl bg-slate-950/60 border border-white/10 flex items-center justify-between gap-2">
-            <span className="text-xs font-mono text-emerald-400 truncate flex-1 pl-1">
+            <span
+              className={`text-xs font-mono truncate flex-1 pl-1 ${
+                isTemplate ? 'text-emerald-400' : 'text-cyan-400'
+              }`}
+            >
               {targetUrl}
             </span>
             <button
               onClick={handleCopyUrl}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
                 copiedUrl
-                  ? 'bg-emerald-500 text-slate-950 font-black'
+                  ? isTemplate
+                    ? 'bg-emerald-500 text-slate-950 font-black'
+                    : 'bg-cyan-500 text-slate-950 font-black'
                   : 'bg-white/10 hover:bg-white/20 text-white'
               }`}
             >
@@ -186,7 +296,11 @@ export function CRMTemplateQRModal({ isOpen, onClose }: CRMTemplateQRModalProps)
             <button
               onClick={handleDownloadQr}
               disabled={downloading}
-              className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/30 transition-all active:scale-95 disabled:opacity-50"
+              className={`py-2.5 px-3 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all active:scale-95 disabled:opacity-50 text-slate-950 ${
+                isTemplate
+                  ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                  : 'bg-cyan-500 hover:bg-cyan-400 shadow-cyan-500/30'
+              }`}
             >
               <Download className="w-3.5 h-3.5" />
               <span>{downloading ? 'Descargando...' : 'Descargar QR'}</span>

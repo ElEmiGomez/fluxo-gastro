@@ -130,6 +130,7 @@ export default function CRMAdminPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isContactCardOpen, setIsContactCardOpen] = useState(false)
   const [isTemplateQrOpen, setIsTemplateQrOpen] = useState(false)
+  const [templateQrProto, setTemplateQrProto] = useState<'template' | 'casamar'>('template')
   const [showAllEvents, setShowAllEvents] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [isOnline, setIsOnline] = useState<boolean>(true)
@@ -638,11 +639,25 @@ export default function CRMAdminPage() {
             </button>
 
             <button
-              onClick={() => setIsTemplateQrOpen(true)}
+              onClick={() => {
+                setTemplateQrProto('template')
+                setIsTemplateQrOpen(true)
+              }}
               className="w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15] text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth"
             >
               <QrCode className="w-4 h-4 text-emerald-400" />
               <span>Template Carta QR</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setTemplateQrProto('casamar')
+                setIsTemplateQrOpen(true)
+              }}
+              className="w-full px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15] text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth"
+            >
+              <QrCode className="w-4 h-4 text-cyan-400" />
+              <span>QR Casa Mar da Vila</span>
             </button>
 
             <button
@@ -1729,6 +1744,7 @@ export default function CRMAdminPage() {
       <CRMTemplateQRModal
         isOpen={isTemplateQrOpen}
         onClose={() => setIsTemplateQrOpen(false)}
+        initialPrototype={templateQrProto}
       />
     </div>
   )
