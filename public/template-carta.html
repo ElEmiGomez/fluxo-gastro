@@ -748,7 +748,7 @@
       dessert: ['Con nata', 'Sin nata', 'Con sirope', 'Sin sirope', 'Para compartir', 'Cucharas extra', 'Helado aparte']
     };
 
-    const PRODUCTS = [
+    let PRODUCTS = [
       // ── NUESTRAS PROMOS ──
       {
         id: 'combo-pareja',
@@ -1945,6 +1945,146 @@
       document.getElementById('blocked-info-modal').classList.add('hidden');
     }
 
+    
+    // Auto-hidratación dinámica para prototipos aprovisionados en el CRM (localStorage o parámetro ?slug=)
+    function autoHydrateDynamicPrototype() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        let slug = urlParams.get('slug');
+        if (!slug) {
+          const pathParts = window.location.pathname.split('/');
+          const pIndex = pathParts.indexOf('p');
+          if (pIndex !== -1 && pathParts[pIndex + 1]) {
+            slug = pathParts[pIndex + 1];
+          }
+        }
+
+        let protoRecord = null;
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const raw = localStorage.getItem('fluxo_crm_prototypes_v1');
+          if (raw) {
+            const list = JSON.parse(raw);
+            if (slug) {
+              protoRecord = list.find(p => p.slug === slug);
+            } else if (list.length > 0) {
+              protoRecord = list[0];
+            }
+          }
+        }
+
+        if (protoRecord && protoRecord.platos && protoRecord.platos.length > 0) {
+          console.log('[Fluxo] Hidratando carta interactiva para:', protoRecord.nombre_local);
+          if (protoRecord.nombre_local) {
+            document.title = protoRecord.nombre_local + ' — Carta Digital Interactiva | Fluxo';
+            const waiterSub = document.querySelector('#blocked-info-modal #blocked-modal-subtitle');
+            if (waiterSub) waiterSub.textContent = protoRecord.nombre_local + ' · Prototipo';
+          }
+
+          const FOOD_PHOTOS = {
+            pulpo: 'images/dishes/pulpo.jpg',
+            zamburi: 'images/dishes/zamburinas.jpg',
+            padron: 'images/dishes/patacas-3-salsas.jpg',
+            croqueta: 'images/dishes/croquetas.jpg',
+            empanada: 'images/dishes/empanada-venezolana.jpg',
+            raxo: 'images/dishes/raxo-patacas.jpg',
+            churrasco: 'images/dishes/secreto-duroc.jpg',
+            merluza: 'images/dishes/merluza-galega.jpg',
+            albarino: 'images/dishes/copa-albarino.jpg',
+            estrella: 'images/dishes/estrella-galicia.jpg',
+            cerveza: 'images/dishes/estrella-galicia.jpg',
+            agua: 'images/agua-mineral.jpg',
+            santiago: 'images/dishes/tarta-santiago.jpg',
+            tarta: 'images/dishes/tarta-queso-horno.jpg',
+            canitas: 'images/dishes/tequenos.jpg',
+            navaja: 'images/dishes/zamburinas.jpg',
+            centollo: 'images/dishes/pulpo.jpg'
+          };
+
+          function inferPhoto(name, cat) {
+            const n = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+            for (const [k, url] of Object.entries(FOOD_PHOTOS)) {
+              if (n.includes(k)) return url;
+            }
+            if (cat.toLowerCase().includes('bebida') || cat.toLowerCase().includes('vino')) {
+              return 'images/dishes/copa-albarino.jpg';
+            }
+            if (cat.toLowerCase().includes('postre') || cat.toLowerCase().includes('dulce')) {
+              return 'images/dishes/tarta-santiago.jpg';
+            }
+            if (cat.toLowerCase().includes('marisco') || cat.toLowerCase().includes('pescado')) {
+              return 'images/dishes/pulpo.jpg';
+            }
+            return 'images/dishes/raxo-patacas.jpg';
+          }
+
+          const dynamicProducts = protoRecord.platos.map(item => {
+            const catSlug = (item.categoria || 'entradas')
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[̀-ͯ]/g, '')
+              .replace(/[^a-z0-9]/g, '-');
+
+            const allg = [];
+            const rawAllg = (item.alergenos || []).map(a => a.toLowerCase());
+            if (rawAllg.some(a => a.includes('gluten'))) allg.push('gluten');
+            if (rawAllg.some(a => a.includes('molusco') || a.includes('marisco'))) allg.push('molluscs');
+            if (rawAllg.some(a => a.includes('crustaceo'))) allg.push('crustaceans');
+            if (rawAllg.some(a => a.includes('pescado') || a.includes('peixe'))) allg.push('fish');
+            if (rawAllg.some(a => a.includes('huevo') || a.includes('ovo'))) allg.push('eggs');
+            if (rawAllg.some(a => a.includes('lacteo') || a.includes('leche') || a.includes('queixo'))) allg.push('dairy');
+            if (rawAllg.some(a => a.includes('fruto') || a.includes('almendra'))) allg.push('nuts');
+            if (rawAllg.some(a => a.includes('sulfito') || a.includes('vino') || a.includes('albarino'))) allg.push('sulfites');
+
+            const isDrink = catSlug.includes('bebida') || catSlug.includes('vino') || catSlug.includes('cerveza');
+            const isDessert = catSlug.includes('postre') || catSlug.includes('sobremesa');
+            const isMeat = catSlug.includes('carne') || catSlug.includes('principal') || catSlug.includes('churrasco') || catSlug.includes('raxo');
+
+            return {
+              id: item.id || ('p-' + Math.random().toString(36).slice(2, 8)),
+              name: item.nombre,
+              categories: [catSlug],
+              categoryName: item.categoria,
+              price: item.precio || 0,
+              image_url: inferPhoto(item.nombre, item.categoria || ''),
+              description: item.descripcion || (item.badge ? item.badge + ' de la casa.' : 'Elaborado artesanalmente en cocina con producto fresco seleccionado.'),
+              allergens: allg,
+              dietary: allg.includes('gluten') ? [] : ['gluten_free'],
+              customizerType: isDrink ? 'drink' : isDessert ? 'dessert' : isMeat ? 'meat' : 'starter',
+              hasCookingPoint: isMeat,
+              hasSide: isMeat
+            };
+          });
+
+          if (dynamicProducts.length > 0) {
+            PRODUCTS = dynamicProducts;
+
+            // Reconstruir categorías en carrusel
+            const categoriesMap = new Map();
+            PRODUCTS.forEach(p => {
+              const catKey = p.categories[0];
+              if (!categoriesMap.has(catKey)) {
+                categoriesMap.set(catKey, p.categoryName || catKey);
+              }
+            });
+
+            const catContainer = document.getElementById('category-scroll-container');
+            if (catContainer) {
+              let pills = '<button type="button" onclick="selectCategory(\'all\')" data-cat="all" class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-blue-600 text-white font-black shadow-xs ring-1 ring-blue-500 scale-[1.02]">🍴 <span class="cat-label" data-cat-key="all">Todos</span></button>';
+
+              categoriesMap.forEach((name, key) => {
+                pills += '<button type="button" onclick="selectCategory(\'' + key + '\')" data-cat="' + key + '" class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"><span class="cat-label" data-cat-key="' + key + '">' + name + '</span></button>';
+              });
+
+              catContainer.innerHTML = pills;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Fluxo] Auto-hydration warning:', err);
+      }
+    }
+
+    autoHydrateDynamicPrototype();
     renderCatalog();
     setTimeout(updateCatScrollButtons, 80);
   </script>
