@@ -13,7 +13,7 @@ import {
 const FORMATS: Array<{ id: StreetKitFormat; label: string; hint: string; badge: string }> = [
   { id: 'A5', label: 'Lámina A5', hint: '1748 × 2480 px · plastificable', badge: 'Formato A' },
   { id: 'A6', label: 'Lámina A6', hint: '1240 × 1748 px · plastificable', badge: 'Formato A' },
-  { id: 'A4_TENT', label: 'Caballete A4 plegable', hint: '2480 × 3508 px · doble cara', badge: 'Formato B' },
+  { id: 'A4_TENT', label: 'Caballete A4', hint: '2480 × 3508 px · doble cara', badge: 'Formato B' },
 ]
 
 /**
@@ -64,14 +64,14 @@ export function StreetKitPhysicalGenerator() {
             }`}
           >
             <div className="flex items-center justify-between gap-2">
-              <p className={`text-xs font-bold ${format === f.id ? 'text-cyan-200' : 'text-white'}`}>
+              <p className={`text-xs font-bold min-w-0 leading-snug ${format === f.id ? 'text-cyan-200' : 'text-white'}`}>
                 {f.label}
               </p>
-              <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300">
+              <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-white/10 text-slate-300 flex-shrink-0">
                 {f.badge}
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1 font-mono">{f.hint}</p>
+            <p className="text-[10px] text-slate-400 mt-1 font-mono leading-snug">{f.hint}</p>
           </button>
         ))}
       </div>
@@ -121,10 +121,10 @@ export function StreetKitPhysicalGenerator() {
       <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/[0.08] flex justify-center">
         <canvas
           ref={canvasRef}
-          className={`rounded-xl shadow-2xl ring-1 ring-white/10 ${
+          className={`rounded-xl shadow-2xl ring-1 ring-white/10 w-auto max-w-full ${
             format === 'A4_TENT'
-              ? 'max-h-[560px] w-auto max-w-full'
-              : 'max-h-[480px] w-auto max-w-full'
+              ? 'max-h-[680px]'
+              : 'max-h-[560px]'
           }`}
           aria-label={`Vista previa Kit de Calle ${format}`}
         />

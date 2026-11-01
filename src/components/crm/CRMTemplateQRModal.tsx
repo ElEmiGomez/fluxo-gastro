@@ -101,7 +101,7 @@ export function CRMTemplateQRModal({
         </button>
 
         {/* Selector de Pestañas (Segmented Control - Apple Glassmorphism) */}
-        <div className="grid grid-cols-2 p-1 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md mb-4">
+        <div className="grid grid-cols-2 p-1 mr-12 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md mb-4">
           <button
             type="button"
             onClick={() => setActivePrototype('template')}
