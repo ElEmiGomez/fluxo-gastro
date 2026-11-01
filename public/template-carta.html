@@ -54,7 +54,7 @@
   <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-4 py-2.5 sm:py-3 transition-all">
     <div class="max-w-xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2">
       <!-- Identidad del Restaurante + Badge de Mesa -->
-      <div class="min-w-0 flex items-center gap-2 sm:gap-2.5">
+      <div class="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
         <div class="w-7 h-7 rounded-lg shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
           <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0">
             <rect width="36" height="36" rx="10" fill="url(#fluxo_header_grad_template)"/>
@@ -115,7 +115,7 @@
           onclick="openBlockedModal('rewards')"
           aria-label="Club de Premios"
           title="Ver mis puntos y premios"
-          class="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-xl bg-amber-50/90 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-all active:scale-95 border border-amber-200/90 shadow-2xs cursor-pointer"
+          class="hidden min-[480px]:flex items-center gap-1 px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-xl bg-amber-50/90 hover:bg-amber-100 text-amber-900 font-bold text-xs transition-all active:scale-95 border border-amber-200/90 shadow-2xs cursor-pointer"
         >
           <span class="text-sm leading-none">🎁</span>
           <span id="ui-btn-rewards" class="hidden sm:inline text-[11px] font-extrabold">Premios</span>
