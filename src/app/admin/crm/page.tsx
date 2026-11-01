@@ -38,7 +38,10 @@ import {
   MoveRight,
   ArrowLeft,
   Edit3,
-  Trash2
+  Trash2,
+  Landmark,
+  DoorOpen,
+  Printer
 } from 'lucide-react'
 import {
   CRMICP,
@@ -106,13 +109,39 @@ const CRMMap = dynamic(() => import('@/components/crm/CRMMap').then((m) => m.CRM
   ),
 })
 
+const SuiteSpinner = () => (
+  <div className="w-full min-h-[60vh] flex items-center justify-center text-slate-500">
+    <div className="flex flex-col items-center gap-2">
+      <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-mono">Cargando suite financiera...</span>
+    </div>
+  </div>
+)
+
+const BillingFinanceView = dynamic(
+  () => import('@/components/crm/billing/BillingFinanceView').then((m) => m.BillingFinanceView),
+  { ssr: false, loading: SuiteSpinner }
+)
+
+const OwnerPortalWorkspace = dynamic(
+  () => import('@/components/owner-portal/OwnerPortalWorkspace').then((m) => m.OwnerPortalWorkspace),
+  { ssr: false, loading: SuiteSpinner }
+)
+
+const KitDeCalleView = dynamic(
+  () => import('@/components/crm/billing/KitDeCalleView').then((m) => m.KitDeCalleView),
+  { ssr: false, loading: SuiteSpinner }
+)
+
 export default function CRMAdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true)
   const [leads, setLeads] = useState<CRMLead[]>([])
   const [metrics, setMetrics] = useState<CRMMetrics | null>(null)
   const [loading, setLoading] = useState<boolean>(false)
-  const [viewMode, setViewMode] = useState<'kanban' | 'table' | 'map' | 'qr_dinamicos'>('kanban')
+  const [viewMode, setViewMode] = useState<
+    'kanban' | 'table' | 'map' | 'qr_dinamicos' | 'finanzas' | 'portal' | 'kit'
+  >('kanban')
 
   // Modo Claro / Oscuro (Tema estilo imagen de referencia por defecto)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
@@ -674,6 +703,47 @@ export default function CRMAdminPage() {
             >
               <QrCode className="w-4 h-4 text-purple-400" />
               <span>QRs Dinámicos</span>
+            </button>
+          </div>
+
+          {/* Suite Financiera del CRM Fundador */}
+          <div className="space-y-1.5 pt-2">
+            <p className="px-3 text-[10px] font-bold text-slate-400 tracking-wider uppercase">Suite Financiera</p>
+
+            <button
+              onClick={() => setViewMode('finanzas')}
+              className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth ${
+                viewMode === 'finanzas'
+                  ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                  : 'bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15]'
+              }`}
+            >
+              <Landmark className="w-4 h-4 text-emerald-400" />
+              <span>Finanzas &amp; Semáforo</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode('portal')}
+              className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth ${
+                viewMode === 'portal'
+                  ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
+                  : 'bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15]'
+              }`}
+            >
+              <DoorOpen className="w-4 h-4 text-indigo-400" />
+              <span>Portal del Dueño</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode('kit')}
+              className={`w-full px-3.5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-3 backdrop-blur-md apple-smooth ${
+                viewMode === 'kit'
+                  ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
+                  : 'bg-white/10 hover:bg-white/[0.18] text-slate-200 border border-white/[0.15]'
+              }`}
+            >
+              <Printer className="w-4 h-4 text-purple-400" />
+              <span>Kit de Calle &amp; QRs</span>
             </button>
           </div>
 
@@ -1701,6 +1771,15 @@ export default function CRMAdminPage() {
                 </div>
               )}
             </div>
+          ) : viewMode === 'finanzas' ? (
+            /* Pestaña 1: Finanzas, Semáforo & Recibos */
+            <BillingFinanceView />
+          ) : viewMode === 'portal' ? (
+            /* Pestaña 2: Portal del Dueño (preview por local) */
+            <OwnerPortalWorkspace />
+          ) : viewMode === 'kit' ? (
+            /* Pestaña 3: Kit de Calle (/demo físico) & QRs Digitales */
+            <KitDeCalleView />
           ) : (
             /* Vista MAPA Interactivo de Noia */
             <CRMMap

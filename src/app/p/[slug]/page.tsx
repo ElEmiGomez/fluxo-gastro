@@ -18,6 +18,8 @@ import {
   ArrowLeft,
 } from 'lucide-react'
 import { MenuPrototype, MenuPrototypeDish } from '@/types/database.types'
+import { ProtectedMenuScreen } from '@/components/owner-portal/ProtectedMenuScreen'
+import { getPauseLevelBySlug } from '@/lib/billing/crm-demo-seed'
 
 const TEMPLATES: Record<string, MenuPrototype> = {
   'taperia-adega-do-pazo': {
@@ -62,9 +64,9 @@ const TEMPLATES: Record<string, MenuPrototype> = {
 
 const ICONOS_CATEGORIA: Record<string, React.ReactNode> = {
   Entrantes: <Menu className="w-5 h-5" />,
-  Mariscos: <Plate className="w-5 h-5" />,
-  Pizzas: <Plate className="w-5 h-5" />,
-  Principales: <Plate className="w-5 h-5" />,
+  Mariscos: <Utensils className="w-5 h-5" />,
+  Pizzas: <Utensils className="w-5 h-5" />,
+  Principales: <Utensils className="w-5 h-5" />,
   Bebidas: <Wine className="w-5 h-5" />,
   Postres: <Cake className="w-5 h-5" />,
   Brunch: <Coffee className="w-5 h-5" />,
@@ -112,6 +114,9 @@ export default function CartaPrototipoPage() {
   const [busqueda, setBusqueda] = useState('')
   const [platoDetalle, setPlatoDetalle] = useState<MenuPrototypeDish | null>(null)
   const [radarEnviado, setRadarEnviado] = useState(false)
+  // Mantenimiento Protegido (pause_level === 2): estado post-carga para evitar
+  // hydration mismatch en la hidratación híbrida de la carta.
+  const [enMantenimiento, setEnMantenimiento] = useState(false)
 
   // ================================================================================
   // HIDRATACIÓN HÍBRIDA: ?d= -> localStorage -> plantilla -> fallback genérico
@@ -173,6 +178,15 @@ export default function CartaPrototipoPage() {
   }, [slug, preview, prototipo?.nombre_local])
 
   // ================================================================================
+  // PAUSA EN 2 NIVELES: si pause_level === 2, la carta pública se oculta
+  // (Mantenimiento Protegido, jamás se mencionan impagos).
+  // ================================================================================
+  useEffect(() => {
+    if (cargando) return
+    setEnMantenimiento(getPauseLevelBySlug(slug) === 2)
+  }, [slug, cargando])
+
+  // ================================================================================
   // PLATOS FILTRADOS
   // ================================================================================
   const platosFiltrados = useMemo(() => {
@@ -223,6 +237,17 @@ export default function CartaPrototipoPage() {
           <button onClick={() => router.push('/admin/crm')} className="mt-4 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm">Volver al CRM</button>
         </div>
       </div>
+    )
+  }
+
+  // Mantenimiento Protegido (pause_level === 2): pantalla Apple Glass, sin
+  // mención pública de impagos ni datos internos.
+  if (enMantenimiento) {
+    return (
+      <ProtectedMenuScreen
+        localName={prototipo.nombre_local}
+        accentColor={prototipo.color_acento}
+      />
     )
   }
 

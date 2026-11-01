@@ -216,3 +216,33 @@ export interface QrDinamico {
   updated_at: string
 }
 
+// ==============================================================================
+// CARTAS PROTOTIPO (CRM Fundador · /p/[slug] · vendor de QRs digitales)
+// ==============================================================================
+export type MenuPrototypeBadge = 'Estrella' | 'Sugerido' | 'Segun Lonja' | (string & {})
+
+export interface MenuPrototypeDish {
+  id: string
+  nombre: string
+  categoria: string
+  precio: number
+  badge?: MenuPrototypeBadge | null
+  alergenos: string[]
+  descripcion?: string
+  /** Disponibilidad editable desde el Portal del Dueño (Mi Carta & Lonja). */
+  disponible?: boolean
+}
+
+export interface MenuPrototype {
+  id: string
+  slug: string
+  nombre_local: string
+  eslogan: string
+  color_acento: string
+  clave_wifi?: string
+  platos: MenuPrototypeDish[]
+  url_destino?: string | null
+  created_at: string
+  updated_at: string
+}
+
