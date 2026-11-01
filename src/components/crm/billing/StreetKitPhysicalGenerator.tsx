@@ -25,10 +25,10 @@ export function StreetKitPhysicalGenerator() {
   const [format, setFormat] = useState<StreetKitFormat>('A5')
   const [includeQrCode, setIncludeQrCode] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const [targetUrl, setTargetUrl] = useState('/demo')
+  const [targetUrl, setTargetUrl] = useState('/carta-prototipo')
 
   useEffect(() => {
-    setTargetUrl(resolveAbsoluteUrl('/demo'))
+    setTargetUrl(resolveAbsoluteUrl('/carta-prototipo'))
   }, [])
 
   useEffect(() => {

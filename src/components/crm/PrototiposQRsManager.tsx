@@ -116,7 +116,7 @@ export default function PrototiposQRsManager() {
   const [exito, setExito] = useState<string | null>(null)
 
   // QR Maestro
-  const [qrMaestroUrl, setQrMaestroUrl] = useState('https://fluxo-gastro.vercel.app/demo')
+  const [qrMaestroUrl, setQrMaestroUrl] = useState('https://fluxo-gastro.vercel.app/carta-prototipo')
 
   // Modal crear prototipo
   const [modalCrearAbierto, setModalCrearAbierto] = useState(false)
