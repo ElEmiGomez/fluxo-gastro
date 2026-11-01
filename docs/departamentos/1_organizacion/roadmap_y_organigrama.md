@@ -77,26 +77,26 @@ flowchart TD
 │  │  │     • Render /web/[slug] a 60 fps (desktop/móvil 390x844, neblinas   │
 │  │  │       y fluidez de <canvas> por scroll)                              │
 │  │  │     • Descarga CRM a 300 DPI de lámina física /demo y tarjeta 9:16   │
-│  │  └─ [⏳ EN CURSO - Tarea 5] Enrutamiento Multi-Dominio                  │
-│  │        • Middleware Next.js para reescribir dominios propios por local  │
-│  │          (ej. casamardavila.es -> /web/casa-mar-da-vila) [OpenCode]     │
+│  │  └─ [x] Tarea 5: Enrutamiento Multi-Dominio (Middleware Next.js)        │
+│  │        • Reescritura transparente de dominios propios por restaurante   │
+│  │          (ej. casamardavila.es -> /web/casa-mar-da-vila y /carta)       │
 │  │                                                                         │
 │  └─ 🚀 FASE 2: SPRINT OPERATIVO (SALA, COCINA Y ONBOARDING)                │
 │     ├─ [📋 Tarea 6] Onboarding «Llave en Mano» con Visión IA (Crítica)     │
 │     │     • POST /api/onboarding/parse-menu: digitalización de foto/PDF     │
 │     │       con visión multimodal, validación Zod de 14 alérgenos UE y     │
 │     │       auto-aprovisionamiento en Supabase < 30s con QRs               │
-│     ├─ [⏳ EN CURSO - Tarea 7] Comandero Móvil Offline-First & Cuentas     │
+│     ├─ [x] Tarea 7: Comandero Móvil Offline-First & División de Cuentas    │
 │     │     • Motor SyncQueue (IndexedDB + optimista) para terrazas, traslado│
 │     │       y fusión de mesas en 2 toques, división proporcional/táctil    │
-│     │       y liberación de QR con saldo 0,00 € [Prioridad Alta]           │
-│     ├─ [⏳ EN CURSO - Tarea 8] Monitor KDS Manos Libres por Hardware       │
+│     │       y liberación de QR con saldo 0,00 €                            │
+│     ├─ [x] Tarea 8: Monitor KDS Manos Libres por Hardware                  │
 │     │     • Cola FIFO (espacio/pedal USB), buffer undo 10s (Ctrl+Z), voz   │
 │     │       push-to-talk («Oído/Listo mesa X») y filtro acústico selectivo │
-│     └─ [⏳ EN CURSO - Tarea 9] Motor de Upselling Reactivo en Carta QR     │
+│     └─ [x] Tarea 9: Motor de Upselling Reactivo en Carta QR                │
 │           • Cadena (Principal -> Bebida -> Entrante -> Postre) con filtro  │
 │             de alérgenos/stock, modificadores rápidos y carrusel de café   │
-│             y postre a los 22-25 min de servicio                          │
+│             y postre contextual a los 22-25 min de servicio                │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
 ┌────────────────────────────────────▼────────────────────────────────────┐

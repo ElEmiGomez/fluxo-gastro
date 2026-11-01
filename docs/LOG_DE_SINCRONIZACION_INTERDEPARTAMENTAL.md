@@ -6,6 +6,26 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-01 21:30] — Cierre e Implementación Exitosa: Tareas 5, 7, 8 y 9
+* **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4), Dirección General (Depto 1) y Marketing & Ventas (Depto 2).
+* **Módulos Entregados y Certificados:**
+  1. **Tarea 5 (Enrutamiento Multi-Dominio):**
+     - [`src/middleware.ts`]: Detección de host custom vs localhost/vercel.app. Reescritura transparente de dominios de clientes (ej. `casamardavila.es`) hacia `/web/[slug]` para la home y hacia `/carta` para cartas digitales, preservando query params (`table`, `token`) y respetando rutas internas (`/api`, `/_next`, `/staff`, `/admin`).
+     - [`src/lib/domain-resolver.ts`]: Caché en memoria (TTL 5 min) de mapeo de host a slug y branding de local.
+  2. **Tarea 7 (Comandero Móvil Offline-First & División de Cuentas):**
+     - [`src/lib/offline-sync-queue.ts`]: Motor `SyncQueue` sobre IndexedDB con mutaciones optimistas para terraza sin cobertura, auto-reintento con backoff exponencial al detectar `navigator.onLine`.
+     - [`src/components/waiter/OfflineStatusBanner.tsx`]: Indicador visual de estado de red (En línea / Sin conexión) con contador de mutaciones pendientes y simulador de desconexión.
+     - [`src/components/waiter/TableMoveMergeSheet.tsx`]: Traslado y fusión atómica de mesas en 2 toques.
+     - [`src/components/waiter/SplitBillModal.tsx`] y [`src/lib/bill-splitter.ts`]: División de cuentas proporcional (2 a 12 partes) o ítem por ítem con cálculo en vivo de propina (0%, 5%, 10%) e IVA, y liberación automática de mesa al saldo 0,00 €.
+  3. **Tarea 8 (Monitor KDS Manos Libres por Hardware):**
+     - [`src/components/kds/KdsHandsFreeBar.tsx`] y [`src/lib/kds-hardware-controller.ts`]: Cola FIFO despachada con barra espaciadora o pedal USB, buffer de 10 segundos para deshacer con `Ctrl + Z`.
+     - [`src/lib/kds-audio-engine.ts`]: Reconocimiento de voz push-to-talk (`«Oído mesa X»` y `«Listo mesa X»`) con Web Speech Recognition y filtro acústico selectivo (síntesis de voz Web Audio solo para cocina caliente, bebidas enrutadas en silencio).
+  4. **Tarea 9 (Motor de Upselling Reactivo en Carta QR):**
+     - Cadena reactiva de venta cruzada en carrito (Principal $\rightarrow$ Bebida $\rightarrow$ Entrante $\rightarrow$ Postre) con validación de alérgenos y reapertura contextual del carrusel de café y postres.
+* **Verificación de Calidad:** `npx.cmd tsc --noEmit` con 0 errores de TypeScript y pruebas de integración validadas.
+
+---
+
 ### [2026-11-01 17:35] — Activación de Tareas a Estado «EN CURSO»: Tareas 5, 7, 8 y 9
 * **Departamentos Sincronizados:** Dirección General (Depto 1) e Ingeniería & Producto (Depto 4).
 * **Cambio de Estado Operativo:**
