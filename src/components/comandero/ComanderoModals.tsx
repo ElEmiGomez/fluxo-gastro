@@ -10,6 +10,9 @@ import { ConfirmModal } from '@/components/common/ConfirmModal'
 import { PreBillModal } from '@/components/comandero/PreBillModal'
 import { CloseTableModal } from '@/components/comandero/CloseTableModal'
 import { QuickStockModal } from '@/components/comandero/QuickStockModal'
+import { TableMoveMergeSheet } from '@/components/waiter/TableMoveMergeSheet'
+import { SplitBillModal } from '@/components/waiter/SplitBillModal'
+import { TableStatusType } from '@/components/comandero/TableSelector'
 import { DailyMenuModal, DailyMenuSelectionItem } from '@/components/menu/DailyMenuModal'
 import { PromoConfiguratorModal, PromoConfiguredPayload } from '@/components/menu/PromoConfiguratorModal'
 import { QuickDessertSelectorModal } from '@/components/comandero/QuickDessertSelectorModal'
@@ -37,6 +40,21 @@ interface ComanderoModalsProps {
   setShowTransferModal: (open: boolean) => void
   transferTargetTable: string
   setTransferTargetTable: (target: string) => void
+  showSplitBillModal?: boolean
+  setShowSplitBillModal?: (open: boolean) => void
+  tableStatuses?: Record<string | number, TableStatusType>
+  onExecutePartialOrFullPayment?: (params: {
+    tableNumber: string | number
+    paidAmountCents: number
+    paymentMethod: 'card' | 'cash' | 'mixed'
+    isFullyPaid: boolean
+    remainingCents: number
+  }) => Promise<void>
+  onExecuteMoveOrMerge?: (
+    sourceTableNum: string | number,
+    targetTableNum: string | number,
+    isMerge: boolean
+  ) => Promise<void>
   showQuickStockModal: boolean
   setShowQuickStockModal: (open: boolean) => void
   tablePax: number
@@ -104,6 +122,11 @@ export function ComanderoModals({
   setShowTransferModal,
   transferTargetTable,
   setTransferTargetTable,
+  showSplitBillModal = false,
+  setShowSplitBillModal,
+  tableStatuses = {},
+  onExecutePartialOrFullPayment,
+  onExecuteMoveOrMerge,
   showQuickStockModal,
   setShowQuickStockModal,
   tablePax,
@@ -215,70 +238,36 @@ export function ComanderoModals({
         />
       )}
 
-      {/* 6. Modal de Transferir Mesa */}
-      {showTransferModal && selectedTable && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 animate-in fade-in select-none">
-          <div className="w-full max-w-sm bg-white rounded-3xl p-5 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-2 text-amber-600">
-              <RefreshCw className="w-6 h-6 animate-spin" />
-              <h3 className="text-base font-black text-slate-900">
-                Transferir Mesa #{selectedTable.table_number}
-              </h3>
-            </div>
-            <p className="text-xs text-slate-600 font-medium leading-relaxed">
-              Selecciona la nueva mesa a la que se mudan los comensales. Sus pedidos, carrito y cuenta se transferirán automáticamente.
-            </p>
-            
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700">Mesa de Destino:</label>
-              <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1">
-                {tables
-                  .filter(t => t.table_number.toString() !== selectedTable.table_number.toString())
-                  .map(t => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setTransferTargetTable(t.table_number.toString())}
-                      className={`p-2.5 rounded-xl text-xs font-black transition-all border cursor-pointer ${
-                        transferTargetTable === t.table_number.toString()
-                          ? 'bg-amber-500 text-slate-950 border-amber-600 ring-2 ring-amber-400'
-                          : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200'
-                      }`}
-                    >
-                      #{t.table_number}
-                    </button>
-                  ))}
-              </div>
-            </div>
+      {/* 6. Mover o Unir Mesa en 2 Toques */}
+      <TableMoveMergeSheet
+        isOpen={showTransferModal}
+        onClose={() => {
+          setShowTransferModal(false)
+          setTransferTargetTable('')
+        }}
+        sourceTable={selectedTable}
+        tables={tables}
+        tableStatuses={tableStatuses}
+        serverOrders={serverOrders}
+        onExecuteMoveOrMerge={async (fromTbl, toTbl, isMerge) => {
+          if (onExecuteMoveOrMerge) {
+            await onExecuteMoveOrMerge(fromTbl, toTbl, isMerge)
+          } else {
+            onTransferTable(toTbl)
+          }
+        }}
+      />
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowTransferModal(false)
-                  setTransferTargetTable('')
-                }}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={!transferTargetTable}
-                onClick={() => {
-                  if (transferTargetTable) {
-                    onTransferTable(transferTargetTable)
-                    setTransferTargetTable('')
-                    setShowTransferModal(false)
-                  }
-                }}
-                className="px-5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed shadow-md cursor-pointer"
-              >
-                Confirmar Mudanza
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* 6.1 Modal Dividir Cuenta y Auto-Liberación */}
+      {selectedTable && showSplitBillModal && setShowSplitBillModal && onExecutePartialOrFullPayment && (
+        <SplitBillModal
+          isOpen={showSplitBillModal}
+          onClose={() => setShowSplitBillModal(false)}
+          tableNumber={selectedTable.table_number}
+          serverOrders={serverOrders}
+          discountPercentage={tableDiscount}
+          onExecutePartialOrFullPayment={onExecutePartialOrFullPayment}
+        />
       )}
 
       {/* 7. Modal Control Rápido de Stock ("Se Agotó") */}

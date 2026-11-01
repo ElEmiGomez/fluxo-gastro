@@ -8,6 +8,9 @@ import { TenantHeader } from '@/components/tenant/TenantHeader'
 import { KitchenTicket } from '@/components/kitchen/KitchenTicket'
 import { Order, OrderStatus, Restaurant, Product } from '@/types/database.types'
 import { playKitchenChime } from '@/components/kitchen/AudioNotification'
+import { KdsHandsFreeBar } from '@/components/kds/KdsHandsFreeBar'
+import { useKdsHardwareController } from '@/lib/kds-hardware-controller'
+import { announceIncomingOrder, playAckBeep, playDoneBeep, playUndoBeep } from '@/lib/kds-audio-engine'
 import { StaffPinAuth } from '@/components/auth/StaffPinAuth'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { MOCK_RESTAURANTS, MOCK_PRODUCTS } from '@/lib/supabase/mock-fallback'
@@ -812,12 +815,138 @@ export default function KitchenKDSPage() {
     return groups.sort((a, b) => a.earliestTime - b.earliestTime)
   }, [displayedOrders])
 
+  // Cola FIFO de números de mesa (el más antiguo siempre el primero a la izquierda)
+  const fifoTableNumbers = useMemo(() => {
+    return tableGroupedOrders.map(g => g.tableNumber)
+  }, [tableGroupedOrders])
+
+  // Handlers para completar mesa y preparar mesa por comando o pedal
+  const handleCompleteTableFIFO = useCallback(async (tableNum: string | number) => {
+    const group = tableGroupedOrders.find(g => g.tableNumber.toString() === tableNum.toString())
+    if (!group) return
+
+    for (const ord of group.orders) {
+      if (ord.status !== 'ready' && ord.status !== 'delivered' && ord.status !== 'paid' && ord.status !== 'cancelled') {
+        await handleKitchenAction(ord.id, 'ready_food')
+      }
+    }
+  }, [tableGroupedOrders, handleKitchenAction])
+
+  const handlePrepareTableByVoice = useCallback(async (tableNum: string | number) => {
+    const group = tableGroupedOrders.find(g => g.tableNumber.toString() === tableNum.toString())
+    if (!group) return
+
+    for (const ord of group.orders) {
+      if (ord.status === 'pending' || ord.status === 'confirmed') {
+        await handleUpdateStatus(ord.id, 'preparing')
+      }
+    }
+  }, [tableGroupedOrders, handleUpdateStatus])
+
+  const handleRestoreTableAfterUndo = useCallback(async (tableNum: string | number) => {
+    const matching = orders.filter(
+      o => (o.table_number?.toString() === tableNum.toString() || o.table?.table_number?.toString() === tableNum.toString())
+    )
+    for (const ord of matching) {
+      await handleUpdateStatus(ord.id, 'preparing')
+    }
+  }, [orders, handleUpdateStatus])
+
+  // Controlador de Hardware KDS (Espacio / Pedal USB, Push-to-Talk 'V', Ctrl+Z / 2x Espacio)
+  const {
+    isPushToTalkActive,
+    startVoiceInput,
+    stopVoiceInput,
+    lastTranscript,
+    undoItem,
+    undoProgressPct,
+    executeUndo,
+    completeOldestTable,
+  } = useKdsHardwareController({
+    fifoTableNumbers,
+    onCompleteTable: handleCompleteTableFIFO,
+    onPrepareTable: handlePrepareTableByVoice,
+    onRestoreTable: handleRestoreTableAfterUndo,
+  })
+
+  // Simulación de Comanda Mixta (Comida + Bebida) para probar filtro acústico selectivo
+  const handleSimulateMixedOrder = () => {
+    const mockMixedOrder: Order = {
+      id: `sim_${Date.now()}`,
+      created_at: new Date().toISOString(),
+      status: 'pending',
+      table_number: 7,
+      order_items: [
+        {
+          id: 'item_cerv',
+          name: 'Cerveza Estrella Galicia',
+          quantity: 2,
+          unit_price: 2.8,
+          total_price: 5.6,
+          notes: '',
+          product: {
+            id: 'prod_cerv',
+            name: 'Cerveza Estrella Galicia',
+            category_id: 'cat_bebidas',
+            price: 2.8,
+            price_type: 'unit',
+            is_available: true,
+          } as any,
+        },
+        {
+          id: 'item_burg',
+          name: 'Hamburguesa Smash Doble',
+          quantity: 1,
+          unit_price: 13.5,
+          total_price: 13.5,
+          notes: 'Punto medio',
+          product: {
+            id: 'prod_burg',
+            name: 'Hamburguesa Smash Doble',
+            category_id: 'cat_principales',
+            price: 13.5,
+            price_type: 'unit',
+            is_available: true,
+          } as any,
+        },
+      ],
+    } as any
+
+    // Disparar locución TTS selectiva (solo dirá Hamburguesa Smash Doble, silenciando la cerveza)
+    announceIncomingOrder(mockMixedOrder, true)
+    playKitchenChime()
+    setNewOrderAlert(true)
+  }
+
   return (
     <StaffPinAuth role="kitchen" restaurantSlug={slug}>
       <TenantProvider restaurant={restaurant}>
         <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col select-none" style={{ touchAction: 'manipulation' }}>
         
         <TenantHeader viewType="kitchen" />
+
+        {/* Barra de Control Manos Libres KDS (Pedal / Espacio, Push-to-Talk y Undo 10s) */}
+        <KdsHandsFreeBar
+          fifoTargetTable={fifoTableNumbers[0] || null}
+          isPushToTalkActive={isPushToTalkActive}
+          onStartVoiceInput={startVoiceInput}
+          onStopVoiceInput={stopVoiceInput}
+          lastTranscript={lastTranscript}
+          undoItem={undoItem}
+          undoProgressPct={undoProgressPct}
+          onExecuteUndo={executeUndo}
+          onCompleteOldestTable={completeOldestTable}
+          onSimulateMixedOrder={handleSimulateMixedOrder}
+          onSimulateVoiceCommand={(cmd, tbl) => {
+            if (cmd === 'oido') {
+              playAckBeep()
+              handlePrepareTableByVoice(tbl)
+            } else {
+              playDoneBeep()
+              handleCompleteTableFIFO(tbl)
+            }
+          }}
+        />
 
         {/* Notificación de Nueva Comanda con Confirmación Manual */}
         {newOrderAlert && (

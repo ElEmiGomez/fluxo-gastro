@@ -77,6 +77,7 @@ interface ComanderoTableDetailPanelProps {
   onOpenDessertSelector?: () => void
   onOpenPreBill: () => void
   onOpenTransferModal: () => void
+  onOpenSplitBillModal?: () => void
   onOpenFreeTableModal: (tblNum: string | number) => void
   onExecuteFreeTableDirect?: (tblNum: string | number) => void
   onRepeatDrinksRound: () => void
@@ -124,6 +125,7 @@ export function ComanderoTableDetailPanel({
   onOpenDessertSelector,
   onOpenPreBill,
   onOpenTransferModal,
+  onOpenSplitBillModal,
   onOpenFreeTableModal,
   onExecuteFreeTableDirect,
   onRepeatDrinksRound,
@@ -916,25 +918,37 @@ export function ComanderoTableDetailPanel({
             )}
           </button>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={onOpenPreBill}
-              className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-900 border border-slate-200 hover:border-blue-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
+              className="h-11 px-2 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-800 hover:text-blue-900 border border-slate-200 hover:border-blue-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1 active:scale-95 shadow-xs cursor-pointer"
               title="Ver pre-cuenta digital desglosada"
             >
               <Receipt className="w-4 h-4 text-blue-700 flex-shrink-0" />
               <span className="truncate">Pre-Cuenta</span>
             </button>
 
+            {onOpenSplitBillModal && tablePendingAmount > 0 && (
+              <button
+                type="button"
+                onClick={onOpenSplitBillModal}
+                className="h-11 px-2 rounded-xl bg-slate-100 hover:bg-purple-50 text-slate-800 hover:text-purple-900 border border-slate-200 hover:border-purple-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1 active:scale-95 shadow-xs cursor-pointer"
+                title="Dividir cuenta a partes iguales o por platos"
+              >
+                <Users className="w-4 h-4 text-purple-700 flex-shrink-0" />
+                <span className="truncate">Dividir</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onOpenTransferModal}
-              className="h-11 px-3 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-800 hover:text-amber-900 border border-slate-200 hover:border-amber-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
-              title="Cambiar comanda a otra mesa"
+              className="h-11 px-2 rounded-xl bg-slate-100 hover:bg-amber-50 text-slate-800 hover:text-amber-900 border border-slate-200 hover:border-amber-300 font-extrabold transition-all text-xs flex items-center justify-center gap-1 active:scale-95 shadow-xs cursor-pointer"
+              title="Mover o Unir comanda con otra mesa en 2 toques"
             >
               <RefreshCw className="w-4 h-4 text-amber-700 flex-shrink-0" />
-              <span className="truncate">Transferir</span>
+              <span className="truncate">Mover / Unir</span>
             </button>
 
             {(!((tableStatus === 'free' || !tableStatus) && tableActiveOrders.length === 0 && tablePaidOrders.length === 0 && validationOrders.length === 0) || tablePendingAmount > 0) && (
@@ -943,11 +957,11 @@ export function ComanderoTableDetailPanel({
                 onClick={() => {
                   onOpenFreeTableModal(selectedTable.table_number)
                 }}
-                className="h-11 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold transition-all text-xs flex items-center justify-center gap-1.5 active:scale-95 shadow-xs cursor-pointer"
+                className="h-11 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold transition-all text-xs flex items-center justify-center gap-1 active:scale-95 shadow-xs cursor-pointer"
                 title={tablePendingAmount > 0 ? `Cobrar ${tablePendingAmount.toFixed(2)} €` : 'Liberar mesa'}
               >
                 <CreditCard className="w-4 h-4 text-white flex-shrink-0" />
-                <span className="truncate">{tablePendingAmount > 0 ? 'Cobrar Cuenta' : 'Liberar Mesa'}</span>
+                <span className="truncate">{tablePendingAmount > 0 ? 'Cobrar' : 'Liberar'}</span>
               </button>
             )}
           </div>

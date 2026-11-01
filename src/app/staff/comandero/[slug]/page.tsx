@@ -27,6 +27,8 @@ import { ComanderoTaskQueue } from '@/components/comandero/ComanderoTaskQueue'
 import { ComanderoTableDetailPanel } from '@/components/comandero/ComanderoTableDetailPanel'
 import { ComanderoCatalogGrid } from '@/components/comandero/ComanderoCatalogGrid'
 import { ComanderoModals } from '@/components/comandero/ComanderoModals'
+import { OfflineStatusBanner } from '@/components/waiter/OfflineStatusBanner'
+import { enqueueMutation, saveLocalTableState, processSyncQueue } from '@/lib/offline-sync-queue'
 
 export default function WaiterComanderoPage() {
   const params = useParams()
@@ -73,6 +75,8 @@ export default function WaiterComanderoPage() {
   const [showFreeConfirmTable, setShowFreeConfirmTable] = useState<number | string | null>(null)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [transferTargetTable, setTransferTargetTable] = useState('')
+  const [showSplitBillModal, setShowSplitBillModal] = useState(false)
+  const [isSimulatedOffline, setIsSimulatedOffline] = useState(false)
   const [showQuickStockModal, setShowQuickStockModal] = useState(false)
   const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null)
   const [customizingPromoProduct, setCustomizingPromoProduct] = useState<Product | null>(null)
@@ -454,6 +458,15 @@ export default function WaiterComanderoPage() {
           
           <TenantHeader viewType="comandero" tableNumber={selectedTable?.table_number.toString()} />
 
+          {/* Banner de Sincronización y Modo Terraza Offline */}
+          <OfflineStatusBanner
+            slug={slug}
+            isSimulatedOffline={isSimulatedOffline}
+            onToggleSimulatedOffline={() => setIsSimulatedOffline(prev => !prev)}
+            onSyncComplete={() => syncServerData()}
+            customHeaders={getStaffHeaders(slug)}
+          />
+
           {/* 1. Centro de Tareas y Avisos Pendientes */}
           <ComanderoTaskQueue
             readyOrdersList={readyOrdersList}
@@ -545,6 +558,7 @@ export default function WaiterComanderoPage() {
               onOpenDessertSelector={() => setIsQuickDessertModalOpen(true)}
               onOpenPreBill={() => setShowPreBill(true)}
               onOpenTransferModal={() => setShowTransferModal(true)}
+              onOpenSplitBillModal={() => setShowSplitBillModal(true)}
               onOpenFreeTableModal={(tbl) => setShowFreeConfirmTable(tbl)}
               onExecuteFreeTableDirect={(tblNum) => executeCloseAndFreeTable(tblNum, 'cash', 0, 0)}
               onRepeatDrinksRound={() => {
@@ -610,6 +624,48 @@ export default function WaiterComanderoPage() {
             setShowTransferModal={setShowTransferModal}
             transferTargetTable={transferTargetTable}
             setTransferTargetTable={setTransferTargetTable}
+            showSplitBillModal={showSplitBillModal}
+            setShowSplitBillModal={setShowSplitBillModal}
+            tableStatuses={tableStatuses}
+            onExecutePartialOrFullPayment={async ({ tableNumber, paidAmountCents, paymentMethod, isFullyPaid, remainingCents }) => {
+              // Optimismo inmediato: si es fullyPaid, cerrar y liberar
+              if (isSimulatedOffline || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+                await enqueueMutation(
+                  isFullyPaid ? 'FREE_TABLE' : 'PARTIAL_PAY',
+                  slug,
+                  tableNumber,
+                  {
+                    payment_method: paymentMethod,
+                    final_amount: paidAmountCents / 100,
+                    orders_count: 1,
+                  }
+                )
+                if (isFullyPaid) {
+                  executeCloseAndFreeTable(tableNumber, paymentMethod, paidAmountCents / 100, 1)
+                  setShowSplitBillModal(false)
+                }
+              } else {
+                if (isFullyPaid) {
+                  executeCloseAndFreeTable(tableNumber, paymentMethod, paidAmountCents / 100, 1)
+                  setShowSplitBillModal(false)
+                } else {
+                  handleChargeTable(tableNumber, paymentMethod, paidAmountCents / 100)
+                }
+              }
+            }}
+            onExecuteMoveOrMerge={async (sourceTableNum, targetTableNum, isMerge) => {
+              if (isSimulatedOffline || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+                await enqueueMutation(
+                  isMerge ? 'MERGE_TABLES' : 'MOVE_TABLE',
+                  slug,
+                  sourceTableNum,
+                  { to_table: targetTableNum }
+                )
+                handleTransferTable(sourceTableNum, targetTableNum)
+              } else {
+                await handleTransferTable(sourceTableNum, targetTableNum)
+              }
+            }}
             showQuickStockModal={showQuickStockModal}
             setShowQuickStockModal={setShowQuickStockModal}
             tablePax={tablePax[currentTableNum] || 2}
