@@ -21,6 +21,8 @@ import {
   Flame,
   Download,
   Info,
+  Link2,
+  Globe,
 } from 'lucide-react'
 import {
   ParsedMenuResponse,
@@ -43,6 +45,8 @@ export function AiMenuOnboardingModal({
   onSuccessProvisioning,
 }: AiMenuOnboardingModalProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [inputMode, setInputMode] = useState<'file' | 'url'>('file')
+  const [menuUrl, setMenuUrl] = useState('')
   const [restaurantName, setRestaurantName] = useState('Taberna O Marinheiro')
   const [selectedPlan, setSelectedPlan] = useState<'fundador' | 'carta' | 'pro'>('fundador')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -83,7 +87,11 @@ export function AiMenuOnboardingModal({
   const handleStartScan = async () => {
     setIsProcessing(true)
     setStep(2)
-    setProcessingStage('Leyendo platos y precios con Visión IA...')
+    setProcessingStage(
+      inputMode === 'url'
+        ? 'Accediendo al enlace web y extrayendo carta digital...'
+        : 'Leyendo platos y precios con Visión IA...'
+    )
 
     try {
       setTimeout(() => {
@@ -94,14 +102,21 @@ export function AiMenuOnboardingModal({
         setProcessingStage('Configurando clasificación de estaciones (Cocina vs Barra)...')
       }, 1400)
 
+      const payload: Record<string, any> = {
+        customRestaurantName: restaurantName,
+      }
+
+      if (inputMode === 'url') {
+        payload.menuUrl = menuUrl.trim()
+      } else {
+        payload.imageBase64 = imageBase64 || 'sample'
+        payload.mimeType = mimeType
+      }
+
       const res = await fetch('/api/onboarding/parse-menu', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: imageBase64 || 'sample',
-          mimeType,
-          customRestaurantName: restaurantName,
-        }),
+        body: JSON.stringify(payload),
       })
 
       const json = await res.json()
@@ -316,59 +331,139 @@ export function AiMenuOnboardingModal({
                 </div>
               </div>
 
-              {/* Zona de Captura / Subida */}
+              {/* Selector de Modo: Foto/PDF vs Enlace Web */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Foto de la Carta Física o PDF:
+                  Fuente de la Carta:
                 </label>
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-800/20"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
+                <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl">
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('file')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      inputMode === 'file'
+                        ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Foto o PDF</span>
+                  </button>
 
-                  {imagePreview ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-16 h-20 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden shadow-md flex items-center justify-center">
-                        <FileText className="w-8 h-8 text-blue-600" />
-                      </div>
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Archivo listo para escaneo
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs">
-                        <Camera className="w-6 h-6" />
-                      </div>
-                      <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                        Haz una foto a la carta o sube un PDF
-                      </div>
-                      <p className="text-[11px] text-slate-400 max-w-xs">
-                        La IA extraerá todos los platos, precios, lonja y alérgenos en segundos.
-                      </p>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('url')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      inputMode === 'url'
+                        ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    <Globe className="w-4 h-4" />
+                    <span>Pegar Link / Web</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Botón rápido de carta de muestra */}
-              <div className="flex items-center justify-between pt-1">
-                <button
-                  type="button"
-                  onClick={handleUseSample}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-700 underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Probar con Foto de Carta de Muestra (1 clic)
-                </button>
-              </div>
+              {inputMode === 'file' ? (
+                <>
+                  {/* Zona de Captura / Subida */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Foto de la Carta Física o PDF:
+                    </label>
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors bg-slate-50/50 dark:bg-slate-800/20"
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,application/pdf"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+
+                      {imagePreview ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-16 h-20 rounded-xl bg-slate-200 dark:bg-slate-700 overflow-hidden shadow-md flex items-center justify-center">
+                            <FileText className="w-8 h-8 text-blue-600" />
+                          </div>
+                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Archivo listo para escaneo
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-xs">
+                            <Camera className="w-6 h-6" />
+                          </div>
+                          <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                            Haz una foto a la carta o sube un PDF
+                          </div>
+                          <p className="text-[11px] text-slate-400 max-w-xs">
+                            La IA extraerá todos los platos, precios, lonja y alérgenos en segundos.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Botón rápido de carta de muestra */}
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={handleUseSample}
+                      className="text-xs font-bold text-blue-600 hover:text-blue-700 underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Probar con Foto de Carta de Muestra (1 clic)
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Modo Pegar Link / Web */
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <Link2 className="w-3.5 h-3.5 text-blue-600" />
+                      Enlace de la carta (Página Web, Menú Digital o PDF online):
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={menuUrl}
+                        onChange={e => setMenuUrl(e.target.value)}
+                        placeholder="https://restaurante.com/carta o link a PDF..."
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                      <Globe className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Fluxo extraerá los platos, precios y alérgenos rastreando directamente la web o PDF online.
+                    </p>
+                  </div>
+
+                  {/* Enlaces de muestra rápidos para testeo de 1 clic */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-[11px] font-bold text-slate-500">Ejemplos:</span>
+                    <button
+                      type="button"
+                      onClick={() => setMenuUrl('https://casamardavila.es/carta')}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-slate-200 cursor-pointer"
+                    >
+                      Casa Mar Da Vila
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMenuUrl('https://taperiaopazo.es/menu')}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400 hover:bg-slate-200 cursor-pointer"
+                    >
+                      Tapería O Pazo
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -551,12 +646,12 @@ export function AiMenuOnboardingModal({
           {step === 1 && (
             <button
               type="button"
-              disabled={!restaurantName.trim()}
+              disabled={!restaurantName.trim() || (inputMode === 'url' && !menuUrl.trim())}
               onClick={handleStartScan}
               className="px-5 py-2.5 rounded-xl font-black text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-40 cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Analizar Carta con Visión IA</span>
+              <span>{inputMode === 'url' ? 'Escanear Web con IA' : 'Analizar Carta con Visión IA'}</span>
             </button>
           )}
 

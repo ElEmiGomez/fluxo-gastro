@@ -234,10 +234,124 @@ function generateCommercialStreetFallback(customName?: string): ParsedMenuRespon
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}))
-    const { imageBase64, mimeType = 'image/jpeg', customRestaurantName } = body
+    const { imageBase64, mimeType = 'image/jpeg', menuUrl, customRestaurantName } = body
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY
 
+    // CASO 1: Si se proporcionó una URL externa (web del restaurante, PDF público o carta digital)
+    if (menuUrl && typeof menuUrl === 'string' && menuUrl.trim().startsWith('http')) {
+      try {
+        const targetUrl = menuUrl.trim()
+        const urlFetchRes = await fetch(targetUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,application/pdf,*/*;q=0.8',
+          },
+          signal: AbortSignal.timeout(10000),
+        })
+
+        if (urlFetchRes.ok) {
+          const contentType = urlFetchRes.headers.get('content-type') || ''
+          
+          // Si la URL devuelve un PDF o imagen binaria
+          if (contentType.includes('application/pdf') || contentType.includes('image/')) {
+            const arrayBuffer = await urlFetchRes.arrayBuffer()
+            const base64FromUrl = Buffer.from(arrayBuffer).toString('base64')
+            const effectiveMime = contentType.split(';')[0].trim() || 'application/pdf'
+            
+            // Re-enrutar al flujo multimodal con el Base64 obtenido
+            return processMultimodalWithGemini(apiKey, base64FromUrl, effectiveMime, customRestaurantName)
+          }
+
+          // Si es HTML, extraer el texto visible depurado
+          const rawHtml = await urlFetchRes.text()
+          const textSnippet = rawHtml
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .slice(0, 15000)
+
+          if (apiKey && textSnippet.length > 50) {
+            const prompt = `Actúa como Principal AI Menu Digitizer & Food Safety Auditor de Fluxo.
+A partir del siguiente contenido extraído de la web o carta digital del restaurante "${customRestaurantName || targetUrl}":
+"""
+${textSnippet}
+"""
+Extrae todos los platos, precios y categorías con máxima precisión.
+Reglas:
+1. Extrae nombres, descripciones y precios.
+2. Si un plato tiene "S/M", "S/L" o "Según lonja/mercado", marca is_market_price: true y price: null.
+3. Clasifica el role: "starter", "main", "drink", "dessert", "coffee" y station: "kitchen" o "bar".
+4. Infiere los 14 alérgenos UE usando exclusivamente:
+   ["gluten", "crustaceans", "eggs", "fish", "peanuts", "soy", "milk", "nuts", "celery", "mustard", "sesame", "sulphites", "lupin", "molluscs"].
+
+Responde ÚNICAMENTE en JSON válido con el esquema:
+{
+  "restaurant_name": "${customRestaurantName || 'Restaurante'}",
+  "suggested_slug": "slug-limpio",
+  "slogan": "Eslogan o subtítulo",
+  "categories": [
+    {
+      "id": "cat_1",
+      "name": "Categoría",
+      "role": "starter",
+      "station": "kitchen",
+      "items": [
+        {
+          "id": "item_1_1",
+          "name": "Nombre plato",
+          "description": "Detalle",
+          "price": 12.50,
+          "is_market_price": false,
+          "allergens": ["gluten"],
+          "dietary_tags": [],
+          "station": "kitchen"
+        }
+      ]
+    }
+  ]
+}`
+
+            const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+            const geminiRes = await fetch(geminiEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.1, responseMimeType: 'application/json' },
+              }),
+            })
+
+            if (geminiRes.ok) {
+              const geminiData = await geminiRes.json()
+              const rawJsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
+              if (rawJsonText) {
+                const parsed = JSON.parse(rawJsonText)
+                const validated = validateParsedMenuResponse(parsed)
+                return NextResponse.json({
+                  success: true,
+                  source: 'url_web_scraping_gemini',
+                  data: validated,
+                })
+              }
+            }
+          }
+        }
+      } catch (urlErr) {
+        console.warn('[OnboardingAI] Error fetching menu URL, falling back to street demo:', urlErr)
+      }
+
+      // Si la URL falló por CORS, timeout o falta de API key, devolver fallback de contingencia
+      const fallback = generateCommercialStreetFallback(customRestaurantName || 'Restaurante Enlace')
+      return NextResponse.json({
+        success: true,
+        source: 'url_fallback_resilient',
+        data: fallback,
+      })
+    }
+
+    // CASO 2: Extracción por Foto Base64
     // Si no hay API Key o la imagen viene vacía, responder con fallback ultra-rápido para demo de calle
     if (!apiKey || !imageBase64) {
       const fallback = generateCommercialStreetFallback(customRestaurantName)
@@ -248,11 +362,27 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Preparar llamada multimodal a Gemini 2.5 Flash
-    try {
-      const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '').replace(/^data:application\/pdf;base64,/, '')
+    return processMultimodalWithGemini(apiKey, imageBase64, mimeType, customRestaurantName)
+  } catch (err: any) {
+    const fallback = generateCommercialStreetFallback()
+    return NextResponse.json({
+      success: true,
+      source: 'emergency_fallback',
+      data: fallback,
+    })
+  }
+}
 
-      const prompt = `Actúa como Principal AI Menu Digitizer & Food Safety Auditor de Fluxo.
+async function processMultimodalWithGemini(
+  apiKey: string | undefined,
+  imageBase64: string,
+  mimeType: string,
+  customRestaurantName?: string
+) {
+  try {
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '').replace(/^data:application\/pdf;base64,/, '')
+
+    const prompt = `Actúa como Principal AI Menu Digitizer & Food Safety Auditor de Fluxo.
 Analiza la imagen o PDF de esta carta física de hostelería y extrae todos los platos, precios y categorías con máxima precisión.
 Reglas obligatorias:
 1. Extrae los nombres, descripciones y precios.
@@ -290,63 +420,53 @@ Responde ÚNICAMENTE en JSON válido con la siguiente estructura:
   ]
 }`
 
-      const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
+    const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`
 
-      const geminiRes = await fetch(geminiEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: prompt },
-                {
-                  inlineData: {
-                    mimeType: mimeType || 'image/jpeg',
-                    data: cleanBase64,
-                  },
+    const geminiRes = await fetch(geminiEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: mimeType || 'image/jpeg',
+                  data: cleanBase64,
                 },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.1,
-            responseMimeType: 'application/json',
+              },
+            ],
           },
-        }),
-      })
+        ],
+        generationConfig: {
+          temperature: 0.1,
+          responseMimeType: 'application/json',
+        },
+      }),
+    })
 
-      if (geminiRes.ok) {
-        const geminiData = await geminiRes.json()
-        const rawJsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
-        if (rawJsonText) {
-          const parsed = JSON.parse(rawJsonText)
-          const validated = validateParsedMenuResponse(parsed)
-          return NextResponse.json({
-            success: true,
-            source: 'gemini_multimodal_vision',
-            data: validated,
-          })
-        }
+    if (geminiRes.ok) {
+      const geminiData = await geminiRes.json()
+      const rawJsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
+      if (rawJsonText) {
+        const parsed = JSON.parse(rawJsonText)
+        const validated = validateParsedMenuResponse(parsed)
+        return NextResponse.json({
+          success: true,
+          source: 'gemini_multimodal_vision',
+          data: validated,
+        })
       }
-    } catch (apiErr) {
-      console.warn('[OnboardingAI] Gemini call failed, resorting to street demo fallback:', apiErr)
     }
-
-    // Fallback de contingencia garantizado
-    const fallback = generateCommercialStreetFallback(customRestaurantName)
-    return NextResponse.json({
-      success: true,
-      source: 'commercial_demo_contingency',
-      data: fallback,
-    })
-  } catch (err: any) {
-    // Si todo falla, jamás devolver 500 al comercial en la mesa
-    const fallback = generateCommercialStreetFallback()
-    return NextResponse.json({
-      success: true,
-      source: 'emergency_fallback',
-      data: fallback,
-    })
+  } catch (apiErr) {
+    console.warn('[OnboardingAI] Gemini call failed, resorting to street demo fallback:', apiErr)
   }
+
+  const fallback = generateCommercialStreetFallback(customRestaurantName)
+  return NextResponse.json({
+    success: true,
+    source: 'commercial_demo_contingency',
+    data: fallback,
+  })
 }
