@@ -93,17 +93,20 @@ export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
   const selected = locales.find((l) => l.id === selectedId) ?? locales[0] ?? null
 
   useEffect(() => {
-    setCardUrl(selected ? resolveAbsoluteUrl(`/p/${selected.slug}`) : '')
+    if (selected && selected.slug) {
+      setCardUrl(resolveAbsoluteUrl(`/p/${selected.slug}`))
+    }
   }, [selected])
 
   useEffect(() => {
     const canvas = cardCanvasRef.current
     if (!canvas || !selected) return
+    const targetUrl = cardUrl || resolveAbsoluteUrl(`/p/${selected.slug}`)
     drawDigitalLocalCard(canvas, {
       localName: selected.nombre,
       slug: selected.slug,
       tagline: 'Prototipo Oficial · Carta Interactiva',
-      targetUrl: cardUrl,
+      targetUrl,
     })
   }, [selected, cardUrl])
 

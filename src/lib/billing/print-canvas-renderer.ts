@@ -37,7 +37,10 @@ export interface QrMatrix {
 
 /** Matriz determinista y síncrona del QR para pintarla en canvas. */
 export function getQrMatrix(text: string): QrMatrix {
-  const qr = QRCode.create(text, { errorCorrectionLevel: 'M' })
+  const safeText = (text && typeof text === 'string' && text.trim().length > 0)
+    ? text.trim()
+    : 'https://fluxo-gastro.vercel.app/demo'
+  const qr = QRCode.create(safeText, { errorCorrectionLevel: 'M' })
   return { size: qr.modules.size, data: qr.modules.data }
 }
 
