@@ -24,10 +24,14 @@ interface CRMPilotAgreementModalProps {
 }
 
 const PLAN_NAMES: Record<CRMPlan, string> = {
-  carta_39: 'Carta Digital (39 €/mes)',
-  sala_69: 'Carta + Comandero Sala (69 €/mes)',
-  full_99: 'Full KDS Cocina + Sala (99 €/mes)',
-  suite_139: 'Suite Integral de Restauración (139 €/mes)',
+  carta_15: 'Carta QR Digital (15 €/mes)',
+  mozo_47: 'Plan Mozo / Sala (47 €/mes)',
+  fundador_50: 'Promo Fundador Full (50 €/mes)',
+  full_97: 'Plan Full Suite (97 €/mes)',
+  carta_39: 'Carta QR Digital (15 €/mes)',
+  sala_69: 'Plan Mozo / Sala (47 €/mes)',
+  full_99: 'Plan Full Suite (97 €/mes)',
+  suite_139: 'Plan Full Suite (97 €/mes)',
 }
 
 export function CRMPilotAgreementModal({

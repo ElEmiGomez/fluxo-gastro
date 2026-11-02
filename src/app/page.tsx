@@ -409,7 +409,7 @@ export default function LandingPage() {
               {/* Tarjeta 1: Plan Carta (39 €) */}
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
                 <div 
-                  onClick={() => handleOpenPilotModal('Plan Carta (39€)')}
+                  onClick={() => handleOpenPilotModal('Plan Carta QR (15€)')}
                   className="bg-white border border-slate-200 hover:border-blue-400/60 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
@@ -428,7 +428,7 @@ export default function LandingPage() {
                     {/* BLOQUE DE PRECIO CLARO */}
                     <div className="py-2 space-y-1.5">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-extrabold text-slate-900 tracking-tight tabular-nums">39 €</span>
+                        <span className="text-4xl font-extrabold text-slate-900 tracking-tight tabular-nums">15 €</span>
                         <span className="text-slate-500 text-sm font-semibold">/ mes (+ IVA)</span>
                       </div>
                       <div className="text-xs text-slate-500 font-medium">
@@ -469,7 +469,7 @@ export default function LandingPage() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleOpenPilotModal('Plan Carta (39€)')
+                        handleOpenPilotModal('Plan Carta QR (15€)')
                       }}
                       className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 group-hover:bg-emerald-600 group-hover:shadow-emerald-500/20"
                     >
@@ -483,7 +483,7 @@ export default function LandingPage() {
               {/* Tarjeta 2: Plan Sala (69 €) */}
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
                 <div 
-                  onClick={() => handleOpenPilotModal('Plan Sala (69€)')}
+                  onClick={() => handleOpenPilotModal('Plan Mozo (47€)')}
                   className="bg-white border border-slate-200 hover:border-blue-400/60 rounded-3xl p-5 sm:p-8 flex flex-col justify-between shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 active:-translate-y-1 group relative cursor-pointer h-full"
                 >
                   {/* Badge Flotante Promocional */}
@@ -493,7 +493,7 @@ export default function LandingPage() {
 
                   <div className="space-y-5">
                     <div>
-                      <h3 className="text-xl font-black text-slate-900 group-hover:text-emerald-600 transition-colors duration-300">Plan Sala</h3>
+                      <h3 className="text-xl font-black text-slate-900 group-hover:text-emerald-600 transition-colors duration-300">Plan Mozo</h3>
                       <p className="text-xs text-slate-500 mt-1">
                         Para restaurantes con camareros en sala y terraza que requieren control antifraude.
                       </p>
@@ -502,7 +502,7 @@ export default function LandingPage() {
                     {/* BLOQUE DE PRECIO CLARO */}
                     <div className="py-2 space-y-1.5">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-extrabold text-slate-900 tracking-tight tabular-nums">69 €</span>
+                        <span className="text-4xl font-extrabold text-slate-900 tracking-tight tabular-nums">47 €</span>
                         <span className="text-slate-500 text-sm font-semibold">/ mes (+ IVA)</span>
                       </div>
                       <div className="text-xs text-slate-500 font-medium">
@@ -543,11 +543,11 @@ export default function LandingPage() {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleOpenPilotModal('Plan Sala (69€)')
+                        handleOpenPilotModal('Plan Mozo (47€)')
                       }}
                       className="w-full h-14 rounded-2xl text-center text-xs sm:text-sm font-black transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 cursor-pointer leading-none bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 group-hover:bg-emerald-600 group-hover:shadow-emerald-500/20"
                     >
-                      <span>Elegir Plan Sala</span>
+                      <span>Elegir Plan Mozo</span>
                       <ArrowRight className="w-4 h-4 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   </div>
@@ -580,7 +580,7 @@ export default function LandingPage() {
                     {/* BLOQUE DE PRECIO CLARO Y ARMONIZADO */}
                     <div className="py-2 space-y-1.5">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-extrabold text-slate-900 tracking-tight tabular-nums">99 €</span>
+                        <span className="text-4xl font-extrabold text-slate-900 tracking-tight tabular-nums">97 €</span>
                         <span className="text-slate-500 text-sm font-semibold">/ mes (+ IVA)</span>
                       </div>
                       <div className="text-xs text-slate-500 font-medium">
@@ -588,7 +588,7 @@ export default function LandingPage() {
                       </div>
                       <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md mt-1 shadow-xs">
                         <Gift className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                        <span>Prueba 14 días a 0 € &middot; Setup de 149 € bonificado</span>
+                        <span>Prueba 14 días a 0 € &middot; Promo 5 Locales Fundadores a 50 €/mes</span>
                       </div>
                     </div>
 
@@ -909,8 +909,8 @@ export default function LandingPage() {
                 description: 'Software para restaurantes sin TPV: carta digital QR interactiva y sistema de comandas móvil para bares y restaurantes, con pantalla de cocina KDS y piloto gratuito de 14 días.',
                 offers: {
                   '@type': 'AggregateOffer',
-                  lowPrice: '39',
-                  highPrice: '99',
+                  lowPrice: '15',
+                  highPrice: '97',
                   priceCurrency: 'EUR',
                   offerCount: '3',
                 },

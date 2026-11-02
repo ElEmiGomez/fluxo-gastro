@@ -51,7 +51,7 @@ export function CRMQuickAddModal({ isOpen, onClose, onSave }: CRMQuickAddModalPr
         score: score,
         status: status,
         target_plan: targetPlan,
-        mrr_projected: PLAN_PRICING[targetPlan] || 39,
+        mrr_projected: PLAN_PRICING[targetPlan] || 15,
         pilot_start_date: status === 'piloto_14_dias' ? new Date().toISOString().split('T')[0] : null,
         pilot_end_date: status === 'piloto_14_dias' ? new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0] : null,
         last_visit_date: status !== 'lead_por_visitar' ? new Date().toISOString() : null,
@@ -180,10 +180,10 @@ export function CRMQuickAddModal({ isOpen, onClose, onSave }: CRMQuickAddModalPr
                 onChange={(e) => setTargetPlan(e.target.value as CRMPlan)}
                 className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500 font-medium"
               >
-                <option value="carta_39">Carta Digital — 39 €/mes</option>
-                <option value="sala_69">Sala & Comandero — 69 €/mes</option>
-                <option value="full_99">Full Operativo (KDS) — 99 €/mes</option>
-                <option value="suite_139">Suite Integral — 139 €/mes</option>
+                <option value="carta_15">Carta QR — 15 €/mes</option>
+                <option value="mozo_47">Plan Mozo — 47 €/mes</option>
+                <option value="fundador_50">Promo Fundador Full — 50 €/mes</option>
+                <option value="full_97">Plan Full — 97 €/mes</option>
               </select>
             </div>
           </div>

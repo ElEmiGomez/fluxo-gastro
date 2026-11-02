@@ -6,7 +6,16 @@ export type CRMStatus =
   | 'ganado'
   | 'perdido'
 
-export type CRMPlan = 'carta_39' | 'sala_69' | 'full_99' | 'suite_139'
+export type CRMPlan =
+  | 'carta_15'
+  | 'fundador_50'
+  | 'mozo_47'
+  | 'full_97'
+  // Compatibilidad hacia atrás
+  | 'carta_39'
+  | 'sala_69'
+  | 'full_99'
+  | 'suite_139'
 
 export type CRMICP = 'A' | 'B' | 'C' | 'CARLOS' | 'MARTIN' | 'LUCIA'
 
@@ -185,10 +194,15 @@ export const NOIA_COMMERCIAL_EVENTS: NoiaEvent[] = [
 ]
 
 export const PLAN_PRICING: Record<CRMPlan, number> = {
-  carta_39: 39,
-  sala_69: 69,
-  full_99: 99,
-  suite_139: 139,
+  carta_15: 15,
+  mozo_47: 47,
+  fundador_50: 50,
+  full_97: 97,
+  // Compatibilidad hacia atras
+  carta_39: 15,
+  sala_69: 47,
+  full_99: 97,
+  suite_139: 97,
 }
 
 export interface PilotChecklist {

@@ -1241,10 +1241,10 @@ export default function CRMAdminPage() {
                 }`}
               >
                 <option value="all">Todos los Planes</option>
-                <option value="carta_39">Carta 39€</option>
-                <option value="sala_69">Sala 69€</option>
-                <option value="full_99">Full 99€</option>
-                <option value="suite_139">Suite 139€</option>
+                <option value="carta_15">Carta 15€</option>
+                <option value="mozo_47">Mozo 47€</option>
+                <option value="fundador_50">Fundador 50€</option>
+                <option value="full_97">Full 97€</option>
               </select>
             </div>
           </div>
