@@ -6,6 +6,16 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-02 10:25] — Cierre de Tarea 4: Smoke Test y Validación en Local (Pruebas de Flujo)
+* **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4) y Dirección General (Depto 1).
+* **Flujos Verificados:**
+  1. Flujo completo en `/activar/[slug]`: cálculo del 21% de IVA, bloqueo de pago manual si no se adjunta archivo de comprobante, y selector de día de cargo recurrente (día 1 a 5).
+  2. Inspección del renderizado en `/web/[slug]` a 60 fps en viewport móvil (390x844) y escritorio, con neblinas de fundido activas y fluidez de render en `<canvas>` mediante scroll.
+  3. Exportación en CRM a 300 DPI de la lámina física para `/demo` y la tarjeta 9:16 de Casa Mar Da Vila.
+* **Estado:** Marcada como completada `[x]`.
+
+---
+
 ### [2026-11-01 21:38] — Cierre de Tarea 6: Onboarding «Llave en Mano» con Visión IA
 * **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4) y Dirección General (Depto 1).
 * **Módulo Completado:**

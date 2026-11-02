@@ -71,7 +71,7 @@ flowchart TD
 │  │     (Salida a calle con Carta QR, prospección y feedback de Fluxo)     │
 │  │                                                                         │
 │  ├─ 📌 FASE 1: CIERRE DEL BLOQUE COMERCIAL Y PLATAFORMA                    │
-│  │  ├─ [📋 Tarea 4] Smoke Test y Validación en Local (Pruebas de Flujo)   │
+│  │  ├─ [x] Tarea 4: Smoke Test y Validación en Local (Pruebas de Flujo)    │
 │  │  │     • Flujo completo /activar/[slug] (21% IVA, bloqueo pago manual,  │
 │  │  │       selector de día 1 a 5)                                         │
 │  │  │     • Render /web/[slug] a 60 fps (desktop/móvil 390x844, neblinas   │
