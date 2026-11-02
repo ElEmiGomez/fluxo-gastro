@@ -30,7 +30,13 @@ import {
   Users,
   Sliders,
   QrCode,
-  FileText
+  FileText,
+  Image as ImageIcon,
+  Paperclip,
+  Upload,
+  FileUp,
+  Eye,
+  Download
 } from 'lucide-react'
 import {
   CRMICP,
@@ -46,7 +52,8 @@ import {
   BeverageDistributor,
   DISTRIBUTOR_CONFIG,
   normalizeICP,
-  ICP_CONFIG
+  ICP_CONFIG,
+  LocalAttachment
 } from '@/types/crm.types'
 import { CRMPilotAgreementModal } from './CRMPilotAgreementModal'
 import { CRMBeforeAfterModal } from './CRMBeforeAfterModal'
@@ -177,6 +184,10 @@ export function CRMLeadDetailModal({
   const [isDossierOpen, setIsDossierOpen] = useState(false)
   const [isContactCardOpen, setIsContactCardOpen] = useState(false)
   const [showStaffPitch, setShowStaffPitch] = useState(false)
+  const [attachments, setAttachments] = useState<LocalAttachment[]>(lead.attachments || [])
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
+  const [newNoteText, setNewNoteText] = useState('')
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const handleAddDecisionMaker = (e: React.FormEvent) => {
     e.preventDefault()
@@ -351,6 +362,58 @@ export function CRMLeadDetailModal({
     setNotes((prev) => (prev ? `${prev}\n\n${scannedText}` : scannedText))
   }
 
+  // Manejo de carga de imágenes / documentos (Base64)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploadingAttachment(true)
+    Array.from(files).forEach((file) => {
+      const isImg = file.type.startsWith('image/')
+      const reader = new FileReader()
+
+      reader.onload = (event) => {
+        const result = event.target?.result as string
+        const newAtt: LocalAttachment = {
+          id: 'att_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+          name: file.name,
+          url: result,
+          type: isImg ? 'image' : 'document',
+          size: file.size,
+          created_at: new Date().toISOString(),
+        }
+
+        setAttachments((prev) => [newAtt, ...prev])
+        setUploadingAttachment(false)
+      }
+
+      reader.onerror = () => {
+        console.error('Error leyendo archivo')
+        setUploadingAttachment(false)
+      }
+
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleRemoveAttachment = (attId: string) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== attId))
+  }
+
+  const handleAddQuickNote = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newNoteText.trim()) return
+    const timestamp = new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    const formatted = `[${timestamp}] ${newNoteText.trim()}`
+    setNotes((prev) => (prev ? `${formatted}\n\n${prev}` : formatted))
+    setNewNoteText('')
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -370,6 +433,7 @@ export function CRMLeadDetailModal({
         google_complaint_tags: complaintTags,
         decision_makers: decisionMakers,
         beverage_distributor: beverageDistributor,
+        attachments,
       }
 
       if (status === 'piloto_14_dias' && !lead.pilot_start_date) {
@@ -1090,6 +1154,112 @@ export function CRMLeadDetailModal({
                 </div>
               </div>
             </div>
+
+            {/* 5. GESTOR DE ARCHIVOS, IMÁGENES Y BITÁCORA DEL LOCAL */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <ImageIcon className="w-4 h-4 text-cyan-400" />
+                  <span>Imágenes, Fotos de Carta & Documentos del Local</span>
+                </label>
+                <span className="text-[10px] text-cyan-400 font-mono">
+                  {attachments.length} {attachments.length === 1 ? 'archivo' : 'archivos'}
+                </span>
+              </div>
+
+              {/* Botón de subida de imágenes o documentos */}
+              <div className="flex items-center gap-3">
+                <label className="px-3.5 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition active:scale-95">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Subir Foto / Archivo</span>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf,.doc,.docx"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+                <span className="text-[11px] text-slate-500">
+                  Fotos de carta física, fachada, tickets o presupuestos
+                </span>
+              </div>
+
+              {/* Galería de adjuntos */}
+              {attachments.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+                  {attachments.map((att) => (
+                    <div
+                      key={att.id}
+                      className="group relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900 flex flex-col justify-between"
+                    >
+                      {att.type === 'image' ? (
+                        <div
+                          className="h-24 w-full bg-slate-950 cursor-pointer overflow-hidden relative"
+                          onClick={() => setPreviewImage(att.url)}
+                        >
+                          <img
+                            src={att.url}
+                            alt={att.name}
+                            className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                            <Eye className="w-5 h-5 text-white" />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-24 w-full bg-slate-950 flex flex-col items-center justify-center p-2 text-center">
+                          <Paperclip className="w-6 h-6 text-slate-400 mb-1" />
+                          <span className="text-[10px] text-slate-300 truncate w-full px-1">
+                            {att.name}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="p-1.5 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-400 truncate flex-1 pr-1 font-mono">
+                          {att.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttachment(att.id)}
+                          className="text-slate-500 hover:text-rose-400 p-0.5"
+                          title="Eliminar"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">
+                  No hay fotos ni documentos adjuntos para este local.
+                </p>
+              )}
+            </div>
+
+            {/* Modal de Previsualización de Imagen */}
+            {previewImage && (
+              <div
+                className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
+                onClick={() => setPreviewImage(null)}
+              >
+                <div className="relative max-w-3xl max-h-[90vh]">
+                  <img
+                    src={previewImage}
+                    alt="Previsualización"
+                    className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+                  />
+                  <button
+                    onClick={() => setPreviewImage(null)}
+                    className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Notas de la Prospección y Etiquetas Rápidas */}
             <div>

@@ -221,6 +221,15 @@ export interface PilotAgreement {
   trial_duration_days: number // 14 días
 }
 
+export interface LocalAttachment {
+  id: string
+  name: string
+  url: string
+  type: 'image' | 'document' | 'other'
+  size?: number
+  created_at: string
+}
+
 export interface CRMLead {
   id: string
   name: string
@@ -251,6 +260,8 @@ export interface CRMLead {
   google_complaint_tags?: string[] | null
   pilot_checklist?: PilotChecklist | null
   pilot_agreement?: PilotAgreement | null
+  attachments?: LocalAttachment[] | null
+  custom_slug?: string | null
   created_at: string
   updated_at: string
 }

@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { createServerClient } from '../server'
 import { isSupabaseConfigured } from '../client'
 import { CRMLead, CRMMetrics, CRMPlan, CRMStatus, PLAN_PRICING } from '@/types/crm.types'
@@ -6,16 +8,50 @@ import crypto from 'crypto'
 
 export { PLAN_PRICING }
 
-// Almacén en memoria de respaldo para funcionamiento 100% resiliente en calle (sin caídas de red)
-let inMemoryLeads: CRMLead[] = NOIA_INITIAL_LEADS.map((item, index) => {
-  const now = new Date(Date.now() - (index * 3600000)).toISOString()
-  return {
-    ...item,
-    id: `crm-lead-${index + 1}`.padEnd(36, '-0000-000000000000'),
-    created_at: now,
-    updated_at: now,
+const DATA_DIR = path.join(process.cwd(), '.fluxo-data')
+const BACKUP_FILE = path.join(DATA_DIR, 'crm_leads.json')
+
+function loadInitialLeads(): CRMLead[] {
+  try {
+    if (fs.existsSync(BACKUP_FILE)) {
+      const raw = fs.readFileSync(BACKUP_FILE, 'utf8')
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
+  } catch (e) {
+    console.warn('[CRM Repository] Error leyendo persistencia en disco:', e)
   }
-})
+
+  return NOIA_INITIAL_LEADS.map((item, index) => {
+    const now = new Date(Date.now() - (index * 3600000)).toISOString()
+    return {
+      ...item,
+      id: `crm-lead-${index + 1}`.padEnd(36, '-0000-000000000000'),
+      attachments: [],
+      created_at: now,
+      updated_at: now,
+    }
+  })
+}
+
+// Almacén en memoria de respaldo con persistencia en disco local
+let inMemoryLeads: CRMLead[] = loadInitialLeads()
+
+function persistLeadsLocally(leads: CRMLead[]) {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true })
+    }
+    fs.writeFileSync(BACKUP_FILE, JSON.stringify(leads, null, 2), 'utf8')
+  } catch (e) {
+    console.warn('[CRM Repository] No se pudo guardar copia local en disco:', e)
+  }
+}
+
+// Asegurar que exista el archivo inicial
+persistLeadsLocally(inMemoryLeads)
 
 /**
  * Calcula las métricas ejecutivas en base al conjunto de leads
@@ -78,12 +114,11 @@ export async function getCRMLeads(): Promise<CRMLead[]> {
         .order('score', { ascending: false })
 
       if (!error && data && data.length > 0) {
-        // Sincronizar en memoria y retornar datos de Supabase SSOT
         inMemoryLeads = data as CRMLead[]
+        persistLeadsLocally(inMemoryLeads)
         return inMemoryLeads
       }
 
-      // Si la tabla existe pero está vacía, auto-sembrar los 35 de Noia
       if (!error && data && data.length === 0) {
         const seeded = await seedInitialNoiaLeads()
         if (seeded && seeded.length > 0) return seeded
@@ -116,6 +151,7 @@ export async function seedInitialNoiaLeads(): Promise<CRMLead[]> {
 
       if (!error && data && data.length > 0) {
         inMemoryLeads = data as CRMLead[]
+        persistLeadsLocally(inMemoryLeads)
         return inMemoryLeads
       }
     } catch (e) {
@@ -123,6 +159,7 @@ export async function seedInitialNoiaLeads(): Promise<CRMLead[]> {
     }
   }
 
+  persistLeadsLocally(inMemoryLeads)
   return inMemoryLeads
 }
 
@@ -139,6 +176,7 @@ export async function createCRMLead(
     ...leadData,
     id: crypto.randomUUID ? crypto.randomUUID() : `crm-lead-${Date.now()}`,
     mrr_projected: mrr,
+    attachments: leadData.attachments || [],
     created_at: now,
     updated_at: now,
   }
@@ -175,6 +213,7 @@ export async function createCRMLead(
           google_complaint_tags: newLead.google_complaint_tags,
           pilot_checklist: newLead.pilot_checklist,
           pilot_agreement: newLead.pilot_agreement,
+          attachments: newLead.attachments,
           created_at: newLead.created_at,
           updated_at: newLead.updated_at,
         })
@@ -183,14 +222,16 @@ export async function createCRMLead(
 
       if (!error && data) {
         inMemoryLeads.unshift(data as CRMLead)
+        persistLeadsLocally(inMemoryLeads)
         return data as CRMLead
       }
     } catch (e) {
-      console.warn('[CRM Repository] Error al guardar en Supabase, guardando en memoria:', e)
+      console.warn('[CRM Repository] Error al guardar en Supabase, guardando localmente:', e)
     }
   }
 
   inMemoryLeads.unshift(newLead)
+  persistLeadsLocally(inMemoryLeads)
   return newLead
 }
 
@@ -203,12 +244,10 @@ export async function updateCRMLead(
 ): Promise<CRMLead | null> {
   const now = new Date().toISOString()
 
-  // Si se cambia el plan y no se especifica mrr, sincronizar precio canónico
   if (updates.target_plan && updates.mrr_projected === undefined) {
     updates.mrr_projected = PLAN_PRICING[updates.target_plan]
   }
 
-  // Si pasa a piloto_14_dias y no tenía fechas, establecer ventana de 14 días
   if (updates.status === 'piloto_14_dias' && !updates.pilot_start_date) {
     const start = new Date()
     const end = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
@@ -231,10 +270,11 @@ export async function updateCRMLead(
 
       if (!error && data) {
         inMemoryLeads = inMemoryLeads.map((item) => (item.id === id ? (data as CRMLead) : item))
+        persistLeadsLocally(inMemoryLeads)
         return data as CRMLead
       }
     } catch (e) {
-      console.warn('[CRM Repository] Error al actualizar en Supabase, aplicando en memoria:', e)
+      console.warn('[CRM Repository] Error al actualizar en Supabase, aplicando localmente:', e)
     }
   }
 
@@ -251,6 +291,7 @@ export async function updateCRMLead(
     return item
   })
 
+  persistLeadsLocally(inMemoryLeads)
   return updatedLead
 }
 
@@ -264,6 +305,7 @@ export async function deleteCRMLead(id: string): Promise<boolean> {
       const { error } = await supabase.from('crm_leads').delete().eq('id', id)
       if (!error) {
         inMemoryLeads = inMemoryLeads.filter((item) => item.id !== id)
+        persistLeadsLocally(inMemoryLeads)
         return true
       }
     } catch (e) {
@@ -272,5 +314,6 @@ export async function deleteCRMLead(id: string): Promise<boolean> {
   }
 
   inMemoryLeads = inMemoryLeads.filter((item) => item.id !== id)
+  persistLeadsLocally(inMemoryLeads)
   return true
 }

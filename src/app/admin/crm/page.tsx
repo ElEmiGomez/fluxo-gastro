@@ -222,21 +222,38 @@ export default function CRMAdminPage() {
     verifyAuth()
   }, [])
 
-  // 2. Cargar datos del CRM
+  // 2. Cargar datos del CRM con persistencia Offline-First
   const fetchCRMData = async () => {
     setLoading(true)
     try {
+      // Carga inmediata de caché local para evitar pantalla en blanco o reseteos
+      const cachedLeads = getLeadsFromOfflineCache()
+      if (cachedLeads && cachedLeads.length > 0) {
+        setLeads(cachedLeads)
+      }
+
       const headers = getAuthHeaders()
       const res = await fetch('/api/crm', { headers })
       if (res.ok) {
         const data = await res.json()
-        setLeads(data.leads || [])
+        const fetched = data.leads || []
+        // Si hay datos remotos, actualizar y sincronizar la caché local
+        if (fetched.length > 0) {
+          setLeads(fetched)
+          saveLeadsToOfflineCache(fetched)
+        } else if (cachedLeads && cachedLeads.length > 0) {
+          setLeads(cachedLeads)
+        }
         setMetrics(data.metrics || null)
       } else if (res.status === 401) {
         setIsAuthenticated(false)
       }
     } catch (e) {
       console.error('Error fetching CRM data:', e)
+      const cachedLeads = getLeadsFromOfflineCache()
+      if (cachedLeads && cachedLeads.length > 0) {
+        setLeads(cachedLeads)
+      }
     } finally {
       setLoading(false)
     }
@@ -255,7 +272,11 @@ export default function CRMAdminPage() {
     }
     const data = await res.json()
     if (data.lead) {
-      setLeads((prev) => [data.lead, ...prev])
+      setLeads((prev) => {
+        const next = [data.lead, ...prev]
+        saveLeadsToOfflineCache(next)
+        return next
+      })
       if (data.metrics) setMetrics(data.metrics)
     }
   }
@@ -295,7 +316,11 @@ export default function CRMAdminPage() {
       }
       const data = await res.json()
       if (data.lead) {
-        setLeads((prev) => prev.map((l) => (l.id === id ? data.lead : l)))
+        setLeads((prev) => {
+          const next = prev.map((l) => (l.id === id ? data.lead : l))
+          saveLeadsToOfflineCache(next)
+          return next
+        })
         if (data.metrics) setMetrics(data.metrics)
         if (selectedLead?.id === id) setSelectedLead(data.lead)
       }

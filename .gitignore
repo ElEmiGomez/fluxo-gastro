@@ -42,3 +42,9 @@ fluxo_codebase_for_ai.txt
 test-results/
 playwright-report/
 scratch/
+
+# OpenCode Bridge temporary files
+.opencode-bridge/
+
+# Local CRM offline / filesystem persistence
+.fluxo-data/
