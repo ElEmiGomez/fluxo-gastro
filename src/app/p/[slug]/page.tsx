@@ -256,10 +256,13 @@ export default function CartaPrototipoPage() {
 
   // Vista interactiva con paridad total de diseño (plantilla oficial de Fluxo / Casa Mar)
   // Embebe la experiencia autónoma optimizada con carrito, personalizador de platos y carrusel de categorías
+  const isCasaMar = slug.includes('casamar') || slug.includes('casa-mar')
+  const menuSource = isCasaMar ? '/carta-casamar' : `/carta-prototipo?slug=${slug}`
+
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 overflow-hidden">
       <iframe
-        src={`/carta-prototipo?slug=${slug}`}
+        src={menuSource}
         title={`Carta Digital Interactiva - ${prototipo.nombre_local}`}
         className="w-full h-full border-none"
       />

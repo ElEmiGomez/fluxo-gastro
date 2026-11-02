@@ -62,10 +62,12 @@ function PitchFullscreen({
           className="mt-8 w-[min(78vw,420px)] h-auto rounded-3xl bg-white p-3 shadow-2xl"
           aria-label={`QR de ${local.nombre}`}
         />
-        <p className="mt-6 text-lg font-bold text-cyan-300 font-mono">/p/{local.slug}</p>
+        <p className="mt-6 text-lg font-bold text-cyan-300 font-mono">
+          {local.slug.includes('casamar') || local.slug.includes('casa-mar') ? '/carta-casamar' : `/p/${local.slug}`}
+        </p>
         <div className="flex flex-wrap justify-center gap-3 mt-8 w-full">
           <a
-            href={`/p/${local.slug}`}
+            href={local.slug.includes('casamar') || local.slug.includes('casa-mar') ? '/carta-casamar' : `/p/${local.slug}`}
             target="_blank"
             rel="noopener noreferrer"
             className="px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-sm font-bold flex items-center gap-2 apple-smooth border border-white/15"
@@ -93,11 +95,16 @@ export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
 
   const selected = locales.find((l) => l.id === selectedId) ?? locales[0] ?? null
 
+  const getTargetUrlForLocal = useCallback((loc: LocalBilling) => {
+    const isCasaMar = loc.slug.includes('casamar') || loc.slug.includes('casa-mar')
+    return resolveAbsoluteUrl(isCasaMar ? '/carta-casamar' : `/p/${loc.slug}`)
+  }, [])
+
   useEffect(() => {
     if (selected && selected.slug) {
-      setCardUrl(resolveAbsoluteUrl(`/p/${selected.slug}`))
+      setCardUrl(getTargetUrlForLocal(selected))
     }
-  }, [selected])
+  }, [selected, getTargetUrlForLocal])
 
   const [bottomLogo, setBottomLogo] = useState<HTMLImageElement | null>(null)
 
@@ -120,7 +127,7 @@ export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
   useEffect(() => {
     const canvas = cardCanvasRef.current
     if (!canvas || !selected) return
-    const targetUrl = cardUrl || resolveAbsoluteUrl(`/p/${selected.slug}`)
+    const targetUrl = cardUrl || getTargetUrlForLocal(selected)
     drawDigitalLocalCard(canvas, {
       localName: selected.nombre,
       slug: selected.slug,
@@ -128,7 +135,7 @@ export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
       targetUrl,
       bottomLogoImage: bottomLogo,
     })
-  }, [selected, cardUrl, bottomLogo])
+  }, [selected, cardUrl, bottomLogo, getTargetUrlForLocal])
 
   const handleDownloadCard = useCallback(() => {
     const canvas = cardCanvasRef.current
