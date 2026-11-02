@@ -510,9 +510,16 @@ export interface DigitalLocalCardData {
   slug: string
   tagline: string
   targetUrl: string
+  bottomLogoImage?: CanvasImageSource | null
 }
 
-/** Tarjeta digital vertical 9:16 (1080x1920) para WhatsApp, por local. */
+/** Tarjeta digital vertical 9:16 (1080x1920) para WhatsApp, por local.
+ * Diseño minimalista idéntico a la lámina oficial:
+ * 1. Fondo azul noche con marcas de encuadre en las cuatro esquinas
+ * 2. Titular centrado en 2 líneas: "Escanea para" / "acceder a la carta"
+ * 3. Contenedor de QR blanco, nítido y centrado
+ * 4. Pie con logotipo circular del local o isotipo "F." blanco
+ */
 export function drawDigitalLocalCard(
   canvas: HTMLCanvasElement,
   data: DigitalLocalCardData
@@ -524,6 +531,7 @@ export function drawDigitalLocalCard(
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
+  // 1. Fondo azul marino / noche idéntico
   const bg = ctx.createLinearGradient(0, 0, W, H)
   bg.addColorStop(0, '#070d1a')
   bg.addColorStop(0.6, '#0d1728')
@@ -531,81 +539,63 @@ export function drawDigitalLocalCard(
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, W, H)
 
-  const glow = ctx.createRadialGradient(W / 2, H * 0.32, 0, W / 2, H * 0.32, W * 0.9)
-  glow.addColorStop(0, 'rgba(34, 211, 238, 0.14)')
+  // Resplandor sutil
+  const glow = ctx.createRadialGradient(W / 2, H * 0.45, 0, W / 2, H * 0.45, W * 0.8)
+  glow.addColorStop(0, 'rgba(34, 211, 238, 0.08)')
   glow.addColorStop(1, 'rgba(34, 211, 238, 0)')
   ctx.fillStyle = glow
   ctx.fillRect(0, 0, W, H)
 
-  drawCutMarks(ctx, W, H, W * 0.045)
+  // Marcas de corte / encuadre en esquinas
+  drawCutMarks(ctx, W, H, W * 0.05)
 
   ctx.textAlign = 'center'
   ctx.textBaseline = 'alphabetic'
 
-  // Isotipo compacto
-  roundRect(ctx, W / 2 - 54, W * 0.09, 108, 108, 28)
+  // 2. Titular centrado: "Escanea para acceder a la carta" (2 líneas)
+  const line1 = 'Escanea para'
+  const line2 = 'acceder a la carta'
+  const hSize = Math.min(
+    fitFontSize(ctx, line1, 800, W * 0.082, W * 0.86),
+    fitFontSize(ctx, line2, 800, W * 0.082, W * 0.88)
+  )
+  ctx.font = FONT(800, hSize)
   ctx.fillStyle = '#ffffff'
-  ctx.fill()
-  ctx.fillStyle = '#2563eb'
-  ctx.font = FONT(900, 62)
-  ctx.fillText('F', W / 2, W * 0.09 + 78)
 
-  // Nombre del local (ajustado por medición para no desbordar)
-  ctx.fillStyle = '#ffffff'
-  const nameSize = fitFontSize(ctx, data.localName, 900, 84, W * 0.88)
-  ctx.fillText(data.localName, W / 2, W * 0.09 + 108 + nameSize * 1.15)
+  const line1Y = H * 0.165
+  const line2Y = line1Y + hSize * 1.25
+  ctx.fillText(line1, W / 2, line1Y)
+  ctx.fillText(line2, W / 2, line2Y)
 
-  // Etiqueta oficial
-  ctx.fillStyle = '#34d399'
-  const tagSize = fitFontSize(ctx, data.tagline, 700, 38, W * 0.82)
-  ctx.fillText(data.tagline, W / 2, W * 0.09 + 108 + nameSize * 1.15 + tagSize * 1.5)
-
-  // Marco QR
-  const qrBox = W * 0.72
+  // 3. Contenedor central del QR (blanco, centrado con aire perimetral amplio)
+  const qrBox = W * 0.74
   const qrX = (W - qrBox) / 2
-  const qrY = H * 0.31
-  roundRect(ctx, qrX, qrY, qrBox, qrBox, 56)
+  const qrY = H * 0.28
+
+  ctx.save()
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.55)'
+  ctx.shadowBlur = W * 0.035
+  ctx.shadowOffsetY = W * 0.018
+  roundRect(ctx, qrX, qrY, qrBox, qrBox, qrBox * 0.08)
   ctx.fillStyle = '#ffffff'
   ctx.fill()
-  ctx.strokeStyle = 'rgba(94, 234, 212, 0.7)'
-  ctx.lineWidth = 8
+  ctx.restore()
+
+  // Borde sutil
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)'
+  ctx.lineWidth = W * 0.003
   ctx.stroke()
 
-  const pad = qrBox * 0.07
+  const pad = qrBox * 0.075
   const matrix = getQrMatrix(data.targetUrl)
   drawQrMatrix(ctx, matrix, qrX + pad, qrY + pad, qrBox - pad * 2)
 
-  // Ruta de la carta
-  ctx.fillStyle = '#7dd3fc'
-  ctx.font = FONT(700, 42)
-  ctx.fillText(`/p/${data.slug}`, W / 2, qrY + qrBox + W * 0.115)
-
-  // Sellos de velocidad e idiomas
-  const sealY = H * 0.855
-  const sealFont = fitFontSize(ctx, '⚡ Carta en 0,2 s', 700, 34, W * 0.27)
-  ctx.font = FONT(700, sealFont)
-  const seals: Array<[string, number]> = [
-    ['⚡ Carta en 0,2 s', W * 0.31],
-    ['🌍 ES · GAL · EN', W * 0.27],
-  ]
-  let sealX = W / 2 - (seals[0][1] + W * 0.03 + seals[1][1]) / 2
-  for (const [text, boxW] of seals) {
-    roundRect(ctx, sealX, sealY, boxW, 76, 38)
-    ctx.fillStyle = 'rgba(16, 185, 129, 0.14)'
-    ctx.fill()
-    ctx.strokeStyle = 'rgba(52, 211, 153, 0.4)'
-    ctx.lineWidth = 3
-    ctx.stroke()
-    ctx.fillStyle = '#a7f3d0'
-    ctx.fillText(text, sealX + boxW / 2, sealY + 50)
-    sealX += boxW + W * 0.03
+  // 4. Pie: Logotipo circular del local o Isotipo "F." en blanco puro
+  const logoBoxSize = W * 0.11
+  const logoCenterY = H * 0.885
+  if (data.bottomLogoImage) {
+    drawLocalLogoCircle(ctx, data.bottomLogoImage, W / 2, logoCenterY, logoBoxSize)
+  } else {
+    drawFluxoIsotypeWhite(ctx, W / 2, logoCenterY, logoBoxSize)
   }
-
-  // Pie de marca
-  ctx.fillStyle = '#ffffff'
-  ctx.font = FONT(900, 50)
-  ctx.fillText('FLUXO', W / 2, H * 0.952)
-  ctx.fillStyle = 'rgba(148, 163, 184, 0.85)'
-  ctx.font = FONT(500, 27)
-  ctx.fillText('GASTRONOMIC SYSTEM', W / 2, H * 0.952 + 42)
 }

@@ -17,6 +17,7 @@ import {
   downloadCanvasPng,
   resolveAbsoluteUrl,
 } from '@/lib/billing/print-canvas-renderer'
+import { CASAMAR_LOGO_DATA_URI } from '@/lib/billing/casamar-logo-data'
 import { LocalBilling, PLAN_CONFIG } from '@/lib/billing/billing-calculations'
 
 interface DigitalLocalQrStudioProps {
@@ -98,6 +99,24 @@ export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
     }
   }, [selected])
 
+  const [bottomLogo, setBottomLogo] = useState<HTMLImageElement | null>(null)
+
+  // Carga automática del logo circular si el local es Casa Mar da Vila
+  useEffect(() => {
+    if (!selected) {
+      setBottomLogo(null)
+      return
+    }
+    const isCasaMar = selected.slug.includes('casamar') || selected.slug.includes('casa-mar')
+    if (isCasaMar) {
+      const img = new Image()
+      img.onload = () => setBottomLogo(img)
+      img.src = CASAMAR_LOGO_DATA_URI
+    } else {
+      setBottomLogo(null)
+    }
+  }, [selected])
+
   useEffect(() => {
     const canvas = cardCanvasRef.current
     if (!canvas || !selected) return
@@ -107,8 +126,9 @@ export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
       slug: selected.slug,
       tagline: 'Prototipo Oficial · Carta Interactiva',
       targetUrl,
+      bottomLogoImage: bottomLogo,
     })
-  }, [selected, cardUrl])
+  }, [selected, cardUrl, bottomLogo])
 
   const handleDownloadCard = useCallback(() => {
     const canvas = cardCanvasRef.current
