@@ -37,7 +37,8 @@ import {
   FileUp,
   Eye,
   Download,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Edit3
 } from 'lucide-react'
 import {
   CRMICP,
@@ -141,6 +142,8 @@ export function CRMLeadDetailModal({
 }: CRMLeadDetailModalProps) {
   if (!isOpen || !lead) return null
 
+  const [localName, setLocalName] = useState(lead.name || '')
+  const [isEditingName, setIsEditingName] = useState(false)
   const [status, setStatus] = useState<CRMStatus>(lead.status)
   const [targetPlan, setTargetPlan] = useState<CRMPlan>(lead.target_plan)
   const [contactName, setContactName] = useState(lead.contact_name || '')
@@ -426,6 +429,7 @@ export function CRMLeadDetailModal({
     setSaving(true)
     try {
       const updates: Partial<CRMLead> = {
+        name: localName.trim() || lead.name,
         status,
         target_plan: targetPlan,
         mrr_projected: PLAN_PRICING[targetPlan],
@@ -499,7 +503,33 @@ export function CRMLeadDetailModal({
                     ★ Score {lead.score}/10
                   </span>
                 </div>
-                <h2 className="text-xl font-bold text-white truncate">{lead.name}</h2>
+                <div className="flex items-center gap-2">
+                  {isEditingName ? (
+                    <input
+                      type="text"
+                      value={localName}
+                      onChange={(e) => setLocalName(e.target.value)}
+                      onBlur={() => setIsEditingName(false)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') setIsEditingName(false)
+                      }}
+                      autoFocus
+                      className="text-xl font-bold text-white bg-slate-800 border border-blue-500 rounded-lg px-2 py-0.5 focus:outline-none w-full max-w-md"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 group/title">
+                      <h2 className="text-xl font-bold text-white truncate">{localName || lead.name}</h2>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingName(true)}
+                        className="opacity-60 hover:opacity-100 text-slate-400 hover:text-blue-400 p-1 rounded transition"
+                        title="Editar nombre comercial del local"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
                   <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-500" />
                   <span className="truncate">{lead.address}</span>

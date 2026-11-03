@@ -112,7 +112,7 @@ export const NOIA_INITIAL_LEADS: Omit<CRMLead, 'id' | 'created_at' | 'updated_at
     lost_reason: null,
   },
   {
-    name: 'Cervexería Equs',
+    name: 'Cafetería / Cervexería Equs',
     address: 'Rúa da Alameda, 12',
     zone: 'Alameda',
     icp_segment: 'A',

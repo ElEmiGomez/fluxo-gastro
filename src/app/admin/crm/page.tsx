@@ -531,14 +531,25 @@ export default function CRMAdminPage() {
     document.body.removeChild(a)
   }
 
-  // 8. Filtrar leads
+  // 8. Filtrar leads con búsqueda insensible a tildes y mayúsculas
   const filteredLeads = useMemo(() => {
+    const normalizeStr = (str: string) =>
+      str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
+    const q = normalizeStr(searchQuery)
+
     return leads.filter((lead) => {
+      const normName = normalizeStr(lead.name || '')
+      const normAddress = normalizeStr(lead.address || '')
+      const normContact = normalizeStr(lead.contact_name || '')
+      const normSlug = normalizeStr(lead.custom_slug || '')
+
       const matchesSearch =
-        searchQuery === '' ||
-        lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lead.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (lead.contact_name && lead.contact_name.toLowerCase().includes(searchQuery.toLowerCase()))
+        q === '' ||
+        normName.includes(q) ||
+        normAddress.includes(q) ||
+        normContact.includes(q) ||
+        normSlug.includes(q)
 
       const matchesZone = selectedZone === 'all' || lead.zone === selectedZone
       const matchesICP = selectedICP === 'all' || normalizeICP(lead.icp_segment) === selectedICP

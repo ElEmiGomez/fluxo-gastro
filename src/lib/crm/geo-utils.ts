@@ -14,6 +14,8 @@ export const NOIA_ESTABLISHMENT_COORDINATES: Record<string, { lat: number; lng: 
   'Arrocería Baobab': { lat: 42.78435, lng: -8.88615 },
   'Forno do Rato': { lat: 42.78350, lng: -8.88560 },
   'Cervexería Equs': { lat: 42.78480, lng: -8.88685 },
+  'Cafetería / Cervexería Equs': { lat: 42.78480, lng: -8.88685 },
+  'Cafetería Equs': { lat: 42.78480, lng: -8.88685 },
   'A Taberna de Lelo': { lat: 42.78400, lng: -8.89005 },
   'La Parra Tapería': { lat: 42.78485, lng: -8.88895 },
   'Pizzería Venecia': { lat: 42.78335, lng: -8.88635 },
