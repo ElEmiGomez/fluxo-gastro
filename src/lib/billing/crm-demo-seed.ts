@@ -70,6 +70,23 @@ export const DEMO_LOCALES: LocalBilling[] = [
     owner_email: 'dueno@brasasmash.es',
     owner_phone: '34600111003',
   },
+  {
+    id: 'demo-loc-equs',
+    slug: 'cervexeria-equs',
+    nombre: 'Cafetería / Cervexería Equs',
+    plan_type: 'full_fundador',
+    monthly_price_eur: 50,
+    is_founder_slot: true,
+    founder_started_at: '2026-03-01T10:00:00.000Z',
+    founder_commitment_accepted: true,
+    billing_day: 5,
+    payment_status: 'paid',
+    payment_method: 'bizum',
+    has_payment_proof: true,
+    pause_level: 0,
+    owner_email: 'gerencia@cervexeriaequs.es',
+    owner_phone: '34600111004',
+  },
 ]
 
 function isLocalBilling(value: unknown): value is LocalBilling {

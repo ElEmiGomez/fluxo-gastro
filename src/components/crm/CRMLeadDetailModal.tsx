@@ -36,7 +36,8 @@ import {
   Upload,
   FileUp,
   Eye,
-  Download
+  Download,
+  UtensilsCrossed
 } from 'lucide-react'
 import {
   CRMICP,
@@ -217,6 +218,13 @@ export function CRMLeadDetailModal({
     if (primary) {
       setContactName(primary.name)
     }
+  }
+
+  // Resolución de la URL de la carta prototipo del local
+  const getMenuUrl = () => {
+    const rawSlug = lead.custom_slug || lead.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const isCasaMar = rawSlug.includes('casamar') || rawSlug.includes('casa-mar')
+    return isCasaMar ? '/carta-casamar' : `/p/${rawSlug}`
   }
 
   // Cálculo de días de piloto
@@ -515,6 +523,19 @@ export function CRMLeadDetailModal({
 
             {/* Barra de Contacto y Acciones Rápidas */}
             <div className="mt-4 flex flex-wrap items-center gap-2">
+              {/* Botón Abrir Carta Prototipo */}
+              <a
+                href={getMenuUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 transition active:scale-95 touch-manipulation"
+                title="Abrir la carta interactiva del local en una pestaña nueva"
+              >
+                <UtensilsCrossed className="w-4 h-4 text-white" />
+                <span>Abrir Carta</span>
+                <ExternalLink className="w-3 h-3 opacity-70" />
+              </a>
+
               {getWhatsAppLink() ? (
                 <a
                   href={getWhatsAppLink()!}

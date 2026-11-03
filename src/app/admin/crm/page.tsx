@@ -40,7 +40,8 @@ import {
   Edit3,
   Trash2,
   Landmark,
-  DoorOpen
+  DoorOpen,
+  UtensilsCrossed
 } from 'lucide-react'
 import {
   CRMICP,
@@ -1465,6 +1466,29 @@ export default function CRMAdminPage() {
                                 </span>
 
                                 <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                  {/* Botón rápido para abrir la carta digital */}
+                                  {(() => {
+                                    const rawSlug = lead.custom_slug || lead.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                                    const isCasaMar = rawSlug.includes('casamar') || rawSlug.includes('casa-mar')
+                                    const menuUrl = isCasaMar ? '/carta-casamar' : `/p/${rawSlug}`
+                                    return (
+                                      <a
+                                        href={menuUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={`p-1 rounded-lg transition flex items-center gap-1 px-1.5 font-bold text-[10px] ${
+                                          isLight
+                                            ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                                            : 'bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 border border-blue-500/30'
+                                        }`}
+                                        title={`Abrir carta de ${lead.name}`}
+                                      >
+                                        <UtensilsCrossed className="w-3 h-3 text-blue-400" />
+                                        <span>Carta</span>
+                                      </a>
+                                    )
+                                  })()}
+
                                   {/* Selector rápido para mover de etapa en móvil con 1 toque */}
                                   <select
                                     value={lead.status}
