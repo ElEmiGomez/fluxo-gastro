@@ -84,6 +84,154 @@ export function resolveAbsoluteUrl(path: string): string {
   return new URL(path, window.location.origin).toString()
 }
 
+/**
+ * Dibuja el isotipo oficial "F." invertido en color azul `#2563EB`
+ * para fondos blancos (`#FFFFFF`) respetando las proporciones exactas del viewBox 0 0 64 64 de Fluxo:
+ * Trazo "F" de grosor 8.5 con terminaciones redondeadas (M23 48V16H45 M23 31H38)
+ * y punto circular r=4.2 en (39, 46).
+ */
+export function drawFluxoIsotypeInverted(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  boxSize: number
+): void {
+  ctx.save()
+  const scale = boxSize / 64
+  ctx.translate(cx - 32 * scale, cy - 32 * scale)
+  ctx.scale(scale, scale)
+
+  ctx.strokeStyle = '#2563eb'
+  ctx.fillStyle = '#2563eb'
+  ctx.lineWidth = 8.5
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+
+  // Trazo principal de la "F"
+  ctx.beginPath()
+  ctx.moveTo(23, 48)
+  ctx.lineTo(23, 16)
+  ctx.lineTo(45, 16)
+  ctx.moveTo(23, 31)
+  ctx.lineTo(38, 31)
+  ctx.stroke()
+
+  // Punto circular
+  ctx.beginPath()
+  ctx.arc(39, 46, 4.2, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.restore()
+}
+
+/**
+ * Fondo blanco editorial de la Cara B invertida (en coordenadas absolutas).
+ */
+function paintWhiteFaceBackground(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number
+): void {
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, W, H)
+
+  // Borde sutil perimetral de corte para guillotina
+  ctx.strokeStyle = '#cbd5e1'
+  ctx.lineWidth = Math.max(2, Math.min(W, H) * 0.002)
+  ctx.strokeRect(0, 0, W, H)
+}
+
+/**
+ * Reverso (Cara B - Formato White) por clonación estructural exacta de drawFrontDesign
+ * e inversión cromática estricta (fondo blanco #FFFFFF, textos oscuros #0B131E).
+ * Apunta a la página web principal de Fluxo (${baseUrl}/).
+ */
+export function drawWhiteBackDesign(
+  ctx: CanvasRenderingContext2D,
+  includeQrCode: boolean,
+  targetUrl: string
+): void {
+  const W = DESIGN_W
+  const H = DESIGN_H
+  ctx.textBaseline = 'alphabetic'
+  ctx.textAlign = 'center'
+
+  // 1. CABECERA SIMÉTRICA A 2 LÍNEAS EN TONO OSCURO PROFUNDO (#0B131E)
+  const line1 = 'Escanea para'
+  const line2 = 'conocer Fluxo'
+  const hSize = Math.min(
+    fitFontSize(ctx, line1, 800, W * 0.076, W * 0.84),
+    fitFontSize(ctx, line2, 800, W * 0.076, W * 0.86)
+  )
+  ctx.font = FONT(800, hSize)
+  ctx.fillStyle = '#0b131e'
+
+  const line1Y = H * 0.145
+  const line2Y = line1Y + hSize * 1.25
+  ctx.fillText(line1, W / 2, line1Y)
+  ctx.fillText(line2, W / 2, line2Y)
+
+  // 2. CONTENEDOR CENTRAL DEL QR (Idéntica posición, proporción y radio de esquina)
+  const qrBox = W * 0.76
+  const qrX = (W - qrBox) / 2
+  const qrY = H * 0.285
+
+  ctx.save()
+  ctx.shadowColor = 'rgba(15, 23, 42, 0.08)'
+  ctx.shadowBlur = W * 0.03
+  ctx.shadowOffsetY = W * 0.015
+  roundRect(ctx, qrX, qrY, qrBox, qrBox, qrBox * 0.065)
+  ctx.fillStyle = '#ffffff'
+  ctx.fill()
+  ctx.restore()
+
+  // Borde de referencia para guillotina y delimitación limpia
+  ctx.strokeStyle = '#cbd5e1'
+  ctx.lineWidth = W * 0.003
+  ctx.stroke()
+
+  if (includeQrCode) {
+    const pad = qrBox * 0.075
+    const matrix = getQrMatrix(targetUrl)
+    drawQrMatrix(ctx, matrix, qrX + pad, qrY + pad, qrBox - pad * 2)
+  } else {
+    // Marco vacío de encuadre en tonos neutros
+    ctx.strokeStyle = '#94a3b8'
+    ctx.lineWidth = W * 0.004
+    const inset = qrBox * 0.1
+    const tick = qrBox * 0.07
+    const cx1 = qrX + inset
+    const cx2 = qrX + qrBox - inset
+    const cy1 = qrY + inset
+    const cy2 = qrY + qrBox - inset
+    const ticks: Array<[number, number, number]> = [
+      [cx1, cy1, 1],
+      [cx2, cy1, -1],
+      [cx1, cy2, 1],
+      [cx2, cy2, -1],
+    ]
+    for (const [tx, ty, dirX] of ticks) {
+      const dirY = ty === cy1 ? 1 : -1
+      ctx.beginPath()
+      ctx.moveTo(tx, ty + dirY * tick)
+      ctx.lineTo(tx, ty)
+      ctx.lineTo(tx + dirX * tick, ty)
+      ctx.stroke()
+    }
+  }
+
+  // Subtítulo indicador en escala Slate-600 bajo el QR
+  const legendY = qrY + qrBox + W * 0.065
+  ctx.font = FONT(700, W * 0.032)
+  ctx.fillStyle = '#475569'
+  ctx.fillText('Web Oficial · Sistema Gastronómico', W / 2, legendY)
+
+  // 3. LOGO EN EL PIE: Isotipo Invertido de Fluxo (F azul sobre fondo claro)
+  const logoBoxSize = W * 0.095
+  const logoCenterY = H * 0.915
+  drawFluxoIsotypeInverted(ctx, W / 2, logoCenterY, logoBoxSize)
+}
+
 /** Descarga el canvas actual como PNG. */
 export function downloadCanvasPng(canvas: HTMLCanvasElement, filename: string): void {
   const link = document.createElement('a')
@@ -424,17 +572,22 @@ function drawBackDesign(
   ctx.fillText('contactofluxosystem@gmail.com', W / 2, H * 0.965)
 }
 
+export type StreetKitFace = 'front' | 'back'
+
 /**
  * Lámina del Kit de Calle a 300 DPI.
- * - A5/A6: lámina plana rígida (frente comercial con marco QR).
- * - A4_TENT: caballete plegable (frente + línea de pliegue + dorso ejecutivo).
+ * - A5/A6: lámina plana rígida:
+ *     - face === 'front' (o por defecto): Cara A comercial Black original con marcas de corte.
+ *     - face === 'back': Cara B blanca invertida (#FFFFFF / #0B131E) hacia la web principal (${baseUrl}/).
+ * - A4_TENT: caballete plegable (frente + línea de pliegue + dorso).
  */
 export function drawStreetKit(
   canvas: HTMLCanvasElement,
   format: StreetKitFormat,
   includeQrCode: boolean,
   targetUrl: string,
-  bottomLogoImage?: CanvasImageSource | null
+  bottomLogoImage?: CanvasImageSource | null,
+  face: StreetKitFace = 'front'
 ): void {
   const { w: W, h: H } = STREET_KIT_SIZES[format]
   canvas.width = W
@@ -478,31 +631,96 @@ export function drawStreetKit(
     ctx.fillText('DOBLAR AQUÍ TRAS PLASTIFICAR', W / 2, foldY - W * 0.014)
     ctx.fillText('DOBLAR AQUÍ TRAS PLASTIFICAR', W / 2, foldY + W * 0.034)
 
-    // Mitad inferior: dorso ejecutivo escalado/centrado
+    // Mitad inferior: reverso White invertido o dorso ejecutivo
     ctx.save()
     ctx.beginPath()
     ctx.rect(0, foldY, W, half)
     ctx.clip()
-    const bgBack = ctx.createLinearGradient(0, foldY, 0, H)
-    bgBack.addColorStop(0, '#0b1426')
-    bgBack.addColorStop(1, '#141f38')
-    ctx.fillStyle = bgBack
-    ctx.fillRect(0, foldY, W, half)
     const sBack = Math.min(W / DESIGN_W, half / DESIGN_H)
     ctx.translate((W - DESIGN_W * sBack) / 2, foldY + (half - DESIGN_H * sBack) / 2)
     ctx.scale(sBack, sBack)
-    drawBackDesign(ctx, includeQrCode, targetUrl)
+    paintWhiteFaceBackground(ctx, DESIGN_W, DESIGN_H)
+    const homeUrl = resolveAbsoluteUrl('/')
+    drawWhiteBackDesign(ctx, includeQrCode, homeUrl)
     ctx.restore()
   } else {
-    paintFaceBackground(ctx, W, H)
-    drawCutMarks(ctx, W, H, Math.min(W, H) * 0.04)
-    const s = Math.min(W / DESIGN_W, H / DESIGN_H)
-    ctx.save()
-    ctx.translate((W - DESIGN_W * s) / 2, (H - DESIGN_H * s) / 2)
-    ctx.scale(s, s)
-    drawFrontDesign(ctx, includeQrCode, targetUrl, bottomLogoImage)
-    ctx.restore()
+    // Formatos planos A5 / A6
+    if (face === 'back') {
+      paintWhiteFaceBackground(ctx, W, H)
+      drawCutMarks(ctx, W, H, Math.min(W, H) * 0.04)
+      const s = Math.min(W / DESIGN_W, H / DESIGN_H)
+      ctx.save()
+      ctx.translate((W - DESIGN_W * s) / 2, (H - DESIGN_H * s) / 2)
+      ctx.scale(s, s)
+      const homeUrl = resolveAbsoluteUrl('/')
+      drawWhiteBackDesign(ctx, includeQrCode, homeUrl)
+      ctx.restore()
+    } else {
+      paintFaceBackground(ctx, W, H)
+      drawCutMarks(ctx, W, H, Math.min(W, H) * 0.04)
+      const s = Math.min(W / DESIGN_W, H / DESIGN_H)
+      ctx.save()
+      ctx.translate((W - DESIGN_W * s) / 2, (H - DESIGN_H * s) / 2)
+      ctx.scale(s, s)
+      drawFrontDesign(ctx, includeQrCode, targetUrl, bottomLogoImage)
+      ctx.restore()
+    }
   }
+}
+
+/**
+ * Dibuja en un solo canvas de alta resolución ambas caras (Cara A Black + Cara B White)
+ * dispuestas una al lado de la otra con marcas de corte simétricas,
+ * ideal para imprimir en hoja A4 y recortar/pegar dorso con dorso para plastificar.
+ */
+export function drawStreetKitDual(
+  canvas: HTMLCanvasElement,
+  format: 'A5' | 'A6',
+  includeQrCode: boolean,
+  targetUrl: string,
+  bottomLogoImage?: CanvasImageSource | null
+): void {
+  const single = STREET_KIT_SIZES[format]
+  const gap = Math.round(single.w * 0.04)
+  const W = single.w * 2 + gap
+  const H = single.h
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  // Fondo del pliego general para guillotina
+  ctx.fillStyle = '#0f172a'
+  ctx.fillRect(0, 0, W, H)
+
+  const s = Math.min(single.w / DESIGN_W, single.h / DESIGN_H)
+
+  // 1. CARA A (IZQUIERDA) - FORMATO BLACK ORIGINAL
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(0, 0, single.w, single.h)
+  ctx.clip()
+  paintFaceBackground(ctx, single.w, single.h)
+  drawCutMarks(ctx, single.w, single.h, Math.min(single.w, single.h) * 0.04)
+  ctx.translate((single.w - DESIGN_W * s) / 2, (single.h - DESIGN_H * s) / 2)
+  ctx.scale(s, s)
+  drawFrontDesign(ctx, includeQrCode, targetUrl, bottomLogoImage)
+  ctx.restore()
+
+  // 2. CARA B (DERECHA) - FORMATO WHITE INVERTIDO (Exactamente las mismas dimensiones)
+  const rightX = single.w + gap
+  ctx.save()
+  ctx.translate(rightX, 0)
+  ctx.beginPath()
+  ctx.rect(0, 0, single.w, single.h)
+  ctx.clip()
+  paintWhiteFaceBackground(ctx, single.w, single.h)
+  drawCutMarks(ctx, single.w, single.h, Math.min(single.w, single.h) * 0.04)
+  ctx.translate((single.w - DESIGN_W * s) / 2, (single.h - DESIGN_H * s) / 2)
+  ctx.scale(s, s)
+  const homeUrl = resolveAbsoluteUrl('/')
+  drawWhiteBackDesign(ctx, includeQrCode, homeUrl)
+  ctx.restore()
 }
 
 export interface DigitalLocalCardData {
@@ -598,4 +816,90 @@ export function drawDigitalLocalCard(
   } else {
     drawFluxoIsotypeWhite(ctx, W / 2, logoCenterY, logoBoxSize)
   }
+}
+
+/**
+ * Reverso (Cara B - Formato White) de la tarjeta digital vertical 9:16 (1080x1920)
+ * por clonación estructural exacta e inversión cromática:
+ * - Fondo blanco #FFFFFF con borde de corte border-slate-300
+ * - Titular centrado en #0B131E: "Escanea para" / "conocer Fluxo"
+ * - Contenedor QR blanco con sombra neutra y borde slate-300
+ * - QR apuntando a la web principal de Fluxo (${baseUrl}/)
+ * - Leyenda explicativa en Slate-600
+ * - Isotipo invertido "F." en azul Fluxo #2563EB
+ */
+export function drawDigitalLocalCardBack(
+  canvas: HTMLCanvasElement,
+  data: { targetUrl?: string } = {}
+): void {
+  const W = DIGITAL_CARD_W
+  const H = DIGITAL_CARD_H
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  // 1. Fondo blanco puro con marcas de corte perimetrales
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, W, H)
+
+  drawCutMarks(ctx, W, H, W * 0.05)
+
+  // Borde sutil de corte
+  ctx.strokeStyle = '#cbd5e1'
+  ctx.lineWidth = W * 0.003
+  ctx.strokeRect(0, 0, W, H)
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'alphabetic'
+
+  // 2. Titular centrado en #0B131E (2 líneas)
+  const line1 = 'Escanea para'
+  const line2 = 'conocer Fluxo'
+  const hSize = Math.min(
+    fitFontSize(ctx, line1, 800, W * 0.082, W * 0.86),
+    fitFontSize(ctx, line2, 800, W * 0.082, W * 0.88)
+  )
+  ctx.font = FONT(800, hSize)
+  ctx.fillStyle = '#0b131e'
+
+  const line1Y = H * 0.165
+  const line2Y = line1Y + hSize * 1.25
+  ctx.fillText(line1, W / 2, line1Y)
+  ctx.fillText(line2, W / 2, line2Y)
+
+  // 3. Contenedor central del QR (Mismas proporciones y posición)
+  const qrBox = W * 0.74
+  const qrX = (W - qrBox) / 2
+  const qrY = H * 0.28
+
+  ctx.save()
+  ctx.shadowColor = 'rgba(15, 23, 42, 0.08)'
+  ctx.shadowBlur = W * 0.035
+  ctx.shadowOffsetY = W * 0.018
+  roundRect(ctx, qrX, qrY, qrBox, qrBox, qrBox * 0.08)
+  ctx.fillStyle = '#ffffff'
+  ctx.fill()
+  ctx.restore()
+
+  // Borde de referencia
+  ctx.strokeStyle = '#cbd5e1'
+  ctx.lineWidth = W * 0.003
+  ctx.stroke()
+
+  const homeUrl = data.targetUrl || resolveAbsoluteUrl('/')
+  const pad = qrBox * 0.075
+  const matrix = getQrMatrix(homeUrl)
+  drawQrMatrix(ctx, matrix, qrX + pad, qrY + pad, qrBox - pad * 2)
+
+  // Leyenda descriptiva bajo el QR en slate-600
+  const legendY = qrY + qrBox + W * 0.07
+  ctx.font = FONT(700, W * 0.034)
+  ctx.fillStyle = '#475569'
+  ctx.fillText('Web Oficial · Sistema Gastronómico', W / 2, legendY)
+
+  // 4. Pie: Isotipo Oficial Invertido "F." en azul sobre blanco
+  const logoBoxSize = W * 0.11
+  const logoCenterY = H * 0.885
+  drawFluxoIsotypeInverted(ctx, W / 2, logoCenterY, logoBoxSize)
 }

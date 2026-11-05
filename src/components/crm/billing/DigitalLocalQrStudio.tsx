@@ -14,6 +14,7 @@ import {
   DIGITAL_CARD_H,
   DIGITAL_CARD_W,
   drawDigitalLocalCard,
+  drawDigitalLocalCardBack,
   downloadCanvasPng,
   resolveAbsoluteUrl,
 } from '@/lib/billing/print-canvas-renderer'
@@ -90,6 +91,7 @@ function PitchFullscreen({
 export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
   const [selectedId, setSelectedId] = useState<string>(locales[0]?.id ?? '')
   const [pitchOpen, setPitchOpen] = useState(false)
+  const [cardFace, setCardFace] = useState<'front' | 'back'>('front')
   const cardCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const [cardUrl, setCardUrl] = useState('')
 
@@ -127,22 +129,28 @@ export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
   useEffect(() => {
     const canvas = cardCanvasRef.current
     if (!canvas || !selected) return
-    const targetUrl = cardUrl || getTargetUrlForLocal(selected)
-    drawDigitalLocalCard(canvas, {
-      localName: selected.nombre,
-      slug: selected.slug,
-      tagline: 'Prototipo Oficial · Carta Interactiva',
-      targetUrl,
-      bottomLogoImage: bottomLogo,
-    })
-  }, [selected, cardUrl, bottomLogo, getTargetUrlForLocal])
+    if (cardFace === 'back') {
+      const homeUrl = resolveAbsoluteUrl('/')
+      drawDigitalLocalCardBack(canvas, { targetUrl: homeUrl })
+    } else {
+      const targetUrl = cardUrl || getTargetUrlForLocal(selected)
+      drawDigitalLocalCard(canvas, {
+        localName: selected.nombre,
+        slug: selected.slug,
+        tagline: 'Prototipo Oficial · Carta Interactiva',
+        targetUrl,
+        bottomLogoImage: bottomLogo,
+      })
+    }
+  }, [selected, cardUrl, cardFace, bottomLogo, getTargetUrlForLocal])
 
   const handleDownloadCard = useCallback(() => {
     const canvas = cardCanvasRef.current
     if (!canvas || !selected) return
     const safe = selected.slug.replace(/[^a-z0-9-]/g, '')
-    downloadCanvasPng(canvas, `tarjeta_digital_916_${safe}.png`)
-  }, [selected])
+    const suffix = cardFace === 'back' ? 'cara_b_white' : 'cara_a_black'
+    downloadCanvasPng(canvas, `tarjeta_digital_916_${safe}_${suffix}.png`)
+  }, [selected, cardFace])
 
   if (!selected) return null
 
@@ -221,6 +229,35 @@ export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
               Enviar por WhatsApp
             </a>
           </div>
+        </div>
+      </div>
+
+      {/* Selector de Cara de la Tarjeta Digital */}
+      <div className="flex items-center justify-between p-2 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
+        <span className="text-xs font-bold text-slate-300 pl-2">Cara a previsualizar / descargar:</span>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setCardFace('front')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              cardFace === 'front'
+                ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/30'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Cara A (Carta Black)
+          </button>
+          <button
+            type="button"
+            onClick={() => setCardFace('back')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              cardFace === 'back'
+                ? 'bg-white text-slate-950 border border-slate-300'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Cara B (Web Fluxo White)
+          </button>
         </div>
       </div>
 

@@ -4,8 +4,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Download, QrCode, ImageIcon, Eye, Store, Sparkles } from 'lucide-react'
 import {
   StreetKitFormat,
+  StreetKitFace,
   STREET_KIT_SIZES,
   drawStreetKit,
+  drawStreetKitDual,
   downloadCanvasPng,
   resolveAbsoluteUrl,
 } from '@/lib/billing/print-canvas-renderer'
@@ -32,6 +34,7 @@ const FORMATS: Array<{ id: StreetKitFormat; label: string; hint: string; badge: 
 export function StreetKitPhysicalGenerator() {
   const [modelPreset, setModelPreset] = useState<KitModelPreset>('fluxo')
   const [format, setFormat] = useState<StreetKitFormat>('A5')
+  const [activeFace, setActiveFace] = useState<'front' | 'back' | 'dual'>('dual')
   const [includeQrCode, setIncludeQrCode] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [casamarImg, setCasamarImg] = useState<HTMLImageElement | null>(null)
@@ -52,19 +55,27 @@ export function StreetKitPhysicalGenerator() {
     const canvas = canvasRef.current
     if (!canvas) return
     const bottomLogo = modelPreset === 'casamar' ? casamarImg : null
-    drawStreetKit(canvas, format, includeQrCode, targetUrl, bottomLogo)
-  }, [format, includeQrCode, targetUrl, modelPreset, casamarImg])
+
+    if (format === 'A4_TENT') {
+      drawStreetKit(canvas, format, includeQrCode, targetUrl, bottomLogo)
+    } else if (activeFace === 'dual') {
+      drawStreetKitDual(canvas, format, includeQrCode, targetUrl, bottomLogo)
+    } else {
+      drawStreetKit(canvas, format, includeQrCode, targetUrl, bottomLogo, activeFace)
+    }
+  }, [format, activeFace, includeQrCode, targetUrl, modelPreset, casamarImg])
 
   const handleDownload = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const suffix = format === 'A4_TENT' ? 'caballete_a4' : format.toLowerCase().replace('tent', '')
     const prefix = modelPreset === 'casamar' ? 'casamar_da_vila' : 'fluxo'
+    const faceSuffix = format === 'A4_TENT' ? '' : `_${activeFace}`
     downloadCanvasPng(
       canvas,
-      `${prefix}_kit_calle_${suffix}_${includeQrCode ? 'con_qr' : 'marco_vacio'}.png`
+      `${prefix}_kit_calle_${suffix}${faceSuffix}_${includeQrCode ? 'con_qr' : 'marco_vacio'}.png`
     )
-  }, [format, includeQrCode, modelPreset])
+  }, [format, activeFace, includeQrCode, modelPreset])
 
   const dims = STREET_KIT_SIZES[format]
 
@@ -150,6 +161,45 @@ export function StreetKitPhysicalGenerator() {
         ))}
       </div>
 
+      {/* Selector de Caras para Láminas Plastificables (A5 / A6) */}
+      {format !== 'A4_TENT' && (
+        <div className="p-1.5 rounded-2xl bg-white/[0.05] border border-white/10 grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveFace('dual')}
+            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              activeFace === 'dual'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>Doble Cara (A + B)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveFace('front')}
+            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              activeFace === 'front'
+                ? 'bg-slate-800 text-cyan-300 border border-cyan-500/30 shadow-md'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>Cara A (Black)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveFace('back')}
+            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              activeFace === 'back'
+                ? 'bg-white text-slate-950 font-black shadow-md border border-slate-300'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>Cara B (White)</span>
+          </button>
+        </div>
+      )}
+
       {/* Interruptor QR + info de destino */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08]">
         <div className="flex items-start gap-3">
@@ -210,7 +260,7 @@ export function StreetKitPhysicalGenerator() {
         className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white text-xs font-bold apple-smooth flex items-center justify-center gap-2 active:scale-[0.99] shadow-lg shadow-cyan-600/20"
       >
         <Download className="w-4 h-4" />
-        Descargar PNG a máxima resolución ({dims.w}×{dims.h}) · {modelPreset === 'casamar' ? 'Casa Mar da Vila' : 'Fluxo'}
+        Descargar PNG ({format === 'A4_TENT' ? `${dims.w}×${dims.h}` : activeFace === 'dual' ? `${dims.w * 2}×${dims.h} (Doble Cara A+B)` : `${dims.w}×${dims.h} (${activeFace === 'front' ? 'Cara A Black' : 'Cara B White'})`}) · {modelPreset === 'casamar' ? 'Casa Mar da Vila' : 'Fluxo'}
       </button>
     </div>
   )
