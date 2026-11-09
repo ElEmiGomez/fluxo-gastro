@@ -130,15 +130,16 @@ export function drawFluxoIsotypeInverted(
 function paintWhiteFaceBackground(
   ctx: CanvasRenderingContext2D,
   W: number,
-  H: number
+  H: number,
+  offsetY: number = 0
 ): void {
   ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, W, H)
+  ctx.fillRect(0, offsetY, W, H)
 
   // Borde sutil perimetral de corte para guillotina
   ctx.strokeStyle = '#cbd5e1'
   ctx.lineWidth = Math.max(2, Math.min(W, H) * 0.002)
-  ctx.strokeRect(0, 0, W, H)
+  ctx.strokeRect(0, offsetY, W, H)
 }
 
 /**
@@ -631,15 +632,15 @@ export function drawStreetKit(
     ctx.fillText('DOBLAR AQUÍ TRAS PLASTIFICAR', W / 2, foldY - W * 0.014)
     ctx.fillText('DOBLAR AQUÍ TRAS PLASTIFICAR', W / 2, foldY + W * 0.034)
 
-    // Mitad inferior: reverso White invertido o dorso ejecutivo
+    // Mitad inferior: reverso White invertido
     ctx.save()
     ctx.beginPath()
     ctx.rect(0, foldY, W, half)
     ctx.clip()
+    paintWhiteFaceBackground(ctx, W, half, foldY)
     const sBack = Math.min(W / DESIGN_W, half / DESIGN_H)
     ctx.translate((W - DESIGN_W * sBack) / 2, foldY + (half - DESIGN_H * sBack) / 2)
     ctx.scale(sBack, sBack)
-    paintWhiteFaceBackground(ctx, DESIGN_W, DESIGN_H)
     const homeUrl = resolveAbsoluteUrl('/')
     drawWhiteBackDesign(ctx, includeQrCode, homeUrl)
     ctx.restore()

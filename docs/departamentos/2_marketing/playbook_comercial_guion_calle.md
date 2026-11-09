@@ -70,6 +70,8 @@
 3. **El Cierre sin Presión:**  
    > «No quiero que decidas nada hoy. Míralo hoy en el WhatsApp con tu equipo y el miércoles paso dos minutos a que me digas qué os pareció. Si os encaja y aún queda libre una de las 5 plazas, os la reservo.»  
    *(Si pide activarlo ya, abres `/activar/[slug]` y se registra en el momento).*
+4. **El Gancho Físico (Cartelería Resuelta):**
+   > «Y de la cartelería no te preocupes: si decidís probarlo, yo mismo te acerco las pegatinas o peanas plastificadas con vuestro logo listas para las mesas.»
 
 ---
 
@@ -79,7 +81,7 @@
 > «A la gente mayor se le sigue dando la carta de papel de siempre. Pero del 70% de familias y jóvenes que sí usan móvil, con que pidan 3 postres o cafés más a la semana sugeridos por el carrito, la herramienta ya te sale gratis y te ahorra reimprimir papel cada vez que cambia la lonja.»
 
 ### 02. TPV ACTUAL: No quiero cambiarlo
-> «Tu TPV de barra no se toca; esto no sustituye tu caja, cubre lo que el TPV no hace fuera de la barra: una carta ultrarrápida con los alérgenos de Sanidad, pedidos ágiles en terraza y reservas a tu WhatsApp sin comisiones.»
+> «Tu TPV de barra no se toca; esto no sustituye tu caja. Fluxo es una herramienta de servicio de sala, no fiscal: no toca tu contabilidad, ni Hacienda ni tu caja registradora. Cubre lo que el TPV no hace fuera de la barra: una carta ultrarrápida con los alérgenos de Sanidad, pedidos ágiles en terraza y reservas a tu WhatsApp sin comisiones.»
 
 ### 03. INVIERNO: Vuelve en verano
 > «En verano vas tan desbordado que es imposible implantar nada. Si reservas ahora una de las 5 plazas de fundador, bloqueas los 50 €/mes para todo agosto en vez de los 99 € de tarifa general, y si cierras algún mes de invierno pagas solo 9 € de mantenimiento.»
