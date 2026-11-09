@@ -1,16 +1,28 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Cookie, ShieldCheck, ChevronRight } from 'lucide-react'
 import { LegalModal } from './LegalModal'
 
 const COOKIE_CONSENT_KEY = 'gastro_cookie_consent_v1'
 
 export function CookieConsentBanner() {
+  const pathname = usePathname()
   const [showBanner, setShowBanner] = useState(false)
   const [showLegalModal, setShowLegalModal] = useState(false)
 
+  // No mostrar banner de cookies en cartas digitales de clientes ni comanderos de sala
+  const isMenuOrStaffRoute =
+    pathname?.startsWith('/p/') ||
+    pathname?.startsWith('/carta') ||
+    pathname?.startsWith('/jaratusas') ||
+    pathname?.startsWith('/casamar') ||
+    pathname?.startsWith('/staff/')
+
   useEffect(() => {
+    if (isMenuOrStaffRoute) return
+
     try {
       const consent = localStorage.getItem(COOKIE_CONSENT_KEY)
       if (!consent) {
@@ -21,7 +33,7 @@ export function CookieConsentBanner() {
     } catch {
       // ignore
     }
-  }, [])
+  }, [isMenuOrStaffRoute])
 
   const handleAccept = () => {
     try {
@@ -32,7 +44,7 @@ export function CookieConsentBanner() {
     setShowBanner(false)
   }
 
-  if (!showBanner && !showLegalModal) return null
+  if (isMenuOrStaffRoute || (!showBanner && !showLegalModal)) return null
 
   return (
     <>

@@ -46,7 +46,7 @@
 <body class="min-h-screen bg-slate-50/70 pb-36 relative selection:bg-blue-600 selection:text-white">
 
   <!-- TOAST REACTIVO AL AÑADIR AL PEDIDO -->
-  <div id="order-toast" class="hidden fixed top-20 inset-x-4 max-w-md mx-auto z-50 transition-all duration-200">
+  <div id="order-toast" class="hidden fixed top-16 inset-x-4 max-w-md mx-auto z-50 transition-all duration-200">
     <div class="bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700/80 flex items-center justify-between gap-3">
       <div class="flex items-center gap-2.5 min-w-0">
         <span class="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center text-xs font-black flex-shrink-0">✓</span>
@@ -58,25 +58,25 @@
     </div>
   </div>
 
-  <!-- 1. CABECERA STICKY (Paridad 100% con Prototipo General y Casa Mar da Vila) -->
-  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-4 py-2.5 sm:py-3 transition-all shadow-xs">
+  <!-- 1. CABECERA STICKY (Paridad 100% con Casa Mar da Vila y Prototipo General) -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-4 py-2.5 sm:py-3 transition-all">
     <div class="max-w-xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2">
-      <!-- Identidad del Restaurante + Badge de Mesa Persistente (Requerimiento A) -->
+      <!-- Identidad de Bar Jara-Tusas + Badge de Mesa -->
       <div class="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
-        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl shadow-xs flex items-center justify-center flex-shrink-0 overflow-hidden bg-white ring-1 ring-slate-200 p-0.5">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full shadow-xs flex items-center justify-center flex-shrink-0 overflow-hidden bg-white ring-1 ring-slate-200 p-0.5">
           <img src="/images/jaratusas-logo.png" alt="Bar Jara-Tusas" class="w-full h-full object-contain">
         </div>
         <div class="min-w-0 flex items-center gap-2">
-          <span id="header-table-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 w-fit flex-shrink-0 whitespace-nowrap shadow-2xs">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 w-fit flex-shrink-0 whitespace-nowrap shadow-2xs">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             <span id="ui-table-badge">📍 MESA 12 · TERRAZA</span>
           </span>
         </div>
       </div>
 
-      <!-- Acciones Rápidas: Selector Idioma + Premios + Ayuda -->
+      <!-- Acciones de Cabecera: Selector Idioma + WiFi + Camarero -->
       <div class="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
-        <!-- Selector de Idioma con Desplegable -->
+        <!-- Selector de Idioma -->
         <div class="relative">
           <button
             type="button"
@@ -97,188 +97,245 @@
             </button>
             <button type="button" onclick="setLanguage('gl')" class="w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer">
               <span class="font-bold text-slate-800">Galego</span>
-              <span id="lang-dot-gl" class="w-1.5 h-1.5 rounded-full bg-blue-600 hidden"></span>
+              <span id="lang-dot-gl" class="hidden w-1.5 h-1.5 rounded-full bg-blue-600"></span>
             </button>
             <button type="button" onclick="setLanguage('en')" class="w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer">
               <span class="font-bold text-slate-800">English</span>
-              <span id="lang-dot-en" class="w-1.5 h-1.5 rounded-full bg-blue-600 hidden"></span>
+              <span id="lang-dot-en" class="hidden w-1.5 h-1.5 rounded-full bg-blue-600"></span>
             </button>
           </div>
         </div>
 
-        <!-- Botón WiFi de Cortesía -->
+        <!-- WiFi Cortesía -->
         <button
           type="button"
           onclick="openWifiModal()"
-          class="flex items-center gap-1 px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-bold text-xs transition-all active:scale-95 border border-slate-200/80 cursor-pointer"
-          title="WiFi de cortesía"
+          aria-label="Ver clave WiFi"
+          title="WiFi de clientes"
+          class="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-bold text-xs transition-all active:scale-95 border border-slate-200/80 cursor-pointer"
         >
-          <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>
-          <span class="text-[11px] font-black hidden sm:inline">WiFi</span>
+          <span class="text-xs">📶</span>
+          <span class="hidden sm:inline">WiFi</span>
+        </button>
+
+        <!-- Botón Llamar al Mozo / Aviso Barra -->
+        <button
+          type="button"
+          onclick="openCartDrawer()"
+          aria-label="Ver comanda para camarero"
+          class="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl font-bold text-[11px] sm:text-xs transition-all shadow-xs bg-white text-slate-800 border border-slate-200/90 hover:bg-slate-50 active:scale-95 whitespace-nowrap cursor-pointer"
+        >
+          <svg class="w-3.5 h-3.5 text-blue-900 animate-pulse flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span id="ui-btn-waiter">Camarero</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- BANNER COBRO RÁPIDO EN BARRA (Requerimiento A) -->
-  <div id="fast-pay-banner" data-testid="terrace-order-banner" class="bg-gradient-to-r from-blue-50/90 via-amber-50/90 to-blue-50/90 border-b border-amber-200/70 px-4 py-2 text-center text-xs font-medium text-slate-700 flex items-center justify-center gap-2">
-    <span>💡</span>
-    <span>Para pagar rápido en barra indica tu mesa: <strong id="fast-pay-mesa-text" class="text-blue-700 font-black bg-white px-2 py-0.5 rounded-md border border-blue-200">MESA 12</strong></span>
-  </div>
+  <!-- 2. CONTENEDOR PRINCIPAL (Mobile-First, idéntico a Casa Mar da Vila) -->
+  <main class="max-w-xl mx-auto px-4 pt-3 space-y-4">
 
-  <main class="max-w-xl mx-auto px-3 sm:px-4 pt-3.5 sm:pt-4 space-y-4">
-
-    <!-- HERO CARD DEL LOCAL: BAR JARA-TUSAS (Exacto a Casa Mar da Vila y Prototipo) -->
-    <div class="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-xs relative overflow-hidden">
-      <div class="flex items-start justify-between gap-3">
-        <div class="space-y-1.5 min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase bg-amber-500/15 text-amber-800 border border-amber-300">
-              Café & Coctelería Histórica
-            </span>
-            <span class="text-[11px] text-slate-400 font-bold">· Noia</span>
-          </div>
-          <h1 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
-            Bar Jara-Tusas
-          </h1>
-          <p class="text-xs text-slate-500 leading-relaxed font-medium">
-            Rúa do Curro, 8 · Noia (A Coruña)<br>
-            <span class="text-slate-400">Cafetería · Cervezas · Vermús de Galicia · Tapas Caseras · Cócteles</span>
-          </p>
+    <!-- 2A. BANNER DE COBRO RÁPIDO EN BARRA & TERRAZA -->
+    <div id="fast-pay-banner" class="mb-2">
+      <div class="w-full flex items-center justify-between px-3.5 py-2 rounded-xl bg-blue-50/80 border border-blue-200/70 text-blue-900 transition-all text-left">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-sm">💡</span>
+          <span class="text-xs font-extrabold tracking-tight truncate">
+            Para pagar rápido en barra indica tu mesa: <strong id="fast-pay-mesa-text" class="text-blue-700 font-black bg-white px-2 py-0.5 rounded-md border border-blue-200">MESA 12</strong>
+          </span>
         </div>
-
-        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-50 border border-slate-200/80 p-1 flex-shrink-0 flex items-center justify-center shadow-xs">
-          <img src="/images/jaratusas-logo.png" alt="Logo Bar Jara-Tusas" class="w-full h-full object-contain">
-        </div>
-      </div>
-
-      <!-- Reseñas y Puntuación en Google Maps -->
-      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-        <div class="flex items-center gap-1.5">
-          <div class="flex text-amber-400 text-xs">★★★★★</div>
-          <span class="font-extrabold text-slate-800">4.6</span>
-          <span class="text-slate-400 text-[11px]">(184 reseñas en Google)</span>
-        </div>
-        <div class="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-          <span>●</span>
-          <span>Abierto hoy</span>
-        </div>
+        <span class="text-[11px] font-bold text-blue-700 ml-2 bg-white px-2 py-0.5 rounded-md border border-blue-200/60 shadow-2xs whitespace-nowrap">
+          Terraza
+        </span>
       </div>
     </div>
 
-    <!-- BUSCADOR REACTIVO Y FILTROS DIETÉTICOS -->
-    <div class="sticky top-[53px] sm:top-[57px] z-20 bg-slate-50/95 backdrop-blur-md pt-1 pb-2 space-y-2">
-      <!-- Barra de Búsqueda -->
-      <div class="relative">
-        <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input
-          type="text"
-          id="search-input"
-          oninput="handleSearch(this.value)"
-          placeholder="Buscar en la carta (ej. 1906, albariño, croquetas...)"
-          class="w-full pl-9 pr-8 py-2.5 rounded-2xl bg-white border border-slate-200/90 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-2xs font-medium"
+    <!-- 2B. BARRA DE FILTROS DIETÉTICOS (Paridad 100% con Casa Mar da Vila) -->
+    <div class="sticky top-[57px] z-20 bg-slate-50/95 backdrop-blur-md py-2 -mx-4 px-4 border-b border-slate-200/60">
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 flex-shrink-0">
+          FILTROS:
+        </span>
+        <button
+          type="button"
+          id="filter-btn-gluten_free"
+          onclick="toggleDietaryFilter('gluten_free')"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
         >
-        <button
-          id="clear-search-btn"
-          type="button"
-          onclick="clearSearch()"
-          class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center text-xs"
-        >✕</button>
-      </div>
-
-      <!-- Filtros Dietéticos y Disponibilidad -->
-      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-[11px]">
+          <span>🌾</span>
+          <span>Sin Gluten</span>
+        </button>
         <button
           type="button"
-          onclick="setDietaryFilter('all')"
-          id="filter-all"
-          class="px-3 py-1 rounded-full font-bold bg-blue-600 text-white shadow-2xs whitespace-nowrap transition cursor-pointer"
-        >Todos</button>
+          id="filter-btn-veggie"
+          onclick="toggleDietaryFilter('veggie')"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
+        >
+          <span>🌱</span>
+          <span>Veggie</span>
+        </button>
         <button
           type="button"
-          onclick="setDietaryFilter('gluten_free')"
-          id="filter-gluten_free"
-          class="px-3 py-1 rounded-full font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer"
-        >🌾 Sin Gluten</button>
-        <button
-          type="button"
-          onclick="setDietaryFilter('veggie')"
-          id="filter-veggie"
-          class="px-3 py-1 rounded-full font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer"
-        >🌱 Veggie</button>
-        <button
-          type="button"
+          id="filter-btn-available"
           onclick="toggleSoldOutFilter()"
-          id="filter-soldout"
-          class="px-3 py-1 rounded-full font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer flex items-center gap-1"
-        ><span>🟢</span><span>Solo Disponibles</span></button>
-      </div>
-    </div>
-
-    <!-- SELECTOR DESLIZABLE DE CATEGORÍAS (Idéntico a Prototipo General) -->
-    <div class="relative">
-      <div id="category-scroll-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-        <button type="button" onclick="selectCategory('all')" id="cat-btn-all" class="px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-blue-600 text-white shadow-2xs transition">
-          ✨ Toda la Carta
-        </button>
-        <button type="button" onclick="selectCategory('cervezas')" id="cat-btn-cervezas" class="px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">
-          🍺 Cervezas
-        </button>
-        <button type="button" onclick="selectCategory('vinos')" id="cat-btn-vinos" class="px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">
-          🍷 Vinos Gallegos
-        </button>
-        <button type="button" onclick="selectCategory('vermus')" id="cat-btn-vermus" class="px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">
-          🌿 Vermús & Aperitivos
-        </button>
-        <button type="button" onclick="selectCategory('tapas')" id="cat-btn-tapas" class="px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">
-          🧆 Tapas & Raciones
-        </button>
-        <button type="button" onclick="selectCategory('cocteles')" id="cat-btn-cocteles" class="px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">
-          🍸 Copas & Chupitos
-        </button>
-        <button type="button" onclick="selectCategory('cafes')" id="cat-btn-cafes" class="px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition">
-          ☕ Cafetería
+          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
+        >
+          <span>🟢</span>
+          <span>Disponibles</span>
         </button>
       </div>
     </div>
 
-    <!-- GRID DE PRODUCTOS (2 Columnas con Foto 4:3, Variantes y Estilo Exacto) -->
-    <div id="catalog-grid" class="grid grid-cols-2 gap-3 sm:gap-4 pt-1">
-      <!-- Se inyecta reactivamente por JavaScript -->
+    <!-- 3. GRILLA DE PRODUCTOS EN 2 COLUMNAS (Paridad 100% con Casa Mar da Vila) -->
+    <div id="catalog-grid" class="grid grid-cols-2 gap-3 pt-1">
+      <!-- Renderizado reactivamente por JavaScript -->
     </div>
+
+    <!-- 4. PIE DE PÁGINA LEGAL UE 1169/2011 -->
+    <footer class="mt-10 pt-6 pb-8 border-t border-slate-200/80 text-center px-4 space-y-2">
+      <p class="text-[11px] font-semibold text-slate-600">
+        📋 Información sobre Alérgenos (Reglamento UE 1169/2011) disponible en cada consumición.
+      </p>
+      <p class="text-[11px] text-slate-400 max-w-md mx-auto leading-relaxed">
+        Precios con IVA incluido. Bar Jara-Tusas · Rúa do Curro, 8 · Noia.
+      </p>
+      <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-1">
+        Powered by Fluxo Gastronomic System
+      </p>
+    </footer>
 
   </main>
 
-  <!-- BARRA INFERIOR FLOTANTE DE COMANDA ("Ver Pedido") -->
+  <!-- 5. BARRA INFERIOR DE CATEGORÍAS CON FLECHAS Y DESPLAZAMIENTO REACTIVO (Paridad 100% con Casa Mar da Vila) -->
   <div
-    id="floating-cart-bar"
-    class="hidden fixed bottom-4 inset-x-3 sm:inset-x-4 max-w-xl mx-auto z-40 transition-all duration-300"
+    id="bottom-category-bar"
+    aria-label="Categorías de la carta"
+    class="fixed inset-x-3 sm:inset-x-4 max-w-xl mx-auto z-30 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] bottom-3 sm:bottom-4"
   >
-    <button
-      type="button"
-      onclick="openCartDrawer()"
-      class="w-full bg-slate-900/95 hover:bg-slate-900 text-white rounded-2xl p-3 sm:p-3.5 shadow-2xl border border-slate-700/80 backdrop-blur-md flex items-center justify-between gap-3 active:scale-[0.99] transition cursor-pointer"
-    >
-      <div class="flex items-center gap-2.5">
-        <span class="w-8 h-8 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
-          📋
-        </span>
-        <div class="text-left">
-          <p class="text-xs font-black" id="floating-cart-count">0 ítems · Mesa 12</p>
-          <p class="text-[10px] text-slate-400">Modo Enseñar al Camarero / Pedir</p>
+    <div class="relative bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.12)] p-1.5 flex items-center gap-1">
+      <!-- Flecha Izquierda -->
+      <button
+        type="button"
+        id="cat-scroll-left"
+        onclick="scrollCategories('left')"
+        aria-label="Desplazar categorías a la izquierda"
+        class="w-7 h-8 rounded-xl bg-slate-100/90 hover:bg-slate-200 text-slate-700 flex items-center justify-center flex-shrink-0 transition-all active:scale-90 border border-slate-200/80 shadow-2xs cursor-pointer"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+      </button>
+
+      <!-- Carrusel de Categorías -->
+      <div
+        id="category-scroll-container"
+        onscroll="updateCatScrollButtons()"
+        class="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-0.5 px-1 scroll-smooth flex-1 cat-fade-mask"
+      >
+        <button
+          type="button"
+          onclick="selectCategory('all')"
+          data-cat="all"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-blue-600 text-white font-black shadow-xs ring-1 ring-blue-500 scale-[1.02]"
+        >
+          🍴 Toda la Carta
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('cervezas')"
+          data-cat="cervezas"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          🍺 Cervezas
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('vinos')"
+          data-cat="vinos"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          🍷 Vinos Gallegos
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('vermus')"
+          data-cat="vermus"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          🌿 Vermús
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('tapas')"
+          data-cat="tapas"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          🧆 Tapas & Raciones
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('cocteles')"
+          data-cat="cocteles"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          🍸 Copas & Chupitos
+        </button>
+
+        <button
+          type="button"
+          onclick="selectCategory('cafes')"
+          data-cat="cafes"
+          class="cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80"
+        >
+          ☕ Cafetería
+        </button>
+      </div>
+
+      <!-- Flecha Derecha -->
+      <button
+        type="button"
+        id="cat-scroll-right"
+        onclick="scrollCategories('right')"
+        aria-label="Desplazar categorías a la derecha"
+        class="w-7 h-8 rounded-xl bg-slate-100/90 hover:bg-slate-200 text-slate-700 flex items-center justify-center flex-shrink-0 transition-all active:scale-90 border border-slate-200/80 shadow-2xs cursor-pointer"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 6. BARRA FLOTANTE DE COMANDA ("Modo Enseñar al Camarero / Pedir") -->
+  <div id="floating-cart-bar" class="hidden fixed bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 max-w-xl mx-auto z-40">
+    <div class="bg-slate-900/95 backdrop-blur-md text-white p-3 sm:p-3.5 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.35)] flex items-center justify-between border border-slate-800">
+      <div class="flex items-center space-x-3 pl-1">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-black text-xs shadow-inner">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 10a4 4 0 0 1-8 0"/></svg>
+        </div>
+        <div>
+          <p id="floating-cart-count" class="text-[11px] font-semibold text-slate-300">
+            0 ítems · Mesa 12
+          </p>
+          <p id="floating-cart-total" class="text-sm sm:text-base font-black text-amber-300 tabular-nums">
+            0,00 €
+          </p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <span class="text-sm font-black text-amber-400 tabular-nums" id="floating-cart-total">0,00 €</span>
-        <span class="text-xs bg-white text-slate-900 font-extrabold px-3 py-1.5 rounded-xl shadow-xs">
-          Ver Comanda →
-        </span>
-      </div>
-    </button>
+      <button
+        type="button"
+        onclick="openCartDrawer()"
+        class="bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl flex items-center space-x-1.5 transition-all active:scale-95 shadow-xs cursor-pointer"
+      >
+        <span>Ver comanda</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
   </div>
 
-  <!-- MODAL DE FICHA TÉCNICA Y PERSONALIZACIÓN DE PLATO -->
+  <!-- MODAL DE PERSONALIZACIÓN Y SELECCIÓN DE VARIANTE (Paridad con ProductModifierModal.tsx) -->
   <div id="product-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white border border-slate-200 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 overflow-y-auto max-h-[90vh] animate-in slide-in-from-bottom duration-200 shadow-2xl">
       <div class="flex items-start justify-between gap-3">
@@ -315,9 +372,10 @@
         <button
           id="modal-add-btn"
           type="button"
-          onclick="addCurrentModalToCart()"
-          class="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-sm transition active:scale-95 cursor-pointer"
+          onclick="addFromModal()"
+          class="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
         >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/></svg>
           <span>Añadir a la comanda</span>
         </button>
       </div>
@@ -394,7 +452,7 @@
         📶
       </div>
       <h3 class="text-base font-black text-slate-900">WiFi de Bar Jara-Tusas</h3>
-      <p class="text-xs text-slate-500">Conexión de alta velocidad de cortesía para clientes en barra y terraza.</p>
+      <p class="text-xs text-slate-500">Conexión de cortesía para clientes en barra y terraza.</p>
       <div class="bg-slate-100 p-3 rounded-xl border border-slate-200 font-mono text-xs text-slate-800 font-bold select-all">
         Red: <span class="text-blue-700">JaraTusas_Clientes</span><br>
         Clave: <span class="text-blue-700">noia2026</span>
@@ -402,11 +460,6 @@
       <button onclick="closeWifiModal()" class="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold mt-2">Cerrar</button>
     </div>
   </div>
-
-  <footer class="text-center text-[11px] text-slate-400 py-8 border-t border-slate-200/60 mt-12 space-y-1">
-    <p class="font-bold text-slate-600">Bar Jara-Tusas · Rúa do Curro, 8 · Noia</p>
-    <p>Carta digital interactiva · Fluxo Gastronomic System</p>
-  </footer>
 
   <script>
     // CATÁLOGO OFICIAL DE BAR JARA-TUSAS CON FOTOGRAFÍAS REALES Y VARIANTES CON PRECIOS
@@ -515,84 +568,99 @@
         variants: [
           { name: 'St. Petroni Vermú Rojo', price: 3.00 },
           { name: 'St. Petroni Blanco', price: 3.00 },
-          { name: 'Nordesía Vermú Tinto', price: 3.20 },
-          { name: 'Lodeiros Rojo', price: 2.80 }
+          { name: 'Nordesía Rías Baixas', price: 3.50 }
+        ]
+      },
+      {
+        id: 'vermu-preparado',
+        name: 'Vermú Preparado de la Casa',
+        categories: ['vermus'],
+        price: 3.50,
+        image_url: '/images/cocktails/mojito.jpg',
+        description: 'Receta propia de la casa con ginebra gallega, bíter artesanal y piel de naranja macerada.',
+        allergens: ['sulfites'],
+        dietary: ['gluten_free', 'veggie'],
+        isAvailable: true,
+        selectedVariantIndex: 0,
+        variants: [
+          { name: 'Preparado Clásico', price: 3.50 },
+          { name: 'Preparado Doble', price: 4.80 }
         ]
       },
 
-      // ── TAPAS Y RACIONES DE LA CASA ──
+      // ── TAPAS & RACIONES ──
       {
         id: 'tapa-croquetas',
-        name: 'Croquetas Caseras Cremosas',
+        name: 'Croquetas Artesanas de Jamón Ibérico',
         categories: ['tapas'],
-        price: 7.50,
+        price: 5.50,
         image_url: '/images/dishes/croquetas.jpg',
-        description: 'Hechas a mano cada día, rebozado súper crujiente y bechamel muy suave.',
+        description: 'Bechamel suave y cremosa con abundante jamón ibérico de bellota y rebozado crujiente.',
         allergens: ['gluten', 'dairy', 'eggs'],
         dietary: [],
         isAvailable: true,
         selectedVariantIndex: 0,
         variants: [
-          { name: 'Jamón Ibérico (6 uds)', price: 7.50 },
-          { name: 'Boletus & Trufa (6 uds)', price: 8.00 },
-          { name: 'Marisco da Ría (6 uds)', price: 8.50 }
+          { name: 'Tapa (4 uds)', price: 5.50 },
+          { name: 'Media Ración (6 uds)', price: 7.50 },
+          { name: 'Ración Completa (10 uds)', price: 11.00 }
         ]
       },
       {
-        id: 'tapa-alioli',
-        name: 'Patatas con Alioli Casero / Bravas',
+        id: 'tapa-patacas',
+        name: 'Patatas Bravas & Alioli Casero',
         categories: ['tapas'],
-        price: 5.50,
+        price: 4.50,
         image_url: '/images/dishes/patacas-3-salsas.jpg',
-        description: 'Patata gallega recién frita, crujiente por fuera y tierna con salsa casera.',
+        description: 'Patata agria gallega frita en dados crujientes con dos salsas tradicionales hechas a diario.',
         allergens: ['eggs'],
         dietary: ['gluten_free', 'veggie'],
         isAvailable: true,
         selectedVariantIndex: 0,
         variants: [
-          { name: 'Alioli Suave Casero', price: 5.50 },
-          { name: 'Bravas Picantes', price: 5.50 },
-          { name: 'Mixtas (Doble salsa)', price: 6.00 }
+          { name: 'Tapa', price: 4.50 },
+          { name: 'Ración', price: 7.50 }
         ]
       },
       {
         id: 'tapa-empanada',
-        name: 'Empanada Gallega Artesanal del Día',
+        name: 'Empanada Gallega del Día',
         categories: ['tapas'],
-        price: 4.50,
+        price: 4.00,
         image_url: '/images/dishes/empanada-venezolana.jpg',
-        description: 'Masa fina tradicional con sofrito casero de cebolla dulce y pimientos.',
+        description: 'Masa fina y dorada horneada cada mañana por artesanos locales.',
         allergens: ['gluten', 'fish'],
         dietary: [],
         isAvailable: true,
         selectedVariantIndex: 0,
         variants: [
-          { name: 'Atún con Pimientos', price: 4.50 },
-          { name: 'Carne de Ternera', price: 4.50 },
-          { name: 'Bacalao con Pasas', price: 5.00 }
+          { name: 'Porción Atún', price: 4.00 },
+          { name: 'Porción Carne', price: 4.00 },
+          { name: 'Porción Bacalao con Pasas', price: 4.50 }
         ]
       },
       {
-        id: 'tapa-tabla-quesos',
-        name: 'Tabla de Quesos Gallegos & Jamón',
+        id: 'tapa-raxo',
+        name: 'Raxo Adobado con Patatas',
         categories: ['tapas'],
-        price: 9.00,
+        price: 8.50,
         image_url: '/images/dishes/raxo-queixo.jpg',
-        description: 'Queso Tetilla, Arzúa-Ulloa cremoso y San Simón ahumado con tostas crujientes.',
-        allergens: ['dairy', 'gluten'],
-        dietary: ['veggie'],
+        description: 'Lomo de cerdo troceado en dados macerados en ajo, perejil y pimentón con patatas recién hechas.',
+        allergens: [],
+        dietary: ['gluten_free'],
         isAvailable: true,
         selectedVariantIndex: 0,
         variants: [
-          { name: 'Media Ración', price: 9.00 },
-          { name: 'Ración Completa', price: 14.50 }
+          { name: 'Media Ración', price: 8.50 },
+          { name: 'Ración Completa', price: 13.00 },
+          { name: 'Con Queso Arzúa Fundido', price: 14.50 }
         ]
       },
 
-      // ── COPAS & CÓCTELES ──
+      // ── COPAS & CHUPITOS ──
       {
-        id: 'coctel-copas',
-        name: 'Copas & Combinados Nocturnos',
+        id: 'coctel-combinados',
+        name: 'Combinados & Gin-Tonic Premium',
         categories: ['cocteles'],
         price: 6.50,
         image_url: '/images/cocktails/berry-cooler.jpg',
@@ -664,7 +732,6 @@
     let selectedCategory = 'all';
     let activeDietaryFilter = 'all';
     let onlyAvailableFilter = false;
-    let searchQuery = '';
     let cart = []; // { product, variantName, price, quantity }
     let activeModalProduct = null;
 
@@ -672,7 +739,7 @@
       return (Number(amount) || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
     }
 
-    // ── GESTIÓN DE QUERY PARAMS (REQUERIMIENTO A) ──
+    // ── GESTIÓN DE QUERY PARAMS ──
     function getTableParams() {
       const urlParams = new URLSearchParams(window.location.search);
       const mesa = urlParams.get('mesa') || urlParams.get('table') || urlParams.get('m') || '12';
@@ -693,7 +760,7 @@
       if (drawerHeading) drawerHeading.textContent = badgeText;
     }
 
-    // ── RENDER DEL CATÁLOGO CON FOTOS Y VARIANTES INTERACTIVAS (REQUERIMIENTO 2) ──
+    // ── RENDER DEL CATÁLOGO (Paridad 100% con Casa Mar da Vila) ──
     function renderCatalog() {
       const grid = document.getElementById('catalog-grid');
       let filtered = PRODUCTS;
@@ -715,24 +782,14 @@
         filtered = filtered.filter(p => p.isAvailable);
       }
 
-      // Filtro de búsqueda
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        filtered = filtered.filter(p => {
-          const matchName = p.name.toLowerCase().includes(q);
-          const matchDesc = p.description.toLowerCase().includes(q);
-          const matchVariants = (p.variants || []).some(v => v.name.toLowerCase().includes(q));
-          return matchName || matchDesc || matchVariants;
-        });
-      }
-
       if (filtered.length === 0) {
         grid.innerHTML = `
           <div class="col-span-2 text-center py-12 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs">
-            <p class="text-slate-400 font-semibold text-xs">No se encontraron productos con los filtros seleccionados.</p>
+            <p class="text-slate-400 font-semibold text-xs">No se encontraron consumiciones con los filtros seleccionados.</p>
             <button onclick="resetFilters()" class="mt-3 text-xs text-blue-600 font-bold hover:underline">Restablecer filtros</button>
           </div>
         `;
+        updateBottomBars();
         return;
       }
 
@@ -757,10 +814,10 @@
           `;
         }).join('');
 
-        // Píldoras de variantes interactivas
+        // Píldoras de variantes interactivas en la propia tarjeta
         const variantPillsHtml = (product.variants && product.variants.length > 0)
           ? `
-            <div class="flex flex-wrap gap-1 mt-2.5" onclick="event.stopPropagation()">
+            <div class="flex flex-wrap gap-1 mt-2" onclick="event.stopPropagation()">
               ${product.variants.map((v, vIdx) => {
                 const isActive = vIdx === product.selectedVariantIndex;
                 const pillClass = isActive
@@ -782,13 +839,13 @@
 
         return `
           <div
+            data-product-id="${product.id}"
             onclick="openProductModal('${product.id}')"
-            data-product-id="${product.id}" class="dish-card bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between cursor-pointer active:scale-[0.99] select-none relative"
+            class="dish-card bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between cursor-pointer active:scale-[0.99] select-none relative"
           >
-            <!-- Badge de Agotado si aplica -->
             ${!product.isAvailable ? `
               <div class="absolute top-2 right-2 z-10 bg-red-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-xs">
-                Agotado hoy
+                Agotado
               </div>
             ` : ''}
 
@@ -798,7 +855,7 @@
                 <img
                   src="${product.image_url}"
                   alt="${product.name}"
-                  class="w-full h-full object-cover hover:scale-105 transition-transform duration-300 ${!product.isAvailable ? 'grayscale opacity-75' : ''}"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${!product.isAvailable ? 'grayscale opacity-75' : ''}"
                   loading="lazy"
                 >
               </div>
@@ -823,7 +880,7 @@
 
                 <!-- Alérgenos Declarados -->
                 ${allergenBadges ? `
-                  <div class="flex items-center gap-1 flex-wrap pt-1.5">
+                  <div class="flex items-center gap-1 flex-wrap pt-1">
                     ${allergenBadges}
                   </div>
                 ` : ''}
@@ -833,7 +890,7 @@
             <!-- Footer de la Tarjeta: Agregar a Pedido -->
             <div class="p-3 sm:p-3.5 pt-0 flex items-center justify-between gap-2" onclick="event.stopPropagation()">
               <span class="text-[10px] font-bold text-slate-400">
-                ${totalInCartForProduct > 0 ? `${totalInCartForProduct} en pedido` : 'Toca para info'}
+                ${totalInCartForProduct > 0 ? `${totalInCartForProduct} en comanda` : 'Toca para detalles'}
               </span>
 
               <div class="flex items-center">
@@ -842,17 +899,13 @@
                     type="button"
                     onclick="addProductDirect('${product.id}', event)"
                     aria-label="Añadir ${product.name}"
-                    class="h-8 px-2.5 sm:h-9 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white flex items-center justify-center gap-1 transition-colors border border-blue-200/80 shadow-2xs cursor-pointer font-bold text-xs active:scale-95"
+                    class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors border border-blue-200/80 shadow-2xs cursor-pointer active:scale-95"
                   >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/></svg>
-                    <span>+ Añadir</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14"/></svg>
                   </button>
-                ` : `
-                  <span class="text-[10px] text-slate-400 font-bold px-2 py-1 bg-slate-100 rounded-lg">No disponible</span>
-                `}
+                ` : ''}
               </div>
             </div>
-
           </div>
         `;
       }).join('');
@@ -860,156 +913,295 @@
       updateBottomBars();
     }
 
-    // ── MANEJO DE VARIANTES DINÁMICAS (REQUERIMIENTO 2) ──
+    // ── CAMBIO DE VARIANTE DINÁMICO ──
     function selectVariant(productId, variantIndex, event) {
       if (event) event.stopPropagation();
       const product = PRODUCTS.find(p => p.id === productId);
-      if (!product || !product.variants || !product.variants[variantIndex]) return;
-
+      if (!product || !product.variants) return;
       product.selectedVariantIndex = variantIndex;
-      const chosen = product.variants[variantIndex];
-
-      // Actualizar precio en la tarjeta al instante
-      const priceEl = document.getElementById('price-' + productId);
-      if (priceEl) {
-        priceEl.textContent = formatEuro(chosen.price);
-      }
-
-      // Re-render para actualizar estado visual de píldoras
       renderCatalog();
     }
 
-    // ── AGREGAR DIRECTO DESDE TARJETA ──
+    // ── GESTIÓN DE CATEGORÍAS EN BARRA INFERIOR ──
+    function selectCategory(catKey) {
+      selectedCategory = catKey;
+      document.querySelectorAll('.cat-pill').forEach(btn => {
+        const match = btn.getAttribute('data-cat') === catKey;
+        if (match) {
+          btn.className = 'cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-blue-600 text-white font-black shadow-xs ring-1 ring-blue-500 scale-[1.02]';
+        } else {
+          btn.className = 'cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80';
+        }
+      });
+      renderCatalog();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function scrollCategories(direction) {
+      const container = document.getElementById('category-scroll-container');
+      const offset = direction === 'left' ? -200 : 200;
+      container.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+
+    function updateCatScrollButtons() {
+      const container = document.getElementById('category-scroll-container');
+      const leftBtn = document.getElementById('cat-scroll-left');
+      const rightBtn = document.getElementById('cat-scroll-right');
+      if (!container || !leftBtn || !rightBtn) return;
+      leftBtn.style.opacity = container.scrollLeft > 10 ? '1' : '0.4';
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      rightBtn.style.opacity = container.scrollLeft < maxScroll - 10 ? '1' : '0.4';
+    }
+
+    // ── FILTROS DIETÉTICOS ──
+    function toggleDietaryFilter(type) {
+      if (activeDietaryFilter === type) {
+        activeDietaryFilter = 'all';
+      } else {
+        activeDietaryFilter = type;
+      }
+      const gfBtn = document.getElementById('filter-btn-gluten_free');
+      const vegBtn = document.getElementById('filter-btn-veggie');
+      if (gfBtn) {
+        gfBtn.className = activeDietaryFilter === 'gluten_free'
+          ? 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-blue-600 text-white border-blue-700 shadow-2xs'
+          : 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100';
+      }
+      if (vegBtn) {
+        vegBtn.className = activeDietaryFilter === 'veggie'
+          ? 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-blue-600 text-white border-blue-700 shadow-2xs'
+          : 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100';
+      }
+      renderCatalog();
+    }
+
+    function toggleSoldOutFilter() {
+      onlyAvailableFilter = !onlyAvailableFilter;
+      const btn = document.getElementById('filter-btn-available');
+      if (btn) {
+        btn.className = onlyAvailableFilter
+          ? 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-blue-600 text-white border-blue-700 shadow-2xs'
+          : 'flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100';
+      }
+      renderCatalog();
+    }
+
+    function resetFilters() {
+      selectedCategory = 'all';
+      activeDietaryFilter = 'all';
+      onlyAvailableFilter = false;
+      document.querySelectorAll('.cat-pill').forEach(btn => {
+        btn.className = btn.getAttribute('data-cat') === 'all'
+          ? 'cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-blue-600 text-white font-black shadow-xs ring-1 ring-blue-500 scale-[1.02]'
+          : 'cat-pill px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition-all flex-shrink-0 cursor-pointer bg-slate-100/90 text-slate-600 font-bold hover:bg-slate-200/80';
+      });
+      renderCatalog();
+    }
+
+    // ── GESTIÓN DE COMANDA Y CARRITO ──
     function addProductDirect(productId, event) {
       if (event) event.stopPropagation();
       const product = PRODUCTS.find(p => p.id === productId);
       if (!product || !product.isAvailable) return;
 
-      const currentVariant = (product.variants && product.variants[product.selectedVariantIndex])
+      const variant = (product.variants && product.variants[product.selectedVariantIndex])
         ? product.variants[product.selectedVariantIndex]
         : { name: '', price: product.price };
 
-      addToCart(product, currentVariant.name, currentVariant.price);
+      addItemToCart(product, variant.name, variant.price);
     }
 
-    function addToCart(product, variantName, price) {
+    function addItemToCart(product, variantName, price) {
       const existing = cart.find(item => item.product.id === product.id && item.variantName === variantName);
       if (existing) {
         existing.quantity += 1;
       } else {
         cart.push({
           product,
-          variantName: variantName || '',
-          price: price || product.price,
+          variantName: variantName || 'Estándar',
+          price,
           quantity: 1
         });
       }
 
       showToast(product.name + (variantName ? ` (${variantName})` : ''));
-      updateBottomBars();
       renderCatalog();
+      updateBottomBars();
     }
 
-    function decrementCartItem(index) {
-      if (!cart[index]) return;
-      if (cart[index].quantity > 1) {
-        cart[index].quantity -= 1;
+    function updateBottomBars() {
+      const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+      const totalPrice = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+      const floatingBar = document.getElementById('floating-cart-bar');
+      const bottomCatBar = document.getElementById('bottom-category-bar');
+      const cartCount = document.getElementById('floating-cart-count');
+      const cartTotal = document.getElementById('floating-cart-total');
+
+      const { mesa } = getTableParams();
+
+      if (totalItems > 0) {
+        floatingBar.classList.remove('hidden');
+        bottomCatBar.classList.add('cart-active');
+        if (cartCount) cartCount.textContent = `${totalItems} ${totalItems === 1 ? 'ítem' : 'ítems'} · Mesa ${mesa}`;
+        if (cartTotal) cartTotal.textContent = formatEuro(totalPrice);
       } else {
-        cart.splice(index, 1);
+        floatingBar.classList.add('hidden');
+        bottomCatBar.classList.remove('cart-active');
       }
-      updateBottomBars();
-      renderCartDrawerItems();
-      renderCatalog();
     }
 
-    function incrementCartItem(index) {
-      if (!cart[index]) return;
-      cart[index].quantity += 1;
-      updateBottomBars();
-      renderCartDrawerItems();
+    // ── TOAST REACTIVO ──
+    let toastTimeout = null;
+    function showToast(productLabel) {
+      const toast = document.getElementById('order-toast');
+      const nameEl = document.getElementById('toast-product-name');
+      if (nameEl) nameEl.textContent = productLabel;
+
+      toast.classList.remove('hidden');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2400);
+    }
+
+    // ── DRAWER DE COMANDA ("Modo Enseñar al Camarero") ──
+    function openCartDrawer() {
+      const drawer = document.getElementById('cart-drawer-modal');
+      const list = document.getElementById('drawer-items-list');
+      const totalEl = document.getElementById('drawer-total-price');
+
+      syncTableBadge();
+
+      if (cart.length === 0) {
+        list.innerHTML = `
+          <div class="text-center py-8 text-slate-400">
+            <span class="text-3xl">🛒</span>
+            <p class="text-xs font-semibold mt-2">No has seleccionado ninguna consumición aún.</p>
+            <p class="text-[10px] mt-1 text-slate-400">Toca el botón "+" en cualquier producto para añadirlo.</p>
+          </div>
+        `;
+        if (totalEl) totalEl.textContent = '0,00 €';
+      } else {
+        list.innerHTML = cart.map((item, idx) => {
+          const itemSubtotal = item.price * item.quantity;
+          return `
+            <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <h4 class="text-xs font-black text-slate-900 truncate">${item.product.name}</h4>
+                <p class="text-[11px] text-blue-700 font-bold">${item.variantName}</p>
+                <p class="text-[10px] text-slate-400">${formatEuro(item.price)} ud.</p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-0.5">
+                  <button
+                    onclick="changeItemQty(${idx}, -1)"
+                    class="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 font-black text-xs flex items-center justify-center hover:bg-slate-200"
+                  >-</button>
+                  <span class="text-xs font-black text-slate-900 w-5 text-center">${item.quantity}</span>
+                  <button
+                    onclick="changeItemQty(${idx}, 1)"
+                    class="w-6 h-6 rounded-lg bg-blue-600 text-white font-black text-xs flex items-center justify-center hover:bg-blue-700"
+                  >+</button>
+                </div>
+                <span class="text-xs font-black text-slate-900 w-16 text-right tabular-nums">${formatEuro(itemSubtotal)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        const totalPrice = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        if (totalEl) totalEl.textContent = formatEuro(totalPrice);
+      }
+
+      drawer.classList.remove('hidden');
+      drawer.classList.add('flex');
+    }
+
+    function closeCartDrawer() {
+      const drawer = document.getElementById('cart-drawer-modal');
+      drawer.classList.add('hidden');
+      drawer.classList.remove('flex');
+    }
+
+    function changeItemQty(itemIndex, delta) {
+      if (!cart[itemIndex]) return;
+      cart[itemIndex].quantity += delta;
+      if (cart[itemIndex].quantity <= 0) {
+        cart.splice(itemIndex, 1);
+      }
+      openCartDrawer();
       renderCatalog();
+      updateBottomBars();
     }
 
     function clearCart() {
       cart = [];
-      updateBottomBars();
-      closeCartDrawer();
+      openCartDrawer();
       renderCatalog();
+      updateBottomBars();
     }
 
-    // ── TOAST DE CONFIRMACIÓN ──
-    let toastTimeout = null;
-    function showToast(name) {
-      const toast = document.getElementById('order-toast');
-      const nameEl = document.getElementById('toast-product-name');
-      if (!toast || !nameEl) return;
-
-      nameEl.textContent = name;
-      toast.classList.remove('hidden');
-
-      if (toastTimeout) clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => {
-        toast.classList.add('hidden');
-      }, 2200);
+    function showOrderToWaiter() {
+      const { mesa } = getTableParams();
+      alert(`¡Comanda lista para Mesa ${mesa}! Enséñale esta pantalla al personal o indícala en barra para que la sirvan de inmediato.`);
+      closeCartDrawer();
     }
 
-    // ── MODAL DE DETALLE ──
+    // ── MODAL DE PRODUCTO / PERSONALIZACIÓN ──
     function openProductModal(productId) {
       const product = PRODUCTS.find(p => p.id === productId);
       if (!product) return;
       activeModalProduct = product;
 
-      document.getElementById('modal-category').textContent = product.categories[0].toUpperCase();
       document.getElementById('modal-title').textContent = product.name;
-      document.getElementById('modal-img').src = product.image_url;
       document.getElementById('modal-desc').textContent = product.description;
+      document.getElementById('modal-category').textContent = product.categories[0].toUpperCase();
+      document.getElementById('modal-img').src = product.image_url;
 
-      const currentVariant = (product.variants && product.variants[product.selectedVariantIndex])
-        ? product.variants[product.selectedVariantIndex]
-        : { name: '', price: product.price };
-
-      document.getElementById('modal-price').textContent = formatEuro(currentVariant.price);
-
-      // Variantes en modal
-      const varSection = document.getElementById('modal-variants-section');
-      const varList = document.getElementById('modal-variants-list');
+      const variantsSec = document.getElementById('modal-variants-section');
+      const variantsList = document.getElementById('modal-variants-list');
       if (product.variants && product.variants.length > 0) {
-        varSection.classList.remove('hidden');
-        varList.innerHTML = product.variants.map((v, vIdx) => {
+        variantsSec.classList.remove('hidden');
+        variantsList.innerHTML = product.variants.map((v, vIdx) => {
           const isActive = vIdx === product.selectedVariantIndex;
-          const cls = isActive
-            ? 'variant-pill-active bg-blue-600 text-white font-black shadow-xs border-blue-700'
-            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold border-slate-200';
+          const pillClass = isActive
+            ? 'variant-pill-active bg-blue-600 text-white font-extrabold shadow-2xs border-blue-700'
+            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border-slate-200/80';
           return `
             <button
               type="button"
               onclick="selectModalVariant(${vIdx})"
-              class="px-3 py-1.5 rounded-xl text-xs border transition cursor-pointer ${cls}"
+              class="px-2.5 py-1 rounded-xl text-xs border transition-all active:scale-95 cursor-pointer ${pillClass}"
             >
               ${v.name} · ${formatEuro(v.price)}
             </button>
           `;
         }).join('');
       } else {
-        varSection.classList.add('hidden');
+        variantsSec.classList.add('hidden');
       }
 
-      // Alérgenos en modal
-      const algList = document.getElementById('modal-allergens-list');
+      const allergensSec = document.getElementById('modal-allergens-section');
+      const allergensList = document.getElementById('modal-allergens-list');
       if (product.allergens && product.allergens.length > 0) {
-        algList.innerHTML = product.allergens.map(aKey => {
+        allergensSec.classList.remove('hidden');
+        allergensList.innerHTML = product.allergens.map(aKey => {
           const a = ALLERGENS[aKey];
           if (!a) return '';
           return `
-            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold">
+            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold">
               <span>${a.icon}</span>
               <span>${a.name}</span>
             </span>
           `;
         }).join('');
       } else {
-        algList.innerHTML = '<span class="text-xs text-slate-400">Sin alérgenos de declaración obligatoria señalados.</span>';
+        allergensSec.classList.add('hidden');
       }
+
+      updateModalPrice();
 
       const modal = document.getElementById('product-modal');
       modal.classList.remove('hidden');
@@ -1017,10 +1209,18 @@
     }
 
     function selectModalVariant(vIdx) {
-      if (!activeModalProduct) return;
+      if (!activeModalProduct || !activeModalProduct.variants) return;
       activeModalProduct.selectedVariantIndex = vIdx;
       openProductModal(activeModalProduct.id);
       renderCatalog();
+    }
+
+    function updateModalPrice() {
+      if (!activeModalProduct) return;
+      const v = (activeModalProduct.variants && activeModalProduct.variants[activeModalProduct.selectedVariantIndex])
+        ? activeModalProduct.variants[activeModalProduct.selectedVariantIndex]
+        : { name: '', price: activeModalProduct.price };
+      document.getElementById('modal-price').textContent = formatEuro(v.price);
     }
 
     function closeProductModal() {
@@ -1030,203 +1230,62 @@
       activeModalProduct = null;
     }
 
-    function addCurrentModalToCart() {
+    function addFromModal() {
       if (!activeModalProduct) return;
-      const currentVariant = (activeModalProduct.variants && activeModalProduct.variants[activeModalProduct.selectedVariantIndex])
+      const v = (activeModalProduct.variants && activeModalProduct.variants[activeModalProduct.selectedVariantIndex])
         ? activeModalProduct.variants[activeModalProduct.selectedVariantIndex]
         : { name: '', price: activeModalProduct.price };
 
-      addToCart(activeModalProduct, currentVariant.name, currentVariant.price);
+      addItemToCart(activeModalProduct, v.name, v.price);
       closeProductModal();
     }
 
-    // ── DRAWER DE COMANDA / MODO ENSEÑAR AL CAMARERO ──
-    function openCartDrawer() {
-      renderCartDrawerItems();
-      const modal = document.getElementById('cart-drawer-modal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
+    // ── MODAL WIFI ──
+    function openWifiModal() {
+      const m = document.getElementById('wifi-modal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
     }
 
-    function closeCartDrawer() {
-      const modal = document.getElementById('cart-drawer-modal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
+    function closeWifiModal() {
+      const m = document.getElementById('wifi-modal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
     }
 
-    function renderCartDrawerItems() {
-      const list = document.getElementById('drawer-items-list');
-      const totalAmount = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-
-      document.getElementById('drawer-total-price').textContent = formatEuro(totalAmount);
-
-      if (cart.length === 0) {
-        list.innerHTML = `
-          <div class="text-center py-8 text-slate-400 text-xs">
-            Tu comanda está vacía actualmente.
-          </div>
-        `;
-        return;
-      }
-
-      list.innerHTML = cart.map((item, idx) => `
-        <div class="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between gap-2">
-          <div class="min-w-0 flex-1">
-            <h4 class="text-xs font-bold text-slate-900 truncate">${item.product.name}</h4>
-            ${item.variantName ? `
-              <p class="text-[10px] font-extrabold text-blue-700 mt-0.5">${item.variantName}</p>
-            ` : ''}
-            <span class="text-[11px] font-black text-slate-700 tabular-nums">${formatEuro(item.price * item.quantity)}</span>
-          </div>
-
-          <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
-            <button
-              type="button"
-              onclick="decrementCartItem(${idx})"
-              class="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 flex items-center justify-center font-bold text-xs"
-            >-</button>
-            <span class="w-5 text-center text-xs font-black text-slate-900 tabular-nums">${item.quantity}</span>
-            <button
-              type="button"
-              onclick="incrementCartItem(${idx})"
-              class="w-6 h-6 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center font-bold text-xs"
-            >+</button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function showOrderToWaiter() {
-      const { mesa } = getTableParams();
-      alert(`¡Comanda lista para Mesa ${mesa}! Enséñale esta pantalla al personal o indícala en barra para que la sirvan de inmediato.`);
-      closeCartDrawer();
-    }
-
-    function updateBottomBars() {
-      const totalItems = cart.reduce((acc, i) => acc + i.quantity, 0);
-      const totalAmount = cart.reduce((acc, i) => acc + i.price * i.quantity, 0);
-      const floatingCart = document.getElementById('floating-cart-bar');
-      const { mesa } = getTableParams();
-
-      if (totalItems > 0) {
-        floatingCart.classList.remove('hidden');
-        document.getElementById('floating-cart-count').textContent = `${totalItems} ${totalItems === 1 ? 'ítem' : 'ítems'} · Mesa ${mesa}`;
-        document.getElementById('floating-cart-total').textContent = formatEuro(totalAmount);
-      } else {
-        floatingCart.classList.add('hidden');
-      }
-    }
-
-    // ── FILTROS Y BÚSQUEDA ──
-    function handleSearch(val) {
-      searchQuery = val;
-      const clearBtn = document.getElementById('clear-search-btn');
-      if (val.length > 0) {
-        clearBtn.classList.remove('hidden');
-      } else {
-        clearBtn.classList.add('hidden');
-      }
-      renderCatalog();
-    }
-
-    function clearSearch() {
-      document.getElementById('search-input').value = '';
-      searchQuery = '';
-      document.getElementById('clear-search-btn').classList.add('hidden');
-      renderCatalog();
-    }
-
-    function selectCategory(catKey) {
-      selectedCategory = catKey;
-      ['all', 'cervezas', 'vinos', 'vermus', 'tapas', 'cocteles', 'cafes'].forEach(key => {
-        const btn = document.getElementById('cat-btn-' + key);
-        if (!btn) return;
-        if (key === catKey) {
-          btn.className = 'px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-blue-600 text-white shadow-2xs transition';
-        } else {
-          btn.className = 'px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition';
-        }
-      });
-      renderCatalog();
-    }
-
-    function setDietaryFilter(filterKey) {
-      activeDietaryFilter = filterKey;
-      ['all', 'gluten_free', 'veggie'].forEach(key => {
-        const btn = document.getElementById('filter-' + key);
-        if (!btn) return;
-        if (key === filterKey) {
-          btn.className = 'px-3 py-1 rounded-full font-bold bg-blue-600 text-white shadow-2xs whitespace-nowrap transition cursor-pointer';
-        } else {
-          btn.className = 'px-3 py-1 rounded-full font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer';
-        }
-      });
-      renderCatalog();
-    }
-
-    function toggleSoldOutFilter() {
-      onlyAvailableFilter = !onlyAvailableFilter;
-      const btn = document.getElementById('filter-soldout');
-      if (onlyAvailableFilter) {
-        btn.className = 'px-3 py-1 rounded-full font-bold bg-emerald-600 text-white shadow-2xs whitespace-nowrap transition cursor-pointer flex items-center gap-1';
-        btn.innerHTML = '<span>✓</span><span>Solo Disponibles</span>';
-      } else {
-        btn.className = 'px-3 py-1 rounded-full font-semibold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer flex items-center gap-1';
-        btn.innerHTML = '<span>🟢</span><span>Solo Disponibles</span>';
-      }
-      renderCatalog();
-    }
-
-    function resetFilters() {
-      selectedCategory = 'all';
-      activeDietaryFilter = 'all';
-      onlyAvailableFilter = false;
-      clearSearch();
-      selectCategory('all');
-      setDietaryFilter('all');
-    }
-
-    // ── IDIOMAS & MODALES ──
-    function toggleLangMenu(e) {
-      e.stopPropagation();
+    // ── IDIOMA ──
+    function toggleLangMenu(event) {
+      event.stopPropagation();
       const dd = document.getElementById('lang-dropdown');
-      const ch = document.getElementById('lang-chevron');
       dd.classList.toggle('hidden');
-      ch.classList.toggle('rotate-180');
     }
-
-    document.addEventListener('click', () => {
-      const dd = document.getElementById('lang-dropdown');
-      const ch = document.getElementById('lang-chevron');
-      if (dd && !dd.classList.contains('hidden')) {
-        dd.classList.add('hidden');
-        if (ch) ch.classList.remove('rotate-180');
-      }
-    });
 
     function setLanguage(lang) {
       currentLang = lang;
       document.getElementById('current-lang-label').textContent = lang.toUpperCase();
-      ['es', 'gl', 'en'].forEach(code => {
-        const dot = document.getElementById('lang-dot-' + code);
-        if (dot) dot.classList.toggle('hidden', code !== lang);
+      ['es', 'gl', 'en'].forEach(l => {
+        const dot = document.getElementById(`lang-dot-${l}`);
+        if (dot) {
+          if (l === lang) dot.classList.remove('hidden');
+          else dot.classList.add('hidden');
+        }
       });
-      renderCatalog();
+      document.getElementById('lang-dropdown').classList.add('hidden');
     }
 
-    function openWifiModal() {
-      document.getElementById('wifi-modal').classList.remove('hidden');
-      document.getElementById('wifi-modal').classList.add('flex');
-    }
+    // Cerrar menús al tocar fuera
+    window.addEventListener('click', () => {
+      const dd = document.getElementById('lang-dropdown');
+      if (dd && !dd.classList.contains('hidden')) {
+        dd.classList.add('hidden');
+      }
+    });
 
-    function closeWifiModal() {
-      document.getElementById('wifi-modal').classList.add('hidden');
-      document.getElementById('wifi-modal').classList.remove('flex');
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
+    // ── INICIALIZACIÓN ──
+    document.addEventListener('DOMContentLoaded', () => {
       syncTableBadge();
       renderCatalog();
+      updateCatScrollButtons();
     });
   </script>
 </body>
