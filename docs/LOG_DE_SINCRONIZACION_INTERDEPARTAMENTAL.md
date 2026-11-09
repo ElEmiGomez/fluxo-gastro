@@ -6,6 +6,16 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-09 16:50] — Especificaciones Técnicas de Tarea 4 (Carta QR Jaratusas) para Program Data
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2) e Ingeniería & Producto / Program Data (Depto 4).
+* **Parámetros Acordados para la Carta de Jaratusas:**
+  1. **Modalidad de Producto:** Carta Digital Fija (Catálogo informativo). No implementará carrito de compras, llamadas de camarero ni envío de pedidos a cocina (cumplimiento estricto del estándar de Carta Fija Digital de Fluxo).
+  2. **Origen de Datos del Catálogo:** El local no dispone de carta física en papel; los productos, categorías y precios se obtendrán exclusivamente del listado de su TPV.
+  3. **Identidad Visual:** Identidad y branding del local disponibles para el encabezado de la carta web y la posterior generación del kit físico de peanas QR a 300 DPI.
+  4. **Directiva Operativa:** Especificaciones documentadas en backlog a la espera de la extracción del volcado del TPV antes de iniciar la maquetación.
+
+---
+
 ### [2026-11-09 16:35] — Registro de Nueva Tarea: Hacer Carta QR para Jaratusas
 * **Departamentos Sincronizados:** Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
 * **Alcance de la Tarea:**

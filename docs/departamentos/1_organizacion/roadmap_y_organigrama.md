@@ -70,7 +70,9 @@ flowchart TD
 │  ├─ [📋 Tarea 3] Accionar Plan de Marketing y Validación en Campo          │
 │  │     (Salida a calle con Carta QR, prospección y feedback de Fluxo)     │
 │  ├─ [📋 Tarea 4] Hacer Carta QR para Jaratusas                            │
-│  │     (Digitalización de carta, prototipo demo y generación de kit físico)│
+│  │     • Modalidad: Carta Fija Digital informativa (sin pedidos ni comandas)│
+│  │     • Fuente de datos: Extracción directa de listado del TPV            │
+│  │     • Branding: Identidad visual lista (logo/colores para kit físico)   │
 │  │                                                                         │
 │  ├─ 📌 FASE 1: CIERRE DEL BLOQUE COMERCIAL Y PLATAFORMA                    │
 │  │  ├─ [x] Tarea 4: Smoke Test y Validación en Local (Pruebas de Flujo)    │
