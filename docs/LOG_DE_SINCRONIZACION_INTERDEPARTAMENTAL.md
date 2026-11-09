@@ -6,6 +6,16 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-09 16:35] — Registro de Nueva Tarea: Hacer Carta QR para Jaratusas
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
+* **Alcance de la Tarea:**
+  1. Digitalización de la carta y menú de Jaratusas con estructura categorizada, alérgenos y precios oficiales.
+  2. Configuración de prototipo interactivo para demostración comercial y pruebas en el local.
+  3. Generación y exportación de artes gráficas y QR de alta resolución (300 DPI) para muestras físicas.
+* **Orden de Backlog Pendiente:** Tarea 2 (Vídeo Landing Page), Tarea 3 (Accionar Plan de Marketing en Campo) y Tarea 4 (Hacer Carta QR para Jaratusas).
+
+---
+
 ### [2026-11-02 10:25] — Cierre de Tarea 4: Smoke Test y Validación en Local (Pruebas de Flujo)
 * **Departamentos Sincronizados:** Ingeniería & Producto (Depto 4) y Dirección General (Depto 1).
 * **Flujos Verificados:**

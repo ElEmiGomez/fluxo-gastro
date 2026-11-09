@@ -69,6 +69,8 @@ flowchart TD
 │  │     (Guion, captura del flujo de terraza/cocina y maquetación web)      │
 │  ├─ [📋 Tarea 3] Accionar Plan de Marketing y Validación en Campo          │
 │  │     (Salida a calle con Carta QR, prospección y feedback de Fluxo)     │
+│  ├─ [📋 Tarea 4] Hacer Carta QR para Jaratusas                            │
+│  │     (Digitalización de carta, prototipo demo y generación de kit físico)│
 │  │                                                                         │
 │  ├─ 📌 FASE 1: CIERRE DEL BLOQUE COMERCIAL Y PLATAFORMA                    │
 │  │  ├─ [x] Tarea 4: Smoke Test y Validación en Local (Pruebas de Flujo)    │
