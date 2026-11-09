@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bar Jara-Tusas · Carta Oficial</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .font-serif-title {
+      font-family: 'Playfair Display', serif;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .active-pill {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #0f172a;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-amber-500/30 pb-20">
+
+  <!-- TOP BAR: BADGE PERSISTENTE DE MESA Y ZONA -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 shadow-md px-4 py-2.5 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div id="table-badge" class="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold px-3 py-1 rounded-full text-xs tracking-wide uppercase">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <span id="table-badge-text">📍 MESA 12 · TERRAZA</span>
+      </div>
+    </div>
+
+    <!-- SELECTOR DE IDIOMA -->
+    <div class="flex items-center bg-slate-800/80 rounded-lg p-0.5 border border-slate-700/60 text-[11px] font-semibold text-slate-400">
+      <button onclick="setLang('es')" id="lang-es" class="px-2 py-0.5 rounded text-white bg-slate-700">ES</button>
+      <button onclick="setLang('gl')" id="lang-gl" class="px-2 py-0.5 rounded hover:text-white">GL</button>
+      <button onclick="setLang('en')" id="lang-en" class="px-2 py-0.5 rounded hover:text-white">EN</button>
+    </div>
+  </header>
+
+  <!-- BANNER INFORMATIVO COBRO RÁPIDO (REQUERIMIENTO A) -->
+  <div id="fast-pay-alert" class="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-center text-[12px] text-amber-300 font-medium flex items-center justify-center gap-2">
+    <span>💡</span>
+    <span>Para pagar rápido en barra indica tu mesa: <strong id="fast-pay-label" class="text-amber-400 font-bold">MESA 12</strong></span>
+  </div>
+
+  <!-- HERO DEL LOCAL -->
+  <div class="px-4 pt-5 pb-3 flex flex-col items-center text-center">
+    <div class="w-20 h-20 rounded-2xl bg-slate-900 border border-slate-800 p-2 shadow-xl flex items-center justify-center mb-3">
+      <img src="data:image/png;base64,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My7rREhYe7bd9th1D9tqix/Y2O1+aN/eeCObNOk+u+uO22254cuY2FUpqJhoaLTBOoQvagElBa5cW84qZEDyitlixZh02Pnvgt/MaY81KbtALFYmI6HpHQEg/h2rceONE43PUyZPnqwEW51WX8HYzmIJ2tryMuMp33UREGMZANiaa66u1VGwutoqy+rkv6m5TUFkwtICUnvBLJcvCpQVlpEQcLukH2bobG2Msumca51++um21tprihJ+1QEwLHUpj9HT167THUIwMvlsCup0ptjY1Gw1NTVWqUWDASiXmuoqSybilkwmteOeIQuf9/t333tHoJpk03TFBW+88cayVhWyvBmEIYOQ8xJC8M2M6adsXHS7wN9FAismk0dvAAVRWC0Oejli2HTTTQUGM76SfP31tz2IxgXi7kgnJGV66B5CECPm8Q9jkZwkgcl9a2urhJC0muoKByRAon5QXbUfrfzqpBPs+uuvN87HoAVg0odYCPdsA/yHRTdr1kzbfvsf2fHHH2urfoUvNVqstS1jea1Q7X20OHPW1Nyixdpu7JqJq5ZbbrgDBuAhy+V1esFOtqGhQaBqE4hKgkXmWU9KB7nI4JX0IRTxhwX8WSSwcHkM1C5TiJ/FLd5///225ZZb2uWXXy4CYkpMNhlBH59akHwk3mBn0i7GYKSlJePTE2Ti4wEfXx2stZZO2WWZ2MFhsTKyTqus/CU784xTbYqC7AcffNC35iQToaG5udnBx32ZYXMr5cMPwD8FGzFihAEG9HLAAQd4zouA/dprrrRrrr7C9hm3p604cjmXTUoLHR1iHCh4hVzOjO/v337jDT9nJXmNzqqxcEnz3T+dARJy554SQjDquO+sLBJYAIoBARgDJGVKybE0NeXs4Ycf98GFOVmuhILjJuNTi1Q6raDzZe0y5NJyebUhzTDIvxpgPFwq/9iA75rWXXdNq66psOHDh9iBB+5rN9x4ve3z83E2QisKJ9+g1dja1qLVlrV0RcqqqisVfRUspvgF4UDTQC7IkrAkK6uCBV9hhRVsk002sZ122snGjh2rtMElduWVV9p2225lhBxvvvmWwpK4fe9733OxVVUlpbNn/StTvMILL7wiS5bXZqPFkC8pi7hiK0CEQQghGIu6XGcL+FkksAASbhBwYTG4h/DNN9/EgcOEuDsYI95iq8tctOUaj5em4GiA1cVp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" alt="Bar Jara-Tusas" class="w-full h-full object-contain">
+    </div>
+    <h1 class="text-2xl font-black tracking-tight text-white flex items-center gap-1.5 font-serif-title">
+      Bar Jara-Tusas
+    </h1>
+    <p class="text-xs text-slate-400 mt-1 max-w-xs" id="hero-subtitle">
+      Rúa do Curro, 8 · Noia (A Coruña)<br>
+      <span class="text-slate-500">Café · Cervezas · Vermús · Tapas · Cócteles</span>
+    </p>
+  </div>
+
+  <!-- BUSCADOR REACTIVO Y FILTROS DIETÉTICOS -->
+  <div class="px-4 py-2 space-y-2 sticky top-[49px] z-30 bg-slate-950/95 backdrop-blur-md pt-2 pb-3 border-b border-slate-900">
+    <div class="relative">
+      <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+      </svg>
+      <input type="text" id="search-input" oninput="filterItems()" placeholder="Buscar en la carta (ej. 1906, albariño, croquetas...)" class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50 transition">
+      <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-2.5 top-2 text-slate-500 hover:text-white text-xs p-1">✕</button>
+    </div>
+
+    <!-- FILTROS DIETÉTICOS -->
+    <div class="flex items-center gap-1.5 text-xs overflow-x-auto hide-scrollbar pt-1">
+      <button onclick="toggleDiet('all')" id="filter-all" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500 text-slate-950">Todos</button>
+      <button onclick="toggleDiet('gluten_free')" id="filter-gluten_free" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-900 border border-slate-800 text-slate-400 whitespace-nowrap">🌾 Sin Gluten</button>
+      <button onclick="toggleDiet('veggie')" id="filter-veggie" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-900 border border-slate-800 text-slate-400 whitespace-nowrap">🌱 Veggie</button>
+    </div>
+  </div>
+
+  <!-- CATEGORÍAS TABS -->
+  <div class="px-4 py-2 sticky top-[138px] z-20 bg-slate-950/95 backdrop-blur border-b border-slate-900 overflow-x-auto hide-scrollbar flex gap-2">
+    <button onclick="scrollToCat('cervezas')" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-900 text-amber-400 border border-slate-800 hover:border-amber-500/40">🍺 Cervezas</button>
+    <button onclick="scrollToCat('vinos')" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-900 text-slate-300 border border-slate-800 hover:text-white">🍷 Vinos</button>
+    <button onclick="scrollToCat('vermus')" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-900 text-slate-300 border border-slate-800 hover:text-white">🌿 Vermús</button>
+    <button onclick="scrollToCat('tapas')" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-900 text-slate-300 border border-slate-800 hover:text-white">🧆 Tapas y Raciones</button>
+    <button onclick="scrollToCat('cocteles')" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-900 text-slate-300 border border-slate-800 hover:text-white">🍸 Copas y Cócteles</button>
+    <button onclick="scrollToCat('cafes')" class="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-slate-900 text-slate-300 border border-slate-800 hover:text-white">☕ Cafetería</button>
+  </div>
+
+  <!-- LISTADO DE PRODUCTOS -->
+  <main id="catalog" class="px-4 py-4 space-y-8 flex-1 max-w-xl mx-auto w-full">
+    <!-- Se inyecta dinámicamente con JavaScript -->
+  </main>
+
+  <!-- MODAL DE FICHA TÉCNICA (Reglamento UE 1169/2011) -->
+  <div id="item-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 overflow-y-auto max-h-[85vh] animate-in slide-in-from-bottom duration-200">
+      <div class="flex items-start justify-between">
+        <div>
+          <span id="modal-category" class="text-[10px] font-bold uppercase tracking-wider text-amber-500">Categoría</span>
+          <h3 id="modal-title" class="text-lg font-bold text-white mt-0.5">Título del Producto</h3>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1 text-lg">✕</button>
+      </div>
+
+      <p id="modal-desc" class="text-xs text-slate-300 mt-2 leading-relaxed">Descripción detallada</p>
+      
+      <!-- VARIANTES (CHULETA) -->
+      <div id="modal-variants-section" class="mt-4 pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Variantes disponibles:</label>
+        <div id="modal-variants-list" class="flex flex-wrap gap-1.5 mt-2"></div>
+      </div>
+
+      <!-- ALÉRGENOS OFICIALES -->
+      <div id="modal-allergens-section" class="mt-4 pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Información de Alérgenos (Reg. UE 1169/2011):</label>
+        <div id="modal-allergens-list" class="flex flex-wrap gap-1.5 mt-2"></div>
+      </div>
+
+      <div class="mt-5 pt-3 border-t border-slate-800 flex items-center justify-between">
+        <div class="text-xs text-slate-400">PVP oficial (IVA incl.)</div>
+        <div id="modal-price" class="text-xl font-bold text-amber-400">-- €</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="text-center text-[11px] text-slate-600 py-6 border-t border-slate-900 mt-12">
+    <p>Bar Jara-Tusas · Noia</p>
+    <p class="mt-1">Carta digital informativa · Fluxo System</p>
+  </footer>
+
+  <script>
+    // CATÁLOGO REAL DE BAR JARA-TUSAS (AUDITORÍA NOIA)
+    const PRODUCTS = [
+      // CERVEZAS
+      {
+        id: 'cerv-grifo',
+        cat: 'cervezas',
+        catName: { es: 'Cervezas', gl: 'Cervexas', en: 'Beers' },
+        name: { es: 'Estrella Galicia de Grifo', gl: 'Estrella Galicia de Barril', en: 'Estrella Galicia Draught' },
+        desc: { es: 'Cerveza gallega de tirador perfectamente servida con dos dedos de crema.', gl: 'Cervexa galega de tirador servida con crema perfecta.', en: 'Classic Galician draught beer freshly poured.' },
+        price: '2.00 €',
+        variants: ['Caña (200ml)', 'Copa / Doble (330ml)', 'Xarra / Jarra (500ml)'],
+        allergens: ['Gluten (Cebada)'],
+        isGlutenFree: false,
+        isVeggie: true
+      },
+      {
+        id: 'cerv-1906',
+        cat: 'cervezas',
+        catName: { es: 'Cervezas', gl: 'Cervexas', en: 'Beers' },
+        name: { es: '1906 Reserva Especial ("La Milnueve")', gl: '1906 Reserva Especial ("A Milnove")', en: '1906 Reserva Especial (Special Dark)' },
+        desc: { es: 'Cerveza tostada extra con carácter y notas a malta torrefacta.', gl: 'Cervexa tostada extra con carácter e notas a malta torrefacta.', en: 'Premium roasted amber beer with malty intensity.' },
+        price: '2.80 €',
+        variants: ['1906 Reserva Especial', '1906 Red Vintage ("La Colorada")', '1906 Black Coupage'],
+        allergens: ['Gluten (Cebada)'],
+        isGlutenFree: false,
+        isVeggie: true
+      },
+      {
+        id: 'cerv-brewdog',
+        cat: 'cervezas',
+        catName: { es: 'Cervezas', gl: 'Cervexas', en: 'Beers' },
+        name: { es: 'Cervezas Artesanas & Especiales', gl: 'Cervexas Artesás & Especiais', en: 'Craft & Specialty Beers' },
+        desc: { es: 'Selección de botellines artesanos e importación.', gl: 'Selección de botellíns artesáns e importación.', en: 'Craft beer bottles selection.' },
+        price: '3.20 €',
+        variants: ['BrewDog Punk IPA', 'Estrella Galicia 0,0 Tostada', 'Estrella Galicia Sin Gluten (Apta Celíacos)'],
+        allergens: ['Gluten (según botella)'],
+        isGlutenFree: true,
+        isVeggie: true
+      },
+
+      // VINOS
+      {
+        id: 'vino-blanco',
+        cat: 'vinos',
+        catName: { es: 'Vinos', gl: 'Vinos', en: 'Wines' },
+        name: { es: 'Vinos Blancos Gallegos', gl: 'Vinos Brancos Galegos', en: 'Galician White Wines' },
+        desc: { es: 'Selección de copas de vinos blancos de las mejores denominaciones de origen.', gl: 'Selección de viños brancos das Rías Baixas e Ribeiro.', en: 'Selection of crisp local white wines.' },
+        price: '2.50 €',
+        variants: ['Albariño D.O. Rías Baixas', 'Ribeiro Branco da Casa', 'Godello D.O. Valdeorras'],
+        allergens: ['Sulfitos'],
+        isGlutenFree: true,
+        isVeggie: true
+      },
+      {
+        id: 'vino-tinto',
+        cat: 'vinos',
+        catName: { es: 'Vinos', gl: 'Vinos', en: 'Wines' },
+        name: { es: 'Vinos Tintos (Mencía & Rioja)', gl: 'Vinos Tintos (Mencía & Rioxa)', en: 'Red Wines' },
+        desc: { es: 'Tintos con cuerpo, servidos a temperatura perfecta.', gl: 'Tintos con corpo servidos a temperatura axeitada.', en: 'Rich red wines from local Mencía to classic Rioja.' },
+        price: '2.50 €',
+        variants: ['Mencía D.O. Ribeira Sacra', 'Rioja Crianza', 'Ribera del Duero Roble'],
+        allergens: ['Sulfitos'],
+        isGlutenFree: true,
+        isVeggie: true
+      },
+
+      // VERMÚS
+      {
+        id: 'vermu-gallego',
+        cat: 'vermus',
+        catName: { es: 'Vermús', gl: 'Vermús', en: 'Vermouths' },
+        name: { es: 'Vermús de Galicia con Sifón y Naranja', gl: 'Vermús de Galicia con Sifón e Laranxa', en: 'Galician Vermouth' },
+        desc: { es: 'Aperitivo clásico servido con hielo de roca, rodaja de naranja fresca y toque de sifón.', gl: 'Aperitivo clásico servido con xeo, laranxa e sifón.', en: 'Artisanal local vermouth served with citrus and soda spritz.' },
+        price: '3.00 €',
+        variants: ['St. Petroni Vermú Rojo (Padrón)', 'St. Petroni Blanco', 'Nordesía Vermú Tinto', 'Lodeiros Rojo'],
+        allergens: ['Sulfitos'],
+        isGlutenFree: true,
+        isVeggie: true
+      },
+
+      // TAPAS Y RACIONES
+      {
+        id: 'tapa-croquetas',
+        cat: 'tapas',
+        catName: { es: 'Tapas y Raciones', gl: 'Tapas e Racións', en: 'Tapas & Bites' },
+        name: { es: 'Croquetas Caseras Cremosas', gl: 'Croquetas Caseiras Cremosas', en: 'Creamy Homemade Croquettes' },
+        desc: { es: 'Hechas a mano cada mañana, rebozado crujiente y bechamel suave.', gl: 'Feitas a man cada mañá, rebozado crocante e bechamel suave.', en: 'Crispy handmade croquettes with creamy artisanal filling.' },
+        price: '7.50 €',
+        variants: ['Jamón Ibérico', 'Boletus & Trufa', 'Marisco'],
+        allergens: ['Gluten (Trigo)', 'Lácteos', 'Huevos'],
+        isGlutenFree: false,
+        isVeggie: false
+      },
+      {
+        id: 'tapa-alioli',
+        cat: 'tapas',
+        catName: { es: 'Tapas y Raciones', gl: 'Tapas e Racións', en: 'Tapas & Bites' },
+        name: { es: 'Patatas Bravas / Alioli Casero', gl: 'Patacas Bravas / Alioli Caseiro', en: 'Homemade Potatoes Bravas / Alioli' },
+        desc: { es: 'Patata gallega crujiente por fuera y tierna por dentro con salsa alioli recién emulsionada.', gl: 'Pataca galega crocante por fóra con salsa alioli caseira.', en: 'Fried Galician potatoes with garlic alioli or spicy sauce.' },
+        price: '5.50 €',
+        variants: ['Alioli suave casero', 'Bravas picantes', 'Mixtas (Doble salsa)'],
+        allergens: ['Huevos'],
+        isGlutenFree: true,
+        isVeggie: true
+      },
+      {
+        id: 'tapa-empanada',
+        cat: 'tapas',
+        catName: { es: 'Tapas y Raciones', gl: 'Tapas e Racións', en: 'Tapas & Bites' },
+        name: { es: 'Empanada Gallega Artesanal del Día', gl: 'Empanada Galega Artesá do Día', en: 'Galician Artisanal Pie' },
+        desc: { es: 'Masa fina tradicional con sofrito casero de cebolla y pimiento.', gl: 'Masa fina tradicional con rustrido caseiro de cebola e pemento.', en: 'Traditional homemade Galician pastry pie with seasonal filling.' },
+        price: '4.50 €',
+        variants: ['Atún claro con pimiento', 'Carne picada de ternera', 'Bacalao con pasas'],
+        allergens: ['Gluten (Trigo)', 'Pescado (según variante)'],
+        isGlutenFree: false,
+        isVeggie: false
+      },
+      {
+        id: 'tapa-tabla-quesos',
+        cat: 'tapas',
+        catName: { es: 'Tapas y Raciones', gl: 'Tapas e Racións', en: 'Tapas & Bites' },
+        name: { es: 'Tabla de Quesos Gallegos & Jamón', gl: 'Táboa de Queixos Galegos & Xamón', en: 'Galician Cheese & Cured Ham Board' },
+        desc: { es: 'Queso Tetilla, Arzúa-Ulloa y San Simón da Costa ahumado, acompañados de tostas.', gl: 'Queixo Tetilla, Arzúa-Ulloa e San Simón afumado con tostas.', en: 'Local cheeses platter with Tetilla, creamy Arzúa and smoked San Simón.' },
+        price: '9.00 €',
+        variants: ['Media Ración', 'Ración Completa (+3.50€)'],
+        allergens: ['Lácteos', 'Gluten (Tostas)'],
+        isGlutenFree: false,
+        isVeggie: true
+      },
+
+      // COPAS Y CÓCTELES
+      {
+        id: 'coctel-combinados',
+        cat: 'cocteles',
+        catName: { es: 'Copas y Cócteles', gl: 'Copas e Cócteles', en: 'Spirits & Cocktails' },
+        name: { es: 'Copas & Combinados Nocturnos', gl: 'Copas & Combinados', en: 'Long Drinks & Gin Tonics' },
+        desc: { es: 'Servidos en copa de balón con hielo macizo, tónica premium o refresco y botánicos.', gl: 'Servidos en copa de balón con xeo macizo e cítricos.', en: 'Premium spirits served in balloon glass with citrus and premium tonic.' },
+        price: '6.50 €',
+        variants: ['Nordés Gin (Galicia)', 'Puerto de Indias Fresa', 'Seagrams Gin', 'Ron Barceló Añejo', 'Whisky Red Label'],
+        allergens: [],
+        isGlutenFree: true,
+        isVeggie: true
+      },
+      {
+        id: 'coctel-licorcafe',
+        cat: 'cocteles',
+        catName: { es: 'Copas y Cócteles', gl: 'Copas e Cócteles', en: 'Spirits & Cocktails' },
+        name: { es: 'Chupitos Tradicionales Gallegos', gl: 'Chupitos Tradicionais Galegos', en: 'Traditional Galician Shots' },
+        desc: { es: 'Destilados tradicionales servidos helados en chupito.', gl: 'Destilados tradicionais servidos ben fríos.', en: 'Traditional after-dinner local liqueur shots.' },
+        price: '2.00 €',
+        variants: ['Licor Café Casero', 'Crema de Orujo', 'Hierbas Tradicional', 'Orujo Blanco'],
+        allergens: ['Lácteos (en Crema de Orujo)'],
+        isGlutenFree: true,
+        isVeggie: true
+      },
+
+      // CAFETERÍA
+      {
+        id: 'cafe-especial',
+        cat: 'cafes',
+        catName: { es: 'Cafetería', gl: 'Cafetaría', en: 'Coffee' },
+        name: { es: 'Café de Especialidad 100% Arábica', gl: 'Café de Especialidade 100% Arábica', en: 'Specialty Coffee' },
+        desc: { es: 'Tostado natural, molido al momento con leche fresca vaporizada.', gl: 'Torrado natural, moído ao intre con leite fresca cremada.', en: 'Espresso freshly ground with creamy steamed milk.' },
+        price: '1.40 €',
+        variants: ['Solo / Expreso', 'Cortado', 'Café con Leche', 'Café Bombon (con condensada)'],
+        allergens: ['Lácteos'],
+        isGlutenFree: true,
+        isVeggie: true
+      }
+    ];
+
+    let currentLang = 'es';
+    let currentDiet = 'all';
+
+    // PARSE QUERY PARAMS (REQUERIMIENTO A)
+    function parseTableParams() {
+      const params = new URLSearchParams(window.location.search);
+      const mesa = params.get('mesa') || params.get('table') || params.get('m') || '12';
+      const zona = params.get('zona') || params.get('z') || 'Terraza';
+      
+      const badgeText = `📍 MESA ${mesa.toUpperCase()} · ${zona.toUpperCase()}`;
+      document.getElementById('table-badge-text').textContent = badgeText;
+      document.getElementById('fast-pay-label').textContent = `MESA ${mesa.toUpperCase()}`;
+    }
+
+    function renderCatalog() {
+      const catalogEl = document.getElementById('catalog');
+      const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
+      
+      const filtered = PRODUCTS.filter(p => {
+        // Filtro de dieta
+        if (currentDiet === 'gluten_free' && !p.isGlutenFree) return false;
+        if (currentDiet === 'veggie' && !p.isVeggie) return false;
+
+        // Filtro de búsqueda
+        if (searchTerm) {
+          const name = (p.name[currentLang] || p.name.es).toLowerCase();
+          const desc = (p.desc[currentLang] || p.desc.es).toLowerCase();
+          const variants = (p.variants || []).join(' ').toLowerCase();
+          return name.includes(searchTerm) || desc.includes(searchTerm) || variants.includes(searchTerm);
+        }
+        return true;
+      });
+
+      // Agrupar por categoría
+      const categories = [
+        { id: 'cervezas', name: { es: 'Cervezas', gl: 'Cervexas', en: 'Beers' } },
+        { id: 'vinos', name: { es: 'Vinos Gallegos & Tintos', gl: 'Vinos Galegos & Tintos', en: 'Wines' } },
+        { id: 'vermus', name: { es: 'Vermús & Aperitivos', gl: 'Vermús & Aperitivos', en: 'Vermouths' } },
+        { id: 'tapas', name: { es: 'Tapas & Raciones de la Casa', gl: 'Tapas e Racións da Casa', en: 'Tapas & Food' } },
+        { id: 'cocteles', name: { es: 'Copas, Combinados & Licores', gl: 'Copas, Combinados & Licores', en: 'Spirits & Liqueurs' } },
+        { id: 'cafes', name: { es: 'Cafetería & Infusiones', gl: 'Cafetaría & Infusións', en: 'Coffee & Tea' } }
+      ];
+
+      if (filtered.length === 0) {
+        catalogEl.innerHTML = `
+          <div class="text-center py-12 text-slate-500 text-xs">
+            No se encontraron productos con el filtro aplicado.
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      categories.forEach(cat => {
+        const items = filtered.filter(p => p.cat === cat.id);
+        if (items.length === 0) return;
+
+        html += `
+          <section id="cat-${cat.id}" class="scroll-mt-40">
+            <h2 class="text-xs font-bold text-amber-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span>${cat.name[currentLang] || cat.name.es}</span>
+              <span class="h-px bg-slate-800 flex-1"></span>
+            </h2>
+            <div class="space-y-3">
+              ${items.map(p => renderProductCard(p)).join('')}
+            </div>
+          </section>
+        `;
+      });
+
+      catalogEl.innerHTML = html;
+    }
+
+    function renderProductCard(p) {
+      const name = p.name[currentLang] || p.name.es;
+      const desc = p.desc[currentLang] || p.desc.es;
+      
+      const pillsHtml = (p.variants || []).map(v => 
+        `<span class="inline-block bg-slate-800/90 border border-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded-md font-medium">${v}</span>`
+      ).join('');
+
+      return `
+        <div onclick="openModal('${p.id}')" class="bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 rounded-xl p-3.5 transition cursor-pointer active:scale-[0.99]">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+              <h3 class="text-sm font-bold text-white flex items-center gap-1.5">
+                ${name}
+              </h3>
+              <p class="text-xs text-slate-400 mt-1 line-clamp-2 leading-relaxed">${desc}</p>
+              
+              <!-- PILLS DE VARIANTES (REQUERIMIENTO B) -->
+              <div class="flex flex-wrap gap-1 mt-2.5">
+                ${pillsHtml}
+              </div>
+            </div>
+
+            <div class="text-right flex flex-col items-end justify-between self-stretch">
+              <span class="text-xs font-bold text-amber-400 bg-amber-400/10 px-2 py-1 rounded-md border border-amber-400/20 whitespace-nowrap">
+                ${p.price}
+              </span>
+              <span class="text-[10px] text-slate-500 mt-auto pt-2 flex items-center gap-0.5">
+                + Info
+              </span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openModal(id) {
+      const p = PRODUCTS.find(x => x.id === id);
+      if (!p) return;
+
+      document.getElementById('modal-category').textContent = p.catName[currentLang] || p.catName.es;
+      document.getElementById('modal-title').textContent = p.name[currentLang] || p.name.es;
+      document.getElementById('modal-desc').textContent = p.desc[currentLang] || p.desc.es;
+      document.getElementById('modal-price').textContent = p.price;
+
+      // Variantes
+      const varList = document.getElementById('modal-variants-list');
+      varList.innerHTML = (p.variants || []).map(v => 
+        `<span class="bg-slate-800 border border-slate-700 text-amber-300 text-xs px-2.5 py-1 rounded-md font-medium">${v}</span>`
+      ).join('');
+
+      // Alérgenos
+      const algList = document.getElementById('modal-allergens-list');
+      if (p.allergens && p.allergens.length > 0) {
+        algList.innerHTML = p.allergens.map(a => 
+          `<span class="bg-red-950/60 border border-red-800/60 text-red-300 text-xs px-2 py-0.5 rounded-md">${a}</span>`
+        ).join('');
+      } else {
+        algList.innerHTML = '<span class="text-xs text-slate-400">Sin alérgenos comunes declarados</span>';
+      }
+
+      const modal = document.getElementById('item-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('item-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function setLang(lang) {
+      currentLang = lang;
+      ['es', 'gl', 'en'].forEach(l => {
+        const btn = document.getElementById('lang-' + l);
+        if (l === lang) {
+          btn.className = 'px-2 py-0.5 rounded text-white bg-slate-700';
+        } else {
+          btn.className = 'px-2 py-0.5 rounded hover:text-white';
+        }
+      });
+      renderCatalog();
+    }
+
+    function toggleDiet(diet) {
+      currentDiet = diet;
+      ['all', 'gluten_free', 'veggie'].forEach(d => {
+        const btn = document.getElementById('filter-' + d);
+        if (d === diet) {
+          btn.className = 'px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500 text-slate-950';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-900 border border-slate-800 text-slate-400 whitespace-nowrap';
+        }
+      });
+      renderCatalog();
+    }
+
+    function filterItems() {
+      const searchVal = document.getElementById('search-input').value;
+      const clearBtn = document.getElementById('clear-search');
+      if (searchVal.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      renderCatalog();
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('clear-search').classList.add('hidden');
+      renderCatalog();
+    }
+
+    function scrollToCat(catId) {
+      const el = document.getElementById('cat-' + catId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      parseTableParams();
+      renderCatalog();
+    });
+  </script>
+</body>
+</html>

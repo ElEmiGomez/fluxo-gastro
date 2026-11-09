@@ -254,10 +254,15 @@ export default function CartaPrototipoPage() {
     )
   }
 
-  // Vista interactiva con paridad total de diseño (plantilla oficial de Fluxo / Casa Mar)
+  // Vista interactiva con paridad total de diseño (plantilla oficial de Fluxo / Casa Mar / Jaratusas)
   // Embebe la experiencia autónoma optimizada con carrito, personalizador de platos y carrusel de categorías
   const isCasaMar = slug.includes('casamar') || slug.includes('casa-mar')
-  const menuSource = isCasaMar ? '/carta-casamar' : `/carta-prototipo?slug=${slug}`
+  const isJaratusas = slug.includes('jaratusa') || slug.includes('jara-tusa')
+  const menuSource = isJaratusas
+    ? '/carta-jaratusas'
+    : isCasaMar
+    ? '/carta-casamar'
+    : `/carta-prototipo?slug=${slug}`
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 overflow-hidden">
