@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
 
-export type PrototypeKey = 'template' | 'casamar'
+export type PrototypeKey = 'template' | 'casamar' | 'jaratusas'
 
 export interface CustomPrototypeData {
   slug: string
@@ -48,13 +48,18 @@ export function CRMTemplateQRModal({
 
   const isCustom = !!customPrototype
   const isTemplate = !isCustom && activePrototype === 'template'
+  const isJaratusas = !isCustom && activePrototype === 'jaratusas'
   const origin = typeof window !== 'undefined'
     ? window.location.origin
     : 'https://fluxo-gastro.vercel.app'
 
   const targetPath = isCustom
     ? `/p/${customPrototype.slug}`
-    : (isTemplate ? '/carta-prototipo' : '/carta-casamar')
+    : isJaratusas
+    ? '/p/bar-jaratusas'
+    : isTemplate
+    ? '/carta-prototipo'
+    : '/carta-casamar'
   const targetUrl = `${origin}${targetPath}`
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=10&data=${encodeURIComponent(
@@ -63,7 +68,11 @@ export function CRMTemplateQRModal({
 
   const downloadFilename = isCustom
     ? `${customPrototype.slug.replace(/[^a-zA-Z0-9_-]/g, '_')}_Carta_QR.png`
-    : (isTemplate ? 'Fluxo_Template_Carta_QR.png' : 'Casa_Mar_da_Vila_Carta_QR.png')
+    : isJaratusas
+    ? 'Bar_Jara_Tusas_Carta_QR.png'
+    : isTemplate
+    ? 'Fluxo_Template_Carta_QR.png'
+    : 'Casa_Mar_da_Vila_Carta_QR.png'
 
   const handleCopyUrl = () => {
     if (typeof navigator !== 'undefined') {
@@ -114,24 +123,40 @@ export function CRMTemplateQRModal({
 
         {/* Selector de Pestañas (Segmented Control - Apple Glassmorphism) */}
         {!isCustom && (
-          <div className="grid grid-cols-2 p-1 mr-12 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md mb-4">
+          <div className="grid grid-cols-3 p-1 mr-12 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-md mb-4">
             <button
               type="button"
               onClick={() => setActivePrototype('template')}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
                 isTemplate
                   ? 'bg-white/20 text-white shadow-md border border-white/20 backdrop-blur-lg'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <FluxoLogo size={14} />
-              <span>Template General</span>
+              <span className="truncate">Template</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActivePrototype('jaratusas')}
+              className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                isJaratusas
+                  ? 'bg-amber-500/25 text-amber-300 shadow-md border border-amber-400/40 backdrop-blur-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <img
+                src="/images/jaratusas-logo.png"
+                alt="Jara-Tusas"
+                className="w-3.5 h-3.5 rounded-md object-contain"
+              />
+              <span className="truncate">Bar Jara-Tusas</span>
             </button>
             <button
               type="button"
               onClick={() => setActivePrototype('casamar')}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                !isTemplate
+              className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                !isTemplate && !isJaratusas
                   ? 'bg-cyan-500/20 text-cyan-300 shadow-md border border-cyan-400/30 backdrop-blur-lg'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
@@ -141,7 +166,7 @@ export function CRMTemplateQRModal({
                 alt="Casa Mar"
                 className="w-3.5 h-3.5 rounded-full object-cover"
               />
-              <span>Casa Mar da Vila</span>
+              <span className="truncate">Casa Mar</span>
             </button>
           </div>
         )}
@@ -152,6 +177,8 @@ export function CRMTemplateQRModal({
             className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-colors ${
               isCustom
                 ? 'bg-blue-500/20 border border-blue-400/30 text-blue-400 shadow-blue-500/20'
+                : isJaratusas
+                ? 'bg-amber-500/20 border border-amber-400/30 text-amber-400 shadow-amber-500/20'
                 : isTemplate
                 ? 'bg-emerald-500/20 border border-emerald-400/30 text-emerald-400 shadow-emerald-500/20'
                 : 'bg-cyan-500/20 border border-cyan-400/30 text-cyan-400 shadow-cyan-500/20'
@@ -162,23 +189,27 @@ export function CRMTemplateQRModal({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-extrabold text-white">
-                {isCustom ? `${customPrototype.name} QR` : isTemplate ? 'Template Carta QR' : 'Casa Mar da Vila QR'}
+                {isCustom ? `${customPrototype.name} QR` : isJaratusas ? 'Bar Jara-Tusas QR' : isTemplate ? 'Template Carta QR' : 'Casa Mar da Vila QR'}
               </h3>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                   isCustom
                     ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                    : isJaratusas
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                     : isTemplate
                     ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                     : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
                 }`}
               >
-                {isCustom ? 'Aprovisionado' : isTemplate ? 'Estático' : 'Piloto'}
+                {isCustom ? 'Aprovisionado' : isJaratusas ? 'Carta Fija' : isTemplate ? 'Estático' : 'Piloto'}
               </span>
             </div>
             <p className="text-xs text-slate-400">
               {isCustom
                 ? `Tarjeta de sala lista para imprimir y escanear en ${customPrototype.name}`
+                : isJaratusas
+                ? 'Carta oficial con variantes, alérgenos y selector de mesa'
                 : isTemplate
                 ? 'Demostración oficial para reuniones y captación'
                 : 'Carta digital con identidad oficial y carta real'}
@@ -195,6 +226,15 @@ export function CRMTemplateQRModal({
                 <>
                   <FluxoLogo size={22} />
                   <span className="text-xs font-black text-slate-900">{customPrototype.name}</span>
+                </>
+              ) : isJaratusas ? (
+                <>
+                  <img
+                    src="/images/jaratusas-logo.png"
+                    alt="Bar Jara-Tusas"
+                    className="w-5 h-5 object-contain"
+                  />
+                  <span className="text-xs font-black text-slate-900">Bar Jara-Tusas</span>
                 </>
               ) : isTemplate ? (
                 <>
@@ -214,7 +254,7 @@ export function CRMTemplateQRModal({
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                {isCustom ? 'Mesa 1' : isTemplate ? 'Mesa X' : 'Mesa 1'}
+                {isCustom ? 'Mesa 1' : isJaratusas ? 'Mesa 12' : isTemplate ? 'Mesa X' : 'Mesa 1'}
               </span>
             </div>
           </div>
@@ -223,7 +263,7 @@ export function CRMTemplateQRModal({
           <div className="p-2 bg-white rounded-xl border border-slate-200/80 shadow-xs relative">
             <img
               src={qrImageUrl}
-              alt={isCustom ? `QR ${customPrototype.name}` : isTemplate ? 'QR Estático Template Carta' : 'QR Casa Mar da Vila'}
+              alt={isCustom ? `QR ${customPrototype.name}` : isJaratusas ? 'QR Bar Jara-Tusas' : isTemplate ? 'QR Estático Template Carta' : 'QR Casa Mar da Vila'}
               className="w-48 h-48 sm:w-56 sm:h-56 object-contain rounded-lg"
               loading="eager"
             />
@@ -234,6 +274,8 @@ export function CRMTemplateQRModal({
             <p className="text-xs font-extrabold text-slate-900">
               {isCustom
                 ? `Escanea para acceder a la carta de ${customPrototype.name}`
+                : isJaratusas
+                ? 'Escanea para abrir la carta de Bar Jara-Tusas'
                 : isTemplate
                 ? 'Escanea para abrir la carta demostrativa'
                 : 'Escanea para abrir la carta de Casa Mar da Vila'}

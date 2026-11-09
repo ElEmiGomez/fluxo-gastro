@@ -60,6 +60,30 @@ const TEMPLATES: Record<string, MenuPrototype> = {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
+  'bar-jaratusas': {
+    id: 'tpl-jaratusas',
+    slug: 'bar-jaratusas',
+    nombre_local: 'Bar Jara-Tusas',
+    eslogan: 'Café, Cervezas, Vermús y Tapas en Noia',
+    color_acento: '#f59e0b',
+    clave_wifi: '',
+    platos: [],
+    url_destino: '/carta-jaratusas',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  'jara-tusas': {
+    id: 'tpl-jaratusas-alt',
+    slug: 'jara-tusas',
+    nombre_local: 'Bar Jara-Tusas',
+    eslogan: 'Café, Cervezas, Vermús y Tapas en Noia',
+    color_acento: '#f59e0b',
+    clave_wifi: '',
+    platos: [],
+    url_destino: '/carta-jaratusas',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
 }
 
 const ICONOS_CATEGORIA: Record<string, React.ReactNode> = {
@@ -258,11 +282,12 @@ export default function CartaPrototipoPage() {
   // Embebe la experiencia autónoma optimizada con carrito, personalizador de platos y carrusel de categorías
   const isCasaMar = slug.includes('casamar') || slug.includes('casa-mar')
   const isJaratusas = slug.includes('jaratusa') || slug.includes('jara-tusa')
+  const queryString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
   const menuSource = isJaratusas
-    ? '/carta-jaratusas'
+    ? `/carta-jaratusas${queryString}`
     : isCasaMar
-    ? '/carta-casamar'
-    : `/carta-prototipo?slug=${slug}`
+    ? `/carta-casamar${queryString}`
+    : `/carta-prototipo?slug=${slug}${queryString ? `&${searchParams.toString()}` : ''}`
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 overflow-hidden">

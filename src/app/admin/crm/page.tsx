@@ -163,7 +163,7 @@ export default function CRMAdminPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isContactCardOpen, setIsContactCardOpen] = useState(false)
   const [isTemplateQrOpen, setIsTemplateQrOpen] = useState(false)
-  const [templateQrProto, setTemplateQrProto] = useState<'template' | 'casamar'>('template')
+  const [templateQrProto, setTemplateQrProto] = useState<'template' | 'casamar' | 'jaratusas'>('template')
   const [showAllEvents, setShowAllEvents] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [isOnline, setIsOnline] = useState<boolean>(true)
@@ -745,6 +745,17 @@ export default function CRMAdminPage() {
                 >
                   <QrCode className="w-3.5 h-3.5 text-emerald-400" />
                   <span>Template Carta QR</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setTemplateQrProto('jaratusas')
+                    setIsTemplateQrOpen(true)
+                  }}
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/[0.1] text-[11px] font-semibold flex items-center gap-2.5 backdrop-blur-md apple-smooth"
+                >
+                  <QrCode className="w-3.5 h-3.5 text-amber-400" />
+                  <span>QR Bar Jara-Tusas</span>
                 </button>
 
                 <button
@@ -1481,7 +1492,8 @@ export default function CRMAdminPage() {
                                   {(() => {
                                     const rawSlug = lead.custom_slug || lead.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
                                     const isCasaMar = rawSlug.includes('casamar') || rawSlug.includes('casa-mar')
-                                    const menuUrl = isCasaMar ? '/carta-casamar' : `/p/${rawSlug}`
+                                    const isJaratusas = rawSlug.includes('jaratusa') || rawSlug.includes('jara-tusa')
+                                    const menuUrl = isJaratusas ? '/p/bar-jaratusas' : isCasaMar ? '/carta-casamar' : `/p/${rawSlug}`
                                     return (
                                       <a
                                         href={menuUrl}

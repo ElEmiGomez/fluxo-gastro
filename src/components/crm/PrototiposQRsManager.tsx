@@ -164,16 +164,39 @@ export default function PrototiposQRsManager() {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }
+          const jaratusasDefault: MenuPrototype = {
+            id: 'proto-jaratusas',
+            slug: 'bar-jaratusas',
+            nombre_local: 'Bar Jara-Tusas',
+            eslogan: 'Café, Cervezas, Vermús y Tapas en Noia',
+            color_acento: '#f59e0b',
+            clave_wifi: '',
+            platos: [
+              { id: 'j1', nombre: 'Estrella Galicia de Grifo', categoria: 'Cervezas', precio: 2.00, badge: 'Estrella', alergenos: ['Gluten'] },
+              { id: 'j2', nombre: '1906 Reserva Especial', categoria: 'Cervezas', precio: 2.80, badge: 'Sugerido', alergenos: ['Gluten'] },
+              { id: 'j3', nombre: 'St. Petroni Vermú de Galicia', categoria: 'Bebidas', precio: 3.00, badge: 'Estrella', alergenos: ['Sulfitos'] },
+              { id: 'j4', nombre: 'Croquetas Caseras Cremosas', categoria: 'Tapas', precio: 7.50, badge: 'Estrella', alergenos: ['Gluten', 'Lácteos', 'Huevos'] },
+              { id: 'j5', nombre: 'Patatas con Alioli Casero', categoria: 'Tapas', precio: 5.50, badge: null, alergenos: ['Huevos'] },
+              { id: 'j6', nombre: 'Empanada Gallega Artesanal', categoria: 'Tapas', precio: 4.50, badge: null, alergenos: ['Gluten'] },
+            ],
+            url_destino: '/p/bar-jaratusas',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
           if (stored) {
             const data: MenuPrototype[] = JSON.parse(stored)
             if (!data.some((p) => p.slug === 'casamar-da-vila' || p.id === 'proto-casamar')) {
               data.unshift(casaMarDefault)
-              try { localStorage.setItem('fluxo_crm_prototypes_v1', JSON.stringify(data)) } catch {}
             }
+            if (!data.some((p) => p.slug === 'bar-jaratusas' || p.id === 'proto-jaratusas')) {
+              data.splice(1, 0, jaratusasDefault)
+            }
+            try { localStorage.setItem('fluxo_crm_prototypes_v1', JSON.stringify(data)) } catch {}
             setPrototipos(data)
           } else {
             const defaults: MenuPrototype[] = [
               casaMarDefault,
+              jaratusasDefault,
               {
                 id: 'proto-taperia',
                 slug: 'taperia-adega-do-pazo',

@@ -227,7 +227,8 @@ export function CRMLeadDetailModal({
   const getMenuUrl = () => {
     const rawSlug = lead.custom_slug || lead.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
     const isCasaMar = rawSlug.includes('casamar') || rawSlug.includes('casa-mar')
-    return isCasaMar ? '/carta-casamar' : `/p/${rawSlug}`
+    const isJaratusas = rawSlug.includes('jaratusa') || rawSlug.includes('jara-tusa')
+    return isJaratusas ? '/p/bar-jaratusas' : isCasaMar ? '/carta-casamar' : `/p/${rawSlug}`
   }
 
   // Cálculo de días de piloto

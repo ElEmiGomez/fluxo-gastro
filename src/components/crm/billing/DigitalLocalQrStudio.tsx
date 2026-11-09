@@ -64,11 +64,21 @@ function PitchFullscreen({
           aria-label={`QR de ${local.nombre}`}
         />
         <p className="mt-6 text-lg font-bold text-cyan-300 font-mono">
-          {local.slug.includes('casamar') || local.slug.includes('casa-mar') ? '/carta-casamar' : `/p/${local.slug}`}
+          {local.slug.includes('jaratusa') || local.slug.includes('jara-tusa')
+            ? '/p/bar-jaratusas'
+            : local.slug.includes('casamar') || local.slug.includes('casa-mar')
+            ? '/carta-casamar'
+            : `/p/${local.slug}`}
         </p>
         <div className="flex flex-wrap justify-center gap-3 mt-8 w-full">
           <a
-            href={local.slug.includes('casamar') || local.slug.includes('casa-mar') ? '/carta-casamar' : `/p/${local.slug}`}
+            href={
+              local.slug.includes('jaratusa') || local.slug.includes('jara-tusa')
+                ? '/p/bar-jaratusas'
+                : local.slug.includes('casamar') || local.slug.includes('casa-mar')
+                ? '/carta-casamar'
+                : `/p/${local.slug}`
+            }
             target="_blank"
             rel="noopener noreferrer"
             className="px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-sm font-bold flex items-center gap-2 apple-smooth border border-white/15"
@@ -99,7 +109,8 @@ export function DigitalLocalQrStudio({ locales }: DigitalLocalQrStudioProps) {
 
   const getTargetUrlForLocal = useCallback((loc: LocalBilling) => {
     const isCasaMar = loc.slug.includes('casamar') || loc.slug.includes('casa-mar')
-    return resolveAbsoluteUrl(isCasaMar ? '/carta-casamar' : `/p/${loc.slug}`)
+    const isJaratusas = loc.slug.includes('jaratusa') || loc.slug.includes('jara-tusa')
+    return resolveAbsoluteUrl(isJaratusas ? '/p/bar-jaratusas' : isCasaMar ? '/carta-casamar' : `/p/${loc.slug}`)
   }, [])
 
   useEffect(() => {
