@@ -626,12 +626,6 @@ export function drawStreetKit(
     ctx.stroke()
     ctx.restore()
 
-    ctx.fillStyle = '#cbd5e1'
-    ctx.font = FONT(800, W * 0.022)
-    ctx.textAlign = 'center'
-    ctx.fillText('DOBLAR AQUÍ TRAS PLASTIFICAR', W / 2, foldY - W * 0.014)
-    ctx.fillText('DOBLAR AQUÍ TRAS PLASTIFICAR', W / 2, foldY + W * 0.034)
-
     // Mitad inferior: reverso White invertido
     ctx.save()
     ctx.beginPath()
