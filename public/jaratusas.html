@@ -69,7 +69,7 @@
         <div class="min-w-0 flex items-center gap-2">
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 w-fit flex-shrink-0 whitespace-nowrap shadow-2xs">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span id="ui-table-badge">📍 Mesa 12</span>
+            <span id="ui-table-badge">Mesa 12</span>
           </span>
         </div>
       </div>
@@ -383,8 +383,9 @@
         <div class="space-y-1">
           <h3 class="text-lg font-black text-slate-900 tracking-tight">Comanda de tu Mesa</h3>
           <p id="drawer-table-subtitle" class="text-xs text-blue-700 font-bold flex items-center gap-1.5 flex-wrap pt-0.5">
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black">
-              📍 Mesa 12
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Mesa 12
             </span>
             <span class="text-slate-500 font-medium">— Enséñale o léele esta lista al camarero</span>
           </p>
@@ -749,7 +750,7 @@
       const { mesa } = getTableParams();
 
       const uiBadge = document.getElementById('ui-table-badge');
-      if (uiBadge) uiBadge.textContent = `📍 ${mesa}`;
+      if (uiBadge) uiBadge.textContent = mesa;
 
       const fastPayPill = document.getElementById('fast-pay-zone-pill');
       if (fastPayPill) fastPayPill.textContent = mesa;
@@ -757,8 +758,9 @@
       const drawerSub = document.getElementById('drawer-table-subtitle');
       if (drawerSub) {
         drawerSub.innerHTML = `
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black">
-            📍 ${mesa}
+          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            ${mesa}
           </span>
           <span class="text-slate-500 font-medium">— Enséñale o léele esta lista al camarero</span>
         `;
@@ -800,8 +802,11 @@
       }
 
       grid.innerHTML = filtered.map(product => {
-        const currentVariant = (product.variants && product.variants[product.selectedVariantIndex])
-          ? product.variants[product.selectedVariantIndex]
+        const vIdx = (typeof product.selectedVariantByUser === 'number')
+          ? product.selectedVariantByUser
+          : (typeof product.selectedVariantIndex === 'number' ? product.selectedVariantIndex : 0);
+        const currentVariant = (product.variants && product.variants[vIdx])
+          ? product.variants[vIdx]
           : { name: '', price: product.price };
 
         const currentPrice = currentVariant.price;
@@ -820,19 +825,19 @@
           `;
         }).join('');
 
-        // Píldoras de variantes interactivas en la propia tarjeta
+        // Píldoras de variantes interactivas en la propia tarjeta (neutras por defecto en el menú general sin entrar al producto)
         const variantPillsHtml = (product.variants && product.variants.length > 0)
           ? `
             <div class="flex flex-wrap gap-1 mt-2" onclick="event.stopPropagation()">
-              ${product.variants.map((v, vIdx) => {
-                const isActive = vIdx === product.selectedVariantIndex;
+              ${product.variants.map((v, vIndex) => {
+                const isActive = product.selectedVariantByUser === vIndex;
                 const pillClass = isActive
                   ? 'variant-pill-active bg-blue-600 text-white font-extrabold shadow-2xs border-blue-700'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border-slate-200/80';
+                  : 'bg-slate-100/90 hover:bg-slate-200 text-slate-700 font-medium border-slate-200/80';
                 return `
                   <button
                     type="button"
-                    onclick="selectVariant('${product.id}', ${vIdx}, event)"
+                    onclick="selectVariant('${product.id}', ${vIndex}, event)"
                     class="px-2 py-0.5 rounded-lg text-[10px] border transition-all active:scale-95 cursor-pointer ${pillClass}"
                   >
                     ${v.name}
@@ -924,6 +929,7 @@
       if (event) event.stopPropagation();
       const product = PRODUCTS.find(p => p.id === productId);
       if (!product || !product.variants) return;
+      product.selectedVariantByUser = variantIndex;
       product.selectedVariantIndex = variantIndex;
       renderCatalog();
     }
