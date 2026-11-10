@@ -6,6 +6,14 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-10 22:35] — Cierre de Tarea 4: Hacer Carta QR para Jaratusas
+* **Departamentos Sincronizados:** Marketing & Ventas (Depto 2) e Ingeniería & Producto / Program Data (Depto 4).
+* **Módulo Completado:**
+  - Carta digital fija y kit físico para Jaratusas finalizados según especificaciones acordadas.
+* **Estado:** Marcada como completada `[x]`.
+
+---
+
 ### [2026-11-09 16:50] — Especificaciones Técnicas de Tarea 4 (Carta QR Jaratusas) para Program Data
 * **Departamentos Sincronizados:** Marketing & Ventas (Depto 2) e Ingeniería & Producto / Program Data (Depto 4).
 * **Parámetros Acordados para la Carta de Jaratusas:**

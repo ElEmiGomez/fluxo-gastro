@@ -69,7 +69,7 @@ flowchart TD
 │  │     (Guion, captura del flujo de terraza/cocina y maquetación web)      │
 │  ├─ [📋 Tarea 3] Accionar Plan de Marketing y Validación en Campo          │
 │  │     (Salida a calle con Carta QR, prospección y feedback de Fluxo)     │
-│  ├─ [📋 Tarea 4] Hacer Carta QR para Jaratusas                            │
+│  ├─ [x] Tarea 4: Hacer Carta QR para Jaratusas                            │
 │  │     • Modalidad: Carta Fija Digital informativa (sin pedidos ni comandas)│
 │  │     • Fuente de datos: Extracción directa de listado del TPV            │
 │  │     • Branding: Identidad visual lista (logo/colores para kit físico)   │
