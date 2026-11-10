@@ -63,7 +63,7 @@
     <div class="max-w-xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2">
       <!-- Identidad de Bar Jara-Tusas + Badge de Mesa -->
       <div class="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
-        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full shadow-xs flex items-center justify-center flex-shrink-0 overflow-hidden bg-white ring-1 ring-slate-200 p-0.5">
+        <div class="w-10 h-10 rounded-full bg-white p-1.5 border border-slate-200 flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0">
           <img src="/images/jaratusas-logo.png" alt="Bar Jara-Tusas" class="w-full h-full object-contain">
         </div>
         <div class="min-w-0 flex items-center gap-2">
@@ -135,17 +135,17 @@
   <!-- 2. CONTENEDOR PRINCIPAL (Mobile-First, idéntico a Casa Mar da Vila) -->
   <main class="max-w-xl mx-auto px-4 pt-3 space-y-4">
 
-    <!-- 2A. BANNER DE COBRO RÁPIDO EN BARRA & TERRAZA -->
-    <div id="fast-pay-banner" class="mb-2">
-      <div class="w-full flex items-center justify-between px-3.5 py-2 rounded-xl bg-blue-50/80 border border-blue-200/70 text-blue-900 transition-all text-left">
-        <div class="flex items-center gap-2 min-w-0">
-          <span class="text-sm">💡</span>
-          <span class="text-xs font-extrabold tracking-tight truncate">
-            Para pagar rápido en barra indica tu mesa: <strong id="fast-pay-mesa-text" class="text-blue-700 font-black bg-white px-2 py-0.5 rounded-md border border-blue-200">MESA 12</strong>
-          </span>
+    <!-- 2A. BANNER INFORMATIVO: ARMAR COMANDA EN MESA -->
+    <div id="fast-pay-banner" class="mb-2.5">
+      <div class="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl bg-blue-50/90 border border-blue-200/80 text-blue-950 transition-all text-left shadow-2xs">
+        <div class="flex items-start sm:items-center gap-2 min-w-0 flex-1">
+          <span class="text-base flex-shrink-0 mt-0.5 sm:mt-0">💡</span>
+          <p class="text-[11px] sm:text-xs font-semibold leading-snug text-blue-900">
+            Selecciona con el botón <strong class="font-black text-blue-700">(+)</strong> los productos que quieras pedir; se guardarán en tu comanda para tenerlo todo listo cuando se acerque el camarero.
+          </p>
         </div>
-        <span class="text-[11px] font-bold text-blue-700 ml-2 bg-white px-2 py-0.5 rounded-md border border-blue-200/60 shadow-2xs whitespace-nowrap">
-          Terraza
+        <span id="fast-pay-zone-pill" class="text-[10px] sm:text-[11px] font-black text-blue-700 bg-white px-2.5 py-1 rounded-full border border-blue-200/80 shadow-2xs whitespace-nowrap flex-shrink-0">
+          MESA 12 · Terraza
         </span>
       </div>
     </div>
@@ -174,15 +174,7 @@
           <span>🌱</span>
           <span>Veggie</span>
         </button>
-        <button
-          type="button"
-          id="filter-btn-available"
-          onclick="toggleSoldOutFilter()"
-          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex-shrink-0 border bg-white text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
-        >
-          <span>🟢</span>
-          <span>Disponibles</span>
-        </button>
+        
       </div>
     </div>
 
@@ -386,45 +378,39 @@
   <div id="cart-drawer-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white border border-slate-200 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 overflow-y-auto max-h-[92vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
       
-      <!-- Cabecera del Drawer -->
-      <div class="flex items-start justify-between pb-3 border-b border-slate-100">
-        <div>
-          <h3 class="text-base font-black text-slate-900">Comanda de tu Mesa</h3>
-          <p class="text-xs text-slate-500 font-medium">Revisa los productos antes de mostrarlos en barra o terraza</p>
+      <!-- Cabecera del Drawer Ultralimpia con Subtítulo y Badge Integrado -->
+      <div class="flex items-start justify-between pb-3.5 border-b border-slate-100">
+        <div class="space-y-1">
+          <h3 class="text-lg font-black text-slate-900 tracking-tight">Comanda de tu Mesa</h3>
+          <p id="drawer-table-subtitle" class="text-xs text-blue-700 font-bold flex items-center gap-1.5 flex-wrap pt-0.5">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black">
+              📍 MESA 12 · TERRAZA
+            </span>
+            <span class="text-slate-500 font-medium">— Enséñale o léele esta lista al camarero</span>
+          </p>
         </div>
-        <button onclick="closeCartDrawer()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold cursor-pointer">✕</button>
+        <button onclick="closeCartDrawer()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm font-bold cursor-pointer transition">✕</button>
       </div>
 
-      <!-- Tarjeta Destacada de Mesa (Anti-Errores) -->
-      <div class="mt-3 p-3.5 bg-blue-50/90 border border-blue-200 rounded-2xl flex items-center justify-between">
-        <div>
-          <span class="text-[10px] font-black uppercase text-blue-600 tracking-wider">Identificador Oficial</span>
-          <h4 id="drawer-table-heading" class="text-base font-black text-blue-900">📍 MESA 12 · TERRAZA</h4>
-        </div>
-        <span class="text-[10px] bg-blue-600 text-white font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
-          En terraza
-        </span>
-      </div>
-
-      <!-- Prompt de Servicio Rápido -->
-      <div class="mt-2.5 p-2.5 bg-amber-50/80 border border-amber-200/70 rounded-xl text-xs text-amber-900 font-medium flex items-center gap-2">
-        <span class="text-base">📱</span>
-        <span><strong>Modo Chuleta:</strong> Enseña esta pantalla al camarero o léela para tomar la nota sin dudas en 5 segundos.</span>
-      </div>
-
-      <!-- Lista de Ítems en la Comanda -->
-      <div id="drawer-items-list" class="mt-4 space-y-2 flex-1 overflow-y-auto max-h-[40vh] pr-1">
+      <!-- Lista de Ítems en la Comanda (Directa, sin bloques intermedios) -->
+      <div id="drawer-items-list" class="mt-4 space-y-2 flex-1 overflow-y-auto max-h-[48vh] pr-1">
         <!-- Inyectado reactivamente -->
       </div>
 
-      <!-- Total y Acciones -->
-      <div class="mt-4 pt-3 border-t border-slate-100 space-y-3">
+      <!-- Total, Nota de Barra y Acciones -->
+      <div class="mt-4 pt-3.5 border-t border-slate-100 space-y-3">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-slate-500">Total Comanda</span>
-          <span id="drawer-total-price" class="text-xl font-black text-blue-700 tabular-nums">0,00 €</span>
+          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Comanda</span>
+          <span id="drawer-total-price" class="text-2xl font-black text-blue-700 tabular-nums">0,00 €</span>
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
+        <!-- Nota discreta en una sola línea -->
+        <p class="text-[11px] text-slate-500 font-medium text-center py-1.5 bg-slate-50 rounded-xl border border-slate-100">
+          💡 Para pagar más rápido en barra, indica tu mesa: <strong id="drawer-fast-pay-mesa" class="font-black text-slate-800">MESA 12</strong>
+        </p>
+
+        <!-- Botones de Acción: Vaciar todo y Seguir mirando la carta -->
+        <div class="grid grid-cols-2 gap-2 pt-1">
           <button
             type="button"
             onclick="clearCart()"
@@ -434,10 +420,10 @@
           </button>
           <button
             type="button"
-            onclick="showOrderToWaiter()"
-            class="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+            onclick="closeCartDrawer()"
+            class="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-1.5"
           >
-            <span>Listo para pedir ✓</span>
+            <span>Seguir mirando la carta</span>
           </button>
         </div>
       </div>
@@ -487,7 +473,7 @@
         name: '1906 Reserva Especial ("La Milnueve")',
         categories: ['cervezas'],
         price: 2.80,
-        image_url: '/images/dishes/estrella-galicia.jpg',
+        image_url: '/images/dishes/cerveza-1906.jpg',
         description: 'Cerveza tostada extra con carácter, maltas torrefactas y cuerpo intenso.',
         allergens: ['gluten'],
         dietary: ['veggie'],
@@ -504,7 +490,7 @@
         name: 'Cervezas Especiales & Artesanas',
         categories: ['cervezas'],
         price: 3.20,
-        image_url: '/images/dishes/estrella-galicia.jpg',
+        image_url: '/images/dishes/cerveza-artesana.jpg',
         description: 'Botellines de cerveza artesana seleccionada e importación.',
         allergens: ['gluten'],
         dietary: ['gluten_free', 'veggie'],
@@ -749,15 +735,26 @@
 
     function syncTableBadge() {
       const { mesa, zona } = getTableParams();
+      const zonaCapitalized = zona.charAt(0).toUpperCase() + zona.slice(1).toLowerCase();
       const badgeText = `📍 MESA ${mesa} · ${zona}`;
       const uiBadge = document.getElementById('ui-table-badge');
       if (uiBadge) uiBadge.textContent = badgeText;
 
-      const fastPayText = document.getElementById('fast-pay-mesa-text');
-      if (fastPayText) fastPayText.textContent = `MESA ${mesa}`;
+      const fastPayPill = document.getElementById('fast-pay-zone-pill');
+      if (fastPayPill) fastPayPill.textContent = `MESA ${mesa} · ${zonaCapitalized}`;
 
-      const drawerHeading = document.getElementById('drawer-table-heading');
-      if (drawerHeading) drawerHeading.textContent = badgeText;
+      const drawerSub = document.getElementById('drawer-table-subtitle');
+      if (drawerSub) {
+        drawerSub.innerHTML = `
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black">
+            📍 MESA ${mesa} · ${zona}
+          </span>
+          <span class="text-slate-500 font-medium">— Enséñale o léele esta lista al camarero</span>
+        `;
+      }
+
+      const drawerMesa = document.getElementById('drawer-fast-pay-mesa');
+      if (drawerMesa) drawerMesa.textContent = `MESA ${mesa}`;
     }
 
     // ── RENDER DEL CATÁLOGO (Paridad 100% con Casa Mar da Vila) ──
@@ -777,10 +774,8 @@
         filtered = filtered.filter(p => p.dietary.includes('veggie'));
       }
 
-      // Filtro disponibilidad
-      if (onlyAvailableFilter) {
-        filtered = filtered.filter(p => p.isAvailable);
-      }
+      // Ocultar productos agotados automáticamente (solo productos disponibles)
+      filtered = filtered.filter(p => p.isAvailable !== false && p.available !== false);
 
       if (filtered.length === 0) {
         grid.innerHTML = `
