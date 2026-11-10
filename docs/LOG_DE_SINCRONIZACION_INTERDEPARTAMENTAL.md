@@ -6,6 +6,16 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-10 23:28] — Registro de Nueva Tarea: Creador de Motion Graphics Fluxo (Remotion) (Tarea 5)
+* **Departamentos Sincronizados:** Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
+* **Alcance de la Tarea:**
+  1. Integración del entorno Remotion en React/Next.js para la composición y renderizado programático de motion graphics corporativos de Fluxo.
+  2. Creación de plantillas animadas de producto: transiciones de marca, demostraciones de flujo en sala/cocina y piezas audiovisuales para la landing page y campañas de marketing.
+  3. Exportación automatizada a formatos estándar (MP4, WebM) y optimización de rendimiento.
+* **Orden de Backlog Pendiente:** Tarea 2 (Vídeo Landing Page), Tarea 3 (Accionar Plan de Marketing en Campo) y Tarea 5 (Creador de Motion Graphics Fluxo - Remotion).
+
+---
+
 ### [2026-11-10 22:35] — Cierre de Tarea 4: Hacer Carta QR para Jaratusas
 * **Departamentos Sincronizados:** Marketing & Ventas (Depto 2) e Ingeniería & Producto / Program Data (Depto 4).
 * **Módulo Completado:**
