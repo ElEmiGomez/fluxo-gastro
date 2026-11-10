@@ -63,13 +63,13 @@
     <div class="max-w-xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2">
       <!-- Identidad de Bar Jara-Tusas + Badge de Mesa -->
       <div class="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
-        <div class="w-10 h-10 rounded-full bg-white p-1.5 border border-slate-200 flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0">
-          <img src="/images/jaratusas-logo.png" alt="Bar Jara-Tusas" class="w-full h-full object-contain">
+        <div class="w-10 h-10 rounded-full bg-[#e6e3dc] border border-slate-200/90 flex items-center justify-center overflow-hidden shadow-xs flex-shrink-0">
+          <img src="/images/jaratusas-logo-circle.png" alt="Bar Jara-Tusas" class="w-full h-full object-cover">
         </div>
         <div class="min-w-0 flex items-center gap-2">
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-black bg-blue-50 text-blue-700 border border-blue-200/80 w-fit flex-shrink-0 whitespace-nowrap shadow-2xs">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span id="ui-table-badge">📍 MESA 12 · TERRAZA</span>
+            <span id="ui-table-badge">📍 Mesa 12</span>
           </span>
         </div>
       </div>
@@ -141,11 +141,11 @@
         <div class="flex items-start sm:items-center gap-2 min-w-0 flex-1">
           <span class="text-base flex-shrink-0 mt-0.5 sm:mt-0">💡</span>
           <p class="text-[11px] sm:text-xs font-semibold leading-snug text-blue-900">
-            Selecciona con el botón <strong class="font-black text-blue-700">(+)</strong> los productos que quieras pedir; se guardarán en tu comanda para tenerlo todo listo cuando se acerque el camarero.
+            Selecciona con el botón <strong class="font-black text-blue-700">(+)</strong> los productos que quieras pedir
           </p>
         </div>
         <span id="fast-pay-zone-pill" class="text-[10px] sm:text-[11px] font-black text-blue-700 bg-white px-2.5 py-1 rounded-full border border-blue-200/80 shadow-2xs whitespace-nowrap flex-shrink-0">
-          MESA 12 · Terraza
+          Mesa 12
         </span>
       </div>
     </div>
@@ -384,7 +384,7 @@
           <h3 class="text-lg font-black text-slate-900 tracking-tight">Comanda de tu Mesa</h3>
           <p id="drawer-table-subtitle" class="text-xs text-blue-700 font-bold flex items-center gap-1.5 flex-wrap pt-0.5">
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black">
-              📍 MESA 12 · TERRAZA
+              📍 Mesa 12
             </span>
             <span class="text-slate-500 font-medium">— Enséñale o léele esta lista al camarero</span>
           </p>
@@ -406,7 +406,7 @@
 
         <!-- Nota discreta en una sola línea -->
         <p class="text-[11px] text-slate-500 font-medium text-center py-1.5 bg-slate-50 rounded-xl border border-slate-100">
-          💡 Para pagar más rápido en barra, indica tu mesa: <strong id="drawer-fast-pay-mesa" class="font-black text-slate-800">MESA 12</strong>
+          💡 Para pagar más rápido en barra, indica tu mesa: <strong id="drawer-fast-pay-mesa" class="font-black text-slate-800">Mesa 12</strong>
         </p>
 
         <!-- Botones de Acción: Vaciar todo y Seguir mirando la carta -->
@@ -509,7 +509,7 @@
         name: 'Vinos Blancos Gallegos',
         categories: ['vinos'],
         price: 2.50,
-        image_url: '/images/dishes/copa-albarino.jpg',
+        image_url: '/images/dishes/vino-blanco.jpg',
         description: 'Copas de los mejores blancos de las Rías Baixas y O Ribeiro bien frescos.',
         allergens: ['sulfites'],
         dietary: ['gluten_free', 'veggie'],
@@ -526,7 +526,7 @@
         name: 'Vinos Tintos (Mencía & Rioja)',
         categories: ['vinos'],
         price: 2.50,
-        image_url: '/images/dishes/copa-albarino.jpg',
+        image_url: '/images/dishes/vino-tinto.jpg',
         description: 'Tintos con cuerpo, servidos a la temperatura justa en copa de cata.',
         allergens: ['sulfites'],
         dietary: ['gluten_free', 'veggie'],
@@ -545,7 +545,7 @@
         name: 'Vermús de Galicia con Sifón',
         categories: ['vermus'],
         price: 3.00,
-        image_url: '/images/cocktails/mojito.jpg',
+        image_url: '/images/dishes/vermu-gallego.jpg',
         description: 'Aperitivo clásico servido con hielo de roca, rodaja de naranja fresca y toque de sifón.',
         allergens: ['sulfites'],
         dietary: ['gluten_free', 'veggie'],
@@ -562,7 +562,7 @@
         name: 'Vermú Preparado de la Casa',
         categories: ['vermus'],
         price: 3.50,
-        image_url: '/images/cocktails/mojito.jpg',
+        image_url: '/images/dishes/vermu-gallego.jpg',
         description: 'Receta propia de la casa con ginebra gallega, bíter artesanal y piel de naranja macerada.',
         allergens: ['sulfites'],
         dietary: ['gluten_free', 'veggie'],
@@ -613,7 +613,7 @@
         name: 'Empanada Gallega del Día',
         categories: ['tapas'],
         price: 4.00,
-        image_url: '/images/dishes/empanada-venezolana.jpg',
+        image_url: '/images/dishes/empanada-gallega.jpg',
         description: 'Masa fina y dorada horneada cada mañana por artesanos locales.',
         allergens: ['gluten', 'fish'],
         dietary: [],
@@ -688,7 +688,7 @@
         name: 'Café 100% Arábica de Especialidad',
         categories: ['cafes'],
         price: 1.30,
-        image_url: '/images/dishes/tarta-santiago.jpg',
+        image_url: '/images/dishes/cafe-especial.jpg',
         description: 'Tostado natural, molido al momento con leche fresca vaporizada.',
         allergens: ['dairy'],
         dietary: ['gluten_free', 'veggie'],
@@ -726,35 +726,46 @@
     }
 
     // ── GESTIÓN DE QUERY PARAMS ──
+    function formatTableName(rawMesa) {
+      if (!rawMesa) return 'Mesa 12';
+      const m = String(rawMesa).trim();
+      if (/^mesa/i.test(m)) {
+        return m.replace(/^mesa\s*/i, 'Mesa ');
+      }
+      if (/^\d+$/.test(m)) {
+        return `Mesa ${m}`;
+      }
+      return m.toUpperCase();
+    }
+
     function getTableParams() {
       const urlParams = new URLSearchParams(window.location.search);
-      const mesa = urlParams.get('mesa') || urlParams.get('table') || urlParams.get('m') || '12';
-      const zona = urlParams.get('zona') || urlParams.get('z') || 'Terraza';
-      return { mesa: mesa.toUpperCase(), zona: zona.toUpperCase() };
+      const rawMesa = urlParams.get('mesa') || urlParams.get('table') || urlParams.get('m') || '12';
+      const mesaFormatted = formatTableName(rawMesa);
+      return { mesa: mesaFormatted };
     }
 
     function syncTableBadge() {
-      const { mesa, zona } = getTableParams();
-      const zonaCapitalized = zona.charAt(0).toUpperCase() + zona.slice(1).toLowerCase();
-      const badgeText = `📍 MESA ${mesa} · ${zona}`;
+      const { mesa } = getTableParams();
+
       const uiBadge = document.getElementById('ui-table-badge');
-      if (uiBadge) uiBadge.textContent = badgeText;
+      if (uiBadge) uiBadge.textContent = `📍 ${mesa}`;
 
       const fastPayPill = document.getElementById('fast-pay-zone-pill');
-      if (fastPayPill) fastPayPill.textContent = `MESA ${mesa} · ${zonaCapitalized}`;
+      if (fastPayPill) fastPayPill.textContent = mesa;
 
       const drawerSub = document.getElementById('drawer-table-subtitle');
       if (drawerSub) {
         drawerSub.innerHTML = `
           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-black">
-            📍 MESA ${mesa} · ${zona}
+            📍 ${mesa}
           </span>
           <span class="text-slate-500 font-medium">— Enséñale o léele esta lista al camarero</span>
         `;
       }
 
       const drawerMesa = document.getElementById('drawer-fast-pay-mesa');
-      if (drawerMesa) drawerMesa.textContent = `MESA ${mesa}`;
+      if (drawerMesa) drawerMesa.textContent = mesa;
     }
 
     // ── RENDER DEL CATÁLOGO (Paridad 100% con Casa Mar da Vila) ──
@@ -1038,7 +1049,7 @@
       if (totalItems > 0) {
         floatingBar.classList.remove('hidden');
         bottomCatBar.classList.add('cart-active');
-        if (cartCount) cartCount.textContent = `${totalItems} ${totalItems === 1 ? 'ítem' : 'ítems'} · Mesa ${mesa}`;
+        if (cartCount) cartCount.textContent = `${totalItems} ${totalItems === 1 ? 'ítem' : 'ítems'} · ${mesa}`;
         if (cartTotal) cartTotal.textContent = formatEuro(totalPrice);
       } else {
         floatingBar.classList.add('hidden');
@@ -1140,7 +1151,7 @@
 
     function showOrderToWaiter() {
       const { mesa } = getTableParams();
-      alert(`¡Comanda lista para Mesa ${mesa}! Enséñale esta pantalla al personal o indícala en barra para que la sirvan de inmediato.`);
+      alert(`¡Comanda lista para ${mesa}! Enséñale esta pantalla al personal o indícala en barra para que la sirvan de inmediato.`);
       closeCartDrawer();
     }
 
