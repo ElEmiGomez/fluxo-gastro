@@ -43,7 +43,32 @@
     }
   </style>
 </head>
-<body class="min-h-screen bg-slate-50/70 pb-36 relative selection:bg-blue-600 selection:text-white">
+<body class="min-h-screen bg-white pb-36 relative selection:bg-blue-600 selection:text-white">
+
+  <!-- AMBIENT FLANKS: IMÁGENES REALES DEL LOCAL BAR JARA-TUSAS (NOIA) CON DIFUMINADO SUAVE HACIA EL CENTRO BLANCO -->
+  <aside aria-hidden="true" class="fixed inset-0 pointer-events-none z-0 hidden md:block overflow-hidden select-none">
+    <!-- Flanco Izquierdo: Fachada exterior y terraza bajo soportales de piedra de Bar Jara-Tusas -->
+    <div class="absolute top-0 bottom-0 left-0 w-1/2 overflow-hidden">
+      <img
+        src="/images/bg/jaratusas-flank-left.jpg"
+        alt="Fachada y terraza rústica de Bar Jara-Tusas"
+        class="w-full h-full object-cover object-left opacity-[0.18]"
+      />
+      <!-- Difuminado horizontal suave hacia el centro blanco -->
+      <div class="absolute inset-0 bg-gradient-to-r from-white/10 via-white/60 via-65% to-white"></div>
+    </div>
+
+    <!-- Flanco Derecho: Interior con barra de madera, muros de piedra y lámparas cálidas de Bar Jara-Tusas -->
+    <div class="absolute top-0 bottom-0 right-0 w-1/2 overflow-hidden">
+      <img
+        src="/images/bg/jaratusas-flank-right.jpg"
+        alt="Interior y ambiente acogedor de Bar Jara-Tusas"
+        class="w-full h-full object-cover object-right opacity-[0.18]"
+      />
+      <!-- Difuminado horizontal suave hacia el centro blanco -->
+      <div class="absolute inset-0 bg-gradient-to-l from-white/10 via-white/60 via-65% to-white"></div>
+    </div>
+  </aside>
 
   <!-- TOAST REACTIVO AL AÑADIR AL PEDIDO -->
   <div id="order-toast" class="hidden fixed top-16 inset-x-4 max-w-md mx-auto z-50 transition-all duration-200">
@@ -132,8 +157,8 @@
     </div>
   </header>
 
-  <!-- 2. CONTENEDOR PRINCIPAL (Mobile-First, idéntico a Casa Mar da Vila) -->
-  <main class="max-w-xl mx-auto px-4 pt-3 space-y-4">
+  <!-- 2. CONTENEDOR PRINCIPAL (Mobile-First, tira vertical con fondo blanco puro y flancos difuminados) -->
+  <main class="max-w-xl mx-auto px-4 pt-3 space-y-4 relative z-10 bg-white md:shadow-[0_0_50px_rgba(0,0,0,0.04)] md:border-x md:border-slate-100 min-h-screen">
 
     <!-- 2A. BANNER INFORMATIVO: ARMAR COMANDA EN MESA -->
     <div id="fast-pay-banner" class="mb-2.5">
@@ -151,7 +176,7 @@
     </div>
 
     <!-- 2B. BARRA DE FILTROS DIETÉTICOS (Paridad 100% con Casa Mar da Vila) -->
-    <div class="sticky top-[57px] z-20 bg-slate-50/95 backdrop-blur-md py-2 -mx-4 px-4 border-b border-slate-200/60">
+    <div class="sticky top-[57px] z-20 bg-white/95 backdrop-blur-md py-2 -mx-4 px-4 border-b border-slate-200/60">
       <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
         <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mr-1 flex-shrink-0">
           FILTROS:
