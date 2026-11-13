@@ -130,10 +130,10 @@ export function DrinkMockupsMarquee({
     : 'Tiraje directo de bodega, cervezas especiales, aperitivos tradicionales y vinos gallegos servidos en su copa adecuada.'
 
   const ctaText = lang === 'gl'
-    ? '📖 Ver Carta Completa e Prezos na Mesa 0'
+    ? 'Ver Carta'
     : lang === 'en'
-    ? '📖 View Full Menu & Prices at Table 0'
-    : '📖 Ver Carta Completa y Precios en Mesa 0'
+    ? 'View Menu'
+    : 'Ver Carta'
 
   return (
     <section

@@ -877,7 +877,7 @@ ${JSON.stringify(jsonLd, null, 2)}
       <a href="#tragos-carta">Tragos y Carta</a>
       <a href="#horarios-ubicacion">Horarios y Dónde estamos</a>
       <a href="#resenas-maps">Reseñas</a>
-      <a href="carta.html?mesa=0" class="btn-blue" style="margin-top: 4px;">Ver Carta en Mesa 0</a>
+      <a href="carta.html?mesa=0" class="btn-blue" style="margin-top: 4px;">Ver Carta</a>
     </div>
   </div>
 
@@ -895,7 +895,7 @@ ${JSON.stringify(jsonLd, null, 2)}
       <h1 class="cauce-hero-title">Tu mesa bajo los soportales de Noia, cerveza de bodega y picoteo</h1>
       <p class="cauce-hero-sub">${escapeHtml(tenant.tagline)}</p>
       <div class="cauce-hero-cta">
-        <a href="carta.html?mesa=0" class="btn-blue btn-blue-lg">Ver Carta en Mesa 0</a>
+        <a href="carta.html?mesa=0" class="btn-blue btn-blue-lg">Ver Carta</a>
       </div>
     </div>
   </header>
@@ -951,7 +951,7 @@ ${JSON.stringify(jsonLd, null, 2)}
     </div>
 
     <div style="margin-top: 36px;">
-      <a href="carta.html?mesa=0" class="btn-blue btn-blue-lg">📖 Ver Carta Completa y Precios en Mesa 0 →</a>
+      <a href="carta.html?mesa=0" class="btn-blue btn-blue-lg">Ver Carta →</a>
       <p style="margin-top: 10px; font-size: 0.82rem; color: var(--text-muted);">Precios actualizados, formatos y los 14 alérgenos oficiales</p>
     </div>
   </section>
