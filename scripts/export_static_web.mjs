@@ -892,7 +892,7 @@ ${JSON.stringify(jsonLd, null, 2)}
     </div>
     <div class="cauce-hero-scrim"></div>
     <div class="cauce-hero-inner">
-      <h1 class="cauce-hero-title">Tu mesa bajo los soportales de Noia, cerveza de bodega y picoteo</h1>
+      <h1 class="cauce-hero-title">Tu bar de siempre bajo los soportales de Noia</h1>
       <p class="cauce-hero-sub">${escapeHtml(tenant.tagline)}</p>
       <div class="cauce-hero-cta">
         <a href="carta.html?mesa=0" class="btn-blue btn-blue-lg">Ver Carta</a>
@@ -902,10 +902,10 @@ ${JSON.stringify(jsonLd, null, 2)}
 
   <!-- PANTALLA 2: MENÚ DESLIZANTE DE MOCKUPS DE TRAGOS + BOTÓN A MESA 0 -->
   <section id="tragos-carta" class="cauce-section" style="padding-top: 56px; text-align: center;">
-    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); background: var(--brand-blue-soft); padding: 4px 14px; border-radius: 9999px; border: 1px solid var(--brand-blue-border); display: inline-block; margin-bottom: 12px;">Tiraje y Bodega</span>
-    <h2 class="cauce-h2">Nuestras cañas, vinos y tragos de barra</h2>
+    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); background: var(--brand-blue-soft); padding: 4px 14px; border-radius: 9999px; border: 1px solid var(--brand-blue-border); display: inline-block; margin-bottom: 12px;">El ritmo de la barra</span>
+    <h2 class="cauce-h2">Cañas bien tiradas, vinos de la tierra y aperitivos de siempre</h2>
     <p style="margin: 10px auto 32px; max-width: 600px; font-size: 0.96rem; color: var(--text-muted); line-height: 1.6;">
-      Tiraje directo de bodega, cervezas especiales, aperitivos tradicionales y vinos gallegos servidos en su copa adecuada.
+      Cerveza de bodega en copa fría, vermú preparado como manda la tradición y vinos gallegos para acompañar la conversación.
     </p>
 
     <!-- Carrusel deslizante de 6 mockups de tragos -->
@@ -915,54 +915,54 @@ ${JSON.stringify(jsonLd, null, 2)}
           <img src="${resolveImg('/images/dishes/estrella-galicia.jpg')}" alt="Caña y Copa Estrella Galicia de Bodega" class="drink-thumb" loading="lazy">
           <div class="drink-tag">Bodega</div>
           <h3 class="drink-title">Caña y Copa Estrella Galicia</h3>
-          <p class="drink-desc">Cristal helado, crema densa y tiraje directo desde tanque refrigerado.</p>
+          <p class="drink-desc">Directa de tanque refrigerado, con su crema perfecta y la temperatura justa para la primera o la tercera ronda.</p>
         </div>
         <div class="drink-card">
           <img src="${resolveImg('/images/dishes/cerveza-1906.jpg')}" alt="1906 Red Vintage La Colorada" class="drink-thumb" loading="lazy">
           <div class="drink-tag">Reserva</div>
           <h3 class="drink-title">1906 Red Vintage «La Colorada»</h3>
-          <p class="drink-desc">Tostada intensa de espuma cremosa y notas acarameladas en copa propia.</p>
+          <p class="drink-desc">Tostada, intensa y de trago largo. La favorita para alargar la tarde con calma y buena charla.</p>
         </div>
         <div class="drink-card">
           <img src="${resolveImg('/images/dishes/cerveza-artesana.jpg')}" alt="1906 Black Coupage" class="drink-thumb" loading="lazy">
           <div class="drink-tag">Especial</div>
           <h3 class="drink-title">1906 Black Coupage</h3>
-          <p class="drink-desc">Cerveza negra de carácter con matices tostados de café y cacao.</p>
+          <p class="drink-desc">Carácter tostado y notas de café y cacao para los que buscan un sabor diferente en la sobremesa.</p>
         </div>
         <div class="drink-card">
           <img src="${resolveImg('/images/dishes/vermu-preparado.jpg')}" alt="Vermú de Grifo con Sifón y Cítrico" class="drink-thumb" loading="lazy">
           <div class="drink-tag">Aperitivo</div>
           <h3 class="drink-title">Vermú de Grifo con Sifón</h3>
-          <p class="drink-desc">El clásico aperitivo servido con hielo, rodaja de naranja y aceituna.</p>
+          <p class="drink-desc">El aperitivo indispensable: servido con hielo, toque de sifón, rodaja de naranja y aceituna antes de comer.</p>
         </div>
         <div class="drink-card">
           <img src="${resolveImg('/images/dishes/copa-albarino-rustica.jpg')}" alt="Albariño y Mencía por Copa" class="drink-thumb" loading="lazy">
           <div class="drink-tag">Denominación</div>
           <h3 class="drink-title">Albariño y Mencía por Copa</h3>
-          <p class="drink-desc">Selección de bodegas de Rías Baixas y Ribeira Sacra a su temperatura.</p>
+          <p class="drink-desc">Blancos y tintos de bodegas gallegas servidos por copa, ideales para picotear algo al paso.</p>
         </div>
         <div class="drink-card">
           <img src="${resolveImg('/images/dishes/combinados.jpg')}" alt="Licores Tradicionales y Combinados" class="drink-thumb" loading="lazy">
           <div class="drink-tag">Sobremesa</div>
           <h3 class="drink-title">Licores y Combinados</h3>
-          <p class="drink-desc">Licor café macerado, crema de orujo, hierbas y destilados en copa balón.</p>
+          <p class="drink-desc">Licor café casero, hierbas tradicionales y combinados en copa balón para cerrar la noche entre amigos.</p>
         </div>
       </div>
     </div>
 
     <div style="margin-top: 36px;">
       <a href="carta.html?mesa=0" class="btn-blue btn-blue-lg">Ver Carta →</a>
-      <p style="margin-top: 10px; font-size: 0.82rem; color: var(--text-muted);">Precios actualizados, formatos y los 14 alérgenos oficiales</p>
+      <p style="margin-top: 10px; font-size: 0.82rem; color: var(--text-muted);">Precios actualizados, formatos de ración y los 14 alérgenos oficiales</p>
     </div>
   </section>
 
   <!-- PANTALLA 3: HORARIOS Y DÓNDE ESTAMOS -->
   <section id="horarios-ubicacion" class="cauce-section" style="padding-top: 56px;">
     <div style="max-width: 680px; margin-bottom: 36px;">
-      <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); display: block; margin-bottom: 8px;">Servicio y Dónde Encontrarnos</span>
-      <h2 class="cauce-h2">Horarios de barra, terraza y ubicación</h2>
+      <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); display: block; margin-bottom: 8px;">Dónde encontrarnos</span>
+      <h2 class="cauce-h2">El punto de encuentro en la Rúa do Curro</h2>
       <p style="margin-top: 10px; font-size: 0.96rem; color: var(--text-muted); line-height: 1.6;">
-        ${escapeHtml(tenant.address)}, ${escapeHtml(tenant.postalCode)} ${escapeHtml(tenant.city)}. Servicio ininterrumpido en el casco histórico medieval.
+        Bajo los soportales de piedra de Noia. Un espacio cercano donde coincidir a cualquier hora del día.
       </p>
     </div>
 
@@ -995,7 +995,7 @@ ${JSON.stringify(jsonLd, null, 2)}
         </div>
 
         <p style="border-top: 1px solid #F1F5F9; padding-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
-          Horarios continuos de servicio en barra y terraza cubierta.
+          Servicio continuo en barra y terraza cubierta para que siempre encuentres sitio.
         </p>
       </div>
 
@@ -1026,7 +1026,7 @@ ${JSON.stringify(jsonLd, null, 2)}
           </div>
 
           <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.55;">
-            Bajo los soportales históricos de piedra de la Rúa do Curro, en pleno casco histórico medieval de Noia.
+            En el corazón histórico de Noia, resguardado por los soportales de piedra donde siempre apetece parar a tomar algo.
           </p>
 
           <div style="display: flex; align-items: center; gap: 8px; font-size: 0.92rem; padding-top: 4px;">
@@ -1049,10 +1049,10 @@ ${JSON.stringify(jsonLd, null, 2)}
     <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px;">
       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px;">
         <div style="max-width: 680px;">
-          <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); display: block; margin-bottom: 8px;">Opiniones Reales</span>
-          <h2 class="cauce-h2">Lo que dicen de nosotros en Google Maps</h2>
+          <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); display: block; margin-bottom: 8px;">Opiniones Verificadas · Google Maps</span>
+          <h2 class="cauce-h2">La confianza de quienes llenan la barra cada día</h2>
           <p style="margin-top: 10px; font-size: 0.96rem; color: var(--text-muted); line-height: 1.6;">
-            Reseñas espontáneas de clientes sobre nuestra cerveza de bodega, tapas de cortesía y ambiente bajo los soportales.
+            Una puntuación de 4.8 sobre 5 en Google Maps avalada por quienes disfrutan del trato cercano y la calidad de siempre.
           </p>
         </div>
 

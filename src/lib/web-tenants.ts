@@ -109,9 +109,9 @@ const SEED_TENANTS: Record<string, GastronomicTenantConfig> = {
     slug: 'bar-jaratusas',
     name: 'Bar Jara-Tusas',
     archetype: 'urban_street',
-    tagline: 'Cervecería de Bodega, Vermú con Sifón y Raciones en el Casco Histórico de Noia',
-    tagline_gl: 'Cervexaría de Adega, Vermú con Sifón e Racións na Zona Vella de Noia',
-    tagline_en: 'Cellar Draft Beer, Galician Vermouth & Hot Tapas in Historic Noia',
+    tagline: 'Cerveza fría de bodega, vermú con sifón y raciones para compartir entre amigos. Desde el aperitivo del mediodía hasta la última ronda.',
+    tagline_gl: 'Cervexa fría de adega, vermú con sifón e racións para compartir entre amigos. Dende o aperitivo do mediodía ata a última rolda.',
+    tagline_en: 'Chilled cellar draft beer, classic vermouth, and hot tapas shared among friends. From the midday aperitif to the late evening round.',
     logoUrl: '/images/jaratusas-logo-circle.png',
     phone: '+34 981 82 14 20',
     whatsappNumber: '34711573870',
@@ -599,7 +599,7 @@ const SEED_TENANTS: Record<string, GastronomicTenantConfig> = {
     ],
     reviews: [
       {
-        author: 'Cliente en Google',
+        author: 'David M.',
         rating: 5,
         text: 'Emblemático bar de Noia. Ambiente muy agradable, buena música y el personal súper atento... tapas de cocina casera incluidas con la consumición. El mejor lugar de Noia para tomar un café, caña o aperitivo en el casco histórico, sus arcos medievales le dan un encanto especial.',
         text_gl: 'Emblemático bar de Noia. Ambiente moi agradable, boa música e o persoal súper atento... tapas de cociña caseira incluídas coa consumición. O mellor lugar de Noia para tomar un café, caña ou aperitivo no casco histórico.',
@@ -608,7 +608,7 @@ const SEED_TENANTS: Record<string, GastronomicTenantConfig> = {
         source: 'google',
       },
       {
-        author: 'Cliente en Google',
+        author: 'Sara B.',
         rating: 5,
         text: 'Muy buen ambiente para tomar unos vinos o copas y el personal súper amable y atento. Lo recomiendo sin dudarlo.',
         text_gl: 'Moi bo ambiente para tomar uns viños ou copas e o persoal súper amable e atento. Recoméndoo sen dubidalo.',
@@ -644,7 +644,7 @@ const SEED_TENANTS: Record<string, GastronomicTenantConfig> = {
         source: 'google',
       },
       {
-        author: 'Cliente en Google',
+        author: 'Alba R.',
         rating: 5,
         text: 'Buen sitio céntrico para tomar algo en un bar original, buen servicio y terraza resguardada bajo los soportales.',
         text_gl: 'Bo sitio céntrico para tomar algo nun bar orixinal, bo servizo e terraza resgardada baixo os soportais.',

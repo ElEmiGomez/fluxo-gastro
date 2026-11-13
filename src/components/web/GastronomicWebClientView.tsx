@@ -448,16 +448,16 @@ const CAUCE_COPY = {
         desc: 'Si venís varios a comer o cenar, nos escribís por WhatsApp con el mensaje preparado y os guardamos espacio.',
       },
     ],
-    sec4Eyebrow: 'Horarios y Dónde estamos',
-    sec4Title: 'Tu punto de encuentro en la Rúa do Curro',
+    sec4Eyebrow: 'Dónde encontrarnos',
+    sec4Title: 'El punto de encuentro en la Rúa do Curro',
     sec4Subtitle:
-      'Cerveza de bodega, aperitivo del mediodía y picoteo en pleno casco histórico de Noia.',
+      'Bajo los soportales de piedra de Noia. Un espacio cercano donde coincidir a cualquier hora del día.',
     sec4MapsBtn: 'Cómo llegar en Google Maps',
     sec4HoursLabel: 'Horario Semanal',
     secReviewsEyebrow: 'Opiniones Verificadas · Google Maps',
-    secReviewsTitle: 'Lo que dicen quienes nos visitan',
+    secReviewsTitle: 'La confianza de quienes llenan la barra cada día',
     secReviewsSubtitle:
-      'Puntuación media de 4.8 sobre 5 basada en más de 340 reseñas reales en Google Maps.',
+      'Una puntuación de 4.8 sobre 5 en Google Maps avalada por quienes disfrutan del trato cercano y la calidad de siempre.',
     secReviewsViewAll: 'Ver todas las opiniones en Google Maps →',
     footerRights: 'Todos los derechos reservados.',
     footerMenuLink: 'Carta Completa',
@@ -534,16 +534,16 @@ const CAUCE_COPY = {
         desc: 'Se vides varios a xantar ou cear, escribídenos por WhatsApp coa mensaxe preparada e gardámosvos espazo.',
       },
     ],
-    sec4Eyebrow: 'Horarios e Onde estamos',
-    sec4Title: 'O teu punto de encontro na Rúa do Curro',
+    sec4Eyebrow: 'Onde atoparnos',
+    sec4Title: 'O punto de encontro na Rúa do Curro',
     sec4Subtitle:
-      'Cervexa de adega, aperitivo do mediodía e racións en pleno casco histórico de Noia.',
+      'Baixo os soportais de pedra de Noia. Un espazo próximo onde coincidir a calquera hora do día.',
     sec4MapsBtn: 'Como chegar en Google Maps',
     sec4HoursLabel: 'Horario Semanal',
     secReviewsEyebrow: 'Opinións Verificadas · Google Maps',
-    secReviewsTitle: 'O que din as persoas que nos visitan',
+    secReviewsTitle: 'A confianza de quen enche a barra cada día',
     secReviewsSubtitle:
-      'Puntuación media de 4.8 sobre 5 baseada en máis de 340 reseñas reais en Google Maps.',
+      'Unha puntuación de 4.8 sobre 5 en Google Maps avalada por quen goza do trato próximo e a calidade de sempre.',
     secReviewsViewAll: 'Ver todas as opinións en Google Maps →',
     footerRights: 'Todos os dereitos reservados.',
     footerMenuLink: 'Carta Completa',
@@ -620,16 +620,16 @@ const CAUCE_COPY = {
         desc: 'Coming with family or friends for dinner? Send your pre-filled WhatsApp message in seconds and we will hold your table.',
       },
     ],
-    sec4Eyebrow: 'Hours & Location',
-    sec4Title: 'Your gathering spot on Rúa do Curro',
+    sec4Eyebrow: 'Where to Find Us',
+    sec4Title: 'Our Gathering Spot on Rúa do Curro',
     sec4Subtitle:
-      'Cellar draft beer, midday aperitifs and sharing tapas in the historic center of Noia.',
+      'Under Noia’s historic stone arcades. A welcoming spot to meet up at any time of day.',
     sec4MapsBtn: 'Directions on Google Maps',
     sec4HoursLabel: 'Weekly Hours',
     secReviewsEyebrow: 'Verified Reviews · Google Maps',
-    secReviewsTitle: 'What our guests say',
+    secReviewsTitle: 'The Trust of Those Who Fill Our Bar Every Day',
     secReviewsSubtitle:
-      'Average rating of 4.8 out of 5 based on over 340 authentic reviews on Google Maps.',
+      'A 4.8 out of 5 rating on Google Maps backed by those who love our friendly hospitality and honest quality.',
     secReviewsViewAll: 'View all reviews on Google Maps →',
     footerRights: 'All rights reserved.',
     footerMenuLink: 'Full Menu',
@@ -1482,7 +1482,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                 </div>
 
                 <div className="pt-3 border-t border-slate-100 text-xs text-[#475569]">
-                  <span>Horarios continuos de servicio en barra y terraza cubierta.</span>
+                  <span>Servicio continuo en barra y terraza cubierta para que siempre encuentres sitio.</span>
                 </div>
               </div>
 
@@ -1518,7 +1518,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                   </div>
 
                   <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
-                    Bajo los soportales históricos de piedra de la Rúa do Curro, en pleno casco histórico medieval de Noia.
+                    En el corazón histórico de Noia, resguardado por los soportales de piedra donde siempre apetece parar a tomar algo.
                   </p>
 
                   <div className="pt-1 flex items-center gap-2.5 text-sm">

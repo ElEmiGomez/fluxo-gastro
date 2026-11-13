@@ -28,9 +28,9 @@ export const JARA_TUSAS_DRINK_MOCKUPS: DrinkMockupItem[] = [
     tag: 'Bodega',
     tag_gl: 'Adega',
     tag_en: 'Cellar Draft',
-    desc: 'Cristal helado, crema densa y tiraje directo desde tanque refrigerado.',
-    desc_gl: 'Cristal xeado, crema densa e tiraxe directo dende tanque refrixerado.',
-    desc_en: 'Ice-cold glassware, dense foam, and direct draft from refrigerated cellar tanks.',
+    desc: 'Directa de tanque refrigerado, con su crema perfecta y la temperatura justa para la primera o la tercera ronda.',
+    desc_gl: 'Directa de tanque refrixerado, coa súa crema perfecta e a temperatura xusta para a primeira ou a terceira rolda.',
+    desc_en: 'Direct from refrigerated cellar tanks, with silky crema and the perfect cold pour for any round.',
     image: '/images/dishes/estrella-galicia.jpg',
   },
   {
@@ -41,9 +41,9 @@ export const JARA_TUSAS_DRINK_MOCKUPS: DrinkMockupItem[] = [
     tag: 'Reserva',
     tag_gl: 'Reserva',
     tag_en: 'Special Reserve',
-    desc: 'Tostada intensa de espuma cremosa y notas acarameladas en copa propia.',
-    desc_gl: 'Tostada intensa de escuma cremosa e notas acarameladas en copa propia.',
-    desc_en: 'Intense roasted malt, velvety foam, and subtle caramel notes served in dedicated stemware.',
+    desc: 'Tostada, intensa y de trago largo. La favorita para alargar la tarde con calma y buena charla.',
+    desc_gl: 'Tostada, intensa e de trago longo. A favorita para alargar a tarde con acougo e boa conversa.',
+    desc_en: 'Rich roasted malt and caramel notes. The local favorite for stretching out the evening.',
     image: '/images/dishes/cerveza-1906.jpg',
   },
   {
@@ -54,9 +54,9 @@ export const JARA_TUSAS_DRINK_MOCKUPS: DrinkMockupItem[] = [
     tag: 'Especial',
     tag_gl: 'Especial',
     tag_en: 'Craft Stout',
-    desc: 'Cerveza negra de carácter con matices tostados de café y cacao.',
-    desc_gl: 'Cervexa negra de carácter con matices tostados de café e cacao.',
-    desc_en: 'Bold dark brew characterized by roasted malts, espresso, and chocolate nuances.',
+    desc: 'Carácter tostado y notas de café y cacao para los que buscan un sabor diferente en la sobremesa.',
+    desc_gl: 'Carácter tostado e notas de café e cacao para os que buscan un sabor diferente na sobremesa.',
+    desc_en: 'Bold roasted character with hints of espresso and dark cocoa for an after-dinner pour.',
     image: '/images/dishes/cerveza-artesana.jpg',
   },
   {
@@ -67,9 +67,9 @@ export const JARA_TUSAS_DRINK_MOCKUPS: DrinkMockupItem[] = [
     tag: 'Aperitivo',
     tag_gl: 'Aperitivo',
     tag_en: 'Aperitif',
-    desc: 'El clásico aperitivo del mediodía servido con hielo, rodaja de naranja y aceituna.',
-    desc_gl: 'O clásico aperitivo do mediodía servido con xeo, rodaja de laranxa e aceituna.',
-    desc_en: 'The midday aperitif served over ice with fresh orange slice and olive.',
+    desc: 'El aperitivo indispensable: servido con hielo, toque de sifón, rodaja de naranja y aceituna antes de comer.',
+    desc_gl: 'O aperitivo indispensable: servido con xeo, toque de sifón, rodaja de laranxa e aceituna antes de xantar.',
+    desc_en: 'The classic aperitif: served over ice with a splash of siphon, fresh citrus, and olive.',
     image: '/images/dishes/vermu-preparado.jpg',
   },
   {
@@ -80,9 +80,9 @@ export const JARA_TUSAS_DRINK_MOCKUPS: DrinkMockupItem[] = [
     tag: 'Denominación',
     tag_gl: 'Denominación',
     tag_en: 'Galician Wine',
-    desc: 'Selección de bodegas de Rías Baixas y Ribeira Sacra servida a su temperatura.',
-    desc_gl: 'Selección de adegas de Rías Baixas e Ribeira Sacra servida á súa temperatura.',
-    desc_en: 'Curated selection from Rías Baixas and Ribeira Sacra poured at optimal cellar temperature.',
+    desc: 'Blancos y tintos de bodegas gallegas servidos por copa, ideales para picotear algo al paso.',
+    desc_gl: 'Brancos e tintos de adegas galegas servidos por copa, ideais para picotear algo ao paso.',
+    desc_en: 'Crisp whites and red wines from Galician bodegas poured by the glass, perfect with casual tapas.',
     image: '/images/dishes/copa-albarino-rustica.jpg',
   },
   {
@@ -93,9 +93,9 @@ export const JARA_TUSAS_DRINK_MOCKUPS: DrinkMockupItem[] = [
     tag: 'Sobremesa',
     tag_gl: 'Sobremesa',
     tag_en: 'After-Dinner',
-    desc: 'Licor café macerado, crema de orujo, hierbas de Galicia y destilados en copa balón.',
-    desc_gl: 'Licor café macerado, crema de bagazo, herbas de Galicia e destilados en copa balón.',
-    desc_en: 'Macerated coffee liqueur, pomace cream, herbal spirits, and premium highballs.',
+    desc: 'Licor café casero, hierbas tradicionales y combinados en copa balón para cerrar la noche entre amigos.',
+    desc_gl: 'Licor café caseiro, herbas tradicionais e combinados en copa balón para pechar a noite entre amigos.',
+    desc_en: 'Homemade coffee liqueur, traditional herbal spirits, and classic drinks to close the night.',
     image: '/images/dishes/combinados.jpg',
   },
 ]
@@ -118,16 +118,16 @@ export function DrinkMockupsMarquee({
   const items = [...JARA_TUSAS_DRINK_MOCKUPS, ...JARA_TUSAS_DRINK_MOCKUPS]
 
   const title = lang === 'gl'
-    ? 'As nosas cañas, viños e tragos de barra'
+    ? 'Canas ben tiradas, viños da terra e aperitivos de sempre'
     : lang === 'en'
-    ? 'Our cellar beers, wines & bar drinks'
-    : 'Nuestras cañas, vinos y tragos de barra'
+    ? 'Fresh draft pours, regional wines, and classic aperitifs'
+    : 'Cañas bien tiradas, vinos de la tierra y aperitivos de siempre'
 
   const subtitle = lang === 'gl'
-    ? 'Tiraxe directo de adega, cervexas especiais, aperitivos tradicionais e viños galegos servidos na súa copa adecuada.'
+    ? 'Cervexa de adega en copa fría, vermú preparado como manda a tradición e viños galegos para acompañar a conversa.'
     : lang === 'en'
-    ? 'Direct cellar draft, reserve beers, traditional aperitifs, and Galician wines poured in dedicated glassware.'
-    : 'Tiraje directo de bodega, cervezas especiales, aperitivos tradicionales y vinos gallegos servidos en su copa adecuada.'
+    ? 'Cellar beer in chilled glassware, classic vermouth with a splash of siphon, and Galician wines to share around the bar.'
+    : 'Cerveza de bodega en copa fría, vermú preparado como manda la tradición y vinos gallegos para acompañar la conversación.'
 
   const ctaText = lang === 'gl'
     ? 'Ver Carta'
@@ -143,7 +143,7 @@ export function DrinkMockupsMarquee({
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-10 text-center">
         <span className="text-[11px] font-black uppercase tracking-widest text-[#1D4ED8] bg-blue-50 px-3 py-1 rounded-full border border-blue-200/80 inline-block mb-3">
-          {lang === 'gl' ? 'Tiraxe e Bodega' : lang === 'en' ? 'Cellar & Bar Selection' : 'Tiraje y Bodega'}
+          {lang === 'gl' ? 'O ritmo da barra' : lang === 'en' ? 'At the Bar' : 'El ritmo de la barra'}
         </span>
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-normal text-[#0F172A] tracking-tight font-serif">
           {title}
@@ -235,10 +235,10 @@ export function DrinkMockupsMarquee({
           </Link>
           <span className="text-xs text-slate-500 font-medium">
             {lang === 'gl'
-              ? 'Con prezos actualizados, formatos e os 14 alérxenos'
+              ? 'Con prezos actualizados, formatos de ración e os 14 alérxenos oficiais'
               : lang === 'en'
-              ? 'With live prices, portion formats, and 14 EU allergens'
-              : 'Con precios actualizados, formatos y los 14 alérgenos'}
+              ? 'With updated prices, portion sizes, and official EU allergens'
+              : 'Con precios actualizados, formatos de ración y los 14 alérgenos oficiales'}
           </span>
         </div>
       </div>
