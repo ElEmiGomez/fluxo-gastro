@@ -724,8 +724,88 @@ select:focus-visible {
 .cauce-footer {
   border-top: 1px solid #E2E8F0;
   background: #FFFFFF;
-  padding: 40px 24px;
-  text-align: center;
+  padding: 60px 24px 40px;
+}
+.cauce-footer-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+.cauce-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 36px;
+  text-align: left;
+}
+.cauce-footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.cauce-footer-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-ink);
+  letter-spacing: -0.02em;
+}
+.cauce-footer-tagline {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.cauce-footer-col-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-ink);
+  margin-bottom: 12px;
+}
+.cauce-footer-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.88rem;
+}
+.cauce-footer-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.cauce-footer-links a:hover {
+  color: var(--brand-blue);
+}
+.cauce-footer-bottom {
+  border-top: 1px solid #F1F5F9;
+  padding-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.78rem;
+  color: #64748B;
+}
+.fluxo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--brand-blue);
+}
+.fluxo-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--brand-blue);
 }
 `
 
@@ -865,7 +945,7 @@ ${JSON.stringify(jsonLd, null, 2)}
       </a>
       <div class="pill-links">
         <a href="#tragos-carta" class="pill-link">Tragos y Carta</a>
-        <a href="#horarios-ubicacion" class="pill-link">Horarios y Dónde estamos</a>
+        <a href="#horarios-ubicacion" class="pill-link">Horarios y Ubicación</a>
         <a href="#resenas-maps" class="pill-link">Reseñas</a>
       </div>
       <div class="pill-actions">
@@ -875,7 +955,7 @@ ${JSON.stringify(jsonLd, null, 2)}
     </nav>
     <div id="cauce-mobile-dropdown" class="mobile-dropdown">
       <a href="#tragos-carta">Tragos y Carta</a>
-      <a href="#horarios-ubicacion">Horarios y Dónde estamos</a>
+      <a href="#horarios-ubicacion">Horarios y Ubicación</a>
       <a href="#resenas-maps">Reseñas</a>
       <a href="carta.html?mesa=0" class="btn-blue" style="margin-top: 4px;">Ver Carta</a>
     </div>
@@ -937,7 +1017,7 @@ ${JSON.stringify(jsonLd, null, 2)}
         </div>
         <div class="drink-card">
           <img src="${resolveImg('/images/dishes/copa-albarino-rustica.jpg')}" alt="Albariño y Mencía por Copa" class="drink-thumb" loading="lazy">
-          <div class="drink-tag">Denominación</div>
+          <div class="drink-tag">D.O. Galicia</div>
           <h3 class="drink-title">Albariño y Mencía por Copa</h3>
           <p class="drink-desc">Blancos y tintos de bodegas gallegas servidos por copa, ideales para picotear algo al paso.</p>
         </div>
@@ -956,7 +1036,7 @@ ${JSON.stringify(jsonLd, null, 2)}
     </div>
   </section>
 
-  <!-- PANTALLA 3: HORARIOS Y DÓNDE ESTAMOS -->
+  <!-- PANTALLA 3: HORARIOS Y UBICACIÓN -->
   <section id="horarios-ubicacion" class="cauce-section" style="padding-top: 56px;">
     <div style="max-width: 680px; margin-bottom: 36px;">
       <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); display: block; margin-bottom: 8px;">Dónde encontrarnos</span>
@@ -968,12 +1048,16 @@ ${JSON.stringify(jsonLd, null, 2)}
 
     <div class="spaces-grid">
       <!-- Horario Semanal con Badge en Vivo -->
-      <div class="cauce-card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 20px;">
+      <div class="cauce-card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 20px; border-radius: 24px; box-shadow: 0 4px 24px rgba(15,23,42,0.04);">
         <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 14px; margin-bottom: 14px;">
-            <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--text-ink); display: flex; align-items: center; gap: 6px;">
-              ⏱️ Horario Semanal
-            </span>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #F1F5F9; padding-bottom: 14px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="width: 32px; height: 32px; border-radius: 10px; background: #EFF6FF; color: var(--brand-blue); display: flex; align-items: center; justify-content: center; font-size: 1rem;">⏱️</span>
+              <div>
+                <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; color: var(--text-ink); display: block;">Horario Semanal</span>
+                <span style="font-size: 0.7rem; color: var(--text-muted);">Servicio de barra y terraza</span>
+              </div>
+            </div>
             <span class="live-badge-light tabular-nums">
               <span class="live-dot ${todayStatus.isOpen ? 'open' : 'closed'}"></span>
               <span>${escapeHtml(todayStatus.label)} · ${escapeHtml(todayStatus.subLabel)}</span>
@@ -985,31 +1069,37 @@ ${JSON.stringify(jsonLd, null, 2)}
               const daySchedules = tenant.openingHours.filter(s => s.dayOfWeek === dayIdx)
               const isToday = dayIdx === new Date().getDay()
               return `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-radius: 10px; font-size: 0.85rem; ${isToday ? 'background: var(--brand-blue-soft); color: var(--brand-blue); font-weight: 600;' : 'color: var(--text-muted);'}" class="tabular-nums">
-                <span>${dayNames[dayIdx]}${isToday ? ' (Hoy)' : ''}</span>
-                <span style="font-weight: 500;">${daySchedules.length > 0 ? daySchedules.map(s => `${s.open} – ${s.close}h`).join(' · ') : 'Cerrado'}</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 12px; font-size: 0.86rem; ${isToday ? 'background: #EFF6FF; color: var(--brand-blue); font-weight: 700; border: 1px solid #DBEAFE;' : 'color: var(--text-muted);'}" class="tabular-nums">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                  <span>${dayNames[dayIdx]}</span>
+                  ${isToday ? '<span style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; background: var(--brand-blue); color: #fff; padding: 2px 6px; border-radius: 999px;">Hoy</span>' : ''}
+                </span>
+                <span style="font-weight: 600;">${daySchedules.length > 0 ? daySchedules.map(s => `${s.open} – ${s.close}h`).join(' · ') : 'Cerrado'}</span>
               </div>
               `
             }).join('')}
           </div>
         </div>
 
-        <p style="border-top: 1px solid #F1F5F9; padding-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
-          Servicio continuo en barra y terraza cubierta para que siempre encuentres sitio.
-        </p>
+        <div style="border-top: 1px solid #F1F5F9; padding-top: 12px; font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+          <span style="width: 8px; height: 8px; border-radius: 999px; background: #10B981; display: inline-block;"></span>
+          <span>Servicio continuo en barra y terraza cubierta para que siempre encuentres sitio.</span>
+        </div>
       </div>
 
       <!-- Ubicación y Mapa -->
-      <div class="cauce-card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 20px;">
+      <div class="cauce-card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 20px; border-radius: 24px; box-shadow: 0 4px 24px rgba(15,23,42,0.04);">
         <div style="display: flex; flex-direction: column; gap: 14px;">
-          <div style="border-bottom: 1px solid #E2E8F0; padding-bottom: 12px;">
-            <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--text-ink); display: flex; align-items: center; gap: 6px;">
-              📍 Ubicación & Contacto
-            </span>
+          <div style="border-bottom: 1px solid #F1F5F9; padding-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+            <span style="width: 32px; height: 32px; border-radius: 10px; background: #EFF6FF; color: var(--brand-blue); display: flex; align-items: center; justify-content: center; font-size: 1rem;">📍</span>
+            <div>
+              <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; color: var(--text-ink); display: block;">Ubicación & Contacto</span>
+              <span style="font-size: 0.7rem; color: var(--text-muted);">Bajo los soportales de Noia</span>
+            </div>
           </div>
 
           <!-- Mapa Interactivo de Google Maps -->
-          <div style="width: 100%; height: 180px; border-radius: 14px; overflow: hidden; border: 1px solid #E2E8F0; position: relative; background: #F1F5F9;">
+          <div style="width: 100%; height: 180px; border-radius: 16px; overflow: hidden; border: 1px solid #E2E8F0; position: relative; background: #F1F5F9;">
             <iframe
               title="Ubicación de Bar Jara-Tusas en Google Maps"
               src="https://maps.google.com/maps?q=Bar+Jara-Tusas,+R%C3%BAa+do+Curro+8,+Noia&t=&z=16&ie=UTF8&iwloc=&output=embed"
@@ -1018,28 +1108,33 @@ ${JSON.stringify(jsonLd, null, 2)}
               allowfullscreen
               referrerpolicy="no-referrer-when-downgrade"
             ></iframe>
+            <div style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.95); font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 999px; border: 1px solid #E2E8F0; pointer-events: none;">Google Maps</div>
           </div>
 
-          <div>
-            <p style="font-size: 1.05rem; font-weight: 600; color: var(--text-ink);">${escapeHtml(tenant.address)}</p>
-            <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 2px;" class="tabular-nums">${escapeHtml(tenant.postalCode)} ${escapeHtml(tenant.city)} (A Coruña)</p>
-          </div>
+          <div style="background: #F8FAFC; border-radius: 14px; padding: 14px; border: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <p style="font-size: 0.98rem; font-weight: 700; color: var(--text-ink);">${escapeHtml(tenant.address)}</p>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;" class="tabular-nums">${escapeHtml(tenant.postalCode)} ${escapeHtml(tenant.city)} (A Coruña) · Casco histórico</p>
+            </div>
 
-          <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.55;">
-            En el corazón histórico de Noia, resguardado por los soportales de piedra donde siempre apetece parar a tomar algo.
-          </p>
+            <p style="font-size: 0.82rem; color: #475569; line-height: 1.5; border-top: 1px solid #E2E8F0; padding-top: 6px;">
+              Bajo los soportales de piedra de la Rúa do Curro, el punto de encuentro tradicional de Noia para tomar la penúltima o pedir unas raciones.
+            </p>
 
-          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.92rem; padding-top: 4px;">
-            <span>📞</span>
-            <a href="tel:${escapeHtml(cleanPhoneHref)}" style="font-weight: 600; color: var(--text-ink); text-decoration: none;" class="tabular-nums">${escapeHtml(tenant.phone)}</a>
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #E2E8F0; padding-top: 6px; font-size: 0.86rem;">
+              <a href="tel:${escapeHtml(cleanPhoneHref)}" style="font-weight: 700; color: var(--brand-blue); text-decoration: none; display: flex; align-items: center; gap: 6px;" class="tabular-nums">
+                <span>📞</span>
+                <span>${escapeHtml(tenant.phone)}</span>
+              </a>
+              <span style="font-size: 0.72rem; color: var(--text-muted);">Atención directa</span>
+            </div>
           </div>
         </div>
 
         ${tenant.googleMapsUrl ? `
-        <a href="${escapeHtml(tenant.googleMapsUrl)}" target="_blank" rel="noopener noreferrer" class="btn-blue" style="width: 100%; text-align: center; padding: 13px 20px;">
-          Abrir en Google Maps →
-        </a>
-        ` : ''}
+        <a href="${escapeHtml(tenant.googleMapsUrl)}" target="_blank" rel="noopener noreferrer" class="btn-blue" style="width: 100%; text-align: center; padding: 13px 20px; border-radius: 999px; font-weight: 700;">
+          Cómo llegar en Google Maps →
+        </a>` : ''}
       </div>
     </div>
   </section>
@@ -1097,11 +1192,42 @@ ${JSON.stringify(jsonLd, null, 2)}
 
   <!-- FOOTER -->
   <footer class="cauce-footer">
-    <div style="max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-      ${tenant.logoUrl ? `<span class="logo-circle" style="width: 48px; height: 48px;"><img src="${resolveImg(tenant.logoUrl)}" alt="${escapeHtml(tenant.name)}"></span>` : ''}
-      <p class="font-serif" style="font-size: 1.5rem;">${escapeHtml(tenant.name)}</p>
-      <p style="font-size: 0.86rem; color: var(--text-muted);">${escapeHtml(tenant.address)}, ${escapeHtml(tenant.postalCode)} ${escapeHtml(tenant.city)} · <a href="tel:${escapeHtml(cleanPhoneHref)}" style="color: var(--brand-blue); text-decoration: none;" class="tabular-nums">${escapeHtml(tenant.phone)}</a></p>
-      <p style="font-size: 0.78rem; color: #64748B;">© ${new Date().getFullYear()} ${escapeHtml(tenant.name)} · Desarrollado con tecnología FLUXO.</p>
+    <div class="cauce-footer-inner">
+      <div class="cauce-footer-grid">
+        <div class="cauce-footer-brand">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            ${tenant.logoUrl ? `<span class="logo-circle" style="width: 40px; height: 40px;"><img src="${resolveImg(tenant.logoUrl)}" alt="${escapeHtml(tenant.name)}"></span>` : ''}
+            <span class="cauce-footer-title">${escapeHtml(tenant.name)}</span>
+          </div>
+          <p class="cauce-footer-tagline">${escapeHtml(tenant.tagline)}</p>
+          <p style="font-size: 0.78rem; color: #64748B;">Casco histórico de Noia · Soportales de piedra de la Rúa do Curro</p>
+        </div>
+
+        <div>
+          <div class="cauce-footer-col-title">Visítanos</div>
+          <p style="font-size: 0.92rem; font-weight: 700; color: var(--text-ink); margin-bottom: 2px;">${escapeHtml(tenant.address)}</p>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 10px;" class="tabular-nums">${escapeHtml(tenant.postalCode)} ${escapeHtml(tenant.city)} (A Coruña)</p>
+          <p><a href="tel:${escapeHtml(cleanPhoneHref)}" style="font-weight: 700; color: var(--brand-blue); text-decoration: none; font-size: 0.88rem;" class="tabular-nums">📞 ${escapeHtml(tenant.phone)}</a></p>
+          <p style="font-size: 0.76rem; color: #64748B; margin-top: 6px;">Abierto todos los días · Terraza cubierta</p>
+        </div>
+
+        <div>
+          <div class="cauce-footer-col-title">Accesos</div>
+          <ul class="cauce-footer-links">
+            <li><a href="carta.html?mesa=0">Carta Completa (Oficial)</a></li>
+            ${tenant.googleMapsUrl ? `<li><a href="${escapeHtml(tenant.googleMapsUrl)}" target="_blank" rel="noopener noreferrer">Cómo llegar (Google Maps)</a></li>` : ''}
+            <li><a href="#horarios-ubicacion">Horarios de Servicio</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="cauce-footer-bottom">
+        <p>© ${new Date().getFullYear()} ${escapeHtml(tenant.name)}. Todos los derechos reservados.</p>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>Tecnología por</span>
+          <span class="fluxo-pill"><span class="fluxo-pill-dot"></span>FLUXO</span>
+        </div>
+      </div>
     </div>
   </footer>
 

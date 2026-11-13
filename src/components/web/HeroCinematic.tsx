@@ -69,7 +69,7 @@ const CAUCE_HERO_COPY = {
   es: {
     nav: [
       { id: 'tragos-carta', label: 'Tragos y Carta' },
-      { id: 'horarios-ubicacion', label: 'Horarios y Dónde estamos' },
+      { id: 'horarios-ubicacion', label: 'Horarios y Ubicación' },
       { id: 'resenas-maps', label: 'Reseñas' },
     ],
     navCta: 'Cómo llegar',
@@ -82,7 +82,7 @@ const CAUCE_HERO_COPY = {
   gl: {
     nav: [
       { id: 'tragos-carta', label: 'Tragos e Carta' },
-      { id: 'horarios-ubicacion', label: 'Horarios e Onde estamos' },
+      { id: 'horarios-ubicacion', label: 'Horarios e Ubicación' },
       { id: 'resenas-maps', label: 'Reseñas' },
     ],
     navCta: 'Como chegar',
@@ -234,7 +234,7 @@ export function HeroCinematic({
       <>
         {/* Floating White Pill Navbar */}
         <header className="fixed top-3 sm:top-4 inset-x-3 sm:inset-x-6 z-40">
-          <div className="max-w-6xl mx-auto rounded-full bg-white/95 backdrop-blur-md border border-slate-200/80 px-4 sm:px-6 py-2.5 shadow-sm flex items-center justify-between gap-2">
+          <div className="max-w-6xl mx-auto rounded-full bg-white/95 backdrop-blur-xl border border-slate-200/90 px-3.5 sm:px-5 py-2 sm:py-2.5 shadow-[0_8px_30px_rgba(15,23,42,0.08)] flex items-center justify-between gap-3">
             <a
               href="#top"
               onClick={(e) => {
@@ -248,7 +248,7 @@ export function HeroCinematic({
               className="flex items-center gap-2.5 min-w-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
             >
               {logoUrl && (
-                <span className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#EBE8E1] border border-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+                <span className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#EBE8E1] border border-slate-200/80 overflow-hidden flex items-center justify-center flex-shrink-0 shadow-xs">
                   <Image
                     src={logoUrl}
                     alt={restaurantName}
@@ -259,7 +259,7 @@ export function HeroCinematic({
                   />
                 </span>
               )}
-              <span className="text-sm sm:text-base font-semibold tracking-tight text-[#0F172A] truncate">
+              <span className="text-sm sm:text-[15px] font-semibold tracking-tight text-[#0F172A] truncate">
                 {restaurantName}
               </span>
             </a>
@@ -274,7 +274,7 @@ export function HeroCinematic({
                     e.preventDefault()
                     scrollToTarget(item.id)
                   }}
-                  className="px-3.5 py-1.5 rounded-full text-sm font-medium text-slate-700 hover:text-[#0F172A] hover:bg-slate-100/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+                  className="px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium text-slate-600 hover:text-[#0F172A] hover:bg-slate-100/80 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
                 >
                   {item.label}
                 </a>
@@ -282,12 +282,12 @@ export function HeroCinematic({
             </nav>
 
             {/* Controles derecha: Selector ES | GAL | EN + CTA azul + Menú móvil */}
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
               {onLangChange && (
                 <div
                   role="group"
                   aria-label={cauceCopy.langGroupLabel}
-                  className="inline-flex items-center p-0.5 rounded-full bg-slate-100 border border-slate-200/80 text-[11px] font-semibold"
+                  className="inline-flex items-center p-0.5 rounded-full bg-slate-100/90 border border-slate-200/80 text-[11px] font-semibold"
                 >
                   {(['es', 'gl', 'en'] as WebLanguage[]).map((code) => {
                     const active = lang === code
@@ -296,9 +296,9 @@ export function HeroCinematic({
                         key={code}
                         type="button"
                         onClick={() => onLangChange(code)}
-                        className={`px-2 sm:px-2.5 py-1 rounded-full uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] ${
+                        className={`px-2 sm:px-2.5 py-1 rounded-full uppercase transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] ${
                           active
-                            ? 'bg-[#1D4ED8] text-white shadow-sm'
+                            ? 'bg-[#1D4ED8] text-white shadow-xs font-bold'
                             : 'text-slate-600 hover:text-[#0F172A]'
                         }`}
                       >
@@ -312,7 +312,7 @@ export function HeroCinematic({
               <button
                 type="button"
                 onClick={handleCauceCtaClick}
-                className="hidden sm:inline-flex items-center justify-center bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white text-xs sm:text-sm font-semibold rounded-full px-4 py-2 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+                className="hidden sm:inline-flex items-center justify-center bg-[#1D4ED8] hover:bg-[#1E3A8A] active:scale-95 text-white text-xs sm:text-sm font-semibold rounded-full px-4 sm:px-5 py-2 shadow-xs transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
               >
                 {cauceCopy.navCta}
               </button>

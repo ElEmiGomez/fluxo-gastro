@@ -1442,13 +1442,22 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
               {/* Horario Semanal con Badge en Vivo */}
-              <div className="lg:col-span-7 bg-white rounded-[22px] border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-5 flex flex-col justify-between">
+              <div className="lg:col-span-7 bg-white rounded-[24px] border border-slate-200/90 p-6 sm:p-8 shadow-[0_4px_24px_rgba(15,23,42,0.04)] space-y-5 flex flex-col justify-between">
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-200">
-                    <span className="text-xs uppercase tracking-wider font-bold text-[#0F172A] flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#1D4ED8]" />
-                      <span>{cauce.sec4HoursLabel}</span>
-                    </span>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1D4ED8] flex items-center justify-center flex-shrink-0">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-xs uppercase tracking-wider font-bold text-[#0F172A] block leading-none">
+                          {cauce.sec4HoursLabel}
+                        </span>
+                        <span className="text-[11px] text-[#64748B] mt-0.5 block">
+                          Servicio ininterrumpido en barra y terraza
+                        </span>
+                      </div>
+                    </div>
                     <LiveOpeningBadge schedules={tenant.openingHours} lang={lang} variant="light" />
                   </div>
 
@@ -1461,16 +1470,21 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                         <div
                           key={dayIdx}
                           suppressHydrationWarning
-                          className={`py-2 px-3 rounded-xl flex items-center justify-between gap-3 ${
+                          className={`py-2 px-3.5 rounded-xl flex items-center justify-between gap-3 transition-colors ${
                             isToday
-                              ? 'bg-blue-50 text-[#1D4ED8] font-semibold'
-                              : 'text-[#475569]'
+                              ? 'bg-blue-50/90 border border-blue-100/90 text-[#1D4ED8] font-bold shadow-xs'
+                              : 'text-[#475569] hover:bg-slate-50'
                           }`}
                         >
-                          <span>
-                            {DAY_NAMES[dayIdx]} {isToday ? t.today : ''}
+                          <span className="flex items-center gap-2">
+                            <span>{DAY_NAMES[dayIdx]}</span>
+                            {isToday && (
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-[#1D4ED8] text-white px-2 py-0.5 rounded-full leading-none">
+                                {t.today}
+                              </span>
+                            )}
                           </span>
-                          <span className="tabular-nums font-medium">
+                          <span className="tabular-nums font-semibold">
                             {daySchedules.length > 0
                               ? daySchedules.map((s) => `${s.open} – ${s.close}h`).join(' · ')
                               : t.closedShift}
@@ -1481,23 +1495,31 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 text-xs text-[#475569]">
+                <div className="pt-4 border-t border-slate-100 flex items-center gap-2 text-xs text-[#64748B]">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
                   <span>Servicio continuo en barra y terraza cubierta para que siempre encuentres sitio.</span>
                 </div>
               </div>
 
               {/* Ubicación, Teléfono y Enlace a Google Maps */}
-              <div className="lg:col-span-5 bg-white rounded-[22px] border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-5 flex flex-col justify-between overflow-hidden">
+              <div className="lg:col-span-5 bg-white rounded-[24px] border border-slate-200/90 p-6 sm:p-8 shadow-[0_4px_24px_rgba(15,23,42,0.04)] space-y-5 flex flex-col justify-between overflow-hidden">
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200">
-                    <MapPin className="w-4 h-4 text-[#1D4ED8]" />
-                    <span className="text-xs uppercase tracking-wider font-bold text-[#0F172A]">
-                      Ubicación & Contacto
-                    </span>
+                  <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1D4ED8] flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs uppercase tracking-wider font-bold text-[#0F172A] block leading-none">
+                        Ubicación & Contacto
+                      </span>
+                      <span className="text-[11px] text-[#64748B] mt-0.5 block">
+                        Bajo los soportales de Noia
+                      </span>
+                    </div>
                   </div>
 
                   {/* Mapa Interactivo de Google Maps */}
-                  <div className="relative w-full h-44 sm:h-48 rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
+                  <div className="relative w-full h-44 sm:h-48 rounded-[16px] overflow-hidden border border-slate-200/90 shadow-xs bg-slate-100">
                     <iframe
                       title="Ubicación de Bar Jara-Tusas en Google Maps"
                       src="https://maps.google.com/maps?q=Bar+Jara-Tusas,+R%C3%BAa+do+Curro+8,+Noia&t=&z=16&ie=UTF8&iwloc=&output=embed"
@@ -1506,30 +1528,36 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                       allowFullScreen
                       referrerPolicy="no-referrer-when-downgrade"
                     />
+                    <div className="absolute top-2.5 right-2.5 bg-white/95 backdrop-blur-xs text-[#0F172A] text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-slate-200/80 shadow-2xs pointer-events-none">
+                      Google Maps
+                    </div>
                   </div>
 
-                  <div className="space-y-1 pt-1">
-                    <p className="text-base text-[#0F172A] font-semibold leading-snug">
-                      {tenant.address}
-                    </p>
-                    <p className="text-sm text-[#475569] tabular-nums">
-                      {tenant.postalCode} {tenant.city} (A Coruña)
-                    </p>
-                  </div>
+                  <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-100 space-y-2">
+                    <div>
+                      <p className="text-sm text-[#0F172A] font-bold leading-snug">
+                        {tenant.address}
+                      </p>
+                      <p className="text-xs text-[#64748B] tabular-nums mt-0.5">
+                        {tenant.postalCode} {tenant.city} (A Coruña) · Casco histórico
+                      </p>
+                    </div>
 
-                  <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
-                    En el corazón histórico de Noia, resguardado por los soportales de piedra donde siempre apetece parar a tomar algo.
-                  </p>
+                    <p className="text-xs text-[#475569] leading-relaxed pt-1 border-t border-slate-200/60">
+                      Bajo los soportales de piedra de la Rúa do Curro, el punto de encuentro tradicional de Noia para tomar la penúltima o pedir unas raciones.
+                    </p>
 
-                  <div className="pt-1 flex items-center gap-2.5 text-sm">
-                    <Phone className="w-4 h-4 text-[#1D4ED8] flex-shrink-0" />
-                    <a
-                      href={`tel:${tenant.phone}`}
-                      onClick={() => trackConversion('click_call')}
-                      className="font-semibold text-[#0F172A] hover:text-[#1D4ED8] tabular-nums transition-colors"
-                    >
-                      {tenant.phone}
-                    </a>
+                    <div className="pt-1.5 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                      <a
+                        href={`tel:${tenant.phone}`}
+                        onClick={() => trackConversion('click_call')}
+                        className="inline-flex items-center gap-2 font-bold text-[#1D4ED8] hover:text-[#1E3A8A] tabular-nums transition-colors"
+                      >
+                        <Phone className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span>{tenant.phone}</span>
+                      </a>
+                      <span className="text-[11px] text-[#64748B]">Atención directa</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1539,7 +1567,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => trackConversion('click_maps')}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white rounded-full px-6 py-3.5 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-[#1E3A8A] active:scale-[0.99] text-white rounded-full px-6 py-3.5 text-sm font-semibold shadow-md shadow-blue-900/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
                   >
                     <Compass className="w-4 h-4" />
                     <span>{cauce.sec4MapsBtn}</span>
@@ -1629,62 +1657,116 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
           </section>
         </main>
 
-        {/* Footer Ligero Cauce */}
-        <footer className="bg-white border-t border-slate-200 py-12 px-4 sm:px-6 md:px-10 text-[#0F172A]">
-          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-3.5">
-              {tenant.logoUrl && (
-                <div className="w-11 h-11 rounded-full bg-[#EBE8E1] border border-slate-200 overflow-hidden p-0.5 flex items-center justify-center flex-shrink-0">
-                  <Image
-                    src={tenant.logoUrl}
-                    alt={tenant.name}
-                    width={44}
-                    height={44}
-                    className="w-full h-full object-contain rounded-full"
-                  />
+        {/* Footer Editorial Cauce */}
+        <footer className="bg-white border-t border-slate-200/90 pt-16 pb-12 px-6 sm:px-10 text-[#0F172A]">
+          <div className="max-w-6xl mx-auto space-y-12">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-start">
+              {/* Columna 1: Marca y Propuesta */}
+              <div className="md:col-span-5 space-y-3.5">
+                <div className="flex items-center gap-3">
+                  {tenant.logoUrl && (
+                    <div className="w-10 h-10 rounded-full bg-[#EBE8E1] border border-slate-200/80 overflow-hidden p-0.5 flex items-center justify-center flex-shrink-0 shadow-xs">
+                      <Image
+                        src={tenant.logoUrl}
+                        alt={tenant.name}
+                        width={40}
+                        height={40}
+                        className="w-full h-full object-contain rounded-full"
+                      />
+                    </div>
+                  )}
+                  <span className="text-xl font-bold tracking-tight text-[#0F172A]">
+                    {tenant.name}
+                  </span>
                 </div>
-              )}
-              <div>
-                <span className="text-lg font-bold tracking-tight text-[#0F172A] block">
-                  {tenant.name}
+                <p className="text-sm text-[#475569] leading-relaxed max-w-md">
+                  {localizedTagline}
+                </p>
+                <p className="text-xs text-[#64748B] font-medium">
+                  Casco histórico de Noia · Soportales de piedra de la Rúa do Curro
+                </p>
+              </div>
+
+              {/* Columna 2: Ubicación & Contacto */}
+              <div className="md:col-span-4 space-y-2 text-xs sm:text-sm text-[#475569]">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#0F172A] block mb-2">
+                  Visítanos
                 </span>
-                <p className="text-xs text-[#475569] max-w-sm">{localizedTagline}</p>
+                <p className="font-semibold text-[#0F172A]">
+                  {tenant.address}
+                </p>
+                <p className="tabular-nums text-[#64748B]">
+                  {tenant.postalCode} {tenant.city} (A Coruña)
+                </p>
+                <p className="pt-1">
+                  <a
+                    href={`tel:${tenant.phone}`}
+                    onClick={() => trackConversion('click_call')}
+                    className="inline-flex items-center gap-1.5 font-bold text-[#1D4ED8] hover:text-[#1E3A8A] tabular-nums transition-colors"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>{tenant.phone}</span>
+                  </a>
+                </p>
+                <p className="text-xs text-[#64748B] pt-0.5">
+                  Abierto todos los días · Terraza cubierta
+                </p>
+              </div>
+
+              {/* Columna 3: Accesos Rápidos */}
+              <div className="md:col-span-3 space-y-2 text-xs sm:text-sm">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#0F172A] block mb-2">
+                  Accesos
+                </span>
+                <ul className="space-y-2 font-medium">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMenuModalOpen(true)
+                        trackConversion('open_menu')
+                      }}
+                      className="text-[#475569] hover:text-[#1D4ED8] transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+                    >
+                      {cauce.footerMenuLink} (Carta Oficial)
+                    </button>
+                  </li>
+                  {tenant.googleMapsUrl && (
+                    <li>
+                      <a
+                        href={tenant.googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#475569] hover:text-[#1D4ED8] transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+                      >
+                        {cauce.footerMapsLink} (Cómo llegar)
+                      </a>
+                    </li>
+                  )}
+                  <li>
+                    <a
+                      href="#horarios-ubicacion"
+                      className="text-[#475569] hover:text-[#1D4ED8] transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+                    >
+                      Horarios de Servicio
+                    </a>
+                  </li>
+                </ul>
               </div>
             </div>
 
-            <div className="text-xs text-[#475569] space-y-1 tabular-nums">
-              <p>
-                {tenant.address}, {tenant.postalCode} {tenant.city}
-              </p>
+            {/* Fila Inferior: Copyright + Badge FLUXO invertido */}
+            <div className="pt-8 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#64748B]">
               <p suppressHydrationWarning>
                 © {new Date().getFullYear()} {tenant.name}. {cauce.footerRights}
               </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMenuModalOpen(true)
-                  trackConversion('open_menu')
-                }}
-                className="font-semibold text-[#0F172A] hover:text-[#1D4ED8] transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
-              >
-                {cauce.footerMenuLink}
-              </button>
-              {tenant.googleMapsUrl && (
-                <a
-                  href={tenant.googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-[#0F172A] hover:text-[#1D4ED8] transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
-                >
-                  {cauce.footerMapsLink}
-                </a>
-              )}
-              <span className="text-[#475569]">
-                Powered by <strong className="font-bold tracking-widest text-[#1D4ED8]">FLUXO</strong>
-              </span>
+              <div className="flex items-center gap-2">
+                <span>Powered by</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-[11px] font-bold text-[#1D4ED8]">
+                  <span className="w-2 h-2 rounded-full bg-[#1D4ED8]" />
+                  FLUXO
+                </span>
+              </div>
             </div>
           </div>
         </footer>
