@@ -6,6 +6,52 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-12 14:15] — Aprobación y Consolidación del Diseño Definitivo de Webs Gastronómicas (DEC-39)
+* **Departamentos Sincronizados:** Dirección & Organización (Depto 1), Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
+* **Decisiones Clave Implementadas:**
+  1. **5 Arquetipos Base Cerrados:** *Urban & Street* (Dark mode, bold), *Alta Mesa & Tradición* (Editorial serif, lonja), *Gastro-Bistró* (Apple Glass, templado), *Daylight & Café* (Luminoso, crema), y *Taberna Rústica Gallega* (Piedra, roble, tradición).
+  2. **Estrategia de Precios (Portada Aspiracional + Transparencia a 1 Clic):** 3-4 platos estrella seductores sin precios en portada (evita aspecto de folleto de tarifas y scraping); 100% de precios reales y lonja en el Drawer interactivo.
+  3. **Auto-Detección Trilingüe (ES | GAL | EN):** Detección instantánea vía `navigator.language` con selector manual en cabecera y persistencia.
+  4. **Semáforo Inteligente de Cocina en Vivo:** Aviso de estado con hora de cierre de cocina e integración de avisos de festivos/vacaciones del panel.
+  5. **SSOT con Supabase y Exportador Estático 2-en-1:** Conexión con los mismos platos de `/p/[slug]` y generación automática de bundle `.zip` autónomo para cPanel/Hostinger con `scripts/export_static_web.mjs`.
+* **Estado:** Completado y Verificado `[✔ COMPLETADO]`.
+
+---
+
+### [2026-11-12 12:15] — Activación de Nueva Fase: Pulido y Parametrización de Páginas Web para Locales Gastronómicos (`/web/[slug]`)
+* **Departamentos Sincronizados:** Dirección & Organización (Depto 1), Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
+* **Alcance de la Fase:**
+  1. Desacoplamiento de la plantilla cinemática `/web/[slug]` actualmente hardcodeada con Casa Mar da Vila, transformándola en un motor dinámico multi-local parametrizado por slug/datos de Supabase y configuración local.
+  2. Inyección dinámica de identidad visual: paleta cromática, tipografías, logotipos, carrusel de ambientes Día/Noche y galería de platos de alta resolución.
+  3. Formulario de reservas directas por WhatsApp con enrutamiento dinámico al teléfono propio de cada establecimiento hostelero.
+  4. Enlace bidireccional fluido con la Carta QR (`/p/[slug]` o `/carta`) y soporte para enrutamiento transparente en dominios propios mediante `middleware.ts`.
+* **Estado:** En curso `[⏳ EN CURSO]`.
+
+---
+
+### [2026-11-11 20:35] — Consolidación y Cierre de Tarea 5: Creador de Motion Graphics Fluxo (Remotion) & Google Flow
+* **Departamentos Sincronizados:** Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
+* **Módulo Entregado y Certificado:**
+  1. Entorno Remotion v4 integrado en React/Next.js con aceleración GPU (`--gl=angle`), 16 componentes modulares y diseño sonoro estéreo Haas 48kHz.
+  2. Rejilla estricta de ritmo a 60 fps @ 120 BPM y física de resortes sin cruces negativos ni rebotes anómalos.
+  3. Skill oficial `fluxo-motion-master` y automatización CLI con `google-flow` (v2.0.3) con soporte para generación de escenas B-Roll por IA con Imagen Ancla.
+  4. Inclusión en `AGENTS.md` de la sección `FLUXO_MOTION_INVARIANTS` con el protocolo de 2 Gates de aprobación previa al render final de MP4.
+* **Estado:** Marcada como completada `[x]`.
+
+---
+
+### [2026-11-11 00:30] — Cierre de Auditoría Forense 360° y Biblia del Modelo de Negocio Fluxo
+* **Departamentos Sincronizados:** Dirección General (Depto 1), Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
+* **Documento Maestro Generado:** `docs/FLUXO_AUDIT_AND_BUSINESS_BIBLE.md`.
+* **Conclusiones y Acuerdos:**
+  1. Radiografía exhaustiva del estado funcional de todas las pantallas y rutas del repositorio.
+  2. Diagnóstico de la dualidad de cartas (`/p/[slug]` monolito estático vs `/menu/[slug]` reactivo con Supabase).
+  3. Fijación oficial de la matriz de precios: Plan Carta Fija (39 €/mes), Oferta Socio Fundador (50 €/mes), Plan Sala (69 €/mes), Plan Suite Completa (99 €/mes) y Cláusula de Hibernación (9 €/mes).
+  4. Homogeneización de canales de contacto de WhatsApp al número oficial de soporte y ventas (+34 711 573 870).
+* **Estado:** Consolidado y archivado en base de conocimiento compartida.
+
+---
+
 ### [2026-11-10 23:28] — Registro de Nueva Tarea: Creador de Motion Graphics Fluxo (Remotion) (Tarea 5)
 * **Departamentos Sincronizados:** Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
 * **Alcance de la Tarea:**

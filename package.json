@@ -21,10 +21,19 @@
     "context7:verify": "node scripts/verify_context7_mcp.mjs",
     "surveillance:design": "node scripts/daily_design_surveillance.mjs",
     "surveillance:market": "node scripts/daily_market_intelligence.mjs",
-    "morning:check": "node scripts/daily_design_surveillance.mjs && node scripts/daily_market_intelligence.mjs"
+    "morning:check": "node scripts/daily_design_surveillance.mjs && node scripts/daily_market_intelligence.mjs",
+    "remotion:studio": "remotion studio src/remotion/index.ts",
+    "remotion:render": "remotion render src/remotion/index.ts WhatsAppPitch-JaraTusas out/pitch-jaratusas.mp4 --gl=angle"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.6.1",
+    "@remotion/captions": "4.0.542",
+    "@remotion/cli": "4.0.542",
+    "@remotion/effects": "4.0.542",
+    "@remotion/motion-blur": "4.0.542",
+    "@remotion/paths": "4.0.542",
+    "@remotion/tailwind": "4.0.542",
+    "@remotion/transitions": "4.0.542",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
     "@types/leaflet": "^1.9.22",
@@ -39,8 +48,10 @@
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "remotion": "4.0.542",
     "stripe": "^23.1.0",
-    "tailwind-merge": "^3.0.1"
+    "tailwind-merge": "^3.0.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

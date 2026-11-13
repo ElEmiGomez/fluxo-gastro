@@ -73,8 +73,10 @@ flowchart TD
 │  │     • Modalidad: Carta Fija Digital informativa (sin pedidos ni comandas)│
 │  │     • Fuente de datos: Extracción directa de listado del TPV            │
 │  │     • Branding: Identidad visual lista (logo/colores para kit físico)   │
-│  ├─ [📋 Tarea 5] Creador de Motion Graphics Fluxo (Remotion)               │
-│  │     (Generación programática de vídeo y animaciones de marca/producto)  │
+│  ├─ [x] Tarea 5: Creador de Motion Graphics Fluxo (Remotion)               │
+│  │     (Generación programática de vídeo, audio Haas, 60fps @ 120 BPM)     │
+│  ├─ [⏳ EN CURSO] Tarea 6: Pulido y Parametrización de Páginas Web Locales │
+│  │     (Arquitectura dinámica /web/[slug], branding, reservas y dominios)  │
 │  │                                                                         │
 │  ├─ 📌 FASE 1: CIERRE DEL BLOQUE COMERCIAL Y PLATAFORMA                    │
 │  │  ├─ [x] Tarea 4: Smoke Test y Validación en Local (Pruebas de Flujo)    │

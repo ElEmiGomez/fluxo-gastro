@@ -41,5 +41,24 @@
   4. `python scripts/run_strix_scan.py`
   5. `npx.cmd playwright test`
 
+## 4. Estándar de Motion Graphics y Remotion (FLUXO_MOTION_INVARIANTS)
+- **Invocación Obligatoria de Skill:** Toda creación, refactorización o ajuste de vídeo en `src/remotion/` debe respetar estrictamente la skill `.agent/skills/fluxo-motion-master/SKILL.md` y `.agent/skills/fluxo-motion-master/references/pre-flight-checklist.md`.
+- **Protocolo de Entrevista y Doble Gate Obligatorio Pre-Render (`PRE_FLIGHT_VIDEO_GATE`):** Queda terminantemente prohibido programar o renderizar un vídeo MP4 a ciegas cuando el usuario pida crear un vídeo. El agente DEBE cumplir estos 2 Gates de aprobación antes del render final, indicando proactivamente el modelo recomendado para cada fase:
+  1. **RECOMENDACIÓN DE MODELO EN ANTIGRAVITY:**
+     - Si el vídeo implica diseñar una escena nueva, calcular físicas/cámaras 2.5D o auditar fotogramas PNG: indicar al usuario operar con **Gemini 4 Argon**.
+     - Si el vídeo es una sustitución rápida de datos/precios sobre una plantilla existente o renderizado directo: indicar al usuario que puede conmutar a **Gemini 3.8 Flash** para ahorrar cuota y ganar velocidad.
+  2. **GATE 1 — Cuestionario Inicial (`ask_question`) + Storyboard en Texto:** Si el usuario no especificó alguno de estos 5 puntos en su mensaje inicial, el agente debe preguntarlos antes de escribir código:
+     - *(A) Modo de Vídeo:* (1) Pitch Comercial por Local 15s, (2) Anuncio/Reel Viral de Marca Fluxo, (3) Vídeo de Lanzamiento/Explicativo 30s en 5 escenas, o (4) Recreación/Clonación de un Vídeo de Referencia.
+     - *(B) Formato y Duración:* `9:16 Vertical (1080x1920)`, `16:9 Horizontal (1920x1080)`, `1:1` o `Ambos`, y duración exacta (`6s`, `10s`, `15s`, `30s`), manteniendo **60 FPS y 120 BPM** fijos.
+     - *(C) Datos, Logos, Fotos y Precios Exactos (Cero Invención):* Prohibido inventar precios, nombres de platos o usar fotos de relleno al azar. Confirmar siempre qué logo/fotos usar (`public/`, generación con IA Nano Banana / Imagen Ancla, o catálogo existente) y los importes exactos.
+     - *(D) Estilo Visual, Subtítulos y Fondo:* Subtítulos (`Caja azul Figma` / `Píldora amarilla Hormozi` / `Titular Blur-Up sin subtítulos`) y Fondo (`Rejilla técnica oscura #050811` / `B-Roll con Imagen Ancla` / `Claro`).
+     - *(E) Diseño Sonoro:* `Efectos SFX sintéticos nativos (SoundEffects.tsx)`, `Pista musical en public/`, o `Mudo`.
+     Una vez recopiladas las respuestas, el agente presenta la tabla del **Storyboard escena por escena** (segundos, frames a 60fps, textos, cámara y suma matemática de precios) y **espera el OK del usuario**.
+  2. **GATE 2 — Muestra Visual de 3-4 Fotogramas Clave (`renderStill` PNG):** Tras aprobarse el Storyboard, el agente programa la escena, valida `npx.cmd tsc --noEmit`, renderiza **3 a 4 fotogramas estáticos PNG** representativos (`out/audit-*.png`), los inspecciona visualmente y los presenta al usuario. **Solo tras el OK visual del usuario sobre los PNGs se ejecuta el renderizado del archivo `.mp4` final.**
+- **Rejilla de Ritmo Musical (60fps @ 120 BPM):** Todos los inicios de `<Sequence>`, toques del `TouchCursor` (con trayectoria en arco Bezier `interpolateCursorArc`), cambios de variantes y disparos de `<SoundEffects>` deben alinearse a múltiplos exactos de 15 frames (medio beat = 0.25s) o 30 frames (un beat = 0.5s), importando siempre las constantes de `src/remotion/constants.ts`.
+- **Física de Resortes y Prevención del Bounce Bug:** Se prohíbe el cruce de escalas a números negativos. Todas las interpolaciones de escala deben clampearse (`Math.max(0, val)` y `{ extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }`). La física de resorte debe usar la configuración unificada `config: { damping: 16, mass: 0.9, stiffness: 115 }` (10% anticipación $\rightarrow$ 60% acción $\rightarrow$ 30% amortiguación).
+- **Safe Margins 9:16 (1080x1920):** Los elementos clave (nombre del local, mesa, subtítulos, totales y CTA) deben respetar un margen de seguridad vertical de 120px (arriba/abajo) y lateral de 80px (izquierda/derecha) para no ser tapados por la interfaz de WhatsApp, Reels o Shorts.
+- **Prohibición de Animaciones CSS & Tipografía Reactiva:** Prohibido usar `transition-*` o `animate-*` de Tailwind para animar elementos del vídeo en Remotion; todo movimiento depende de `useCurrentFrame()`. En títulos y variantes, aplicar `leading-snug tracking-tight text-balance` y anchos máximos controlados para prevenir cortes de texto.
+
 
 

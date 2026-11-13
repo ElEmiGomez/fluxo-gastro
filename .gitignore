@@ -48,3 +48,8 @@ scratch/
 
 # Local CRM offline / filesystem persistence
 .fluxo-data/
+
+# Google Flow Skill private browser session & generated media outputs
+.agent/skills/google-flow/session/
+.agent/skills/google-flow/outputs/
+
