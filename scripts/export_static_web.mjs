@@ -639,14 +639,14 @@ select:focus-visible {
 .spaces-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 32px;
-  align-items: start;
+  gap: 24px;
+  align-items: stretch;
 }
 
 @media (min-width: 960px) {
   .spaces-grid {
-    grid-template-columns: 5fr 7fr;
-    gap: 48px;
+    grid-template-columns: 7fr 5fr;
+    gap: 32px;
   }
 }
 
@@ -679,122 +679,23 @@ select:focus-visible {
   background: #DC2626;
 }
 
-.space-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.space-row-btn {
-  width: 100%;
-  text-align: left;
-  background: #FFFFFF;
-  border: 1px solid var(--border-slate);
-  border-radius: 20px;
-  padding: 18px 20px;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  transition: border-color 0.2s ease, transform 0.2s ease;
-}
-
-.space-row-btn:hover {
-  border-color: var(--brand-blue);
-  transform: translateY(-1px);
-}
-
-/* Section 5: Preguntas frecuentes */
-.faq-grid-3 {
+/* Section 4: Reseñas Verificadas de Google Maps */
+.reviews-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
-  margin-top: 32px;
 }
 
-@media (min-width: 768px) {
-  .faq-grid-3 {
+@media (min-width: 640px) {
+  .reviews-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .reviews-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-}
-
-/* Section 6: Live WhatsApp Configurator */
-.wa-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-  margin-top: 28px;
-}
-
-@media (min-width: 960px) {
-  .wa-grid {
-    grid-template-columns: 7fr 5fr;
-  }
-}
-
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.choice-pill {
-  background: var(--bg-stone);
-  color: var(--text-ink);
-  border: 1px solid #CBD5E1;
-  border-radius: 9999px;
-  padding: 8px 14px;
-  font-size: 0.84rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.16s ease;
-}
-
-.choice-pill.active {
-  background: var(--brand-blue);
-  color: #FFFFFF;
-  border-color: var(--brand-blue);
-}
-
-.wa-textarea {
-  width: 100%;
-  min-height: 92px;
-  margin-top: 8px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid #CBD5E1;
-  background: var(--bg-stone);
-  color: var(--text-ink);
-  font-family: var(--font-sans);
-  font-size: 0.9rem;
-  resize: vertical;
-}
-
-.preview-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  background: var(--brand-blue-soft);
-  color: var(--brand-blue-hover);
-  border: 1px solid var(--brand-blue-border);
-}
-
-.wa-preview-box {
-  margin-top: 16px;
-  background: var(--bg-stone);
-  border: 1px solid #E2E8F0;
-  border-radius: 16px;
-  padding: 16px;
-  font-size: 0.9rem;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  color: var(--text-ink);
-  user-select: all;
 }
 
 /* Mobile Sticky Bar (<768px) */
@@ -828,7 +729,7 @@ select:focus-visible {
 }
 `
 
-  const js = `/* FLUXO CAUCE EDITORIAL INTERACTIVITY (60FPS CANVAS LOOPS + LIVE WHATSAPP CONFIGURATOR) */
+  const js = `/* FLUXO CAUCE EDITORIAL INTERACTIVITY (60FPS CANVAS LOOPS + MOBILE MENU) */
 document.addEventListener('DOMContentLoaded', () => {
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -935,111 +836,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   requestAnimationFrame(renderLoops);
-
-  // 3. Live 2-Column WhatsApp "Mensaje preparado" Configurator
-  const state = {
-    espacio: 'Terraza Exterior',
-    motivo: 'Reserva de mesa',
-    personas: '2 personas',
-    turno: 'Noche · 21:30h',
-    detalles: '',
-  };
-
-  const previewEl = document.getElementById('cauce-wa-preview');
-  const detailsEl = document.getElementById('cauce-wa-details');
-  const copyBtn = document.getElementById('cauce-copy-btn');
-  const shareBtn = document.getElementById('cauce-wa-share-btn');
-  const restaurantName = "${tenant.name.replace(/"/g, '\\"')}";
-  const whatsappNumber = "${cleanWaNumber}";
-
-  function formatWhatsAppMessage() {
-    const lines = [
-      'Hola ' + restaurantName + ',',
-      '• Motivo: ' + state.motivo,
-      '• Espacio preferido: ' + state.espacio,
-      '• Personas y turno: ' + state.personas + ' · ' + state.turno,
-    ];
-    if (state.detalles.trim()) {
-      lines.push('• Detalles: ' + state.detalles.trim());
-    }
-    lines.push('¿Tendrían disponibilidad? ¡Gracias!');
-    return lines.join('\\n');
-  }
-
-  function updatePreview() {
-    if (previewEl) {
-      previewEl.textContent = formatWhatsAppMessage();
-    }
-    document.querySelectorAll('[data-wa-group]').forEach(btn => {
-      const group = btn.getAttribute('data-wa-group');
-      const val = btn.getAttribute('data-wa-val');
-      btn.classList.toggle('active', state[group] === val);
-    });
-  }
-
-  document.querySelectorAll('[data-wa-group]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const group = btn.getAttribute('data-wa-group');
-      const val = btn.getAttribute('data-wa-val');
-      if (group && val) {
-        state[group] = val;
-        updatePreview();
-      }
-    });
-  });
-
-  if (detailsEl) {
-    detailsEl.addEventListener('input', () => {
-      state.detalles = detailsEl.value || '';
-      updatePreview();
-    });
-  }
-
-  document.querySelectorAll('[data-select-space]').forEach(cardBtn => {
-    cardBtn.addEventListener('click', () => {
-      const spaceName = cardBtn.getAttribute('data-select-space');
-      if (spaceName) {
-        state.espacio = spaceName;
-        if (spaceName.toLowerCase().includes('grupo')) {
-          state.motivo = 'Grupo o picoteo';
-          state.personas = 'Grupo +6';
-        }
-        updatePreview();
-      }
-      const target = document.getElementById('contacto-whatsapp');
-      if (target) target.scrollIntoView({ behavior: 'smooth' });
-    });
-  });
-
-  if (copyBtn) {
-    copyBtn.addEventListener('click', async () => {
-      const msg = formatWhatsAppMessage();
-      try {
-        await navigator.clipboard.writeText(msg);
-      } catch {
-        const range = document.createRange();
-        if (previewEl) {
-          range.selectNodeContents(previewEl);
-          const sel = window.getSelection();
-          sel?.removeAllRanges();
-          sel?.addRange(range);
-        }
-      }
-      const orig = copyBtn.textContent;
-      copyBtn.textContent = '¡Mensaje copiado!';
-      setTimeout(() => { copyBtn.textContent = orig; }, 2400);
-    });
-  }
-
-  if (shareBtn) {
-    shareBtn.addEventListener('click', () => {
-      const msg = formatWhatsAppMessage();
-      const url = 'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent(msg);
-      window.open(url, '_blank', 'noopener,noreferrer');
-    });
-  }
-
-  updatePreview();
 });
 `
 
@@ -1049,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(tenant.name)} · ${escapeHtml(tenant.tagline)}</title>
-  <meta name="description" content="Web oficial de ${escapeHtml(tenant.name)} en ${escapeHtml(tenant.city)}. Cerveza de bodega, vinos, tapas y reservas directas sin comisiones.">
+  <meta name="description" content="Web oficial de ${escapeHtml(tenant.name)} en ${escapeHtml(tenant.city)}. Cerveza de bodega, vinos y tapas en el casco histórico de Noia.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="${fontsHref}" rel="stylesheet">
@@ -1069,18 +865,18 @@ ${JSON.stringify(jsonLd, null, 2)}
       </a>
       <div class="pill-links">
         <a href="#tragos-carta" class="pill-link">Tragos y Carta</a>
-        <a href="#espacios" class="pill-link">Espacios y Horarios</a>
-        <a href="#contacto-whatsapp" class="pill-link">Contacto</a>
+        <a href="#horarios-ubicacion" class="pill-link">Horarios y Dónde estamos</a>
+        <a href="#resenas-maps" class="pill-link">Reseñas</a>
       </div>
       <div class="pill-actions">
-        <a href="#contacto-whatsapp" class="btn-blue">Reservar / Ir</a>
+        <a href="${escapeHtml(tenant.googleMapsUrl || '#horarios-ubicacion')}" target="_blank" rel="noopener noreferrer" class="btn-blue">Cómo llegar</a>
         <button type="button" id="cauce-mobile-menu-btn" class="mobile-menu-btn" aria-expanded="false" aria-label="Abrir menú">☰</button>
       </div>
     </nav>
     <div id="cauce-mobile-dropdown" class="mobile-dropdown">
       <a href="#tragos-carta">Tragos y Carta</a>
-      <a href="#espacios">Espacios y Horarios</a>
-      <a href="#contacto-whatsapp">Contacto</a>
+      <a href="#horarios-ubicacion">Horarios y Dónde estamos</a>
+      <a href="#resenas-maps">Reseñas</a>
       <a href="carta.html?mesa=0" class="btn-blue" style="margin-top: 4px;">Ver Carta en Mesa 0</a>
     </div>
   </div>
@@ -1156,135 +952,131 @@ ${JSON.stringify(jsonLd, null, 2)}
     </div>
   </section>
 
-  <!-- PANTALLA 3: NUESTROS ESPACIOS Y HORARIOS (3 ESPACIOS ÚNICOS) -->
-  <section id="espacios" class="cauce-section" style="padding-top: 48px;">
+  <!-- PANTALLA 3: HORARIOS Y DÓNDE ESTAMOS -->
+  <section id="horarios-ubicacion" class="cauce-section" style="padding-top: 56px;">
+    <div style="max-width: 680px; margin-bottom: 36px;">
+      <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); display: block; margin-bottom: 8px;">Servicio y Dónde Encontrarnos</span>
+      <h2 class="cauce-h2">Horarios de barra, terraza y ubicación</h2>
+      <p style="margin-top: 10px; font-size: 0.96rem; color: var(--text-muted); line-height: 1.6;">
+        ${escapeHtml(tenant.address)}, ${escapeHtml(tenant.postalCode)} ${escapeHtml(tenant.city)}. Servicio ininterrumpido en el casco histórico medieval.
+      </p>
+    </div>
+
     <div class="spaces-grid">
-      <div>
-        <h2 class="cauce-h2">Tres espacios y horarios</h2>
-        <p style="margin-top: 12px; font-size: 0.96rem; color: var(--text-muted); line-height: 1.6;">
-          ${escapeHtml(tenant.address)}, ${escapeHtml(tenant.postalCode)} ${escapeHtml(tenant.city)}. Elige tu rincón favorito y coordina mesa en segundos.
+      <!-- Horario Semanal con Badge en Vivo -->
+      <div class="cauce-card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 20px;">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E2E8F0; padding-bottom: 14px; margin-bottom: 14px;">
+            <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--text-ink); display: flex; align-items: center; gap: 6px;">
+              ⏱️ Horario Semanal
+            </span>
+            <span class="live-badge-light tabular-nums">
+              <span class="live-dot ${todayStatus.isOpen ? 'open' : 'closed'}"></span>
+              <span>${escapeHtml(todayStatus.label)} · ${escapeHtml(todayStatus.subLabel)}</span>
+            </span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            ${[1, 2, 3, 4, 5, 6, 0].map(dayIdx => {
+              const daySchedules = tenant.openingHours.filter(s => s.dayOfWeek === dayIdx)
+              const isToday = dayIdx === new Date().getDay()
+              return `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-radius: 10px; font-size: 0.85rem; ${isToday ? 'background: var(--brand-blue-soft); color: var(--brand-blue); font-weight: 600;' : 'color: var(--text-muted);'}" class="tabular-nums">
+                <span>${dayNames[dayIdx]}${isToday ? ' (Hoy)' : ''}</span>
+                <span style="font-weight: 500;">${daySchedules.length > 0 ? daySchedules.map(s => `${s.open} – ${s.close}h`).join(' · ') : 'Cerrado'}</span>
+              </div>
+              `
+            }).join('')}
+          </div>
+        </div>
+
+        <p style="border-top: 1px solid #F1F5F9; padding-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
+          Horarios continuos de servicio en barra y terraza cubierta.
         </p>
-        <div style="margin-top: 18px;">
-          <span class="live-badge-light tabular-nums">
-            <span class="live-dot ${todayStatus.isOpen ? 'open' : 'closed'}"></span>
-            <span>${escapeHtml(todayStatus.label)} · ${escapeHtml(todayStatus.subLabel)}</span>
-          </span>
-        </div>
-        <ul style="list-style: none; margin-top: 20px; font-size: 0.88rem; line-height: 2; color: var(--text-muted);" class="tabular-nums">
-          ${tenant.openingHours.map(h => `
-          <li style="display: flex; justify-content: space-between; border-bottom: 1px solid #E2E8F0; gap: 12px;">
-            <span>${dayNames[h.dayOfWeek] || 'Día'} (${escapeHtml(h.label || 'Servicio')})</span>
-            <strong style="color: var(--text-ink);">${escapeHtml(h.open)} – ${escapeHtml(h.close)}</strong>
-          </li>
-          `).join('')}
-        </ul>
-        <div style="margin-top: 22px; display: flex; gap: 10px; flex-wrap: wrap;">
-          <a href="${escapeHtml(tenant.googleMapsUrl || '#')}" target="_blank" rel="noopener noreferrer" class="btn-blue">Cómo llegar en Google Maps</a>
-          <a href="tel:${escapeHtml(cleanPhoneHref)}" class="btn-outline tabular-nums">📞 ${escapeHtml(tenant.phone)}</a>
-        </div>
       </div>
 
-      <div class="space-stack">
-        ${tenant.ambiences.map(amb => `
-        <button type="button" class="space-row-btn" data-select-space="${escapeHtml(amb.name)}">
+      <!-- Ubicación y Mapa -->
+      <div class="cauce-card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 20px;">
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="border-bottom: 1px solid #E2E8F0; padding-bottom: 12px;">
+            <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--text-ink); display: flex; align-items: center; gap: 6px;">
+              📍 Ubicación & Contacto
+            </span>
+          </div>
+
           <div>
-            <div style="font-size: 1.05rem; font-weight: 600; color: var(--text-ink);">${escapeHtml(amb.name)}</div>
-            <div style="font-size: 0.86rem; color: var(--text-muted); margin-top: 4px;">${escapeHtml(amb.subtitle)} · ${escapeHtml(amb.desc)}</div>
+            <p style="font-size: 1.05rem; font-weight: 600; color: var(--text-ink);">${escapeHtml(tenant.address)}</p>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 2px;" class="tabular-nums">${escapeHtml(tenant.postalCode)} ${escapeHtml(tenant.city)} (A Coruña)</p>
           </div>
-          <span style="font-size: 0.82rem; font-weight: 600; color: var(--brand-blue); white-space: nowrap;">Seleccionar →</span>
-        </button>
-        `).join('')}
+
+          <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.55;">
+            Bajo los soportales históricos de piedra de la Rúa do Curro, en pleno casco histórico medieval de Noia.
+          </p>
+
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.92rem; padding-top: 4px;">
+            <span>📞</span>
+            <a href="tel:${escapeHtml(cleanPhoneHref)}" style="font-weight: 600; color: var(--text-ink); text-decoration: none;" class="tabular-nums">${escapeHtml(tenant.phone)}</a>
+          </div>
+        </div>
+
+        ${tenant.googleMapsUrl ? `
+        <a href="${escapeHtml(tenant.googleMapsUrl)}" target="_blank" rel="noopener noreferrer" class="btn-blue" style="width: 100%; text-align: center; padding: 13px 20px;">
+          Abrir en Google Maps →
+        </a>
+        ` : ''}
       </div>
     </div>
   </section>
 
-  <!-- SECCIÓN 5: PREGUNTAS FRECUENTES -->
-  <section id="preguntas" class="cauce-section" style="padding-top: 24px;">
-    <h2 class="cauce-h2">Preguntas frecuentes</h2>
-    <div class="faq-grid-3">
-      <article class="cauce-card">
-        <h3 style="font-size: 1rem; font-weight: 600;">¿Necesito reservar para tomar algo en la terraza?</h3>
-        <p style="margin-top: 10px; font-size: 0.9rem; line-height: 1.55; color: var(--text-muted);">
-          Para cañas, vinos o picoteo espontáneo atendemos por orden de llegada. Si vienes en hora punta o en grupo, puedes avisarnos por WhatsApp para guardar mesa.
-        </p>
-      </article>
-      <article class="cauce-card">
-        <h3 style="font-size: 1rem; font-weight: 600;">¿Dónde consulto los precios exactos y los 14 alérgenos?</h3>
-        <p style="margin-top: 10px; font-size: 0.9rem; line-height: 1.55; color: var(--text-muted);">
-          En el catálogo oficial de la carta encontrarás cada cerveza, copa, botella y ración con sus formatos, precios con IVA incluido y el desglose europeo de alérgenos.
-        </p>
-      </article>
-      <article class="cauce-card">
-        <h3 style="font-size: 1rem; font-weight: 600;">¿Qué datos debo indicar si somos un grupo?</h3>
-        <p style="margin-top: 10px; font-size: 0.9rem; line-height: 1.55; color: var(--text-muted);">
-          Solo el espacio preferido (Terraza Exterior, Salón Interior o Barra), el número aproximado de personas, el turno y cualquier intolerancia o preferencia.
-        </p>
-      </article>
-    </div>
-  </section>
-
-  <!-- SECCIÓN 6: CONFIGURADOR WHATSAPP EN VIVO ("MENSAJE PREPARADO") -->
-  <section id="contacto-whatsapp" class="cauce-section" style="padding-top: 24px;">
-    <h2 class="cauce-h2">Reserva o consulta directa por WhatsApp</h2>
-    <p style="margin-top: 8px; font-size: 0.96rem; color: var(--text-muted);">
-      Configura tu mensaje en segundos y envíalo directamente al equipo de ${escapeHtml(tenant.name)}.
-    </p>
-
-    <div class="wa-grid">
-      <div class="cauce-card" style="display: flex; flex-direction: column; gap: 20px;">
-        <div>
-          <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-ink);">1. Espacio preferido</span>
-          <div class="chip-row">
-            <button type="button" class="choice-pill active" data-wa-group="espacio" data-wa-val="Terraza Exterior">Terraza Exterior</button>
-            <button type="button" class="choice-pill" data-wa-group="espacio" data-wa-val="Salón Interior">Salón Interior</button>
-            <button type="button" class="choice-pill" data-wa-group="espacio" data-wa-val="Barra">Barra</button>
-            <button type="button" class="choice-pill" data-wa-group="espacio" data-wa-val="Indiferente">Indiferente</button>
-          </div>
+  <!-- PANTALLA 4: RESEÑAS VERIFICADAS DE GOOGLE MAPS -->
+  <section id="resenas-maps" class="cauce-section" style="padding-top: 48px;">
+    <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 20px;">
+        <div style="max-width: 680px;">
+          <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); display: block; margin-bottom: 8px;">Opiniones Reales</span>
+          <h2 class="cauce-h2">Lo que dicen de nosotros en Google Maps</h2>
+          <p style="margin-top: 10px; font-size: 0.96rem; color: var(--text-muted); line-height: 1.6;">
+            Reseñas espontáneas de clientes sobre nuestra cerveza de bodega, tapas de cortesía y ambiente bajo los soportales.
+          </p>
         </div>
 
-        <div>
-          <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-ink);">2. Motivo</span>
-          <div class="chip-row">
-            <button type="button" class="choice-pill active" data-wa-group="motivo" data-wa-val="Reserva de mesa">Reserva de mesa</button>
-            <button type="button" class="choice-pill" data-wa-group="motivo" data-wa-val="Grupo o picoteo">Grupo o picoteo</button>
-            <button type="button" class="choice-pill" data-wa-group="motivo" data-wa-val="Consulta rápida">Consulta rápida</button>
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; padding: 12px 20px; border-radius: 18px; display: inline-flex; align-items: center; gap: 14px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);">
+          <div style="color: #F59E0B; font-size: 1.1rem; letter-spacing: 2px;">★★★★★</div>
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-ink);" class="tabular-nums">4.8 / 5.0</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Google Maps</div>
           </div>
-        </div>
-
-        <div>
-          <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-ink);">3. Personas y Turno</span>
-          <div class="chip-row">
-            <button type="button" class="choice-pill tabular-nums active" data-wa-group="personas" data-wa-val="2 personas">2 personas</button>
-            <button type="button" class="choice-pill tabular-nums" data-wa-group="personas" data-wa-val="3-4 personas">3-4 personas</button>
-            <button type="button" class="choice-pill tabular-nums" data-wa-group="personas" data-wa-val="5-6 personas">5-6 personas</button>
-            <button type="button" class="choice-pill tabular-nums" data-wa-group="personas" data-wa-val="Grupo +6">Grupo +6</button>
-          </div>
-          <div class="chip-row" style="margin-top: 10px;">
-            <button type="button" class="choice-pill tabular-nums" data-wa-group="turno" data-wa-val="Mediodía · 13:30h">Mediodía · 13:30h</button>
-            <button type="button" class="choice-pill tabular-nums active" data-wa-group="turno" data-wa-val="Noche · 21:30h">Noche · 21:30h</button>
-          </div>
-        </div>
-
-        <div>
-          <label for="cauce-wa-details" style="font-size: 0.82rem; font-weight: 600; color: var(--text-ink);">4. Detalles opcionales</label>
-          <textarea id="cauce-wa-details" class="wa-textarea" placeholder="Hora exacta, alergias, intolerancias o notas para tu mesa..."></textarea>
-        </div>
-      </div>
-
-      <div class="cauce-card" style="display: flex; flex-direction: column; justify-content: space-between;">
-        <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-            <h3 style="font-size: 1.05rem; font-weight: 600;">Mensaje preparado</h3>
-            <span class="preview-badge">LISTO PARA COPIAR</span>
-          </div>
-          <div id="cauce-wa-preview" class="wa-preview-box"></div>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 18px;">
-          <button type="button" id="cauce-copy-btn" class="btn-outline" style="width: 100%;">Copiar mensaje</button>
-          <button type="button" id="cauce-wa-share-btn" class="btn-blue" style="width: 100%; padding: 12px 18px;">Compartir por WhatsApp</button>
         </div>
       </div>
     </div>
+
+    <div class="reviews-grid">
+      ${(tenant.reviews || []).map(rev => `
+      <article class="cauce-card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="color: #F59E0B; font-size: 0.9rem;">${'★'.repeat(rev.rating || 5)}</div>
+            <span style="font-size: 0.75rem; color: var(--text-muted);" class="tabular-nums">${escapeHtml(rev.date || '')}</span>
+          </div>
+          <p style="font-size: 0.88rem; line-height: 1.6; color: var(--text-ink); font-style: italic;">
+            "${escapeHtml(rev.text)}"
+          </p>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #F1F5F9; padding-top: 10px; font-size: 0.78rem;">
+          <span style="font-weight: 600; color: var(--text-ink);">${escapeHtml(rev.author)}</span>
+          <span style="color: var(--brand-blue); font-weight: 600;">Verificada</span>
+        </div>
+      </article>
+      `).join('')}
+    </div>
+
+    ${tenant.googleMapsUrl ? `
+    <div style="text-align: center; margin-top: 36px;">
+      <a href="${escapeHtml(tenant.googleMapsUrl)}" target="_blank" rel="noopener noreferrer" class="btn-outline">
+        Ver todas las opiniones en Google Maps →
+      </a>
+    </div>
+    ` : ''}
   </section>
 
   <!-- FOOTER -->
@@ -1299,8 +1091,8 @@ ${JSON.stringify(jsonLd, null, 2)}
 
   <!-- BARRA MÓVIL INFERIOR -->
   <aside class="cauce-mobile-bar">
-    <a href="carta.html" class="btn-outline">Ver Carta</a>
-    <a href="#contacto-whatsapp" class="btn-blue">Reservar / Ir</a>
+    <a href="carta.html?mesa=0" class="btn-outline">Ver Carta</a>
+    <a href="${escapeHtml(tenant.googleMapsUrl || '#horarios-ubicacion')}" target="_blank" rel="noopener noreferrer" class="btn-blue">Cómo Llegar</a>
   </aside>
 
   <script src="script.js"></script>

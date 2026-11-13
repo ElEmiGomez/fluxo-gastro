@@ -448,36 +448,17 @@ const CAUCE_COPY = {
         desc: 'Si venís varios a comer o cenar, nos escribís por WhatsApp con el mensaje preparado y os guardamos espacio.',
       },
     ],
-    sec4Eyebrow: 'Espacios & Horario',
-    sec4Title: 'Tres espacios para cada momento del día',
+    sec4Eyebrow: 'Horarios y Dónde estamos',
+    sec4Title: 'Tu punto de encuentro en la Rúa do Curro',
     sec4Subtitle:
-      'Elige el espacio que mejor encaja con tu plan; al seleccionarlo prepararemos tu consulta directa por WhatsApp.',
+      'Cerveza de bodega, aperitivo del mediodía y picoteo en pleno casco histórico de Noia.',
     sec4MapsBtn: 'Cómo llegar en Google Maps',
     sec4HoursLabel: 'Horario Semanal',
-    sec4SelectSpaceCta: 'Seleccionar este espacio',
-    sec4SelectedTag: 'Seleccionado',
-    sec5Eyebrow: 'Preguntas Frecuentes',
-    sec5Title: 'Resolvemos tus dudas antes de pasar por aquí',
-    sec5Subtitle:
-      'Respuestas claras sobre tapas, reservas de grupos y consulta de alérgenos.',
-    sec5Faqs: [
-      {
-        q: '¿Hace falta reservar para tomar algo o tapear?',
-        a: 'No hace falta reserva para barra ni terraza en rotación normal. Si venís en grupo para raciones o queréis asegurar mesa en hora punta, avísanos por WhatsApp en segundos.',
-      },
-      {
-        q: '¿Todas las consumiciones incluyen tapa de cortesía?',
-        a: 'Sí. Siguiendo la tradición de Noia, cada caña, vino o vermú sale de barra acompañado de su tapa recién hecha en nuestra cocina.',
-      },
-      {
-        q: '¿Dónde veo los precios exactos y los 14 alérgenos?',
-        a: 'Al abrir «Ver Carta Completa con Precios» tienes buscador instantáneo, formatos (caña, copa, jarra, media o ración) y los 14 alérgenos europeos declarados.',
-      },
-    ],
-    sec6Eyebrow: 'Contacto Directo · WhatsApp',
-    sec6Title: 'Prepara tu mensaje y consúltanos sin esperas',
-    sec6Subtitle:
-      'Selecciona espacio, motivo y personas. Copia el texto o abre directamente WhatsApp con todo listo para enviar.',
+    secReviewsEyebrow: 'Opiniones Verificadas · Google Maps',
+    secReviewsTitle: 'Lo que dicen quienes nos visitan',
+    secReviewsSubtitle:
+      'Puntuación media de 4.8 sobre 5 basada en más de 340 reseñas reales en Google Maps.',
+    secReviewsViewAll: 'Ver todas las opiniones en Google Maps →',
     footerRights: 'Todos los derechos reservados.',
     footerMenuLink: 'Carta Completa',
     footerMapsLink: 'Google Maps',
@@ -553,36 +534,17 @@ const CAUCE_COPY = {
         desc: 'Se vides varios a xantar ou cear, escribídenos por WhatsApp coa mensaxe preparada e gardámosvos espazo.',
       },
     ],
-    sec4Eyebrow: 'Espazos e Horario',
-    sec4Title: 'Tres espazos para cada momento do día',
+    sec4Eyebrow: 'Horarios e Onde estamos',
+    sec4Title: 'O teu punto de encontro na Rúa do Curro',
     sec4Subtitle:
-      'Escolle o espazo que mellor encaixa co teu plan; ao seleccionalo prepararemos a túa consulta directa por WhatsApp.',
+      'Cervexa de adega, aperitivo do mediodía e racións en pleno casco histórico de Noia.',
     sec4MapsBtn: 'Como chegar en Google Maps',
     sec4HoursLabel: 'Horario Semanal',
-    sec4SelectSpaceCta: 'Seleccionar este espazo',
-    sec4SelectedTag: 'Seleccionado',
-    sec5Eyebrow: 'Preguntas Frecuentes',
-    sec5Title: 'Resolvemos as túas dúbidas antes de pasar por aquí',
-    sec5Subtitle:
-      'Respostas claras sobre tapas, reservas de grupos e consulta de alérxenos.',
-    sec5Faqs: [
-      {
-        q: 'Cómpre reservar para tomar algo ou tapear?',
-        a: 'Non cómpre reserva para barra nin terraza en rotación normal. Se vides en grupo para racións ou queredes asegurar mesa en hora punta, avísanos por WhatsApp en segundos.',
-      },
-      {
-        q: 'Todas as consumicións inclúen tapa de cortesía?',
-        a: 'Si. Seguindo a tradición de Noia, cada cana, viño ou vermú sae da barra acompañado da súa tapa recén feita na nosa cociña.',
-      },
-      {
-        q: 'Onde vexo os prezos exactos e os 14 alérxenos?',
-        a: 'Ao abrir «Ver Carta Completa con Prezos» tes buscador instantáneo, formatos (cana, copa, xarra, media ou ración) e os 14 alérxenos europeos declarados.',
-      },
-    ],
-    sec6Eyebrow: 'Contacto Directo · WhatsApp',
-    sec6Title: 'Prepara a túa mensaxe e consúltanos sen esperas',
-    sec6Subtitle:
-      'Selecciona espazo, motivo e persoas. Copia o texto ou abre directamente WhatsApp con todo listo para enviar.',
+    secReviewsEyebrow: 'Opinións Verificadas · Google Maps',
+    secReviewsTitle: 'O que din as persoas que nos visitan',
+    secReviewsSubtitle:
+      'Puntuación media de 4.8 sobre 5 baseada en máis de 340 reseñas reais en Google Maps.',
+    secReviewsViewAll: 'Ver todas as opinións en Google Maps →',
     footerRights: 'Todos os dereitos reservados.',
     footerMenuLink: 'Carta Completa',
     footerMapsLink: 'Google Maps',
@@ -658,36 +620,17 @@ const CAUCE_COPY = {
         desc: 'Coming with family or friends for dinner? Send your pre-filled WhatsApp message in seconds and we will hold your table.',
       },
     ],
-    sec4Eyebrow: 'Spaces & Hours',
-    sec4Title: 'Three distinct spaces for every moment',
+    sec4Eyebrow: 'Hours & Location',
+    sec4Title: 'Your gathering spot on Rúa do Curro',
     sec4Subtitle:
-      'Choose the area that fits your plan; picking a space prepares your direct WhatsApp message below.',
+      'Cellar draft beer, midday aperitifs and sharing tapas in the historic center of Noia.',
     sec4MapsBtn: 'Directions on Google Maps',
     sec4HoursLabel: 'Weekly Hours',
-    sec4SelectSpaceCta: 'Select this space',
-    sec4SelectedTag: 'Selected',
-    sec5Eyebrow: 'FAQ',
-    sec5Title: 'Quick answers before you stop by',
-    sec5Subtitle:
-      'Everything you need to know about tapas, group seating and allergen details.',
-    sec5Faqs: [
-      {
-        q: 'Do I need a booking for drinks or casual tapas?',
-        a: 'Walk-ins are welcome at the bar and covered terrace during regular turnover. For larger groups or peak hours, message us via WhatsApp in seconds.',
-      },
-      {
-        q: 'Does every drink include a complimentary tapa?',
-        a: 'Yes. Following Noia’s tradition, every draft beer, wine or vermouth comes with a freshly cooked tapa from our kitchen.',
-      },
-      {
-        q: 'Where can I check exact prices and the 14 allergens?',
-        a: 'Open "View Full Menu & Prices" for instant search, exact serving sizes (glass, mug, half or full portion) and the 14 EU allergens.',
-      },
-    ],
-    sec6Eyebrow: 'Direct Contact · WhatsApp',
-    sec6Title: 'Prepare your message and reach us directly',
-    sec6Subtitle:
-      'Choose space, purpose and party size. Copy the formatted text or open WhatsApp right away.',
+    secReviewsEyebrow: 'Verified Reviews · Google Maps',
+    secReviewsTitle: 'What our guests say',
+    secReviewsSubtitle:
+      'Average rating of 4.8 out of 5 based on over 340 authentic reviews on Google Maps.',
+    secReviewsViewAll: 'View all reviews on Google Maps →',
     footerRights: 'All rights reserved.',
     footerMenuLink: 'Full Menu',
     footerMapsLink: 'Google Maps',
@@ -1477,30 +1420,30 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
             }}
           />
 
-          {/* PANTALLA 3: Espacios del Local + Horario en Vivo + Ubicación */}
+          {/* PANTALLA 3: Horarios y Dónde estamos */}
           <section
-            id="espacios"
-            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
+            id="horarios-ubicacion"
+            className="scroll-mt-24 py-16 sm:py-24 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
-              {/* Columna Izquierda: Título, Horario Semanal y Mapa */}
-              <div className="lg:col-span-5 space-y-6">
-                <div className="space-y-3">
-                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
-                    {cauce.sec4Eyebrow}
-                  </span>
-                  <h2
-                    className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
-                    style={CAUCE_SERIF_STYLE}
-                  >
-                    {cauce.sec4Title}
-                  </h2>
-                  <p className="text-base text-[#475569] leading-relaxed">
-                    {cauce.sec4Subtitle}
-                  </p>
-                </div>
+            <div className="max-w-2xl space-y-3 mb-10">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
+                {cauce.sec4Eyebrow}
+              </span>
+              <h2
+                className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
+                style={CAUCE_SERIF_STYLE}
+              >
+                {cauce.sec4Title}
+              </h2>
+              <p className="text-base text-[#475569] leading-relaxed">
+                {cauce.sec4Subtitle}
+              </p>
+            </div>
 
-                <div className="bg-white rounded-[22px] border border-slate-200/80 p-6 shadow-sm space-y-5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+              {/* Horario Semanal con Badge en Vivo */}
+              <div className="lg:col-span-7 bg-white rounded-[22px] border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-5 flex flex-col justify-between">
+                <div className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-200">
                     <span className="text-xs uppercase tracking-wider font-bold text-[#0F172A] flex items-center gap-2">
                       <Clock className="w-4 h-4 text-[#1D4ED8]" />
@@ -1509,7 +1452,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                     <LiveOpeningBadge schedules={tenant.openingHours} lang={lang} variant="light" />
                   </div>
 
-                  <div className="space-y-1 text-xs sm:text-sm">
+                  <div className="space-y-1.5 text-xs sm:text-sm">
                     {[1, 2, 3, 4, 5, 6, 0].map((dayIdx) => {
                       const daySchedules = tenant.openingHours.filter((s) => s.dayOfWeek === dayIdx)
                       const isToday = dayIdx === todayDayOfWeek
@@ -1518,7 +1461,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                         <div
                           key={dayIdx}
                           suppressHydrationWarning
-                          className={`py-2 px-2.5 rounded-xl flex items-center justify-between gap-3 ${
+                          className={`py-2 px-3 rounded-xl flex items-center justify-between gap-3 ${
                             isToday
                               ? 'bg-blue-50 text-[#1D4ED8] font-semibold'
                               : 'text-[#475569]'
@@ -1536,179 +1479,141 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                       )
                     })}
                   </div>
+                </div>
 
-                  <div className="pt-3 border-t border-slate-200 space-y-2.5 text-sm text-[#475569]">
-                    <div className="flex items-start gap-2.5">
-                      <MapPin className="w-4 h-4 text-[#1D4ED8] flex-shrink-0 mt-0.5" />
-                      <span className="tabular-nums">
-                        {tenant.address}, {tenant.postalCode} {tenant.city}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <Phone className="w-4 h-4 text-[#1D4ED8] flex-shrink-0" />
-                      <a
-                        href={`tel:${tenant.phone}`}
-                        onClick={() => trackConversion('click_call')}
-                        className="font-semibold text-[#0F172A] hover:text-[#1D4ED8] tabular-nums transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
-                      >
-                        {tenant.phone}
-                      </a>
-                    </div>
-                  </div>
-
-                  {tenant.googleMapsUrl && (
-                    <a
-                      href={tenant.googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => trackConversion('click_maps')}
-                      className="w-full inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white rounded-full px-6 py-3.5 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
-                    >
-                      <Compass className="w-4 h-4" />
-                      <span>{cauce.sec4MapsBtn}</span>
-                    </a>
-                  )}
+                <div className="pt-3 border-t border-slate-100 text-xs text-[#475569]">
+                  <span>Horarios continuos de servicio en barra y terraza cubierta.</span>
                 </div>
               </div>
 
-              {/* Columna Derecha: 4 Tarjetas blancas interactivas de espacios */}
-              <div className="lg:col-span-7 space-y-4">
-                {tenant.ambiences.map((amb) => {
-                  const ambName = getAmbName(amb)
-                  const isSelected = selectedZone === ambName
-                  const isGroupSpace =
-                    amb.id.toLowerCase().includes('grupo') ||
-                    ambName.toLowerCase().includes('grupo') ||
-                    ambName.toLowerCase().includes('group')
+              {/* Ubicación, Teléfono y Enlace a Google Maps */}
+              <div className="lg:col-span-5 bg-white rounded-[22px] border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6 flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200">
+                    <MapPin className="w-4 h-4 text-[#1D4ED8]" />
+                    <span className="text-xs uppercase tracking-wider font-bold text-[#0F172A]">
+                      Ubicación & Contacto
+                    </span>
+                  </div>
 
-                  return (
-                    <button
-                      type="button"
-                      key={amb.id}
-                      onClick={() => {
-                        setSelectedZone(ambName)
-                        setSelectedReason(isGroupSpace ? 'Grupo o picoteo' : 'Reserva de mesa')
-                        scrollToSection('contacto-whatsapp')
-                      }}
-                      className={`w-full text-left bg-white rounded-[22px] border p-5 sm:p-6 shadow-sm transition-all flex flex-col sm:flex-row gap-4 sm:gap-5 items-start sm:items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2 ${
-                        isSelected
-                          ? 'border-[#1D4ED8] ring-1 ring-[#1D4ED8]/20'
-                          : 'border-slate-200/80 hover:border-slate-300'
-                      }`}
+                  <div className="space-y-1">
+                    <p className="text-base text-[#0F172A] font-semibold leading-snug">
+                      {tenant.address}
+                    </p>
+                    <p className="text-sm text-[#475569] tabular-nums">
+                      {tenant.postalCode} {tenant.city} (A Coruña)
+                    </p>
+                  </div>
+
+                  <p className="text-sm text-[#475569] leading-relaxed">
+                    Bajo los soportales históricos de piedra de la Rúa do Curro, en pleno casco histórico medieval de Noia.
+                  </p>
+
+                  <div className="pt-2 flex items-center gap-2.5 text-sm">
+                    <Phone className="w-4 h-4 text-[#1D4ED8] flex-shrink-0" />
+                    <a
+                      href={`tel:${tenant.phone}`}
+                      onClick={() => trackConversion('click_call')}
+                      className="font-semibold text-[#0F172A] hover:text-[#1D4ED8] tabular-nums transition-colors"
                     >
-                      <div className="relative w-full sm:w-28 h-44 sm:h-28 rounded-[16px] overflow-hidden bg-slate-100 flex-shrink-0">
-                        <Image
-                          src={amb.imageDay}
-                          alt={ambName}
-                          fill
-                          sizes="(max-width: 640px) 100vw, 112px"
-                          className="object-cover"
-                        />
-                      </div>
+                      {tenant.phone}
+                    </a>
+                  </div>
+                </div>
 
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h3 className="text-lg sm:text-xl font-semibold text-[#0F172A] tracking-tight">
-                            {ambName}
-                          </h3>
-                          <span
-                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
-                              isSelected
-                                ? 'bg-blue-50 text-[#1D4ED8]'
-                                : 'bg-slate-100 text-[#475569]'
-                            }`}
-                          >
-                            {getAmbBadge(amb)}
-                          </span>
-                        </div>
-                        <p className="text-xs font-medium text-[#475569]">
-                          {getAmbSubtitle(amb)}
-                        </p>
-                        <p className="text-sm text-[#475569] leading-relaxed">
-                          {getAmbDesc(amb)}
-                        </p>
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1D4ED8] pt-0.5">
-                          <span>{isSelected ? cauce.sec4SelectedTag : cauce.sec4SelectSpaceCta}</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
+                {tenant.googleMapsUrl && (
+                  <a
+                    href={tenant.googleMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => trackConversion('click_maps')}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white rounded-full px-6 py-3.5 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+                  >
+                    <Compass className="w-4 h-4" />
+                    <span>{cauce.sec4MapsBtn}</span>
+                  </a>
+                )}
               </div>
             </div>
           </section>
 
-          {/* SECCIÓN 5: Preguntas Frecuentes (3 Columnas Horizontales) */}
+          {/* PANTALLA 4: Reseñas Verificadas de Google Maps */}
           <section
-            id="preguntas"
-            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
+            id="resenas-maps"
+            className="scroll-mt-24 py-16 sm:py-24 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
           >
-            <div className="max-w-2xl space-y-3 mb-10 sm:mb-12">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
-                {cauce.sec5Eyebrow}
-              </span>
-              <h2
-                className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
-                style={CAUCE_SERIF_STYLE}
-              >
-                {cauce.sec5Title}
-              </h2>
-              <p className="text-base text-[#475569] leading-relaxed">
-                {cauce.sec5Subtitle}
-              </p>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 sm:mb-12">
+              <div className="max-w-2xl space-y-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
+                  {cauce.secReviewsEyebrow}
+                </span>
+                <h2
+                  className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
+                  style={CAUCE_SERIF_STYLE}
+                >
+                  {cauce.secReviewsTitle}
+                </h2>
+                <p className="text-base text-[#475569] leading-relaxed">
+                  {cauce.secReviewsSubtitle}
+                </p>
+              </div>
+
+              {/* Badge de Google Maps con Estrellas */}
+              <div className="inline-flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-slate-200/80 shadow-sm flex-shrink-0">
+                <div className="flex items-center gap-1 text-amber-500">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <div className="text-left text-xs">
+                  <div className="font-bold text-[#0F172A] text-sm tabular-nums">4.8 / 5.0</div>
+                  <div className="text-[#475569]">Google Maps</div>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {cauce.sec5Faqs.map((faq, idx) => (
+            {/* Grid de 6 Reseñas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(tenant.reviews ?? []).map((rev, idx) => (
                 <article
-                  key={faq.q}
-                  className="bg-white rounded-[22px] border border-slate-200/80 p-7 shadow-sm flex flex-col justify-between space-y-4"
+                  key={idx}
+                  className="bg-white rounded-[22px] border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-4"
                 >
                   <div className="space-y-3">
-                    <span className="text-xs font-semibold text-[#1D4ED8] tabular-nums block">
-                      0{idx + 1}
-                    </span>
-                    <h3 className="text-base sm:text-lg font-semibold text-[#0F172A] leading-snug">
-                      {faq.q}
-                    </h3>
-                    <p className="text-sm text-[#475569] leading-relaxed">{faq.a}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-amber-400">
+                        {[...Array(rev.rating || 5)].map((_, i) => (
+                          <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        ))}
+                      </div>
+                      <span className="text-[11px] text-[#475569] tabular-nums">{rev.date}</span>
+                    </div>
+
+                    <p className="text-sm text-[#0F172A] leading-relaxed italic">
+                      "{lang === 'gl' ? rev.text_gl || rev.text : lang === 'en' ? rev.text_en || rev.text : rev.text}"
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-[#475569]">
+                    <span className="font-semibold text-[#0F172A]">{rev.author}</span>
+                    <span className="text-[11px] font-medium text-[#1D4ED8]">Verificada</span>
                   </div>
                 </article>
               ))}
             </div>
-          </section>
 
-          {/* SECCIÓN 6: Configurador Reactivo de WhatsApp */}
-          <section
-            id="contacto-whatsapp"
-            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
-          >
-            <div className="max-w-2xl space-y-3 mb-10">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
-                {cauce.sec6Eyebrow}
-              </span>
-              <h2
-                className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
-                style={CAUCE_SERIF_STYLE}
-              >
-                {cauce.sec6Title}
-              </h2>
-              <p className="text-base text-[#475569] leading-relaxed">
-                {cauce.sec6Subtitle}
-              </p>
-            </div>
-
-            <WhatsAppLiveConfigurator
-              variant="cauce"
-              restaurantName={tenant.name}
-              whatsappNumber={tenant.whatsappNumber}
-              ambiences={tenant.ambiences}
-              initialZone={selectedZone}
-              initialReason={selectedReason}
-              lang={lang}
-              onWhatsAppClick={() => trackConversion('click_reservation')}
-            />
+            {tenant.googleMapsUrl && (
+              <div className="text-center mt-10">
+                <a
+                  href={tenant.googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#1D4ED8] hover:text-[#1E3A8A] transition-colors"
+                >
+                  <span>{cauce.secReviewsViewAll}</span>
+                </a>
+              </div>
+            )}
           </section>
         </main>
 

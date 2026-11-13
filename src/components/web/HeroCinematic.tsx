@@ -69,10 +69,10 @@ const CAUCE_HERO_COPY = {
   es: {
     nav: [
       { id: 'tragos-carta', label: 'Tragos y Carta' },
-      { id: 'espacios', label: 'Espacios y Horarios' },
-      { id: 'contacto-whatsapp', label: 'Contacto' },
+      { id: 'horarios-ubicacion', label: 'Horarios y Dónde estamos' },
+      { id: 'resenas-maps', label: 'Reseñas' },
     ],
-    navCta: 'Reservar / Ir',
+    navCta: 'Cómo llegar',
     headline: 'Cerveza de bodega y raciones bajo los soportales de Noia',
     heroCta: 'Ver Carta en Mesa 0',
     openMenuLabel: 'Abrir menú de navegación',
@@ -82,10 +82,10 @@ const CAUCE_HERO_COPY = {
   gl: {
     nav: [
       { id: 'tragos-carta', label: 'Tragos e Carta' },
-      { id: 'espacios', label: 'Espazos e Horarios' },
-      { id: 'contacto-whatsapp', label: 'Contacto' },
+      { id: 'horarios-ubicacion', label: 'Horarios e Onde estamos' },
+      { id: 'resenas-maps', label: 'Reseñas' },
     ],
-    navCta: 'Reservar / Ir',
+    navCta: 'Como chegar',
     headline: 'Cervexa de adega e racións baixo os soportais de Noia',
     heroCta: 'Ver Carta na Mesa 0',
     openMenuLabel: 'Abrir menú de navegación',
@@ -95,10 +95,10 @@ const CAUCE_HERO_COPY = {
   en: {
     nav: [
       { id: 'tragos-carta', label: 'Drinks & Menu' },
-      { id: 'espacios', label: 'Spaces & Hours' },
-      { id: 'contacto-whatsapp', label: 'Contact' },
+      { id: 'horarios-ubicacion', label: 'Hours & Location' },
+      { id: 'resenas-maps', label: 'Reviews' },
     ],
-    navCta: 'Book / Visit',
+    navCta: 'Directions',
     headline: 'Cellar draft beer and tapas beneath Noia’s stone arcades',
     heroCta: 'View Menu at Table 0',
     openMenuLabel: 'Open navigation menu',
@@ -219,13 +219,13 @@ export function HeroCinematic({
     }
   }
 
-  const handleCauceBookClick = () => {
+  const handleCauceCtaClick = () => {
     setIsMobileMenuOpen(false)
-    if (typeof window !== 'undefined' && document.getElementById('contacto-whatsapp')) {
-      scrollToTarget('contacto-whatsapp')
+    if (googleMapsUrl && typeof window !== 'undefined') {
+      window.open(googleMapsUrl, '_blank', 'noopener,noreferrer')
       return
     }
-    onOpenReservation()
+    scrollToTarget('horarios-ubicacion')
   }
 
   // RAMA CAUCE EDITORIAL (Stone / White / Jara-Tusas Royal Blue #1D4ED8 — 0% naranja/ámbar)
@@ -311,7 +311,7 @@ export function HeroCinematic({
 
               <button
                 type="button"
-                onClick={handleCauceBookClick}
+                onClick={handleCauceCtaClick}
                 className="hidden sm:inline-flex items-center justify-center bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white text-xs sm:text-sm font-semibold rounded-full px-4 py-2 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
               >
                 {cauceCopy.navCta}
@@ -353,7 +353,7 @@ export function HeroCinematic({
               </nav>
               <button
                 type="button"
-                onClick={handleCauceBookClick}
+                onClick={handleCauceCtaClick}
                 className="w-full min-h-[44px] rounded-full bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white text-sm font-semibold px-5 py-2.5 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
               >
                 {cauceCopy.navCta}

@@ -79,14 +79,25 @@ export function MobileStickyActionBar({
             <span className="truncate">{t.menu}</span>
           </button>
 
-          <button
-            type="button"
-            onClick={onOpenReservation}
-            className="min-h-[48px] px-3 py-2.5 rounded-xl bg-[#1D4ED8] hover:bg-[#1E3A8A] active:scale-[0.98] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
-          >
-            <MessageCircle className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">{t.bookOrGo}</span>
-          </button>
+          {googleMapsUrl ? (
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[48px] px-3 py-2.5 rounded-xl bg-[#1D4ED8] hover:bg-[#1E3A8A] active:scale-[0.98] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+            >
+              <MapPin className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{t.directions}</span>
+            </a>
+          ) : (
+            <a
+              href="#horarios-ubicacion"
+              className="min-h-[48px] px-3 py-2.5 rounded-xl bg-[#1D4ED8] hover:bg-[#1E3A8A] active:scale-[0.98] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+            >
+              <MapPin className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{t.directions}</span>
+            </a>
+          )}
         </div>
       </aside>
     )
