@@ -2,10 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Calendar, Utensils, Star, MapPin, Navigation } from 'lucide-react'
-import type { RestaurantArchetype, WebLanguage } from '@/types/gastronomic-web.types'
+import { Calendar, Utensils, Star, MapPin, Navigation, Menu, X } from 'lucide-react'
+import type {
+  GastronomicLayoutPreset,
+  RestaurantArchetype,
+  WebLanguage,
+} from '@/types/gastronomic-web.types'
+import { LoopVideoBlock } from '@/components/web/LoopVideoBlock'
 
-interface HeroCinematicProps {
+export interface HeroCinematicProps {
   restaurantName: string
   archetype: RestaurantArchetype
   tagline: string
@@ -21,6 +26,10 @@ interface HeroCinematicProps {
   rating?: number
   reviewCount?: number
   lang?: WebLanguage
+  layoutPreset?: GastronomicLayoutPreset
+  heroLoopFrames?: string[]
+  onLangChange?: (lang: WebLanguage) => void
+  onNavigateSection?: (id: string) => void
   onOpenReservation: () => void
   onOpenMenu: () => void
 }
@@ -55,6 +64,51 @@ const HERO_LABELS = {
   },
 }
 
+const CAUCE_HERO_COPY = {
+  es: {
+    nav: [
+      { id: 'lo-que-nos-define', label: 'Carta' },
+      { id: 'experiencia', label: 'Experiencia' },
+      { id: 'espacios', label: 'Espacios' },
+      { id: 'preguntas', label: 'Preguntas' },
+    ],
+    navCta: 'Reservar / Ir',
+    headline: 'Cerveza de bodega y raciones bajo los soportales de Noia',
+    heroCta: 'Ver Carta Completa',
+    openMenuLabel: 'Abrir menú de navegación',
+    closeMenuLabel: 'Cerrar menú de navegación',
+    langGroupLabel: 'Selector de idioma',
+  },
+  gl: {
+    nav: [
+      { id: 'lo-que-nos-define', label: 'Carta' },
+      { id: 'experiencia', label: 'Experiencia' },
+      { id: 'espacios', label: 'Espazos' },
+      { id: 'preguntas', label: 'Preguntas' },
+    ],
+    navCta: 'Reservar / Ir',
+    headline: 'Cervexa de adega e racións baixo os soportais de Noia',
+    heroCta: 'Ver Carta Completa',
+    openMenuLabel: 'Abrir menú de navegación',
+    closeMenuLabel: 'Pechar menú de navegación',
+    langGroupLabel: 'Selector de idioma',
+  },
+  en: {
+    nav: [
+      { id: 'lo-que-nos-define', label: 'Menu' },
+      { id: 'experiencia', label: 'Experience' },
+      { id: 'espacios', label: 'Spaces' },
+      { id: 'preguntas', label: 'FAQ' },
+    ],
+    navCta: 'Book / Visit',
+    headline: 'Cellar draft beer and tapas beneath Noia’s stone arcades',
+    heroCta: 'View Full Menu',
+    openMenuLabel: 'Open navigation menu',
+    closeMenuLabel: 'Close navigation menu',
+    langGroupLabel: 'Language selector',
+  },
+}
+
 export function HeroCinematic({
   restaurantName,
   archetype,
@@ -71,18 +125,25 @@ export function HeroCinematic({
   rating = 4.8,
   reviewCount = 280,
   lang = 'es',
+  layoutPreset,
+  heroLoopFrames,
+  onLangChange,
+  onNavigateSection,
   onOpenReservation,
   onOpenMenu,
 }: HeroCinematicProps) {
   const [canAutoplayVideo, setCanAutoplayVideo] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const parallaxBgRef = useRef<HTMLDivElement | null>(null)
   const parallaxFlankRef = useRef<HTMLDivElement | null>(null)
 
+  const isCauce = layoutPreset === 'cauce_editorial'
   const isUrbanBrewery = archetype === 'urban_street' || archetype === 'tavern'
   const labels = HERO_LABELS[lang] || HERO_LABELS.es
+  const cauceCopy = CAUCE_HERO_COPY[lang] || CAUCE_HERO_COPY.es
   const activeAccent = accentColor || (isUrbanBrewery ? '#F59E0B' : '#C85A32')
   const showFlankVignette = Boolean(
-    isUrbanBrewery && flankRightUrl && flankRightUrl !== posterUrl
+    !isCauce && isUrbanBrewery && flankRightUrl && flankRightUrl !== posterUrl
   )
 
   const nameParts = restaurantName.trim().split(/\s+/)
@@ -90,6 +151,17 @@ export function HeroCinematic({
   const remainingWords = nameParts.slice(1).join(' ')
 
   useEffect(() => {
+    if (!isCauce) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileMenuOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isCauce])
+
+  useEffect(() => {
+    if (isCauce) return
+
     // 1. Respetar prefers-reduced-motion
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     if (mediaQuery.matches) return
@@ -136,7 +208,216 @@ export function HeroCinematic({
       window.removeEventListener('scroll', onScroll)
       if (rafId) window.cancelAnimationFrame(rafId)
     }
-  }, [])
+  }, [isCauce])
+
+  const scrollToTarget = (sectionId: string) => {
+    setIsMobileMenuOpen(false)
+    onNavigateSection?.(sectionId)
+    if (typeof window === 'undefined') return
+    const target = document.getElementById(sectionId)
+    if (target) {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' })
+    }
+  }
+
+  const handleCauceBookClick = () => {
+    setIsMobileMenuOpen(false)
+    if (typeof window !== 'undefined' && document.getElementById('contacto-whatsapp')) {
+      scrollToTarget('contacto-whatsapp')
+      return
+    }
+    onOpenReservation()
+  }
+
+  // RAMA CAUCE EDITORIAL (Stone / White / Jara-Tusas Royal Blue #1D4ED8 — 0% naranja/ámbar)
+  if (isCauce) {
+    return (
+      <>
+        {/* Floating White Pill Navbar */}
+        <header className="fixed top-3 sm:top-4 inset-x-3 sm:inset-x-6 z-40">
+          <div className="max-w-6xl mx-auto rounded-full bg-white/95 backdrop-blur-md border border-slate-200/80 px-4 sm:px-6 py-2.5 shadow-sm flex items-center justify-between gap-2">
+            <a
+              href="#top"
+              onClick={(e) => {
+                e.preventDefault()
+                setIsMobileMenuOpen(false)
+                if (typeof window !== 'undefined') {
+                  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                  window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' })
+                }
+              }}
+              className="flex items-center gap-2.5 min-w-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+            >
+              {logoUrl && (
+                <span className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#EBE8E1] border border-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+                  <Image
+                    src={logoUrl}
+                    alt={restaurantName}
+                    width={36}
+                    height={36}
+                    priority
+                    className="w-full h-full object-contain"
+                  />
+                </span>
+              )}
+              <span className="text-sm sm:text-base font-semibold tracking-tight text-[#0F172A] truncate">
+                {restaurantName}
+              </span>
+            </a>
+
+            {/* Enlaces de navegación en escritorio */}
+            <nav aria-label="Navegación principal" className="hidden md:flex items-center gap-1">
+              {cauceCopy.nav.map((item) => (
+                <a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    scrollToTarget(item.id)
+                  }}
+                  className="px-3.5 py-1.5 rounded-full text-sm font-medium text-slate-700 hover:text-[#0F172A] hover:bg-slate-100/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            {/* Controles derecha: Selector ES | GAL | EN + CTA azul + Menú móvil */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {onLangChange && (
+                <div
+                  role="group"
+                  aria-label={cauceCopy.langGroupLabel}
+                  className="inline-flex items-center p-0.5 rounded-full bg-slate-100 border border-slate-200/80 text-[11px] font-semibold"
+                >
+                  {(['es', 'gl', 'en'] as WebLanguage[]).map((code) => {
+                    const active = lang === code
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        onClick={() => onLangChange(code)}
+                        className={`px-2 sm:px-2.5 py-1 rounded-full uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] ${
+                          active
+                            ? 'bg-[#1D4ED8] text-white shadow-sm'
+                            : 'text-slate-600 hover:text-[#0F172A]'
+                        }`}
+                      >
+                        {code === 'gl' ? 'GAL' : code.toUpperCase()}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleCauceBookClick}
+                className="hidden sm:inline-flex items-center justify-center bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white text-xs sm:text-sm font-semibold rounded-full px-4 py-2 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+              >
+                {cauceCopy.navCta}
+              </button>
+
+              <button
+                type="button"
+                aria-expanded={isMobileMenuOpen}
+                aria-controls="cauce-mobile-nav"
+                aria-label={isMobileMenuOpen ? cauceCopy.closeMenuLabel : cauceCopy.openMenuLabel}
+                onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+                className="md:hidden w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200/80 text-[#0F172A] flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+              >
+                {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Panel desplegable móvil (< 768px) */}
+          {isMobileMenuOpen && (
+            <div
+              id="cauce-mobile-nav"
+              className="md:hidden max-w-6xl mx-auto mt-2 rounded-[22px] bg-white/95 backdrop-blur-md border border-slate-200/80 p-4 shadow-lg space-y-2"
+            >
+              <nav aria-label="Navegación móvil" className="flex flex-col gap-1">
+                {cauceCopy.nav.map((item) => (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      scrollToTarget(item.id)
+                    }}
+                    className="min-h-[44px] px-4 rounded-xl flex items-center text-sm font-medium text-[#0F172A] hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
+              <button
+                type="button"
+                onClick={handleCauceBookClick}
+                className="w-full min-h-[44px] rounded-full bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white text-sm font-semibold px-5 py-2.5 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+              >
+                {cauceCopy.navCta}
+              </button>
+            </div>
+          )}
+        </header>
+
+        {/* Fullscreen Unframed Hero (100vw x 100dvh, 0 floating pills/badges/banners) */}
+        <section
+          id="top"
+          className="relative w-full min-h-screen h-[100dvh] overflow-hidden flex items-end bg-slate-950 select-none"
+        >
+          <div className="absolute inset-0 z-0">
+            <LoopVideoBlock
+              posterSrc={posterUrl}
+              frames={heroLoopFrames}
+              videoMp4Url={videoMp4Url}
+              videoWebmUrl={videoWebmUrl}
+              alt={restaurantName}
+              aspectClass="w-full h-full"
+              priorityPoster
+            />
+          </div>
+
+          {/* Scrim calibrado para lectura nítida sobre la fachada y el bucle de fondo */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-b from-slate-950/35 via-slate-950/25 to-slate-950/55"
+          />
+
+          <div
+            className="relative z-20 w-full max-w-6xl mx-auto px-6 md:px-12 pb-28 sm:pb-20 md:pb-24 pt-28"
+            style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}
+          >
+            <div className="max-w-3xl space-y-5">
+              <h1
+                className="text-4xl sm:text-6xl md:text-7xl text-white font-normal tracking-[-0.02em] leading-[1.03] drop-shadow-sm"
+                style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+              >
+                {cauceCopy.headline}
+              </h1>
+
+              <p className="text-base sm:text-xl text-white/90 font-normal max-w-2xl leading-relaxed">
+                {tagline}
+              </p>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={onOpenMenu}
+                  className="inline-flex items-center justify-center bg-[#1D4ED8] hover:bg-[#1E3A8A] active:scale-[0.98] text-white text-sm sm:text-base font-semibold rounded-full px-8 py-4 shadow-xl transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                >
+                  {cauceCopy.heroCta}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </>
+    )
+  }
 
   return (
     <section

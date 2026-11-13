@@ -35,9 +35,13 @@ import type {
 } from '@/types/gastronomic-web.types'
 import { HeroCinematic } from '@/components/web/HeroCinematic'
 import { CanvasScrollytelling } from '@/components/web/CanvasScrollytelling'
+import { LoopVideoBlock } from '@/components/web/LoopVideoBlock'
 import { LiveOpeningBadge } from '@/components/web/LiveOpeningBadge'
 import { MobileStickyActionBar } from '@/components/web/MobileStickyActionBar'
-import { WhatsAppReservationDrawer } from '@/components/web/WhatsAppReservationDrawer'
+import {
+  WhatsAppReservationDrawer,
+  WhatsAppLiveConfigurator,
+} from '@/components/web/WhatsAppReservationDrawer'
 import { getOpeningStatus } from '@/lib/opening-hours-calculator'
 
 // ==============================================================================
@@ -369,11 +373,332 @@ const I18N = {
   },
 }
 
+const CAUCE_SERIF_STYLE = { fontFamily: "'Instrument Serif', Georgia, serif" } as const
+
+const CAUCE_COPY = {
+  es: {
+    sec2Eyebrow: 'Lo que nos define',
+    sec2Title: 'Tradición de barrio, frescura de bodega',
+    sec2Subtitle:
+      'Tres pilares sencillos que marcan el ritmo diario en la Rúa do Curro, sin prisa ni artificios.',
+    sec2Pillars: [
+      {
+        tag: '01 · Bodega',
+        title: 'Cerveza de Bodega',
+        bullets: [
+          'Estrella Galicia directo de tanque de bodega, sin pasteurizar.',
+          'Tiraje cuidado en copa fría de 1906 Red Vintage y Black Coupage.',
+          'Selección rotativa de vinos gallegos por copa y botella.',
+        ],
+      },
+      {
+        tag: '02 · Cocina',
+        title: 'Tapas de Cortesía y Raciones',
+        bullets: [
+          'Tapa caliente de cocina incluida con cada consumición.',
+          'Raciones honestas al centro: bravas, raxo, calamares y tortillas.',
+          'Producto de proximidad preparado al momento para compartir.',
+        ],
+      },
+      {
+        tag: '03 · Soportales',
+        title: 'Soportales y Ambiente Familiar',
+        bullets: [
+          'Terraza cubierta bajo la piedra histórica en la Rúa do Curro.',
+          'Salón luminoso de puertas abiertas para familias y grupos.',
+          'Ritmo cercano desde la sesión vermú del mediodía hasta la noche.',
+        ],
+      },
+    ],
+    sec2FeatureTitle: 'El cuidado empieza en la bodega y se disfruta en tu mesa',
+    sec2FeatureDesc:
+      'Consulta la carta completa antes de sentarte: cada bebida, ración y media ración muestra su precio exacto con IVA y el detalle oficial de los 14 alérgenos.',
+    sec2SubBox1Title: 'Precios claros con variantes',
+    sec2SubBox1Desc: 'Caña, copa, jarra, media y ración completa a la vista.',
+    sec2SubBox2Title: 'Filtro de los 14 alérgenos',
+    sec2SubBox2Desc: 'Buscador inmediato y etiquetado europeo en cada plato.',
+    sec2VideoAlt: 'Tiraje de cerveza de bodega Estrella Galicia en Bar Jara-Tusas',
+    sec2MenuBtn: 'Ver Carta Completa con Precios',
+    sec2QrBtn: 'Abrir vista individual de carta',
+    sec3Eyebrow: 'La experiencia',
+    sec3Title: 'Cómo se vive un rato bajo los soportales',
+    sec3Subtitle:
+      'Desde la primera caña fría hasta la sobremesa, todo sigue un orden natural y sin formalidades innecesarias.',
+    sec3VideoAlt: 'Ambiente interior de piedra, barra y copas en Bar Jara-Tusas Noia',
+    sec3Steps: [
+      {
+        num: '01',
+        title: 'Llegada a la Rúa do Curro',
+        desc: 'Eliges sitio libre en la barra, en el salón interior o a cubierto bajo los soportales de piedra del casco histórico.',
+      },
+      {
+        num: '02',
+        title: 'Tiraje de bodega o copa al gusto',
+        desc: 'Servimos Estrella Galicia de bodega a temperatura controlada, gama 1906 o vinos gallegos por copa.',
+      },
+      {
+        num: '03',
+        title: 'Tapa de cortesía y raciones al centro',
+        desc: 'Cada ronda llega acompañada de nuestra tapa recién hecha en cocina, lista para abrir paso a raciones compartidas.',
+      },
+      {
+        num: '04',
+        title: 'Mesa reservada cuando venís en grupo',
+        desc: 'Si venís varios a comer o cenar, nos escribís por WhatsApp con el mensaje preparado y os guardamos espacio.',
+      },
+    ],
+    sec4Eyebrow: 'Espacios & Horario',
+    sec4Title: 'Cuatro rincones para cada momento del día',
+    sec4Subtitle:
+      'Elige el espacio que mejor encaja con tu plan; al seleccionarlo prepararemos tu consulta directa por WhatsApp.',
+    sec4MapsBtn: 'Cómo llegar en Google Maps',
+    sec4HoursLabel: 'Horario Semanal',
+    sec4SelectSpaceCta: 'Seleccionar este espacio',
+    sec4SelectedTag: 'Seleccionado',
+    sec5Eyebrow: 'Preguntas Frecuentes',
+    sec5Title: 'Resolvemos tus dudas antes de pasar por aquí',
+    sec5Subtitle:
+      'Respuestas claras sobre tapas, reservas de grupos y consulta de alérgenos.',
+    sec5Faqs: [
+      {
+        q: '¿Hace falta reservar para tomar algo o tapear?',
+        a: 'No hace falta reserva para barra ni terraza en rotación normal. Si venís en grupo para raciones o queréis asegurar mesa en hora punta, avísanos por WhatsApp en segundos.',
+      },
+      {
+        q: '¿Todas las consumiciones incluyen tapa de cortesía?',
+        a: 'Sí. Siguiendo la tradición de Noia, cada caña, vino o vermú sale de barra acompañado de su tapa recién hecha en nuestra cocina.',
+      },
+      {
+        q: '¿Dónde veo los precios exactos y los 14 alérgenos?',
+        a: 'Al abrir «Ver Carta Completa con Precios» tienes buscador instantáneo, formatos (caña, copa, jarra, media o ración) y los 14 alérgenos europeos declarados.',
+      },
+    ],
+    sec6Eyebrow: 'Contacto Directo · WhatsApp',
+    sec6Title: 'Prepara tu mensaje y consúltanos sin esperas',
+    sec6Subtitle:
+      'Selecciona espacio, motivo y personas. Copia el texto o abre directamente WhatsApp con todo listo para enviar.',
+    footerRights: 'Todos los derechos reservados.',
+    footerMenuLink: 'Carta Completa',
+    footerMapsLink: 'Google Maps',
+  },
+  gl: {
+    sec2Eyebrow: 'O que nos define',
+    sec2Title: 'Tradición de barrio, frescura de adega',
+    sec2Subtitle:
+      'Tres piares sinxelos que marcan o ritmo diario na Rúa do Curro, sen présa nin artificios.',
+    sec2Pillars: [
+      {
+        tag: '01 · Adega',
+        title: 'Cervexa de Adega',
+        bullets: [
+          'Estrella Galicia directo de tanque de adega, sen pasteurizar.',
+          'Tiraxe coidada en copa fría de 1906 Red Vintage e Black Coupage.',
+          'Selección rotativa de viños galegos por copa e botella.',
+        ],
+      },
+      {
+        tag: '02 · Cociña',
+        title: 'Tapas de Cortesía e Racións',
+        bullets: [
+          'Tapa quente de cociña incluída con cada consumición.',
+          'Racións honestas ao centro: bravas, raxo, luras e tortillas.',
+          'Produto de proximidade preparado ao momento para compartir.',
+        ],
+      },
+      {
+        tag: '03 · Soportais',
+        title: 'Soportais e Ambiente Familiar',
+        bullets: [
+          'Terraza cuberta baixo a pedra histórica na Rúa do Curro.',
+          'Salón luminoso de portas abertas para familias e grupos.',
+          'Ritmo próximo desde a sesión vermú do mediodía ata a noite.',
+        ],
+      },
+    ],
+    sec2FeatureTitle: 'O coidado comeza na adega e desfrútase na túa mesa',
+    sec2FeatureDesc:
+      'Consulta a carta completa antes de sentar: cada bebida, ración e media ración mostra o seu prezo exacto con IVE e o detalle oficial dos 14 alérxenos.',
+    sec2SubBox1Title: 'Prezos claros con variantes',
+    sec2SubBox1Desc: 'Cana, copa, xarra, media e ración completa á vista.',
+    sec2SubBox2Title: 'Filtro dos 14 alérxenos',
+    sec2SubBox2Desc: 'Buscador inmediato e etiquetaxe europea en cada prato.',
+    sec2VideoAlt: 'Tiraxe de cervexa de adega Estrella Galicia en Bar Jara-Tusas',
+    sec2MenuBtn: 'Ver Carta Completa con Prezos',
+    sec2QrBtn: 'Abrir vista individual de carta',
+    sec3Eyebrow: 'A experiencia',
+    sec3Title: 'Como se vive un anaco baixo os soportais',
+    sec3Subtitle:
+      'Desde a primeira cana fría ata a sobremesa, todo segue unha orde natural e sen formalidades innecesarias.',
+    sec3VideoAlt: 'Ambiente interior de pedra, barra e copas en Bar Jara-Tusas Noia',
+    sec3Steps: [
+      {
+        num: '01',
+        title: 'Chegada á Rúa do Curro',
+        desc: 'Escolles sitio libre na barra, no salón interior ou a cuberto baixo os soportais de pedra do casco histórico.',
+      },
+      {
+        num: '02',
+        title: 'Tiraxe de adega ou copa ao gusto',
+        desc: 'Servimos Estrella Galicia de adega a temperatura controlada, gama 1906 ou viños galegos por copa.',
+      },
+      {
+        num: '03',
+        title: 'Tapa de cortesía e racións ao centro',
+        desc: 'Cada rolda chega acompañada da nosa tapa recén feita na cociña, lista para abrir paso a racións compartidas.',
+      },
+      {
+        num: '04',
+        title: 'Mesa reservada cando vides en grupo',
+        desc: 'Se vides varios a xantar ou cear, escribídenos por WhatsApp coa mensaxe preparada e gardámosvos espazo.',
+      },
+    ],
+    sec4Eyebrow: 'Espazos e Horario',
+    sec4Title: 'Catro recunchos para cada momento do día',
+    sec4Subtitle:
+      'Escolle o espazo que mellor encaixa co teu plan; ao seleccionalo prepararemos a túa consulta directa por WhatsApp.',
+    sec4MapsBtn: 'Como chegar en Google Maps',
+    sec4HoursLabel: 'Horario Semanal',
+    sec4SelectSpaceCta: 'Seleccionar este espazo',
+    sec4SelectedTag: 'Seleccionado',
+    sec5Eyebrow: 'Preguntas Frecuentes',
+    sec5Title: 'Resolvemos as túas dúbidas antes de pasar por aquí',
+    sec5Subtitle:
+      'Respostas claras sobre tapas, reservas de grupos e consulta de alérxenos.',
+    sec5Faqs: [
+      {
+        q: 'Cómpre reservar para tomar algo ou tapear?',
+        a: 'Non cómpre reserva para barra nin terraza en rotación normal. Se vides en grupo para racións ou queredes asegurar mesa en hora punta, avísanos por WhatsApp en segundos.',
+      },
+      {
+        q: 'Todas as consumicións inclúen tapa de cortesía?',
+        a: 'Si. Seguindo a tradición de Noia, cada cana, viño ou vermú sae da barra acompañado da súa tapa recén feita na nosa cociña.',
+      },
+      {
+        q: 'Onde vexo os prezos exactos e os 14 alérxenos?',
+        a: 'Ao abrir «Ver Carta Completa con Prezos» tes buscador instantáneo, formatos (cana, copa, xarra, media ou ración) e os 14 alérxenos europeos declarados.',
+      },
+    ],
+    sec6Eyebrow: 'Contacto Directo · WhatsApp',
+    sec6Title: 'Prepara a túa mensaxe e consúltanos sen esperas',
+    sec6Subtitle:
+      'Selecciona espazo, motivo e persoas. Copia o texto ou abre directamente WhatsApp con todo listo para enviar.',
+    footerRights: 'Todos os dereitos reservados.',
+    footerMenuLink: 'Carta Completa',
+    footerMapsLink: 'Google Maps',
+  },
+  en: {
+    sec2Eyebrow: 'What defines us',
+    sec2Title: 'Neighborhood tradition, cellar freshness',
+    sec2Subtitle:
+      'Three simple pillars that shape daily hospitality on Rúa do Curro, unhurried and authentic.',
+    sec2Pillars: [
+      {
+        tag: '01 · Cellar',
+        title: 'Cellar Draft Beer',
+        bullets: [
+          'Unpasteurized Estrella Galicia poured straight from cellar tanks.',
+          'Carefully poured 1906 Red Vintage and Black Coupage in chilled glass.',
+          'Curated Galician wines served by the glass or bottle.',
+        ],
+      },
+      {
+        tag: '02 · Kitchen',
+        title: 'Complimentary Tapas & Sharing Plates',
+        bullets: [
+          'Hot freshly cooked house tapa included with every drink.',
+          'Generous sharing plates: patatas bravas, raxo, squid and tortillas.',
+          'Local ingredients prepared fresh to order for the table.',
+        ],
+      },
+      {
+        tag: '03 · Arcades',
+        title: 'Stone Arcades & Warm Atmosphere',
+        bullets: [
+          'Sheltered terrace beneath historic granite arcades on Rúa do Curro.',
+          'Bright indoor dining room welcoming families and groups.',
+          'Relaxed pace from midday vermouth hour through evening drinks.',
+        ],
+      },
+    ],
+    sec2FeatureTitle: 'Care begins in the cellar and arrives cleanly at your table',
+    sec2FeatureDesc:
+      'Browse the complete menu before you sit down: every drink, full plate and half portion shows exact VAT-included pricing alongside official EU allergen details.',
+    sec2SubBox1Title: 'Clear prices with formats',
+    sec2SubBox1Desc: 'Small draft, glass, pitcher, half or full portion clearly listed.',
+    sec2SubBox2Title: '14-allergen filter',
+    sec2SubBox2Desc: 'Instant search and official EU allergen labels on every dish.',
+    sec2VideoAlt: 'Estrella Galicia cellar draft pour at Bar Jara-Tusas',
+    sec2MenuBtn: 'View Full Menu & Prices',
+    sec2QrBtn: 'Open standalone menu view',
+    sec3Eyebrow: 'The experience',
+    sec3Title: 'How time unfolds beneath the stone arcades',
+    sec3Subtitle:
+      'From your first cold pour to an unhurried finish, every step feels natural and welcoming.',
+    sec3VideoAlt: 'Stone interior atmosphere, bar counter and glassware at Bar Jara-Tusas Noia',
+    sec3Steps: [
+      {
+        num: '01',
+        title: 'Arrive on Rúa do Curro',
+        desc: 'Pick a spot at the bar counter, inside the granite dining room, or sheltered under Noia’s historic stone arcades.',
+      },
+      {
+        num: '02',
+        title: 'Cellar draft or Galician wine',
+        desc: 'Enjoy temperature-controlled Estrella Galicia tank beer, 1906 specials or regional wines poured by the glass.',
+      },
+      {
+        num: '03',
+        title: 'Complimentary tapa & sharing plates',
+        desc: 'Every round arrives with a freshly prepared kitchen tapa, setting the table for sharing plates at your own pace.',
+      },
+      {
+        num: '04',
+        title: 'Held tables for group gatherings',
+        desc: 'Coming with family or friends for dinner? Send your pre-filled WhatsApp message in seconds and we will hold your table.',
+      },
+    ],
+    sec4Eyebrow: 'Spaces & Hours',
+    sec4Title: 'Four welcoming corners for every moment',
+    sec4Subtitle:
+      'Choose the area that fits your plan; picking a space prepares your direct WhatsApp message below.',
+    sec4MapsBtn: 'Directions on Google Maps',
+    sec4HoursLabel: 'Weekly Hours',
+    sec4SelectSpaceCta: 'Select this space',
+    sec4SelectedTag: 'Selected',
+    sec5Eyebrow: 'FAQ',
+    sec5Title: 'Quick answers before you stop by',
+    sec5Subtitle:
+      'Everything you need to know about tapas, group seating and allergen details.',
+    sec5Faqs: [
+      {
+        q: 'Do I need a booking for drinks or casual tapas?',
+        a: 'Walk-ins are welcome at the bar and covered terrace during regular turnover. For larger groups or peak hours, message us via WhatsApp in seconds.',
+      },
+      {
+        q: 'Does every drink include a complimentary tapa?',
+        a: 'Yes. Following Noia’s tradition, every draft beer, wine or vermouth comes with a freshly cooked tapa from our kitchen.',
+      },
+      {
+        q: 'Where can I check exact prices and the 14 allergens?',
+        a: 'Open "View Full Menu & Prices" for instant search, exact serving sizes (glass, mug, half or full portion) and the 14 EU allergens.',
+      },
+    ],
+    sec6Eyebrow: 'Direct Contact · WhatsApp',
+    sec6Title: 'Prepare your message and reach us directly',
+    sec6Subtitle:
+      'Choose space, purpose and party size. Copy the formatted text or open WhatsApp right away.',
+    footerRights: 'All rights reserved.',
+    footerMenuLink: 'Full Menu',
+    footerMapsLink: 'Google Maps',
+  },
+} as const
+
 interface GastronomicWebClientViewProps {
   tenant: GastronomicTenantConfig
 }
 
 export default function GastronomicWebClientView({ tenant }: GastronomicWebClientViewProps) {
+  const isCauce = tenant.layoutPreset === 'cauce_editorial'
   const isUrbanBrewery = tenant.archetype === 'urban_street' || tenant.archetype === 'tavern'
 
   // 1. Detección y Selección de Idioma (ES | GAL | EN)
@@ -409,6 +734,16 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
   }
 
   const t = I18N[lang]
+  const cauce = CAUCE_COPY[lang] || CAUCE_COPY.es
+
+  const scrollToSection = (sectionId: string) => {
+    if (typeof window === 'undefined') return
+    const target = document.getElementById(sectionId)
+    if (target) {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' })
+    }
+  }
 
   // Helpers de traducción de datos del local
   const getDishName = (d: DishShowcaseItem) =>
@@ -498,6 +833,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
   const [selectedZone, setSelectedZone] = useState<string>(
     tenant.ambiences[0]?.name || 'Terraza Exterior'
   )
+  const [selectedReason, setSelectedReason] = useState<string>('Reserva de mesa')
   const [inlineGuests, setInlineGuests] = useState<number>(4)
   const [inlineShift, setInlineShift] = useState<'13:30h' | '20:30h' | '22:00h'>('20:30h')
   const [inlineName, setInlineName] = useState<string>('')
@@ -636,6 +972,1016 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
     tenant.ambiences.length === 3
       ? 'md:grid-cols-3 gap-7 lg:gap-8'
       : 'md:grid-cols-2 gap-10'
+
+  const menuModals = (
+    <>
+      {/* ==============================================================================
+         MODAL DE CARTA FIJA DIGITAL (PRECIOS REALES + VARIANTES + 14 ALÉRGENOS)
+         ============================================================================== */}
+      {isMenuModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsMenuModalOpen(false)
+          }}
+          className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 backdrop-blur-md animate-in fade-in duration-200 ${
+            isCauce ? 'bg-slate-950/60' : 'bg-black/85'
+          }`}
+        >
+          <div
+            className={`w-full max-w-5xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden ${
+              isCauce
+                ? 'bg-white text-[#0F172A] border border-slate-200'
+                : isUrbanBrewery
+                ? 'bg-[#0E1015] text-[#F6F3EC] ring-1 ring-white/15'
+                : 'bg-[#F6F3EC] text-[#141311] border border-[#141311]/10'
+            }`}
+          >
+            {/* Cabecera del Modal */}
+            <div
+              className={`p-5 sm:p-6 border-b flex items-center justify-between gap-3 ${
+                isCauce
+                  ? 'bg-white border-slate-200'
+                  : isUrbanBrewery
+                  ? 'bg-[#0A0B0E] border-white/10'
+                  : 'bg-white border-[#141311]/10'
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                {tenant.logoUrl && (
+                  <div
+                    className={`w-10 h-10 rounded-full bg-[#EBE8E1] overflow-hidden p-0.5 flex items-center justify-center flex-shrink-0 ${
+                      isCauce ? 'ring-1 ring-slate-200' : 'ring-1 ring-[#F59E0B]/50'
+                    }`}
+                  >
+                    <Image
+                      src={tenant.logoUrl}
+                      alt={tenant.name}
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-contain rounded-full"
+                    />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <span
+                    className={`text-[10px] uppercase tracking-[0.22em] font-bold block ${
+                      isCauce
+                        ? 'text-[#1D4ED8]'
+                        : isUrbanBrewery
+                        ? 'text-[#F59E0B]'
+                        : 'text-[#C85A32]'
+                    }`}
+                  >
+                    {t.digitalMenuTitle}
+                  </span>
+                  <h3 className="text-lg sm:text-2xl font-bold truncate">
+                    {tenant.name} · {t.menuAndPrices}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Cerrar carta"
+                onClick={() => setIsMenuModalOpen(false)}
+                className={`w-10 h-10 rounded-full transition flex items-center justify-center flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 ${
+                  isCauce
+                    ? 'bg-slate-100 text-[#0F172A] hover:bg-[#1D4ED8] hover:text-white focus-visible:ring-[#1D4ED8]'
+                    : 'bg-white/10 hover:bg-[#F59E0B] hover:text-[#0A0B0E] focus-visible:ring-[#F59E0B]'
+                }`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Buscador y Categorías */}
+            <div
+              className={`p-4 sm:p-6 border-b space-y-4 ${
+                isCauce
+                  ? 'bg-[#F6F6F3] border-slate-200'
+                  : isUrbanBrewery
+                  ? 'bg-[#12151C] border-white/10'
+                  : 'bg-[#EDE8DE]/40 border-[#141311]/5'
+              }`}
+            >
+              <div className="relative">
+                <Search className="w-4 h-4 opacity-50 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder={t.searchPlaceholder}
+                  value={menuSearch}
+                  onChange={(e) => setMenuSearch(e.target.value)}
+                  className={`w-full pl-11 pr-4 py-3 rounded-2xl text-sm outline-none transition ${
+                    isCauce
+                      ? 'bg-white text-[#0F172A] placeholder-slate-400 border border-slate-200 focus:border-[#1D4ED8] focus:ring-2 focus:ring-[#1D4ED8]/20'
+                      : isUrbanBrewery
+                      ? 'bg-[#0A0B0E] text-white placeholder-white/40 focus:ring-1 focus:ring-[#F59E0B]'
+                      : 'bg-white border border-[#141311]/10 focus:border-[#C85A32]'
+                  }`}
+                />
+              </div>
+
+              {/* Píldoras de Categorías */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => setMenuFilterCategory(cat.key)}
+                    className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition focus-visible:outline-none focus-visible:ring-2 ${
+                      isCauce ? 'focus-visible:ring-[#1D4ED8]' : ''
+                    } ${
+                      menuFilterCategory === cat.key
+                        ? isCauce
+                          ? 'bg-[#1D4ED8] text-white shadow-sm'
+                          : isUrbanBrewery
+                          ? 'bg-[#F59E0B] text-[#0A0B0E]'
+                          : 'bg-[#141311] text-[#F6F3EC]'
+                        : isCauce
+                        ? 'bg-white text-[#475569] border border-slate-200 hover:text-[#0F172A] hover:bg-slate-50'
+                        : isUrbanBrewery
+                        ? 'bg-white/5 text-white/75 hover:bg-white/10'
+                        : 'bg-white text-[#141311]/70 hover:bg-[#141311]/10'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Lista de Productos con Precios Reales, Variantes y 14 Alérgenos */}
+            <div
+              className={`p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 ${
+                isCauce ? 'bg-[#F6F6F3]' : ''
+              }`}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredDishes.map((dish) => (
+                  <button
+                    type="button"
+                    key={dish.id}
+                    onClick={() => setSelectedDishDetail(dish)}
+                    className={`w-full text-left p-4 rounded-2xl transition cursor-pointer flex gap-4 items-start focus-visible:outline-none focus-visible:ring-2 ${
+                      isCauce
+                        ? 'bg-white border border-slate-200/80 hover:border-[#1D4ED8]/40 shadow-sm focus-visible:ring-[#1D4ED8]'
+                        : isUrbanBrewery
+                        ? 'bg-[#151922] hover:bg-[#1B202C] ring-1 ring-white/[0.05]'
+                        : 'bg-white border border-[#141311]/10 hover:border-[#C85A32]/40 shadow-sm'
+                    }`}
+                  >
+                    <div
+                      className={`relative w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 ${
+                        isCauce ? 'bg-slate-100' : 'bg-black/20'
+                      }`}
+                    >
+                      <Image
+                        src={dish.image}
+                        alt={getDishName(dish)}
+                        fill
+                        sizes="96px"
+                        className="object-cover"
+                      />
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex justify-between items-start gap-2">
+                        <h4 className="font-bold text-sm sm:text-base leading-snug">
+                          {getDishName(dish)}
+                        </h4>
+                        <span
+                          className={`font-extrabold text-sm flex-shrink-0 tabular-nums ${
+                            isCauce
+                              ? 'text-[#1D4ED8]'
+                              : isUrbanBrewery
+                              ? 'text-[#F59E0B]'
+                              : 'text-[#C85A32]'
+                          }`}
+                        >
+                          {dish.isMarketPrice || (dish.isDailyMarket && dish.price <= 0)
+                            ? t.marketPriceTag
+                            : `${dish.price.toFixed(2)} €`}
+                        </span>
+                      </div>
+
+                      <p
+                        className={`text-xs line-clamp-2 leading-relaxed ${
+                          isCauce ? 'text-[#475569]' : 'opacity-75'
+                        }`}
+                      >
+                        {getDishDesc(dish)}
+                      </p>
+
+                      {/* Desglose de Variantes con Precio Exacto */}
+                      {dish.variants && dish.variants.length > 0 && (
+                        <div className="pt-1 flex flex-wrap gap-1.5">
+                          {dish.variants.map((v, i) => (
+                            <span
+                              key={i}
+                              className={`text-[11px] px-2.5 py-1 rounded-lg font-medium flex items-center gap-1.5 ${
+                                isCauce
+                                  ? 'bg-[#F6F6F3] text-[#0F172A] border border-slate-200/80'
+                                  : isUrbanBrewery
+                                  ? 'bg-[#0A0B0E] text-white/90'
+                                  : 'bg-[#F6F3EC] text-[#141311]'
+                              }`}
+                            >
+                              <span className={isCauce ? 'text-[#475569]' : 'opacity-75'}>
+                                {lang === 'gl'
+                                  ? v.name_gl || v.name
+                                  : lang === 'en'
+                                  ? v.name_en || v.name
+                                  : v.name}
+                              </span>
+                              <strong
+                                className={`tabular-nums ${
+                                  isCauce ? 'text-[#1D4ED8]' : 'text-[#F59E0B]'
+                                }`}
+                              >
+                                {v.price.toFixed(2)}€
+                              </strong>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 14 Alérgenos */}
+                      {dish.allergens && dish.allergens.length > 0 && (
+                        <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                          {dish.allergens.map((alg) => (
+                            <span
+                              key={alg}
+                              className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md font-semibold ${
+                                isCauce
+                                  ? 'bg-blue-50 text-[#1E3A8A] border border-blue-200'
+                                  : 'bg-amber-500/15 text-amber-300'
+                              }`}
+                            >
+                              {isCauce ? alg : `⚠️ ${alg}`}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {filteredDishes.length === 0 && (
+                <div
+                  className={`text-center py-12 text-sm ${
+                    isCauce ? 'text-[#475569]' : 'opacity-60'
+                  }`}
+                >
+                  {t.noDishesFound}
+                </div>
+              )}
+            </div>
+
+            {/* Pie del modal */}
+            <div
+              className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between text-xs gap-3 ${
+                isCauce
+                  ? 'bg-white border-slate-200 text-[#475569]'
+                  : isUrbanBrewery
+                  ? 'bg-[#0A0B0E] border-white/10 text-white/70'
+                  : 'bg-white border-[#141311]/10 text-[#141311]/60'
+              }`}
+            >
+              <span>{t.vatIncludedNote}</span>
+              <div className="flex items-center gap-4">
+                {tenant.qrMenuUrl && (
+                  <Link
+                    href={tenant.qrMenuUrl}
+                    className={`font-bold hover:underline flex items-center gap-1 ${
+                      isCauce ? 'text-[#1D4ED8]' : 'text-[#F59E0B]'
+                    }`}
+                  >
+                    <span>{t.openQrMenuPageBtn}</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ficha Técnica de Plato Individual */}
+      {selectedDishDetail && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedDishDetail(null)
+          }}
+          className={`fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-150 ${
+            isCauce ? 'bg-slate-950/60' : 'bg-black/80'
+          }`}
+        >
+          <div
+            className={`w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden ${
+              isCauce
+                ? 'bg-white text-[#0F172A] border border-slate-200'
+                : isUrbanBrewery
+                ? 'bg-[#12151C] text-white ring-1 ring-white/15'
+                : 'bg-[#F6F3EC] text-[#141311]'
+            }`}
+          >
+            <div className="relative h-64 w-full">
+              <Image
+                src={selectedDishDetail.image}
+                alt={getDishName(selectedDishDetail)}
+                fill
+                sizes="(max-width: 640px) 100vw, 512px"
+                className="object-cover"
+              />
+              <button
+                type="button"
+                aria-label={t.closeDetail}
+                onClick={() => setSelectedDishDetail(null)}
+                className={`absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center transition focus-visible:outline-none focus-visible:ring-2 ${
+                  isCauce
+                    ? 'bg-white/95 hover:bg-white text-[#0F172A] shadow-sm focus-visible:ring-[#1D4ED8]'
+                    : 'bg-black/70 hover:bg-black text-white'
+                }`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex justify-between items-start gap-4">
+                <h3 className="text-2xl font-bold">{getDishName(selectedDishDetail)}</h3>
+                <span
+                  className={`text-2xl font-black flex-shrink-0 tabular-nums ${
+                    isCauce ? 'text-[#1D4ED8]' : 'text-[#F59E0B]'
+                  }`}
+                >
+                  {selectedDishDetail.isMarketPrice
+                    ? t.marketPriceTag
+                    : `${selectedDishDetail.price.toFixed(2)} €`}
+                </span>
+              </div>
+              <p
+                className={`text-sm leading-relaxed ${
+                  isCauce ? 'text-[#475569]' : 'opacity-80'
+                }`}
+              >
+                {getDishDesc(selectedDishDetail)}
+              </p>
+
+              {selectedDishDetail.variants && selectedDishDetail.variants.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <span
+                    className={`text-xs uppercase tracking-wider font-bold block ${
+                      isCauce ? 'text-[#475569]' : 'opacity-60'
+                    }`}
+                  >
+                    {t.availableFormats}:
+                  </span>
+                  <div className="grid grid-cols-1 gap-2">
+                    {selectedDishDetail.variants.map((v, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center justify-between px-3.5 py-2 rounded-xl text-sm ${
+                          isCauce
+                            ? 'bg-[#F6F6F3] border border-slate-200/80 text-[#0F172A]'
+                            : 'bg-black/30'
+                        }`}
+                      >
+                        <span>
+                          {lang === 'gl'
+                            ? v.name_gl || v.name
+                            : lang === 'en'
+                            ? v.name_en || v.name
+                            : v.name}
+                        </span>
+                        <strong
+                          className={`tabular-nums ${
+                            isCauce ? 'text-[#1D4ED8]' : 'text-[#F59E0B]'
+                          }`}
+                        >
+                          {v.price.toFixed(2)} €
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedDishDetail.allergens && selectedDishDetail.allergens.length > 0 && (
+                <div>
+                  <span
+                    className={`text-xs uppercase tracking-wider font-bold block mb-1.5 ${
+                      isCauce ? 'text-[#475569]' : 'opacity-60'
+                    }`}
+                  >
+                    {t.allergensDeclared}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDishDetail.allergens.map((alg) => (
+                      <span
+                        key={alg}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          isCauce
+                            ? 'bg-blue-50 text-[#1E3A8A] border border-blue-200'
+                            : 'bg-amber-500/20 text-amber-300'
+                        }`}
+                      >
+                        {isCauce ? alg : `⚠️ ${alg}`}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedDishDetail(null)}
+                className={`w-full py-3.5 rounded-2xl font-extrabold text-xs uppercase tracking-wider transition focus-visible:outline-none focus-visible:ring-2 ${
+                  isCauce
+                    ? 'bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2'
+                    : 'bg-[#F59E0B] text-[#0A0B0E] hover:bg-[#D97706]'
+                }`}
+              >
+                {t.closeDetail}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+
+  // ============================================================================
+  // DISEÑO EDITORIAL "CAUCE" (STONE #F6F6F3 / WHITE / INK #0F172A / BLUE #1D4ED8)
+  // ============================================================================
+  if (isCauce) {
+    return (
+      <div
+        id="top"
+        className="min-h-screen overflow-x-hidden bg-[#F6F6F3] text-[#0F172A] antialiased pb-24 md:pb-0 selection:bg-[#1D4ED8] selection:text-white"
+        style={{ fontFamily: "'Inter', 'DM Sans', sans-serif" }}
+      >
+        <style jsx global>{`
+          @import url('https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap');
+        `}</style>
+
+        {/* Aviso informativo de temporada o festivo */}
+        {tenant.vacationNotice && (
+          <div className="bg-blue-50 text-[#1E3A8A] border-b border-blue-200 px-6 py-2.5 text-xs text-center font-medium flex items-center justify-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-[#1D4ED8] flex-shrink-0" />
+            <span>{tenant.vacationNotice}</span>
+          </div>
+        )}
+
+        {/* SECCIÓN 1: Navbar flotante blanca + Hero Fullscreen 100vh multi-frame */}
+        <HeroCinematic
+          restaurantName={tenant.name}
+          archetype={tenant.archetype}
+          tagline={localizedTagline}
+          address={tenant.address}
+          city={tenant.city}
+          posterUrl={tenant.heroImagePoster}
+          logoUrl={tenant.logoUrl}
+          flankRightUrl={tenant.flankRightImage}
+          googleMapsUrl={tenant.googleMapsUrl}
+          accentColor={tenant.accentColor}
+          videoWebmUrl={tenant.heroVideoWebm}
+          videoMp4Url={tenant.heroVideoMp4}
+          rating={tenant.googleMapsRating}
+          reviewCount={tenant.googleMapsReviewCount}
+          lang={lang}
+          layoutPreset={tenant.layoutPreset}
+          heroLoopFrames={tenant.heroLoopFrames}
+          onLangChange={handleLangChange}
+          onOpenReservation={() => {
+            scrollToSection('contacto-whatsapp')
+            trackConversion('click_reservation')
+          }}
+          onOpenMenu={() => {
+            setIsMenuModalOpen(true)
+            trackConversion('open_menu')
+          }}
+        />
+
+        <main id="main-content">
+          {/* SECCIÓN 2: Lo que nos define (3 Tarjetas + Tarjeta Feature Vídeo 16:9) */}
+          <section
+            id="lo-que-nos-define"
+            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto"
+          >
+            <ScrollReveal>
+              <div className="max-w-2xl space-y-3 mb-12 sm:mb-14">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
+                  {cauce.sec2Eyebrow}
+                </span>
+                <h2
+                  className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
+                  style={CAUCE_SERIF_STYLE}
+                >
+                  {cauce.sec2Title}
+                </h2>
+                <p className="text-base sm:text-lg text-[#475569] leading-relaxed">
+                  {cauce.sec2Subtitle}
+                </p>
+              </div>
+            </ScrollReveal>
+
+            {/* Tres pilares en tarjetas blancas puras */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {cauce.sec2Pillars.map((pillar, idx) => (
+                <ScrollReveal key={pillar.tag} delayMs={idx * 60}>
+                  <article className="h-full bg-white rounded-[22px] border border-slate-200/80 p-7 sm:p-8 shadow-sm flex flex-col justify-between space-y-5">
+                    <div className="space-y-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1D4ED8] block">
+                        {pillar.tag}
+                      </span>
+                      <h3
+                        className="text-2xl sm:text-[26px] font-normal text-[#0F172A] tracking-tight leading-snug"
+                        style={CAUCE_SERIF_STYLE}
+                      >
+                        {pillar.title}
+                      </h3>
+                    </div>
+
+                    <ul className="space-y-3 pt-1">
+                      {pillar.bullets.map((item) => (
+                        <li
+                          key={item}
+                          className="flex items-start gap-2.5 text-sm text-[#475569] leading-relaxed"
+                        >
+                          <Check className="w-4 h-4 text-[#1D4ED8] flex-shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </article>
+                </ScrollReveal>
+              ))}
+            </div>
+
+            {/* Tarjeta horizontal feature: Vídeo 16:9 izquierdo + Texto & CTA derecho */}
+            <ScrollReveal delayMs={120}>
+              <div className="mt-8 bg-white rounded-[22px] border border-slate-200/80 p-5 sm:p-8 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div className="lg:col-span-7">
+                  <LoopVideoBlock
+                    posterSrc={
+                      tenant.featureVideoFrames?.[0] || '/images/jaratusas/panel-01-tiraje.jpg'
+                    }
+                    frames={tenant.featureVideoFrames}
+                    aspectClass="aspect-video w-full rounded-[16px]"
+                    alt={cauce.sec2VideoAlt}
+                  />
+                </div>
+
+                <div className="lg:col-span-5 space-y-5">
+                  <h3
+                    className="text-2xl sm:text-4xl font-normal tracking-tight text-[#0F172A] leading-[1.12]"
+                    style={CAUCE_SERIF_STYLE}
+                  >
+                    {cauce.sec2FeatureTitle}
+                  </h3>
+                  <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
+                    {cauce.sec2FeatureDesc}
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="rounded-2xl bg-[#F6F6F3] border border-slate-200/70 p-4 space-y-1">
+                      <span className="text-xs font-semibold text-[#0F172A] block">
+                        {cauce.sec2SubBox1Title}
+                      </span>
+                      <p className="text-xs text-[#475569] leading-relaxed">
+                        {cauce.sec2SubBox1Desc}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-[#F6F6F3] border border-slate-200/70 p-4 space-y-1">
+                      <span className="text-xs font-semibold text-[#0F172A] block">
+                        {cauce.sec2SubBox2Title}
+                      </span>
+                      <p className="text-xs text-[#475569] leading-relaxed">
+                        {cauce.sec2SubBox2Desc}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMenuModalOpen(true)
+                        trackConversion('open_menu')
+                      }}
+                      className="inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white rounded-full px-6 py-3.5 text-sm font-semibold shadow-sm transition-colors w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+                    >
+                      <span>{cauce.sec2MenuBtn}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+
+                    {tenant.qrMenuUrl && (
+                      <Link
+                        href={tenant.qrMenuUrl}
+                        className="inline-flex items-center justify-center sm:justify-start gap-1.5 text-xs font-semibold text-[#1D4ED8] hover:underline py-2 px-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+                      >
+                        <span>{cauce.sec2QrBtn}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          </section>
+
+          {/* SECCIÓN 3: La experiencia (En < 768px vídeo 3:4 debajo del título y ANTES del paso 01) */}
+          <section
+            id="experiencia"
+            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-12 md:grid-rows-[auto_1fr] gap-8 md:gap-x-12 md:gap-y-8 items-start">
+              {/* Título */}
+              <div className="order-1 md:col-span-6 md:col-start-1 md:row-start-1 space-y-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
+                  {cauce.sec3Eyebrow}
+                </span>
+                <h2
+                  className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
+                  style={CAUCE_SERIF_STYLE}
+                >
+                  {cauce.sec3Title}
+                </h2>
+                <p className="text-base sm:text-lg text-[#475569] leading-relaxed">
+                  {cauce.sec3Subtitle}
+                </p>
+              </div>
+
+              {/* Vídeo 3:4 vertical sin badges flotantes */}
+              <div className="order-2 md:col-span-5 md:col-start-8 md:row-start-1 md:row-span-2">
+                <LoopVideoBlock
+                  posterSrc={
+                    tenant.experienceVideoFrames?.[0] || '/images/bg/jaratusas-flank-left.jpg'
+                  }
+                  frames={tenant.experienceVideoFrames}
+                  aspectClass="aspect-[3/4] w-full rounded-[22px] shadow-md"
+                  alt={cauce.sec3VideoAlt}
+                />
+              </div>
+
+              {/* Pasos 01 a 04 */}
+              <div className="order-3 md:col-span-6 md:col-start-1 md:row-start-2 divide-y divide-slate-200 border-t border-b border-slate-200">
+                {cauce.sec3Steps.map((step) => (
+                  <div key={step.num} className="py-5 sm:py-6 flex items-start gap-4 sm:gap-6">
+                    <span
+                      className="text-2xl sm:text-3xl font-normal text-[#1D4ED8] tabular-nums leading-none pt-0.5 flex-shrink-0"
+                      style={CAUCE_SERIF_STYLE}
+                    >
+                      {step.num}
+                    </span>
+                    <div className="space-y-1.5">
+                      <h3 className="text-base sm:text-lg font-semibold text-[#0F172A] tracking-tight">
+                        {step.title}
+                      </h3>
+                      <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
+                        {step.desc}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* SECCIÓN 4: Espacios del Local + Horario en Vivo + Ubicación */}
+          <section
+            id="espacios"
+            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+              {/* Columna Izquierda: Título, Horario Semanal y Mapa */}
+              <div className="lg:col-span-5 space-y-6">
+                <div className="space-y-3">
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
+                    {cauce.sec4Eyebrow}
+                  </span>
+                  <h2
+                    className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
+                    style={CAUCE_SERIF_STYLE}
+                  >
+                    {cauce.sec4Title}
+                  </h2>
+                  <p className="text-base text-[#475569] leading-relaxed">
+                    {cauce.sec4Subtitle}
+                  </p>
+                </div>
+
+                <div className="bg-white rounded-[22px] border border-slate-200/80 p-6 shadow-sm space-y-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-200">
+                    <span className="text-xs uppercase tracking-wider font-bold text-[#0F172A] flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[#1D4ED8]" />
+                      <span>{cauce.sec4HoursLabel}</span>
+                    </span>
+                    <LiveOpeningBadge schedules={tenant.openingHours} lang={lang} variant="light" />
+                  </div>
+
+                  <div className="space-y-1 text-xs sm:text-sm">
+                    {[1, 2, 3, 4, 5, 6, 0].map((dayIdx) => {
+                      const daySchedules = tenant.openingHours.filter((s) => s.dayOfWeek === dayIdx)
+                      const isToday = dayIdx === todayDayOfWeek
+
+                      return (
+                        <div
+                          key={dayIdx}
+                          suppressHydrationWarning
+                          className={`py-2 px-2.5 rounded-xl flex items-center justify-between gap-3 ${
+                            isToday
+                              ? 'bg-blue-50 text-[#1D4ED8] font-semibold'
+                              : 'text-[#475569]'
+                          }`}
+                        >
+                          <span>
+                            {DAY_NAMES[dayIdx]} {isToday ? t.today : ''}
+                          </span>
+                          <span className="tabular-nums font-medium">
+                            {daySchedules.length > 0
+                              ? daySchedules.map((s) => `${s.open} – ${s.close}h`).join(' · ')
+                              : t.closedShift}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-200 space-y-2.5 text-sm text-[#475569]">
+                    <div className="flex items-start gap-2.5">
+                      <MapPin className="w-4 h-4 text-[#1D4ED8] flex-shrink-0 mt-0.5" />
+                      <span className="tabular-nums">
+                        {tenant.address}, {tenant.postalCode} {tenant.city}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <Phone className="w-4 h-4 text-[#1D4ED8] flex-shrink-0" />
+                      <a
+                        href={`tel:${tenant.phone}`}
+                        onClick={() => trackConversion('click_call')}
+                        className="font-semibold text-[#0F172A] hover:text-[#1D4ED8] tabular-nums transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+                      >
+                        {tenant.phone}
+                      </a>
+                    </div>
+                  </div>
+
+                  {tenant.googleMapsUrl && (
+                    <a
+                      href={tenant.googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackConversion('click_maps')}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white rounded-full px-6 py-3.5 text-sm font-semibold shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
+                    >
+                      <Compass className="w-4 h-4" />
+                      <span>{cauce.sec4MapsBtn}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Columna Derecha: 4 Tarjetas blancas interactivas de espacios */}
+              <div className="lg:col-span-7 space-y-4">
+                {tenant.ambiences.map((amb) => {
+                  const ambName = getAmbName(amb)
+                  const isSelected = selectedZone === ambName
+                  const isGroupSpace =
+                    amb.id.toLowerCase().includes('grupo') ||
+                    ambName.toLowerCase().includes('grupo') ||
+                    ambName.toLowerCase().includes('group')
+
+                  return (
+                    <button
+                      type="button"
+                      key={amb.id}
+                      onClick={() => {
+                        setSelectedZone(ambName)
+                        setSelectedReason(isGroupSpace ? 'Grupo o picoteo' : 'Reserva de mesa')
+                        scrollToSection('contacto-whatsapp')
+                      }}
+                      className={`w-full text-left bg-white rounded-[22px] border p-5 sm:p-6 shadow-sm transition-all flex flex-col sm:flex-row gap-4 sm:gap-5 items-start sm:items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2 ${
+                        isSelected
+                          ? 'border-[#1D4ED8] ring-1 ring-[#1D4ED8]/20'
+                          : 'border-slate-200/80 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="relative w-full sm:w-28 h-44 sm:h-28 rounded-[16px] overflow-hidden bg-slate-100 flex-shrink-0">
+                        <Image
+                          src={amb.imageDay}
+                          alt={ambName}
+                          fill
+                          sizes="(max-width: 640px) 100vw, 112px"
+                          className="object-cover"
+                        />
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h3 className="text-lg sm:text-xl font-semibold text-[#0F172A] tracking-tight">
+                            {ambName}
+                          </h3>
+                          <span
+                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+                              isSelected
+                                ? 'bg-blue-50 text-[#1D4ED8]'
+                                : 'bg-slate-100 text-[#475569]'
+                            }`}
+                          >
+                            {getAmbBadge(amb)}
+                          </span>
+                        </div>
+                        <p className="text-xs font-medium text-[#475569]">
+                          {getAmbSubtitle(amb)}
+                        </p>
+                        <p className="text-sm text-[#475569] leading-relaxed">
+                          {getAmbDesc(amb)}
+                        </p>
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1D4ED8] pt-0.5">
+                          <span>{isSelected ? cauce.sec4SelectedTag : cauce.sec4SelectSpaceCta}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </section>
+
+          {/* SECCIÓN 5: Preguntas Frecuentes (3 Columnas Horizontales) */}
+          <section
+            id="preguntas"
+            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
+          >
+            <div className="max-w-2xl space-y-3 mb-10 sm:mb-12">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
+                {cauce.sec5Eyebrow}
+              </span>
+              <h2
+                className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
+                style={CAUCE_SERIF_STYLE}
+              >
+                {cauce.sec5Title}
+              </h2>
+              <p className="text-base text-[#475569] leading-relaxed">
+                {cauce.sec5Subtitle}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {cauce.sec5Faqs.map((faq, idx) => (
+                <article
+                  key={faq.q}
+                  className="bg-white rounded-[22px] border border-slate-200/80 p-7 shadow-sm flex flex-col justify-between space-y-4"
+                >
+                  <div className="space-y-3">
+                    <span className="text-xs font-semibold text-[#1D4ED8] tabular-nums block">
+                      0{idx + 1}
+                    </span>
+                    <h3 className="text-base sm:text-lg font-semibold text-[#0F172A] leading-snug">
+                      {faq.q}
+                    </h3>
+                    <p className="text-sm text-[#475569] leading-relaxed">{faq.a}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {/* SECCIÓN 6: Configurador Reactivo de WhatsApp */}
+          <section
+            id="contacto-whatsapp"
+            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
+          >
+            <div className="max-w-2xl space-y-3 mb-10">
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
+                {cauce.sec6Eyebrow}
+              </span>
+              <h2
+                className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
+                style={CAUCE_SERIF_STYLE}
+              >
+                {cauce.sec6Title}
+              </h2>
+              <p className="text-base text-[#475569] leading-relaxed">
+                {cauce.sec6Subtitle}
+              </p>
+            </div>
+
+            <WhatsAppLiveConfigurator
+              variant="cauce"
+              restaurantName={tenant.name}
+              whatsappNumber={tenant.whatsappNumber}
+              ambiences={tenant.ambiences}
+              initialZone={selectedZone}
+              initialReason={selectedReason}
+              lang={lang}
+              onWhatsAppClick={() => trackConversion('click_reservation')}
+            />
+          </section>
+        </main>
+
+        {/* Footer Ligero Cauce */}
+        <footer className="bg-white border-t border-slate-200 py-12 px-4 sm:px-6 md:px-10 text-[#0F172A]">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-center gap-3.5">
+              {tenant.logoUrl && (
+                <div className="w-11 h-11 rounded-full bg-[#EBE8E1] border border-slate-200 overflow-hidden p-0.5 flex items-center justify-center flex-shrink-0">
+                  <Image
+                    src={tenant.logoUrl}
+                    alt={tenant.name}
+                    width={44}
+                    height={44}
+                    className="w-full h-full object-contain rounded-full"
+                  />
+                </div>
+              )}
+              <div>
+                <span className="text-lg font-bold tracking-tight text-[#0F172A] block">
+                  {tenant.name}
+                </span>
+                <p className="text-xs text-[#475569] max-w-sm">{localizedTagline}</p>
+              </div>
+            </div>
+
+            <div className="text-xs text-[#475569] space-y-1 tabular-nums">
+              <p>
+                {tenant.address}, {tenant.postalCode} {tenant.city}
+              </p>
+              <p suppressHydrationWarning>
+                © {new Date().getFullYear()} {tenant.name}. {cauce.footerRights}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMenuModalOpen(true)
+                  trackConversion('open_menu')
+                }}
+                className="font-semibold text-[#0F172A] hover:text-[#1D4ED8] transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+              >
+                {cauce.footerMenuLink}
+              </button>
+              {tenant.googleMapsUrl && (
+                <a
+                  href={tenant.googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#0F172A] hover:text-[#1D4ED8] transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+                >
+                  {cauce.footerMapsLink}
+                </a>
+              )}
+              <span className="text-[#475569]">
+                Powered by <strong className="font-bold tracking-widest text-[#1D4ED8]">FLUXO</strong>
+              </span>
+            </div>
+          </div>
+        </footer>
+
+        {/* Barra sticky móvil Cauce */}
+        <MobileStickyActionBar
+          layoutPreset={tenant.layoutPreset}
+          archetype={tenant.archetype}
+          phone={tenant.phone}
+          googleMapsUrl={tenant.googleMapsUrl}
+          isOpenNow={openingStatus.isOpen}
+          lang={lang}
+          onOpenReservation={() => {
+            scrollToSection('contacto-whatsapp')
+            trackConversion('click_reservation')
+          }}
+          onOpenMenu={() => {
+            setIsMenuModalOpen(true)
+            trackConversion('open_menu')
+          }}
+        />
+
+        {/* Drawer modal de respaldo */}
+        <WhatsAppReservationDrawer
+          restaurantName={tenant.name}
+          whatsappNumber={tenant.whatsappNumber}
+          ambiences={tenant.ambiences}
+          isOpen={isReservationOpen}
+          onClose={() => setIsReservationOpen(false)}
+          initialZone={selectedZone}
+          initialReason={selectedReason}
+          archetype={tenant.archetype}
+          variant="cauce"
+          lang={lang}
+        />
+
+        {menuModals}
+      </div>
+    )
+  }
 
   return (
     <div
@@ -1896,6 +3242,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
          BARRA FIJA EN LA ZONA DEL PULGAR (MOBILE STICKY ACTION BAR)
          ============================================================================== */}
       <MobileStickyActionBar
+        layoutPreset={tenant.layoutPreset}
         archetype={tenant.archetype}
         phone={tenant.phone}
         googleMapsUrl={tenant.googleMapsUrl}
@@ -1921,339 +3268,13 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
         isOpen={isReservationOpen}
         onClose={() => setIsReservationOpen(false)}
         initialZone={selectedZone}
+        initialReason={selectedReason}
         archetype={tenant.archetype}
+        variant="default"
         lang={lang}
       />
 
-      {/* ==============================================================================
-         MODAL DE CARTA FIJA DIGITAL (PRECIOS REALES + VARIANTES + 14 ALÉRGENOS)
-         ============================================================================== */}
-      {isMenuModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setIsMenuModalOpen(false)
-          }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
-        >
-          <div
-            className={`w-full max-w-5xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden ${
-              isUrbanBrewery
-                ? 'bg-[#0E1015] text-[#F6F3EC] ring-1 ring-white/15'
-                : 'bg-[#F6F3EC] text-[#141311] border border-[#141311]/10'
-            }`}
-          >
-            {/* Cabecera del Modal */}
-            <div
-              className={`p-5 sm:p-6 border-b flex items-center justify-between gap-3 ${
-                isUrbanBrewery
-                  ? 'bg-[#0A0B0E] border-white/10'
-                  : 'bg-white border-[#141311]/10'
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                {tenant.logoUrl && (
-                  <div className="w-10 h-10 rounded-full bg-[#EBE8E1] overflow-hidden p-0.5 ring-1 ring-[#F59E0B]/50 flex items-center justify-center flex-shrink-0">
-                    <Image
-                      src={tenant.logoUrl}
-                      alt={tenant.name}
-                      width={40}
-                      height={40}
-                      className="w-full h-full object-contain rounded-full"
-                    />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <span
-                    className={`text-[10px] uppercase tracking-[0.22em] font-bold block ${
-                      isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'
-                    }`}
-                  >
-                    {t.digitalMenuTitle}
-                  </span>
-                  <h3 className="text-lg sm:text-2xl font-bold truncate">
-                    {tenant.name} · {t.menuAndPrices}
-                  </h3>
-                </div>
-              </div>
-              <button
-                type="button"
-                aria-label="Cerrar carta"
-                onClick={() => setIsMenuModalOpen(false)}
-                className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#F59E0B] hover:text-[#0A0B0E] transition flex items-center justify-center flex-shrink-0"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Buscador y Categorías */}
-            <div
-              className={`p-4 sm:p-6 border-b space-y-4 ${
-                isUrbanBrewery
-                  ? 'bg-[#12151C] border-white/10'
-                  : 'bg-[#EDE8DE]/40 border-[#141311]/5'
-              }`}
-            >
-              <div className="relative">
-                <Search className="w-4 h-4 opacity-50 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder={t.searchPlaceholder}
-                  value={menuSearch}
-                  onChange={(e) => setMenuSearch(e.target.value)}
-                  className={`w-full pl-11 pr-4 py-3 rounded-2xl text-sm outline-none transition ${
-                    isUrbanBrewery
-                      ? 'bg-[#0A0B0E] text-white placeholder-white/40 focus:ring-1 focus:ring-[#F59E0B]'
-                      : 'bg-white border border-[#141311]/10 focus:border-[#C85A32]'
-                  }`}
-                />
-              </div>
-
-              {/* Píldoras de Categorías */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                {categories.map((cat) => (
-                  <button
-                    key={cat.key}
-                    type="button"
-                    onClick={() => setMenuFilterCategory(cat.key)}
-                    className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition ${
-                      menuFilterCategory === cat.key
-                        ? isUrbanBrewery
-                          ? 'bg-[#F59E0B] text-[#0A0B0E]'
-                          : 'bg-[#141311] text-[#F6F3EC]'
-                        : isUrbanBrewery
-                        ? 'bg-white/5 text-white/75 hover:bg-white/10'
-                        : 'bg-white text-[#141311]/70 hover:bg-[#141311]/10'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Lista de Productos con Precios Reales, Variantes y 14 Alérgenos */}
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredDishes.map((dish) => (
-                  <div
-                    key={dish.id}
-                    onClick={() => setSelectedDishDetail(dish)}
-                    className={`p-4 rounded-2xl transition cursor-pointer flex gap-4 items-start ${
-                      isUrbanBrewery
-                        ? 'bg-[#151922] hover:bg-[#1B202C] ring-1 ring-white/[0.05]'
-                        : 'bg-white border border-[#141311]/10 hover:border-[#C85A32]/40 shadow-sm'
-                    }`}
-                  >
-                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-black/20">
-                      <Image
-                        src={dish.image}
-                        alt={getDishName(dish)}
-                        fill
-                        sizes="96px"
-                        className="object-cover"
-                      />
-                    </div>
-
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      <div className="flex justify-between items-start gap-2">
-                        <h4 className="font-bold text-sm sm:text-base leading-snug">
-                          {getDishName(dish)}
-                        </h4>
-                        <span
-                          className={`font-extrabold text-sm flex-shrink-0 tabular-nums ${
-                            isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'
-                          }`}
-                        >
-                          {dish.isMarketPrice || (dish.isDailyMarket && dish.price <= 0)
-                            ? t.marketPriceTag
-                            : `${dish.price.toFixed(2)} €`}
-                        </span>
-                      </div>
-
-                      <p className="text-xs opacity-75 line-clamp-2 leading-relaxed">
-                        {getDishDesc(dish)}
-                      </p>
-
-                      {/* Desglose de Variantes con Precio Exacto */}
-                      {dish.variants && dish.variants.length > 0 && (
-                        <div className="pt-1 flex flex-wrap gap-1.5">
-                          {dish.variants.map((v, i) => (
-                            <span
-                              key={i}
-                              className={`text-[11px] px-2.5 py-1 rounded-lg font-medium flex items-center gap-1.5 ${
-                                isUrbanBrewery
-                                  ? 'bg-[#0A0B0E] text-white/90'
-                                  : 'bg-[#F6F3EC] text-[#141311]'
-                              }`}
-                            >
-                              <span className="opacity-75">
-                                {lang === 'gl'
-                                  ? v.name_gl || v.name
-                                  : lang === 'en'
-                                  ? v.name_en || v.name
-                                  : v.name}
-                              </span>
-                              <strong className="text-[#F59E0B] tabular-nums">
-                                {v.price.toFixed(2)}€
-                              </strong>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* 14 Alérgenos */}
-                      {dish.allergens && dish.allergens.length > 0 && (
-                        <div className="flex items-center gap-1.5 pt-1 flex-wrap">
-                          {dish.allergens.map((alg) => (
-                            <span
-                              key={alg}
-                              className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 font-semibold"
-                            >
-                              ⚠️ {alg}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {filteredDishes.length === 0 && (
-                <div className="text-center py-12 opacity-60 text-sm">
-                  {t.noDishesFound}
-                </div>
-              )}
-            </div>
-
-            {/* Pie del modal */}
-            <div
-              className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between text-xs gap-3 ${
-                isUrbanBrewery
-                  ? 'bg-[#0A0B0E] border-white/10 text-white/70'
-                  : 'bg-white border-[#141311]/10 text-[#141311]/60'
-              }`}
-            >
-              <span>{t.vatIncludedNote}</span>
-              <div className="flex items-center gap-4">
-                {tenant.qrMenuUrl && (
-                  <Link
-                    href={tenant.qrMenuUrl}
-                    className="text-[#F59E0B] font-bold hover:underline flex items-center gap-1"
-                  >
-                    <span>{t.openQrMenuPageBtn}</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Ficha Técnica de Plato Individual */}
-      {selectedDishDetail && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedDishDetail(null)
-          }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
-        >
-          <div
-            className={`w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden ${
-              isUrbanBrewery
-                ? 'bg-[#12151C] text-white ring-1 ring-white/15'
-                : 'bg-[#F6F3EC] text-[#141311]'
-            }`}
-          >
-            <div className="relative h-64 w-full">
-              <Image
-                src={selectedDishDetail.image}
-                alt={getDishName(selectedDishDetail)}
-                fill
-                className="object-cover"
-              />
-              <button
-                type="button"
-                aria-label={t.closeDetail}
-                onClick={() => setSelectedDishDetail(null)}
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="flex justify-between items-start gap-4">
-                <h3 className="text-2xl font-bold">{getDishName(selectedDishDetail)}</h3>
-                <span className="text-2xl font-black text-[#F59E0B] flex-shrink-0 tabular-nums">
-                  {selectedDishDetail.isMarketPrice
-                    ? t.marketPriceTag
-                    : `${selectedDishDetail.price.toFixed(2)} €`}
-                </span>
-              </div>
-              <p className="text-sm opacity-80 leading-relaxed">
-                {getDishDesc(selectedDishDetail)}
-              </p>
-
-              {selectedDishDetail.variants && selectedDishDetail.variants.length > 0 && (
-                <div className="space-y-2 pt-2">
-                  <span className="text-xs uppercase tracking-wider opacity-60 font-bold block">
-                    {t.availableFormats}:
-                  </span>
-                  <div className="grid grid-cols-1 gap-2">
-                    {selectedDishDetail.variants.map((v, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-black/30 text-sm"
-                      >
-                        <span>
-                          {lang === 'gl'
-                            ? v.name_gl || v.name
-                            : lang === 'en'
-                            ? v.name_en || v.name
-                            : v.name}
-                        </span>
-                        <strong className="text-[#F59E0B] tabular-nums">
-                          {v.price.toFixed(2)} €
-                        </strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedDishDetail.allergens && selectedDishDetail.allergens.length > 0 && (
-                <div>
-                  <span className="text-xs uppercase tracking-wider opacity-60 font-bold block mb-1.5">
-                    {t.allergensDeclared}
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDishDetail.allergens.map((alg) => (
-                      <span
-                        key={alg}
-                        className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300"
-                      >
-                        ⚠️ {alg}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => setSelectedDishDetail(null)}
-                className="w-full py-3.5 rounded-2xl bg-[#F59E0B] text-[#0A0B0E] font-extrabold text-xs uppercase tracking-wider hover:bg-[#D97706] transition"
-              >
-                {t.closeDetail}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {menuModals}
     </div>
   )
 }

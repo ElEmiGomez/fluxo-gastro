@@ -7,6 +7,7 @@ import type { OpeningSchedule, WebLanguage } from '@/types/gastronomic-web.types
 interface LiveOpeningBadgeProps {
   schedules: OpeningSchedule[]
   lang?: WebLanguage
+  variant?: 'dark' | 'light'
 }
 
 const BADGE_COPY: Record<
@@ -46,7 +47,11 @@ const BADGE_COPY: Record<
   },
 }
 
-export function LiveOpeningBadge({ schedules, lang = 'es' }: LiveOpeningBadgeProps) {
+export function LiveOpeningBadge({
+  schedules,
+  lang = 'es',
+  variant = 'dark',
+}: LiveOpeningBadgeProps) {
   const [status, setStatus] = useState<OpeningStatusResult>(() =>
     getOpeningStatus(schedules, new Date())
   )
@@ -72,29 +77,39 @@ export function LiveOpeningBadge({ schedules, lang = 'es' }: LiveOpeningBadgePro
       : copy.closed
 
   const secondaryLabel = status.isOpen && closeTime ? closeTime : !status.isOpen ? copy.closedSub : ''
+  const isLight = variant === 'light'
 
   return (
     <div
       aria-label={`${copy.ariaPrefix}: ${primaryLabel}${secondaryLabel ? ` (${secondaryLabel})` : ''}`}
-      className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 rounded-full bg-white/[0.06] border border-white/10 text-[10px] sm:text-xs font-medium backdrop-blur-sm whitespace-nowrap flex-shrink-0"
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${
+        isLight
+          ? 'bg-white text-[#0F172A] border border-slate-200 shadow-sm'
+          : 'bg-white/[0.06] border border-white/10 backdrop-blur-sm'
+      }`}
       style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}
     >
       <span
         aria-hidden="true"
         suppressHydrationWarning
-        className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${
+        className={`w-2 h-2 rounded-full flex-shrink-0 ${
           status.isOpen
-            ? 'bg-[#22C55E] animate-pulse shadow-[0_0_8px_#22C55E]'
+            ? 'bg-[#22C55E] animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.65)]'
+            : isLight
+            ? 'bg-rose-600'
             : 'bg-[#EF4444]'
         }`}
       />
-      <span suppressHydrationWarning className="text-white/95 font-semibold tracking-tight">
+      <span
+        suppressHydrationWarning
+        className={`font-semibold tracking-tight ${isLight ? 'text-[#0F172A]' : 'text-white/95'}`}
+      >
         {primaryLabel}
       </span>
       {status.isOpen && closeTime && (
         <span
           suppressHydrationWarning
-          className="text-white/60 tabular-nums font-medium"
+          className={`tabular-nums font-medium ${isLight ? 'text-[#475569]' : 'text-white/60'}`}
         >
           <span className="hidden sm:inline">· {copy.closes} </span>
           <span className="sm:hidden">· </span>
@@ -102,7 +117,10 @@ export function LiveOpeningBadge({ schedules, lang = 'es' }: LiveOpeningBadgePro
         </span>
       )}
       {!status.isOpen && (
-        <span suppressHydrationWarning className="text-white/50 hidden sm:inline">
+        <span
+          suppressHydrationWarning
+          className={`hidden sm:inline ${isLight ? 'text-[#475569]' : 'text-white/50'}`}
+        >
           · {copy.closedSub}
         </span>
       )}

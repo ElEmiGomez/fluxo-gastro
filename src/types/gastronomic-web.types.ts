@@ -16,6 +16,8 @@ export type RestaurantArchetype =
 
 export type WebLanguage = 'es' | 'gl' | 'en'
 
+export type GastronomicLayoutPreset = 'cauce_editorial' | 'cinematic_scroll'
+
 export interface OpeningSchedule {
   dayOfWeek: number // 0 = Domingo, 1 = Lunes, ..., 6 = Sábado
   open: string // Formato "HH:MM" (ej. "12:30")
@@ -121,9 +123,13 @@ export interface GastronomicTenantConfig {
   googleMapsReviewCount?: number // ej. 312
   primaryColor?: string
   accentColor?: string
+  layoutPreset?: GastronomicLayoutPreset
   heroImagePoster: string
   heroVideoWebm?: string
   heroVideoMp4?: string
+  heroLoopFrames?: string[]
+  featureVideoFrames?: string[]
+  experienceVideoFrames?: string[]
   flankLeftImage?: string
   flankRightImage?: string
   scrollytellingPanels?: ScrollytellingPanelItem[]
