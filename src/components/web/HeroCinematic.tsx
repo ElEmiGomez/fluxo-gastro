@@ -21,6 +21,7 @@ export interface HeroCinematicProps {
   logoUrl?: string
   flankRightUrl?: string
   googleMapsUrl?: string
+  menuUrl?: string
   accentColor?: string
   videoWebmUrl?: string
   videoMp4Url?: string
@@ -117,6 +118,7 @@ export function HeroCinematic({
   logoUrl,
   flankRightUrl,
   googleMapsUrl,
+  menuUrl = '/p/bar-jaratusas?mesa=0',
   accentColor,
   videoWebmUrl,
   videoMp4Url,
@@ -351,13 +353,23 @@ export function HeroCinematic({
                   </a>
                 ))}
               </nav>
-              <button
-                type="button"
-                onClick={handleCauceCtaClick}
-                className="w-full min-h-[44px] rounded-full bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white text-sm font-semibold px-5 py-2.5 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
-              >
-                {cauceCopy.navCta}
-              </button>
+              <div className="flex flex-col gap-2 pt-1">
+                <Link
+                  href={menuUrl}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full min-h-[44px] rounded-full bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white text-sm font-semibold px-5 py-2.5 shadow-sm transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+                >
+                  <span>{cauceCopy.heroCta}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleCauceCtaClick}
+                  className="w-full min-h-[44px] rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[#0F172A] text-sm font-semibold px-5 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
+                >
+                  {cauceCopy.navCta}
+                </button>
+              </div>
             </div>
           )}
         </header>
@@ -403,13 +415,7 @@ export function HeroCinematic({
 
               <div className="pt-2">
                 <Link
-                  href="/p/bar-jaratusas?mesa=0"
-                  onClick={(e) => {
-                    if (onOpenMenu) {
-                      e.preventDefault()
-                      onOpenMenu()
-                    }
-                  }}
+                  href={menuUrl}
                   className="inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-[#1E3A8A] active:scale-[0.98] text-white text-sm sm:text-base font-semibold rounded-full px-8 py-4 shadow-xl transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
                   <span>{cauceCopy.heroCta}</span>

@@ -223,12 +223,6 @@ export function DrinkMockupsMarquee({
         <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href={menuUrl}
-            onClick={(e) => {
-              if (onOpenMenu) {
-                e.preventDefault()
-                onOpenMenu()
-              }
-            }}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-full bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white font-bold text-sm tracking-wide shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#1D4ED8]"
           >
             <span>{ctaText}</span>

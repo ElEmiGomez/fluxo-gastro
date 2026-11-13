@@ -9,6 +9,7 @@ interface MobileStickyActionBarProps {
   layoutPreset?: 'cauce_editorial' | 'cinematic_scroll'
   phone: string
   googleMapsUrl?: string
+  menuUrl?: string
   isOpenNow: boolean
   lang?: WebLanguage
   onOpenReservation: () => void
@@ -50,6 +51,7 @@ export function MobileStickyActionBar({
   layoutPreset,
   phone,
   googleMapsUrl,
+  menuUrl = '/p/bar-jaratusas?mesa=0',
   isOpenNow,
   lang = 'es',
   onOpenReservation,
@@ -70,14 +72,13 @@ export function MobileStickyActionBar({
         style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}
       >
         <div className="grid grid-cols-2 gap-2.5 max-w-md mx-auto">
-          <button
-            type="button"
-            onClick={onOpenMenu}
+          <a
+            href={menuUrl}
             className="min-h-[48px] px-3 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 active:scale-[0.98] text-[#0F172A] font-semibold text-sm flex items-center justify-center gap-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
           >
             <Utensils className="w-4 h-4 text-[#0F172A] flex-shrink-0" />
             <span className="truncate">{t.menu}</span>
-          </button>
+          </a>
 
           {googleMapsUrl ? (
             <a

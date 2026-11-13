@@ -1390,6 +1390,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
           logoUrl={tenant.logoUrl}
           flankRightUrl={tenant.flankRightImage}
           googleMapsUrl={tenant.googleMapsUrl}
+          menuUrl={tenant.qrMenuUrl ? `${tenant.qrMenuUrl}?mesa=0` : '/p/bar-jaratusas?mesa=0'}
           accentColor={tenant.accentColor}
           videoWebmUrl={tenant.heroVideoWebm}
           videoMp4Url={tenant.heroVideoMp4}
@@ -1404,7 +1405,6 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
             trackConversion('click_reservation')
           }}
           onOpenMenu={() => {
-            setIsMenuModalOpen(true)
             trackConversion('open_menu')
           }}
         />
@@ -1415,7 +1415,6 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
             lang={lang}
             menuUrl={tenant.qrMenuUrl ? `${tenant.qrMenuUrl}?mesa=0` : '/p/bar-jaratusas?mesa=0'}
             onOpenMenu={() => {
-              setIsMenuModalOpen(true)
               trackConversion('open_menu')
             }}
           />
@@ -1720,16 +1719,13 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                 </span>
                 <ul className="space-y-2 font-medium">
                   <li>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMenuModalOpen(true)
-                        trackConversion('open_menu')
-                      }}
+                    <Link
+                      href={tenant.qrMenuUrl ? `${tenant.qrMenuUrl}?mesa=0` : '/p/bar-jaratusas?mesa=0'}
+                      onClick={() => trackConversion('open_menu')}
                       className="text-[#475569] hover:text-[#1D4ED8] transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
                     >
-                      {cauce.footerMenuLink} (Carta Oficial)
-                    </button>
+                      {cauce.footerMenuLink} (Carta Oficial · Mesa 0)
+                    </Link>
                   </li>
                   {tenant.googleMapsUrl && (
                     <li>
@@ -1777,6 +1773,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
           archetype={tenant.archetype}
           phone={tenant.phone}
           googleMapsUrl={tenant.googleMapsUrl}
+          menuUrl={tenant.qrMenuUrl ? `${tenant.qrMenuUrl}?mesa=0` : '/p/bar-jaratusas?mesa=0'}
           isOpenNow={openingStatus.isOpen}
           lang={lang}
           onOpenReservation={() => {
@@ -1784,7 +1781,6 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
             trackConversion('click_reservation')
           }}
           onOpenMenu={() => {
-            setIsMenuModalOpen(true)
             trackConversion('open_menu')
           }}
         />
