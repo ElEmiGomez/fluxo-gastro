@@ -884,7 +884,11 @@ ${JSON.stringify(jsonLd, null, 2)}
   <header id="top" class="cauce-hero">
     <div class="loop-box" style="position: absolute; inset: 0;">
       <img src="${resolveImg(tenant.heroImagePoster)}" alt="${escapeHtml(tenant.name)}" class="loop-poster" fetchpriority="high">
-      <canvas class="loop-canvas" data-loop-frames='${escapeHtml(JSON.stringify(heroFrames))}' aria-hidden="true"></canvas>
+      ${tenant.heroVideoMp4 ? `
+      <video autoplay muted loop playsinline poster="${resolveImg(tenant.heroImagePoster)}" class="loop-video" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;">
+        <source src="${resolveImg(tenant.heroVideoMp4)}" type="video/mp4">
+      </video>` : `
+      <canvas class="loop-canvas" data-loop-frames='${escapeHtml(JSON.stringify(heroFrames))}' aria-hidden="true"></canvas>`}
     </div>
     <div class="cauce-hero-scrim"></div>
     <div class="cauce-hero-inner">
@@ -1610,6 +1614,7 @@ async function runExporter() {
   for (const frame of tenant.featureVideoFrames || []) copyAssetIfLocal(frame)
   for (const frame of tenant.experienceVideoFrames || []) copyAssetIfLocal(frame)
   copyAssetIfLocal(tenant.heroImagePoster)
+  if (tenant.heroVideoMp4) copyAssetIfLocal(tenant.heroVideoMp4)
   copyAssetIfLocal(tenant.logoUrl)
   copyAssetIfLocal(tenant.flankLeftImage)
   copyAssetIfLocal(tenant.flankRightImage)

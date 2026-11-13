@@ -80,7 +80,7 @@ async def _open_settings(page):
         if await panel.is_visible():
             return panel
         print(f"    [config] Abriendo ajustes de Flow (intento {attempt + 1}/2)...")
-        await page.locator(SEL_PANEL_TRIGGER).click(timeout=10_000)
+        await page.locator(SEL_PANEL_TRIGGER).first.click(timeout=10_000)
         try:
             await panel.wait_for(state="visible", timeout=3_000)
             return panel
@@ -93,7 +93,7 @@ async def _close_settings(page):
     """Cierra mediante el mismo botón para que la siguiente apertura funcione."""
     panel = page.locator("flow-prompt-box-settings:visible").first
     if await panel.is_visible():
-        await page.locator(SEL_PANEL_TRIGGER).click(timeout=10_000)
+        await page.locator(SEL_PANEL_TRIGGER).first.click(timeout=10_000)
     await panel.wait_for(state="hidden", timeout=5_000)
 
 
@@ -202,10 +202,10 @@ async def select_video_mode(
     panel = await _open_settings(page)
     await _select_radio(panel, re.compile(r"^V[ií]deo$", re.I))
     if mode in ("fotogramas", "ingredientes"):
-        await _select_radio(panel, "Fotogramas" if mode == "fotogramas" else "Ingredientes")
+        await _select_radio(panel, re.compile(r"^(?:Fotogramas|Frames)$", re.I) if mode == "fotogramas" else re.compile(r"^(?:Ingredientes|Ingredients)$", re.I))
     elif mode != "texto":
         raise ValueError(f"Modo de video desconocido: {mode}")
-    trigger = panel.get_by_role("button", name="Seleccionar familia de modelos", exact=True)
+    trigger = panel.locator('button[aria-label="Seleccionar familia de modelos"], button[aria-label="Select model family"], button:has(span.model-select-trigger-content)').first
     target = "Omni 1.2 Flash" if model in ("Omni Flash", "Omni 1.2 - Flash") else model
     pattern = re.compile(r"^\s*" + re.escape(target) + r"\s*(?:arrow_drop_down)?\s*$")
     if not pattern.fullmatch(await trigger.inner_text()):

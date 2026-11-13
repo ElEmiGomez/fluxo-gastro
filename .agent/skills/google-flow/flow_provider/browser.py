@@ -13,7 +13,7 @@ from . import settings
 _playwright: Playwright | None = None
 _context: BrowserContext | None = None
 _page: Page | None = None
-SEL_SETTINGS_TRIGGER = 'button[aria-label="Botón de configuración"], button[aria-label="Activador de ajustes"]'
+SEL_SETTINGS_TRIGGER = 'button[aria-label="Settings trigger"], button.settings-trigger-button, button[aria-label="Botón de configuración"], button[aria-label="Activador de ajustes"]'
 SEL_AGENT_MODE_ON = 'flow-agent-mode-toggle-chip button[aria-pressed="true"]'
 _lock = asyncio.Lock()
 _last_project_url: str | None = None
@@ -22,6 +22,15 @@ _last_project_url: str | None = None
 async def wait_for_settings(page, timeout: int = 15_000) -> None:
     """Espera la barra del generador. Si Flow abre con su Agente activo, los
     ajustes de modelo/formato quedan ocultos: se desactiva antes de seguir."""
+    # Cerrar cualquier overlay o modal informativo (p. ej. 'Introducing Omni 1.2')
+    try:
+        modal_btn = page.locator('button:has-text("Get started"), button:has-text("Comenzar"), button:has-text("Entendido"), button:has-text("Got it")').first
+        if await modal_btn.is_visible(timeout=2000):
+            await modal_btn.click()
+            await page.wait_for_timeout(1000)
+    except Exception:
+        pass
+
     trigger = page.locator(SEL_SETTINGS_TRIGGER).first
     agent_on = page.locator(SEL_AGENT_MODE_ON).first
     await trigger.or_(agent_on).first.wait_for(state="visible", timeout=timeout)

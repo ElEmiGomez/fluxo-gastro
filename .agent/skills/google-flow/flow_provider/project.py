@@ -9,6 +9,24 @@ from .browser import get_page, wait_for_settings
 FLOW_BASE_URL = "https://labs.google/fx/es-419/tools/flow"
 NEW_PROJECT_BUTTON = re.compile(r"Proyecto nuevo|Nuevo proyecto|New project", re.I)
 
+async def _dismiss_modal(page) -> None:
+    """Descarta modales informativos de novedades como 'Introducing Omni 1.2'."""
+    for btn_text in ["Get started", "Comenzar", "Entendido", "Got it", "Close", "Cerrar", "Aceptar"]:
+        try:
+            btn = page.get_by_role("button", name=re.compile(btn_text, re.I)).first
+            if await btn.is_visible(timeout=1000):
+                await btn.click()
+                await page.wait_for_timeout(1000)
+                return
+        except Exception:
+            pass
+    try:
+        await page.keyboard.press("Escape")
+        await page.wait_for_timeout(1000)
+    except Exception:
+        pass
+
+
 async def _dismiss_fullscreen_viewer(page) -> None:
     """Presiona Escape para cerrar cualquier visor/lightbox que se haya abierto accidentalmente."""
     try:
@@ -98,6 +116,7 @@ async def create_project() -> tuple[str, str]:
 
     # Esperar SPA render — CRÍTICO sin esto pantalla negra
     await page.wait_for_timeout(5000)
+    await _dismiss_modal(page)
     await _wait_for_settings(page)
 
     await _dismiss_fullscreen_viewer(page)
