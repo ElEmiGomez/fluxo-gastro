@@ -932,7 +932,7 @@ ${JSON.stringify(jsonLd, null, 2)}
           <p class="drink-desc">El clásico aperitivo servido con hielo, rodaja de naranja y aceituna.</p>
         </div>
         <div class="drink-card">
-          <img src="${resolveImg('/images/dishes/copa-albarino.jpg')}" alt="Albariño y Mencía por Copa" class="drink-thumb" loading="lazy">
+          <img src="${resolveImg('/images/dishes/copa-albarino-rustica.jpg')}" alt="Albariño y Mencía por Copa" class="drink-thumb" loading="lazy">
           <div class="drink-tag">Denominación</div>
           <h3 class="drink-title">Albariño y Mencía por Copa</h3>
           <p class="drink-desc">Selección de bodegas de Rías Baixas y Ribeira Sacra a su temperatura.</p>
@@ -1002,6 +1002,18 @@ ${JSON.stringify(jsonLd, null, 2)}
             <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--text-ink); display: flex; align-items: center; gap: 6px;">
               📍 Ubicación & Contacto
             </span>
+          </div>
+
+          <!-- Mapa Interactivo de Google Maps -->
+          <div style="width: 100%; height: 180px; border-radius: 14px; overflow: hidden; border: 1px solid #E2E8F0; position: relative; background: #F1F5F9;">
+            <iframe
+              title="Ubicación de Bar Jara-Tusas en Google Maps"
+              src="https://maps.google.com/maps?q=Bar+Jara-Tusas,+R%C3%BAa+do+Curro+8,+Noia&t=&z=16&ie=UTF8&iwloc=&output=embed"
+              style="width: 100%; height: 100%; border: 0; position: absolute; inset: 0;"
+              loading="lazy"
+              allowfullscreen
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
           </div>
 
           <div>

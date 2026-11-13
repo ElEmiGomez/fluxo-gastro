@@ -130,8 +130,6 @@ const SEED_TENANTS: Record<string, GastronomicTenantConfig> = {
     heroVideoMp4: '/assets/jaratusas/hero-barra-cerveza-loop.mp4',
     heroLoopFrames: [
       '/assets/jaratusas/hero-barra-cerveza-poster.jpg',
-      '/images/jaratusas/panel-01-tiraje.jpg',
-      '/images/jaratusas/space-barra-night.jpg',
     ],
     featureVideoFrames: [
       '/images/jaratusas/panel-01-tiraje.jpg',

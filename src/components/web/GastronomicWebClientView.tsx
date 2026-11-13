@@ -1487,7 +1487,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
               </div>
 
               {/* Ubicación, Teléfono y Enlace a Google Maps */}
-              <div className="lg:col-span-5 bg-white rounded-[22px] border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-6 flex flex-col justify-between">
+              <div className="lg:col-span-5 bg-white rounded-[22px] border border-slate-200/80 p-6 sm:p-8 shadow-sm space-y-5 flex flex-col justify-between overflow-hidden">
                 <div className="space-y-4">
                   <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200">
                     <MapPin className="w-4 h-4 text-[#1D4ED8]" />
@@ -1496,7 +1496,19 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                     </span>
                   </div>
 
-                  <div className="space-y-1">
+                  {/* Mapa Interactivo de Google Maps */}
+                  <div className="relative w-full h-44 sm:h-48 rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
+                    <iframe
+                      title="Ubicación de Bar Jara-Tusas en Google Maps"
+                      src="https://maps.google.com/maps?q=Bar+Jara-Tusas,+R%C3%BAa+do+Curro+8,+Noia&t=&z=16&ie=UTF8&iwloc=&output=embed"
+                      className="absolute inset-0 w-full h-full border-0"
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                    />
+                  </div>
+
+                  <div className="space-y-1 pt-1">
                     <p className="text-base text-[#0F172A] font-semibold leading-snug">
                       {tenant.address}
                     </p>
@@ -1505,11 +1517,11 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                     </p>
                   </div>
 
-                  <p className="text-sm text-[#475569] leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
                     Bajo los soportales históricos de piedra de la Rúa do Curro, en pleno casco histórico medieval de Noia.
                   </p>
 
-                  <div className="pt-2 flex items-center gap-2.5 text-sm">
+                  <div className="pt-1 flex items-center gap-2.5 text-sm">
                     <Phone className="w-4 h-4 text-[#1D4ED8] flex-shrink-0" />
                     <a
                       href={`tel:${tenant.phone}`}

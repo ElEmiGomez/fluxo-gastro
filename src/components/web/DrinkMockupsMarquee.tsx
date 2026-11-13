@@ -83,7 +83,7 @@ export const JARA_TUSAS_DRINK_MOCKUPS: DrinkMockupItem[] = [
     desc: 'Selección de bodegas de Rías Baixas y Ribeira Sacra servida a su temperatura.',
     desc_gl: 'Selección de adegas de Rías Baixas e Ribeira Sacra servida á súa temperatura.',
     desc_en: 'Curated selection from Rías Baixas and Ribeira Sacra poured at optimal cellar temperature.',
-    image: '/images/dishes/copa-albarino.jpg',
+    image: '/images/dishes/copa-albarino-rustica.jpg',
   },
   {
     id: 'licores-combinados',

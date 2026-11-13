@@ -38,7 +38,7 @@ test('getGastronomicTenant resolves Bar Jara-Tusas with Cauce Editorial tokens, 
     assert.notEqual(tenant?.accentColor?.toUpperCase(), orange)
   }
 
-  assert.ok(Array.isArray(tenant!.heroLoopFrames) && tenant!.heroLoopFrames!.length >= 2)
+  assert.ok(Array.isArray(tenant!.heroLoopFrames) && tenant!.heroLoopFrames!.length >= 1)
   assert.ok(Array.isArray(tenant!.featureVideoFrames) && tenant!.featureVideoFrames!.length >= 3)
   assert.ok(Array.isArray(tenant!.experienceVideoFrames) && tenant!.experienceVideoFrames!.length >= 4)
 
