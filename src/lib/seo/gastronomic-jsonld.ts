@@ -33,7 +33,10 @@ export function buildRestaurantJsonLd(
 
   const schemaType = schemaTypeMap[tenant.archetype] || 'Restaurant'
   const canonicalUrl = `${baseUrl}/web/${tenant.slug}`
-  const menuUrl = `${baseUrl}/p/${tenant.slug}`
+  const rawMenuPath = tenant.qrMenuUrl || `/p/${tenant.slug}`
+  const menuUrl = rawMenuPath.startsWith('http')
+    ? rawMenuPath
+    : `${baseUrl}${rawMenuPath.startsWith('/') ? rawMenuPath : `/${rawMenuPath}`}`
 
   const openingHoursSpecs = (tenant.openingHours || []).map((schedule: OpeningSchedule) => ({
     '@type': 'OpeningHoursSpecification',
@@ -43,6 +46,7 @@ export function buildRestaurantJsonLd(
   }))
 
   const allowsReservations =
+    tenant.archetype === 'urban_street' ||
     tenant.archetype === 'alta_mesa' ||
     tenant.archetype === 'gastro_bistro' ||
     tenant.archetype === 'restaurant'

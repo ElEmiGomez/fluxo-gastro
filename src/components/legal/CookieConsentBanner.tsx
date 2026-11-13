@@ -51,7 +51,9 @@ export function CookieConsentBanner() {
       {showBanner && (
         <aside
           aria-label="Consentimiento de cookies y privacidad"
-          className="fixed bottom-3 inset-x-3 sm:left-auto sm:right-4 sm:max-w-md z-40 bg-slate-900/95 text-slate-100 p-4 rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md animate-in slide-in-from-bottom duration-300 select-none"
+          className={`fixed inset-x-3 sm:left-auto sm:right-4 sm:max-w-md z-50 bg-slate-900/95 text-slate-100 p-4 rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md animate-in slide-in-from-bottom duration-300 select-none ${
+            pathname?.startsWith('/web/') ? 'bottom-24 md:bottom-4' : 'bottom-3'
+          }`}
         >
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 rounded-xl bg-blue-600/30 border border-blue-500/40 text-blue-400 flex items-center justify-center flex-shrink-0 mt-0.5">

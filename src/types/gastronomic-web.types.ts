@@ -75,6 +75,21 @@ export interface SpaceAmbienceItem {
   lightingNoteNight_en?: string
 }
 
+export interface ScrollytellingPanelItem {
+  id: string
+  number: string
+  tag: string
+  tag_gl?: string
+  tag_en?: string
+  title: string
+  title_gl?: string
+  title_en?: string
+  description: string
+  description_gl?: string
+  description_en?: string
+  image: string
+}
+
 export interface SocialReviewItem {
   author: string
   rating: number
@@ -111,6 +126,7 @@ export interface GastronomicTenantConfig {
   heroVideoMp4?: string
   flankLeftImage?: string
   flankRightImage?: string
+  scrollytellingPanels?: ScrollytellingPanelItem[]
   dishes: DishShowcaseItem[]
   ambiences: SpaceAmbienceItem[]
   openingHours: OpeningSchedule[]

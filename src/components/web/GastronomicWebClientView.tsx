@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -20,11 +20,12 @@ import {
   Star,
   Check,
   Calendar,
-  Utensils,
   AlertTriangle,
   Wifi,
   ExternalLink,
   Beer,
+  MessageCircle,
+  Users,
 } from 'lucide-react'
 import type {
   GastronomicTenantConfig,
@@ -34,39 +35,131 @@ import type {
 } from '@/types/gastronomic-web.types'
 import { HeroCinematic } from '@/components/web/HeroCinematic'
 import { CanvasScrollytelling } from '@/components/web/CanvasScrollytelling'
+import { LiveOpeningBadge } from '@/components/web/LiveOpeningBadge'
 import { MobileStickyActionBar } from '@/components/web/MobileStickyActionBar'
 import { WhatsAppReservationDrawer } from '@/components/web/WhatsAppReservationDrawer'
 import { getOpeningStatus } from '@/lib/opening-hours-calculator'
 
 // ==============================================================================
-// DICCIONARIOS TRILINGÜES (ES | GAL | EN) CON AUTO-DETECCIÓN
+// HELPER DE REVELADO GPU CON INTERSECTION OBSERVER (NUNCA OCULTA EL HERO)
+// ==============================================================================
+interface ScrollRevealProps {
+  children: React.ReactNode
+  delayMs?: number
+  className?: string
+}
+
+function ScrollReveal({ children, delayMs = 0, className = '' }: ScrollRevealProps) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) {
+      setIsVisible(true)
+      return
+    }
+
+    if (
+      typeof window === 'undefined' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      !('IntersectionObserver' in window)
+    ) {
+      setIsVisible(true)
+      return
+    }
+
+    const rect = el.getBoundingClientRect()
+    if (rect.top < window.innerHeight * 0.96) {
+      setIsVisible(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setIsVisible(true)
+            observer.disconnect()
+            break
+          }
+        }
+      },
+      { threshold: 0.04, rootMargin: '80px 0px -20px 0px' }
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? 'translate3d(0, 0, 0)' : 'translate3d(0, 18px, 0)',
+        transition: `opacity 560ms cubic-bezier(0.22, 1, 0.36, 1) ${delayMs}ms, transform 560ms cubic-bezier(0.22, 1, 0.36, 1) ${delayMs}ms`,
+        willChange: isVisible ? 'auto' : 'opacity, transform',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ==============================================================================
+// DICCIONARIOS TRILINGÜES (ES | GAL | EN)
 // ==============================================================================
 const I18N = {
   es: {
-    menuAndPrices: 'Carta & Precios',
-    spaces: 'Ambientes',
+    menuAndPrices: 'Ver Carta y Precios',
+    navMenuShort: 'Carta y Precios',
+    spaces: 'Espacios del Local',
+    navSpacesShort: 'Espacios',
+    selectedZoneLabel: 'Zona Seleccionada',
     scheduleAndLocation: 'Horarios & Ubicación',
     reviews: 'Opiniones',
     bookTable: 'Reservar',
-    groupsAndBooking: 'Grupos / Reserva',
+    groupsAndBooking: 'Terraza / Grupos',
     requestTable: 'Solicitar Mesa',
     howToGet: 'Cómo Llegar',
     call: 'Llamar',
     signatureDishBadge: 'Imprescindibles de la Casa',
-    signatureSectionTitleBrewery: 'Cerveza de Bodega, Vermú & Cocina Caliente',
+    signatureSectionTitleBrewery: 'Cerveza de Bodega, Vinos & Cocina Caliente',
     signatureSectionSubtitleBrewery:
-      'Cuatro clásicos que definen nuestra barra en la Rúa do Curro. Pulsa en cualquiera para consultar formatos y precios en la carta completa.',
-    openFullMenuBtn: 'Ver Carta Completa con Precios',
+      'Cuatro pilares que definen nuestra barra en la Rúa do Curro. Pulsa en cualquiera para consultar formatos y precios transparentes en la carta completa.',
+    openFullMenuBtn: 'Ver Carta y Precios',
     openQrMenuPageBtn: 'Abrir Vista de Carta (/p/bar-jaratusas)',
-    availableFormats: 'Formatos de servicio',
+    availableFormats: 'Formatos disponibles',
     seePricesInMenu: 'Ver precios y variantes →',
     sustainableFishing: 'Materia prima local y tirador de bodega',
     fairPricing: 'Precios transparentes con IVA en carta',
-    ambienceTitle: 'Elige tu Ambiente y tu Hora',
-    ambienceSubtitle: 'De la sesión vermú bajo los soportales de piedra a las cañas y raciones por la noche.',
-    lunchTime: 'Sesión Vermú · 13:30h',
-    dinnerTime: 'Cañas & Noche · 21:30h',
-    selectForBooking: 'Reservar para Grupo en esta Zona',
+    ambienceTitle: 'Elige tu Espacio y tu Luz',
+    ambienceSubtitle:
+      'De la luz natural bajo los soportales de piedra al ambiente cálido de noche en salón y barra.',
+    lunchTime: 'Mediodía · 13:30h',
+    dinnerTime: 'Noche · 21:30h',
+    selectForBooking: 'Solicitar Mesa en esta Zona',
+    waBlockEyebrow: 'WhatsApp Directo · Sin Comisiones',
+    waBlockTitle: 'Reserva tu mesa en Terraza o Salón / Consulta para grupos por WhatsApp',
+    waBlockSubtitle:
+      'Elige zona, número de personas y turno horario. Envía tu solicitud en un toque directamente por WhatsApp.',
+    waZoneLabel: 'Zona preferida',
+    waGroupsChip: 'Grupos',
+    waGuestsLabel: 'Personas',
+    waShiftLabel: 'Turno / Hora',
+    waNameLabel: 'Tu nombre',
+    waNamePlaceholder: 'Ej. Laura Pérez',
+    waSendDirectBtn: 'Enviar Solicitud por WhatsApp',
+    waOpenCalendarBtn: 'Elegir fecha y notas',
+    waMsgIntro: 'Hola',
+    waMsgBody: 'quisiera reservar / consultar disponibilidad:',
+    waMsgZone: 'Zona',
+    waMsgGuests: 'Personas',
+    waMsgShift: 'Turno',
+    waMsgName: 'Nombre',
+    waMsgPending: 'A confirmar',
     reviewsTitle: 'Lo que Dicen Nuestros Clientes',
     verifiedVisit: 'Reseña Verificada en Google',
     seeAllGoogleReviews: 'Ver todas las opiniones en Google Maps',
@@ -75,14 +168,16 @@ const I18N = {
     today: '(Hoy)',
     closedShift: 'Cerrado por descanso',
     wifiCourtesy: 'WiFi Clientes en Local',
+    wifiNetwork: 'Red',
+    wifiPass: 'Clave',
     faqsTitle: 'Preguntas Frecuentes',
     digitalMenuTitle: 'Carta Fija Digital · Transparencia Total',
     searchPlaceholder: 'Buscar cerveza, vino, ración o alérgeno...',
     allCategories: 'Todos',
     marketPriceTag: '🌊 Precio según lonja',
-    openNowKitchen: '🟢 Abierto ahora · Cocina hasta',
-    openNow: '🟢 Abierto ahora',
-    closedNow: '🔴 Cerrado ahora',
+    openNowKitchen: 'Abierto ahora · Cocina hasta',
+    openNow: 'Abierto ahora',
+    closedNow: 'Cerrado ahora',
     allergensDeclared: 'Alérgenos Declarados (Reglamento UE 1169/2011):',
     closeDetail: 'Cerrar Ficha',
     vatIncludedNote: 'Precios con IVA incluido. Tapa de cortesía con cada consumición.',
@@ -90,7 +185,7 @@ const I18N = {
     faqs: [
       {
         q: '1. ¿Hace falta reservar para tomar cañas, vinos o picar algo?',
-        a: 'No es necesario reservar para venir de cañas, vermú o tapeo en barra y terraza; funcionamos por rotación directa. Si sois un grupo grande para raciones, podéis avisarnos por WhatsApp en 1 toque.',
+        a: 'No es necesario reservar para venir de cañas, vermú o tapeo en barra y terraza; funcionamos por rotación directa. Si sois un grupo grande para raciones en salón o terraza, podéis avisarnos por WhatsApp en 1 toque.',
       },
       {
         q: '2. ¿Todas las consumiciones incluyen tapa de cortesía?',
@@ -98,36 +193,59 @@ const I18N = {
       },
       {
         q: '3. ¿Cómo puedo consultar los 14 alérgenos y todas las variantes de precios?',
-        a: 'Al pulsar en «Ver Carta Completa con Precios» tienes el desglose íntegro de precios por caña, copa, xarra, media ración o ración completa, junto con los iconos oficiales de los 14 alérgenos.',
+        a: 'Al pulsar en «Ver Carta y Precios» tienes el desglose íntegro de precios por caña, copa, xarra, media ración o ración completa, junto con los iconos oficiales de los 14 alérgenos.',
       },
     ],
   },
   gl: {
-    menuAndPrices: 'Carta e Prezos',
-    spaces: 'Ambientes',
+    menuAndPrices: 'Ver Carta e Prezos',
+    navMenuShort: 'Carta e Prezos',
+    spaces: 'Espazos do Local',
+    navSpacesShort: 'Espazos',
+    selectedZoneLabel: 'Zona Seleccionada',
     scheduleAndLocation: 'Horarios e Localización',
     reviews: 'Opinións',
     bookTable: 'Reservar',
-    groupsAndBooking: 'Grupos / Reserva',
+    groupsAndBooking: 'Terraza / Grupos',
     requestTable: 'Solicitar Mesa',
     howToGet: 'Como Chegar',
     call: 'Chamar',
     signatureDishBadge: 'Imprescindibles da Casa',
-    signatureSectionTitleBrewery: 'Cervexa de Adega, Vermú e Cociña Quente',
+    signatureSectionTitleBrewery: 'Cervexa de Adega, Viños e Cociña Quente',
     signatureSectionSubtitleBrewery:
-      'Catro clásicos que definen a nosa barra na Rúa do Curro. Preme en calquera para consultar formatos e prezos na carta completa.',
-    openFullMenuBtn: 'Ver Carta Completa con Prezos',
+      'Catro piares que definen a nosa barra na Rúa do Curro. Preme en calquera para consultar formatos e prezos transparentes na carta completa.',
+    openFullMenuBtn: 'Ver Carta e Prezos',
     openQrMenuPageBtn: 'Abrir Vista de Carta (/p/bar-jaratusas)',
-    availableFormats: 'Formatos de servizo',
+    availableFormats: 'Formatos dispoñibles',
     seePricesInMenu: 'Ver prezos e variantes →',
     sustainableFishing: 'Materia prima local e tirador de adega',
     fairPricing: 'Prezos transparentes con IVE na carta',
-    ambienceTitle: 'Escolle o teu Ambiente e a túa Hora',
-    ambienceSubtitle: 'Da sesión vermú baixo os soportais de pedra ás canas e racións pola noite.',
-    lunchTime: 'Sesión Vermú · 13:30h',
-    dinnerTime: 'Canas e Noite · 21:30h',
-    selectForBooking: 'Reservar para Grupo nesta Zona',
-    reviewsTitle: 'O que Din a Nosa Xente',
+    ambienceTitle: 'Escolle o teu Espazo e a túa Luz',
+    ambienceSubtitle:
+      'Da luz natural baixo os soportais de pedra ao ambiente cálido de noite no salón e na barra.',
+    lunchTime: 'Mediodía · 13:30h',
+    dinnerTime: 'Noite · 21:30h',
+    selectForBooking: 'Solicitar Mesa nesta Zona',
+    waBlockEyebrow: 'WhatsApp Directo · Sen Comisións',
+    waBlockTitle: 'Reserva a túa mesa en Terraza ou Salón / Consulta para grupos por WhatsApp',
+    waBlockSubtitle:
+      'Escolle zona, número de persoas e quenda horaria. Envía a túa solicitude nun toque directamente por WhatsApp.',
+    waZoneLabel: 'Zona preferida',
+    waGroupsChip: 'Grupos',
+    waGuestsLabel: 'Persoas',
+    waShiftLabel: 'Quenda / Hora',
+    waNameLabel: 'O teu nome',
+    waNamePlaceholder: 'Ex. Laura Pérez',
+    waSendDirectBtn: 'Enviar Solicitude por WhatsApp',
+    waOpenCalendarBtn: 'Escoller data e notas',
+    waMsgIntro: 'Ola',
+    waMsgBody: 'gustaríame reservar / consultar dispoñibilidade:',
+    waMsgZone: 'Zona',
+    waMsgGuests: 'Persoas',
+    waMsgShift: 'Quenda',
+    waMsgName: 'Nome',
+    waMsgPending: 'Por confirmar',
+    reviewsTitle: 'O que Di a Nosa Xente',
     verifiedVisit: 'Opinión Verificada en Google',
     seeAllGoogleReviews: 'Ver todas as opinións en Google Maps',
     whereToFindUs: 'Onde Atoparnos',
@@ -135,14 +253,16 @@ const I18N = {
     today: '(Hoxe)',
     closedShift: 'Pechado por descanso',
     wifiCourtesy: 'WiFi Clientes no Local',
+    wifiNetwork: 'Rede',
+    wifiPass: 'Contrasinal',
     faqsTitle: 'Preguntas Frecuentes',
     digitalMenuTitle: 'Carta Fixa Dixital · Transparencia Total',
     searchPlaceholder: 'Buscar cervexa, viño, ración ou alérxeno...',
     allCategories: 'Todos',
     marketPriceTag: '🌊 Prezo segundo lonxa',
-    openNowKitchen: '🟢 Aberto agora · Cociña ata',
-    openNow: '🟢 Aberto agora',
-    closedNow: '🔴 Pechado agora',
+    openNowKitchen: 'Aberto agora · Cociña ata',
+    openNow: 'Aberto agora',
+    closedNow: 'Pechado agora',
     allergensDeclared: 'Alérxenos Declarados (Regulamento UE 1169/2011):',
     closeDetail: 'Pechar Ficha',
     vatIncludedNote: 'Prezos con IVE incluído. Tapa de cortesía con cada consumición.',
@@ -150,7 +270,7 @@ const I18N = {
     faqs: [
       {
         q: '1. Cómpre reservar para tomar canas, viños ou picar algo?',
-        a: 'Non é necesario reservar para vir de canas, vermú ou tapeo en barra e terraza; funcionamos por rotación directa. Se sodes un grupo grande para racións, podedes avisarnos por WhatsApp nun toque.',
+        a: 'Non é necesario reservar para vir de canas, vermú ou tapeo en barra e terraza; funcionamos por rotación directa. Se sodes un grupo grande para racións no salón ou terraza, podedes avisarnos por WhatsApp nun toque.',
       },
       {
         q: '2. Todas as consumicións inclúen tapa de cortesía?',
@@ -158,35 +278,58 @@ const I18N = {
       },
       {
         q: '3. Como podo consultar os 14 alérxenos e todas as variantes de prezos?',
-        a: 'Ao premer en «Ver Carta Completa con Prezos» tes a desagregación íntegra de prezos por cana, copa, xarra, media ración ou ración completa, xunto cos 14 alérxenos.',
+        a: 'Ao premer en «Ver Carta e Prezos» tes a desagregación íntegra de prezos por cana, copa, xarra, media ración ou ración completa, xunto cos 14 alérxenos.',
       },
     ],
   },
   en: {
-    menuAndPrices: 'Menu & Prices',
-    spaces: 'Spaces',
+    menuAndPrices: 'View Menu & Prices',
+    navMenuShort: 'Menu & Prices',
+    spaces: 'Venue Spaces',
+    navSpacesShort: 'Spaces',
+    selectedZoneLabel: 'Selected Area',
     scheduleAndLocation: 'Hours & Location',
     reviews: 'Reviews',
     bookTable: 'Book Table',
-    groupsAndBooking: 'Groups / Booking',
+    groupsAndBooking: 'Terrace / Groups',
     requestTable: 'Request Table',
-    howToGet: 'Directions',
+    howToGet: 'Get Directions',
     call: 'Call',
     signatureDishBadge: 'House Essentials',
-    signatureSectionTitleBrewery: 'Cellar Draft Beer, Galician Vermouth & Hot Tapas',
+    signatureSectionTitleBrewery: 'Cellar Draft Beer, Wines & Hot Tapas',
     signatureSectionSubtitleBrewery:
-      'Four essentials that define our bar on Rúa do Curro. Tap any item to explore serving sizes and full transparent prices.',
-    openFullMenuBtn: 'View Full Menu with Prices',
+      'Four pillars that define our bar on Rúa do Curro. Tap any item to browse serving formats and transparent pricing in the full menu.',
+    openFullMenuBtn: 'View Menu & Prices',
     openQrMenuPageBtn: 'Open Full Menu Page (/p/bar-jaratusas)',
     availableFormats: 'Serving formats',
     seePricesInMenu: 'See prices & sizes →',
     sustainableFishing: 'Local produce & cellar draft tanks',
-    fairPricing: 'Transparent pricing with tax included',
-    ambienceTitle: 'Choose Your Spot & Time of Day',
-    ambienceSubtitle: 'From midday vermouth beneath the stone arcades to evening draft beers and tapas.',
-    lunchTime: 'Vermouth Hour · 1:30 PM',
-    dinnerTime: 'Evening & Tapas · 9:30 PM',
-    selectForBooking: 'Request Group Table in This Area',
+    fairPricing: 'Transparent pricing with VAT included',
+    ambienceTitle: 'Choose Your Space & Lighting',
+    ambienceSubtitle:
+      'From natural daylight under the stone arcades to warm evening atmosphere in our dining room and bar.',
+    lunchTime: 'Midday · 13:30h',
+    dinnerTime: 'Night · 21:30h',
+    selectForBooking: 'Request Table in This Area',
+    waBlockEyebrow: 'Direct WhatsApp · Zero Fees',
+    waBlockTitle: 'Book your table on the Terrace or Dining Room / Group inquiries via WhatsApp',
+    waBlockSubtitle:
+      'Pick your preferred area, party size and shift. Send your inquiry directly via WhatsApp in one tap.',
+    waZoneLabel: 'Preferred area',
+    waGroupsChip: 'Groups',
+    waGuestsLabel: 'Guests',
+    waShiftLabel: 'Shift / Time',
+    waNameLabel: 'Your name',
+    waNamePlaceholder: 'E.g. Laura Pérez',
+    waSendDirectBtn: 'Send Request via WhatsApp',
+    waOpenCalendarBtn: 'Pick date & notes',
+    waMsgIntro: 'Hi',
+    waMsgBody: 'I would like to book / check availability:',
+    waMsgZone: 'Area',
+    waMsgGuests: 'Guests',
+    waMsgShift: 'Time',
+    waMsgName: 'Name',
+    waMsgPending: 'To be confirmed',
     reviewsTitle: 'What Our Guests Say',
     verifiedVisit: 'Verified Google Review',
     seeAllGoogleReviews: 'See all reviews on Google Maps',
@@ -195,22 +338,24 @@ const I18N = {
     today: '(Today)',
     closedShift: 'Closed for rest',
     wifiCourtesy: 'Guest WiFi in Bar',
+    wifiNetwork: 'Network',
+    wifiPass: 'Password',
     faqsTitle: 'Frequently Asked Questions',
     digitalMenuTitle: 'Official Digital Menu · Full Price Transparency',
     searchPlaceholder: 'Search beer, wine, tapa or allergen...',
     allCategories: 'All',
     marketPriceTag: '🌊 Daily market price',
-    openNowKitchen: '🟢 Open now · Kitchen until',
-    openNow: '🟢 Open now',
-    closedNow: '🔴 Closed now',
+    openNowKitchen: 'Open now · Kitchen until',
+    openNow: 'Open now',
+    closedNow: 'Closed now',
     allergensDeclared: 'Declared Allergens (EU Regulation 1169/2011):',
     closeDetail: 'Close Item',
-    vatIncludedNote: 'Prices include tax (VAT). Complimentary house tapa with every drink.',
+    vatIncludedNote: 'Prices include VAT. Complimentary house tapa with every drink.',
     noDishesFound: 'No items found matching your search.',
     faqs: [
       {
-        q: '1. Do I need a reservation for beers, vermouth or tapas?',
-        a: 'Walk-ins are always welcome at our bar and covered stone terrace. If you are coming with a larger group for sharing plates, you can message us via WhatsApp in one tap.',
+        q: '1. Do I need a reservation for beers, wine or tapas?',
+        a: 'Walk-ins are always welcome at our bar and covered stone terrace. If you are coming with a larger group for sharing plates in the dining room or terrace, message us via WhatsApp in one tap.',
       },
       {
         q: '2. Does every drink come with a complimentary tapa?',
@@ -218,7 +363,7 @@ const I18N = {
       },
       {
         q: '3. Where can I check all serving sizes, prices and the 14 allergens?',
-        a: 'Tap "View Full Menu with Prices" to inspect every serving size (small draft, pint glass, frosted mug, half or full portion) and the 14 official EU allergens.',
+        a: 'Tap "View Menu & Prices" to inspect every serving size (small draft, pint glass, frosted mug, half or full portion) and the 14 official EU allergens.',
       },
     ],
   },
@@ -331,7 +476,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
       ? tenant.historyText_en || tenant.historyText
       : tenant.historyText
 
-  // 2. Radar de Visitas y Conversión
+  // 2. Telemetría de Conversión
   const trackConversion = (
     eventName: 'pageview' | 'open_menu' | 'click_reservation' | 'click_maps' | 'click_call'
   ) => {
@@ -348,15 +493,46 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
     trackConversion('pageview')
   }, [tenant.slug])
 
-  // 3. Estados de Modales y Drawers
+  // 3. Estados de Modales, Drawers y Conversión WhatsApp Inline
   const [isReservationOpen, setIsReservationOpen] = useState(false)
   const [selectedZone, setSelectedZone] = useState<string>(
-    tenant.ambiences[0]?.name || 'Terraza & Soportales'
+    tenant.ambiences[0]?.name || 'Terraza Exterior'
   )
+  const [inlineGuests, setInlineGuests] = useState<number>(4)
+  const [inlineShift, setInlineShift] = useState<'13:30h' | '20:30h' | '22:00h'>('20:30h')
+  const [inlineName, setInlineName] = useState<string>('')
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false)
   const [selectedDishDetail, setSelectedDishDetail] = useState<DishShowcaseItem | null>(null)
 
-  // 4. Estados del Bloque de Ambientes y Luz (13:30h vs 21:30h)
+  // Mantener selectedZone alineado con el idioma activo cuando corresponde a un espacio
+  useEffect(() => {
+    const matched = tenant.ambiences.find(
+      (a) => a.name === selectedZone || a.name_gl === selectedZone || a.name_en === selectedZone
+    )
+    if (matched) {
+      setSelectedZone(getAmbName(matched))
+    } else if (selectedZone === 'Grupos' || selectedZone === 'Groups') {
+      setSelectedZone(t.waGroupsChip)
+    }
+  }, [lang, tenant.ambiences])
+
+  // Cierre de modales de carta con Escape
+  useEffect(() => {
+    if (!isMenuModalOpen && !selectedDishDetail) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (selectedDishDetail) {
+          setSelectedDishDetail(null)
+        } else {
+          setIsMenuModalOpen(false)
+        }
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isMenuModalOpen, selectedDishDetail])
+
+  // 4. Estados del Selector de Espacios y Luz (13:30h vs 21:30h)
   const [lightMode, setLightMode] = useState<'day' | 'night'>('day')
   const [activeAmbienceId, setActiveAmbienceId] = useState<string>(
     tenant.ambiences[0]?.id || ''
@@ -423,6 +599,30 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
     trackConversion('click_reservation')
   }
 
+  const inlineZoneChoices = useMemo(() => {
+    return [
+      ...tenant.ambiences.map((amb) => ({
+        id: amb.id,
+        label: getAmbName(amb),
+      })),
+      { id: 'grupos', label: t.waGroupsChip },
+    ]
+  }, [tenant.ambiences, lang, t.waGroupsChip])
+
+  const cleanWhatsappNumber = tenant.whatsappNumber.replace(/\D/g, '')
+
+  const inlineWhatsAppHref = useMemo(() => {
+    const guestLabel = inlineGuests === 10 ? '+10' : `${inlineGuests}`
+    const lines = [
+      `${t.waMsgIntro} ${tenant.name}, ${t.waMsgBody}`,
+      `• ${t.waMsgZone}: ${selectedZone}`,
+      `• ${t.waMsgGuests}: ${guestLabel}`,
+      `• ${t.waMsgShift}: ${inlineShift}`,
+      `• ${t.waMsgName}: ${inlineName.trim() || t.waMsgPending}`,
+    ].join('\n')
+    return `https://wa.me/${cleanWhatsappNumber}?text=${encodeURIComponent(lines)}`
+  }, [cleanWhatsappNumber, tenant.name, selectedZone, inlineGuests, inlineShift, inlineName, t])
+
   const DAY_NAMES =
     lang === 'gl'
       ? ['Domingo', 'Luns', 'Martes', 'Mércores', 'Xoves', 'Venres', 'Sábado']
@@ -432,29 +632,37 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
 
   const todayDayOfWeek = new Date().getDay()
 
+  const spacesGridCols =
+    tenant.ambiences.length === 3
+      ? 'md:grid-cols-3 gap-7 lg:gap-8'
+      : 'md:grid-cols-2 gap-10'
+
   return (
     <div
-      className={`min-h-screen antialiased pb-24 md:pb-0 ${
+      className={`min-h-screen overflow-x-clip antialiased pb-24 md:pb-0 ${
         isUrbanBrewery
           ? 'bg-[#0A0B0E] text-[#F6F3EC] selection:bg-[#F59E0B] selection:text-[#0A0B0E]'
           : 'bg-[#F6F3EC] text-[#141311] selection:bg-[#C85A32] selection:text-[#F6F3EC]'
       }`}
-      style={{ fontFamily: "'Sora', 'Instrument Sans', sans-serif" }}
+      style={{ fontFamily: "'DM Sans', 'Inter', 'Sora', sans-serif" }}
     >
-      {/* Carga de Fuentes del Arquetipo 1 (Anton + Sora) y Editorial */}
+      {/* Carga de Fuentes de Agencia (Anton + Sora + DM Sans + Inter) y Editorial */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Sora:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap');
       `}</style>
 
       {/* ==============================================================================
-         CABECERA NAVEGACIÓN FLOTANTE (LOGO CIRCULAR OBJECT-CONTAIN + SELECTOR IDIOMA)
+         CABECERA NAVEGACIÓN FLOTANTE (LOGO CIRCULAR #EBE8E1 + LIVE BADGE + ES|GAL|EN)
          ============================================================================== */}
       <header className="fixed top-0 inset-x-0 z-40 bg-[#0A0B0E]/90 backdrop-blur-md border-b border-white/10 transition-all">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-18 py-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href={`/web/${tenant.slug}`} className="flex items-center gap-2.5 group min-w-0">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 sm:h-[72px] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <Link
+              href={`/web/${tenant.slug}`}
+              className="flex items-center gap-2 sm:gap-2.5 group min-w-0"
+            >
               {tenant.logoUrl && (
-                <div className="relative w-10 h-10 rounded-full bg-[#0A0B0E] p-0.5 ring-1 ring-[#F59E0B]/40 flex-shrink-0 flex items-center justify-center">
+                <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#EBE8E1] overflow-hidden p-0.5 ring-1 ring-[#F59E0B]/50 flex-shrink-0 flex items-center justify-center shadow-sm">
                   <Image
                     src={tenant.logoUrl}
                     alt={tenant.name}
@@ -465,48 +673,39 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                 </div>
               )}
               <span
-                className={`text-lg sm:text-2xl tracking-tight font-bold text-[#F6F3EC] truncate transition ${
+                className={`text-[13px] sm:text-xl lg:text-2xl tracking-tight font-bold text-[#F6F3EC] truncate transition ${
                   isUrbanBrewery
                     ? 'uppercase group-hover:text-[#F59E0B]'
                     : 'font-serif group-hover:text-[#C85A32]'
                 }`}
-                style={isUrbanBrewery ? { fontFamily: "'Anton', 'Sora', sans-serif", letterSpacing: '0.02em' } : undefined}
+                style={
+                  isUrbanBrewery
+                    ? { fontFamily: "'Anton', 'Sora', sans-serif", letterSpacing: '0.02em' }
+                    : undefined
+                }
               >
                 {tenant.name}
               </span>
-              <span
-                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                  isUrbanBrewery ? 'bg-[#F59E0B]' : 'bg-[#C85A32]'
-                }`}
-              />
             </Link>
 
-            {/* Semáforo de Horario Inteligente en Vivo */}
-            <div className="hidden lg:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 text-xs font-medium">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  openingStatus.isOpen
-                    ? 'bg-[#22C55E] animate-pulse shadow-[0_0_8px_#22C55E]'
-                    : 'bg-[#EF4444]'
-                }`}
-              />
-              <span className="text-white/90">{trafficLightText}</span>
-            </div>
+            {/* Semáforo de Horario Inteligente en Vivo (Visible en móvil y escritorio) */}
+            <LiveOpeningBadge schedules={tenant.openingHours} lang={lang} />
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-5">
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {/* Selector Manual de Idioma (ES | GAL | EN) */}
             <div
               role="group"
               aria-label="Selector de idioma"
-              className="inline-flex p-1 rounded-full bg-white/5 text-[11px] font-bold text-white/70"
+              className="inline-flex p-0.5 sm:p-1 rounded-full bg-white/[0.06] border border-white/10 text-[10px] sm:text-[11px] font-bold text-white/75 flex-shrink-0"
+              style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}
             >
               {(['es', 'gl', 'en'] as WebLanguage[]).map((code) => (
                 <button
                   key={code}
                   type="button"
                   onClick={() => handleLangChange(code)}
-                  className={`px-2.5 py-1 rounded-full transition-all uppercase ${
+                  className={`px-1.5 sm:px-2.5 py-1 rounded-full transition-all uppercase ${
                     lang === code
                       ? isUrbanBrewery
                         ? 'bg-[#F59E0B] text-[#0A0B0E] shadow-sm'
@@ -519,29 +718,27 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
               ))}
             </div>
 
-            <nav className="flex items-center gap-3 sm:gap-5">
-              <button
-                onClick={() => {
-                  setIsMenuModalOpen(true)
-                  trackConversion('open_menu')
-                }}
-                className={`text-xs uppercase tracking-[0.16em] font-semibold text-[#F6F3EC]/85 transition py-2 hidden sm:inline-block ${
-                  isUrbanBrewery ? 'hover:text-[#F59E0B]' : 'hover:text-[#C85A32]'
-                }`}
-              >
-                {t.menuAndPrices}
-              </button>
+            <nav className="hidden md:flex items-center gap-4 lg:gap-5">
               {tenant.ambiences.length > 0 && (
                 <a
                   href="#ambientes"
-                  className={`hidden md:inline-block text-xs uppercase tracking-[0.16em] font-semibold text-[#F6F3EC]/80 transition py-2 ${
+                  className={`hidden lg:inline-block text-xs uppercase tracking-[0.14em] font-semibold text-[#F6F3EC]/80 transition py-2 ${
                     isUrbanBrewery ? 'hover:text-[#F59E0B]' : 'hover:text-[#C85A32]'
                   }`}
                 >
-                  {t.spaces}
+                  {t.navSpacesShort}
                 </a>
               )}
+              <a
+                href="#reserva-whatsapp"
+                className={`hidden lg:inline-block text-xs uppercase tracking-[0.14em] font-semibold text-[#F6F3EC]/80 transition py-2 ${
+                  isUrbanBrewery ? 'hover:text-[#F59E0B]' : 'hover:text-[#C85A32]'
+                }`}
+              >
+                {t.groupsAndBooking}
+              </a>
               <button
+                type="button"
                 onClick={() => {
                   if (isUrbanBrewery) {
                     setIsMenuModalOpen(true)
@@ -551,13 +748,13 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                     trackConversion('click_reservation')
                   }
                 }}
-                className={`hidden sm:inline-flex px-4 sm:px-5 py-2.5 rounded-full text-xs font-extrabold tracking-wider uppercase transition shadow-md ${
+                className={`px-4 lg:px-5 py-2.5 rounded-full text-xs font-extrabold tracking-wider uppercase transition-all ease-[cubic-bezier(0.22,1,0.36,1)] shadow-md whitespace-nowrap ${
                   isUrbanBrewery
                     ? 'bg-[#F59E0B] text-[#0A0B0E] hover:bg-[#D97706] shadow-[#F59E0B]/20'
                     : 'bg-[#C85A32] text-white hover:bg-[#b04d28] shadow-[#C85A32]/25'
                 }`}
               >
-                {isUrbanBrewery ? t.menuAndPrices : t.bookTable}
+                {isUrbanBrewery ? t.navMenuShort : t.bookTable}
               </button>
             </nav>
           </div>
@@ -573,7 +770,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
       )}
 
       {/* ==============================================================================
-         BLOQUE 1: HERO CINEMÁTICO 60FPS CON PROTECCIÓN LCP Y LOGO CIRCULAR ÍNTEGRO
+         HERO CINEMÁTICO (CONTENIDO ABOVE-THE-FOLD SIEMPRE INMEDIATO)
          ============================================================================== */}
       <HeroCinematic
         restaurantName={tenant.name}
@@ -589,7 +786,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
         videoWebmUrl={tenant.heroVideoWebm}
         videoMp4Url={tenant.heroVideoMp4}
         rating={tenant.googleMapsRating || 4.8}
-        reviewCount={tenant.googleMapsReviewCount || 280}
+        reviewCount={tenant.googleMapsReviewCount || 342}
         lang={lang}
         onOpenReservation={() => {
           setIsReservationOpen(true)
@@ -602,152 +799,162 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
       />
 
       {/* ==============================================================================
-         BLOQUE 2: PORTADA ASPIRACIONAL — LOS 4 PRODUCTOS INSIGNIA (0 PRECIOS EN HOME)
-         Aplicación estricta de DEC-39 y Filtro Anti-Slop (Sin cajas pesadas ni bordes gruesos)
+         PORTADA ASPIRACIONAL — LOS 4 PILARES DE LA CASA (0 PRECIOS EN HOME · DEC-39)
          ============================================================================== */}
       {isUrbanBrewery ? (
-        <section className="relative bg-[#0A0B0E] text-[#F6F3EC] py-24 sm:py-32 px-6 md:px-12 overflow-hidden">
+        <section className="relative bg-[#0A0B0E] text-[#F6F3EC] py-24 sm:py-32 px-6 md:px-12 overflow-x-clip">
           {/* Halo cálido ámbar de fondo */}
           <div
             aria-hidden="true"
-            className="absolute top-24 left-1/2 -translate-x-1/2 w-[720px] h-[360px] rounded-full bg-[#F59E0B]/8 blur-[140px] pointer-events-none"
+            className="absolute top-24 left-1/2 -translate-x-1/2 w-[720px] h-[360px] rounded-full bg-[#F59E0B]/[0.08] blur-[140px] pointer-events-none"
           />
 
           <div className="relative z-10 max-w-6xl mx-auto">
             {/* Encabezado Editorial Cervecería */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-20">
-              <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 mb-3">
-                  <Beer className="w-4 h-4 text-[#F59E0B]" />
-                  <span className="text-xs uppercase tracking-[0.24em] text-[#F59E0B] font-bold">
-                    {t.signatureDishBadge}
-                  </span>
-                </div>
-                <h2
-                  className="text-3xl sm:text-5xl md:text-6xl uppercase text-white leading-[1.04] tracking-tight"
-                  style={{ fontFamily: "'Anton', 'Sora', sans-serif" }}
-                >
-                  {t.signatureSectionTitleBrewery}
-                </h2>
-                <p className="mt-4 text-white/70 text-sm sm:text-base leading-relaxed">
-                  {t.signatureSectionSubtitleBrewery}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
-                <button
-                  onClick={() => {
-                    setIsMenuModalOpen(true)
-                    trackConversion('open_menu')
-                  }}
-                  className="px-7 py-4 rounded-full bg-[#F59E0B] hover:bg-[#D97706] text-[#0A0B0E] text-xs sm:text-sm font-extrabold uppercase tracking-wider transition-all shadow-xl shadow-[#F59E0B]/20 flex items-center gap-2"
-                >
-                  <span>{t.openFullMenuBtn}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Composición Orgánica de los 4 Productos Insignia (Filtro Anti-Slop: 0 bordes duros, 0 precios en Home) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-14 lg:gap-16">
-              {signatureDishes.map((dish, idx) => (
-                <article
-                  key={dish.id}
-                  onClick={() => {
-                    setIsMenuModalOpen(true)
-                    trackConversion('open_menu')
-                  }}
-                  className={`group cursor-pointer flex flex-col sm:flex-row items-center gap-7 sm:gap-8 ${
-                    idx % 2 === 1 ? 'md:mt-12' : ''
-                  }`}
-                >
-                  {/* Fotografía Circular Orgánica con Sombra de Contacto Realista */}
-                  <div className="relative w-52 h-52 sm:w-56 sm:h-56 flex-shrink-0">
-                    <div
-                      aria-hidden="true"
-                      className="absolute inset-4 rounded-full bg-[#F59E0B]/20 blur-2xl transform translate-y-6 scale-90 group-hover:bg-[#F59E0B]/35 transition-all duration-500 pointer-events-none"
-                    />
-                    <div className="relative w-full h-full rounded-full overflow-hidden shadow-[0_28px_50px_rgba(0,0,0,0.85)] transition-transform duration-700 group-hover:scale-[1.04]">
-                      <Image
-                        src={dish.image}
-                        alt={getDishName(dish)}
-                        fill
-                        sizes="(max-width: 640px) 220px, 240px"
-                        className="object-cover"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Información Sensorial Sin Precio en Portada */}
-                  <div className="flex-1 text-center sm:text-left space-y-3">
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-[#F59E0B] font-bold block">
-                      {getDishCat(dish)}
+            <ScrollReveal>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 sm:mb-20">
+                <div className="max-w-2xl">
+                  <div className="inline-flex items-center gap-2 mb-3">
+                    <Beer className="w-4 h-4 text-[#F59E0B]" />
+                    <span className="text-xs uppercase tracking-[0.24em] text-[#F59E0B] font-bold">
+                      {t.signatureDishBadge}
                     </span>
-                    <h3
-                      className="text-2xl sm:text-3xl text-white uppercase tracking-tight group-hover:text-[#F59E0B] transition-colors"
-                      style={{ fontFamily: "'Anton', 'Sora', sans-serif" }}
-                    >
-                      {getDishName(dish)}
-                    </h3>
-                    <p className="text-sm text-white/70 leading-relaxed">
-                      {getDishDesc(dish)}
-                    </p>
-
-                    {/* Formatos de servicio disponibles (Sin mostrar importe en portada) */}
-                    {dish.variants && dish.variants.length > 0 && (
-                      <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                        {dish.variants.map((v, vIdx) => (
-                          <span
-                            key={vIdx}
-                            className="text-[11px] text-white/80 bg-white/[0.06] px-3 py-1 rounded-full font-medium"
-                          >
-                            {lang === 'gl'
-                              ? v.name_gl || v.name
-                              : lang === 'en'
-                              ? v.name_en || v.name
-                              : v.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="pt-1">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#F59E0B] group-hover:translate-x-1 transition-transform">
-                        {t.seePricesInMenu}
-                      </span>
-                    </div>
                   </div>
-                </article>
+                  <h2
+                    className="text-3xl sm:text-5xl md:text-6xl uppercase text-white leading-[1.04] tracking-tight"
+                    style={{ fontFamily: "'Anton', 'Sora', sans-serif" }}
+                  >
+                    {t.signatureSectionTitleBrewery}
+                  </h2>
+                  <p className="mt-4 text-white/75 text-sm sm:text-base leading-relaxed">
+                    {t.signatureSectionSubtitleBrewery}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMenuModalOpen(true)
+                      trackConversion('open_menu')
+                    }}
+                    className="px-7 py-4 rounded-full bg-[#F59E0B] hover:bg-[#D97706] active:scale-[0.98] text-[#0A0B0E] text-xs sm:text-sm font-extrabold uppercase tracking-wider transition-all ease-[cubic-bezier(0.22,1,0.36,1)] shadow-xl shadow-[#F59E0B]/20 flex items-center gap-2"
+                  >
+                    <span>{t.openFullMenuBtn}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* Composición de los 4 Pilares de Portada (0 precios en Home) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16">
+              {signatureDishes.map((dish, idx) => (
+                <ScrollReveal key={dish.id} delayMs={idx * 70}>
+                  <article
+                    onClick={() => {
+                      setIsMenuModalOpen(true)
+                      trackConversion('open_menu')
+                    }}
+                    className={`group cursor-pointer flex flex-col sm:flex-row items-center gap-6 sm:gap-8 p-2 rounded-3xl transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.985] ${
+                      idx % 2 === 1 ? 'md:mt-10' : ''
+                    }`}
+                  >
+                    {/* Fotografía Circular Dark-Luxury con Halo Ámbar */}
+                    <div className="relative w-48 h-48 sm:w-52 sm:h-52 flex-shrink-0">
+                      <div
+                        aria-hidden="true"
+                        className="absolute inset-4 rounded-full bg-[#F59E0B]/20 blur-2xl transform translate-y-5 scale-90 group-hover:bg-[#F59E0B]/40 group-hover:scale-100 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] pointer-events-none"
+                      />
+                      <div className="relative w-full h-full rounded-full overflow-hidden ring-1 ring-white/15 group-hover:ring-[#F59E0B]/60 shadow-[0_24px_48px_rgba(0,0,0,0.85)] transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04]">
+                        <Image
+                          src={dish.image}
+                          alt={getDishName(dish)}
+                          fill
+                          sizes="(max-width: 640px) 200px, 220px"
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Información Sensorial Sin Precio en Portada */}
+                    <div className="flex-1 text-center sm:text-left space-y-3">
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-[#F59E0B] font-bold block">
+                        {getDishCat(dish)}
+                      </span>
+                      <h3
+                        className="text-2xl sm:text-3xl text-white uppercase tracking-tight group-hover:text-[#F59E0B] transition-colors"
+                        style={{ fontFamily: "'Anton', 'Sora', sans-serif" }}
+                      >
+                        {getDishName(dish)}
+                      </h3>
+                      <p className="text-sm text-white/75 leading-relaxed">
+                        {getDishDesc(dish)}
+                      </p>
+
+                      {/* Formatos disponibles (exclusivamente etiquetas sin €) */}
+                      {dish.variants && dish.variants.length > 0 && (
+                        <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                          {dish.variants.map((v, vIdx) => {
+                            const rawName =
+                              lang === 'gl'
+                                ? v.name_gl || v.name
+                                : lang === 'en'
+                                ? v.name_en || v.name
+                                : v.name
+                            const safeFormatLabel = rawName.replace(/\d+[.,]?\d*\s*€/g, '').trim()
+                            return (
+                              <span
+                                key={vIdx}
+                                className="text-[11px] text-white/85 bg-white/[0.06] border border-white/10 px-3 py-1 rounded-full font-medium"
+                              >
+                                {safeFormatLabel}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      <div className="pt-1">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#F59E0B] group-hover:translate-x-1 transition-transform ease-[cubic-bezier(0.22,1,0.36,1)]">
+                          {t.seePricesInMenu}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                </ScrollReveal>
               ))}
             </div>
 
             {/* Barra de Confianza y Enlace Directo a la Carta Viva (/p/bar-jaratusas) */}
-            <div className="mt-20 pt-10 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-white/65">
-              <div className="flex flex-wrap items-center justify-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Flame className="w-4 h-4 text-[#F59E0B]" />
-                  <span>{t.sustainableFishing}</span>
+            <ScrollReveal delayMs={120}>
+              <div className="mt-20 pt-10 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-white/70">
+                <div className="flex flex-wrap items-center justify-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-[#F59E0B]" />
+                    <span>{t.sustainableFishing}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>{t.fairPricing}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>{t.fairPricing}</span>
-                </div>
-              </div>
 
-              {tenant.qrMenuUrl && (
-                <Link
-                  href={tenant.qrMenuUrl}
-                  className="inline-flex items-center gap-2 text-xs font-bold text-[#F59E0B] hover:underline"
-                >
-                  <span>{t.openQrMenuPageBtn}</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </Link>
-              )}
-            </div>
+                {tenant.qrMenuUrl && (
+                  <Link
+                    href={tenant.qrMenuUrl}
+                    className="inline-flex items-center gap-2 text-xs font-bold text-[#F59E0B] hover:underline"
+                  >
+                    <span>{t.openQrMenuPageBtn}</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                )}
+              </div>
+            </ScrollReveal>
           </div>
         </section>
       ) : (
-        <section className="relative bg-[#F6F3EC] text-[#141311] py-24 sm:py-32 px-6 md:px-12 overflow-hidden">
+        <section className="relative bg-[#F6F3EC] text-[#141311] py-24 sm:py-32 px-6 md:px-12 overflow-x-clip">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             <div className="lg:col-span-7 flex justify-center">
               <div className="relative w-[280px] h-[280px] sm:w-[380px] sm:h-[380px] md:w-[440px] md:h-[440px]">
@@ -787,6 +994,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
 
               <div className="pt-2 flex flex-col sm:flex-row gap-4">
                 <button
+                  type="button"
                   onClick={() => {
                     setIsMenuModalOpen(true)
                     trackConversion('open_menu')
@@ -814,9 +1022,10 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
       )}
 
       {/* ==============================================================================
-         BLOQUE 3: LA ESENCIA / EL LOCAL (SOPORTALES HISTÓRICOS & CANTERÍA DE PIEDRA)
+         RECORRIDO HORIZONTAL SCROLLYTELLING (60FPS STICKY VIEWPORT)
          ============================================================================== */}
       <CanvasScrollytelling
+        panels={tenant.scrollytellingPanels}
         dishesFallback={tenant.dishes}
         restaurantName={tenant.name}
         archetype={tenant.archetype}
@@ -828,7 +1037,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
       />
 
       {/* ==============================================================================
-         BLOQUE 4: SELECTOR DE ESPACIO Y LUZ AMBIENTAL (13:30h VERMÚ vs 21:30h NOCHE)
+         SELECTOR DE ESPACIO Y LUZ (13:30h MEDIODÍA vs 21:30h NOCHE)
          ============================================================================== */}
       {tenant.ambiences.length > 0 && (
         <section
@@ -840,180 +1049,237 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
           }`}
         >
           <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
-              <div>
-                <div className="inline-flex items-center gap-2 mb-2">
-                  <Compass
-                    className={`w-4 h-4 ${isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'}`}
-                  />
-                  <span
-                    className={`text-xs uppercase tracking-[0.26em] font-bold ${
-                      isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'
+            <ScrollReveal>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
+                <div>
+                  <div className="inline-flex items-center gap-2 mb-2">
+                    <Compass
+                      className={`w-4 h-4 ${isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'}`}
+                    />
+                    <span
+                      className={`text-xs uppercase tracking-[0.26em] font-bold ${
+                        isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'
+                      }`}
+                    >
+                      {t.spaces}
+                    </span>
+                  </div>
+                  <h2
+                    className={`text-3xl sm:text-5xl tracking-tight ${
+                      isUrbanBrewery ? 'uppercase font-black text-white' : 'font-serif font-bold'
+                    }`}
+                    style={
+                      isUrbanBrewery ? { fontFamily: "'Anton', 'Sora', sans-serif" } : undefined
+                    }
+                  >
+                    {t.ambienceTitle}
+                  </h2>
+                  <p
+                    className={`text-sm sm:text-base mt-2 max-w-xl ${
+                      isUrbanBrewery ? 'text-white/75' : 'text-[#141311]/70'
                     }`}
                   >
-                    {t.spaces}
-                  </span>
+                    {t.ambienceSubtitle}
+                  </p>
                 </div>
-                <h2
-                  className={`text-3xl sm:text-5xl tracking-tight ${
-                    isUrbanBrewery ? 'uppercase font-black text-white' : 'font-serif font-bold'
-                  }`}
-                  style={isUrbanBrewery ? { fontFamily: "'Anton', 'Sora', sans-serif" } : undefined}
-                >
-                  {t.ambienceTitle}
-                </h2>
-                <p
-                  className={`text-sm sm:text-base mt-2 max-w-xl ${
-                    isUrbanBrewery ? 'text-white/70' : 'text-[#141311]/70'
+
+                {/* Switch Interactivo 13:30h vs 21:30h */}
+                <div
+                  className={`inline-flex p-1.5 rounded-full self-start md:self-auto border ${
+                    isUrbanBrewery
+                      ? 'bg-white/5 border-white/10'
+                      : 'bg-[#141311]/5 border-[#141311]/10'
                   }`}
                 >
-                  {t.ambienceSubtitle}
-                </p>
+                  <button
+                    type="button"
+                    onClick={() => setLightMode('day')}
+                    className={`px-4 sm:px-5 py-2.5 rounded-full text-xs font-bold tabular-nums flex items-center gap-2 transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                      lightMode === 'day'
+                        ? isUrbanBrewery
+                          ? 'bg-[#F59E0B] text-[#0A0B0E] shadow-md'
+                          : 'bg-[#141311] text-[#F6F3EC] shadow-md'
+                        : isUrbanBrewery
+                        ? 'text-white/75 hover:text-white'
+                        : 'text-[#141311]/70 hover:text-[#141311]'
+                    }`}
+                  >
+                    <Sun className="w-4 h-4 flex-shrink-0" />
+                    <span>{t.lunchTime}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLightMode('night')}
+                    className={`px-4 sm:px-5 py-2.5 rounded-full text-xs font-bold tabular-nums flex items-center gap-2 transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                      lightMode === 'night'
+                        ? isUrbanBrewery
+                          ? 'bg-[#F59E0B] text-[#0A0B0E] shadow-md'
+                          : 'bg-[#141311] text-[#F6F3EC] shadow-md'
+                        : isUrbanBrewery
+                        ? 'text-white/75 hover:text-white'
+                        : 'text-[#141311]/70 hover:text-[#141311]'
+                    }`}
+                  >
+                    <Moon className="w-4 h-4 flex-shrink-0" />
+                    <span>{t.dinnerTime}</span>
+                  </button>
+                </div>
               </div>
+            </ScrollReveal>
 
-              {/* Switch Interactivo 13:30h vs 21:30h */}
-              <div
-                className={`inline-flex p-1.5 rounded-full self-start md:self-auto ${
-                  isUrbanBrewery ? 'bg-white/5' : 'bg-[#141311]/5 border border-[#141311]/10'
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => setLightMode('day')}
-                  className={`px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all ${
-                    lightMode === 'day'
-                      ? isUrbanBrewery
-                        ? 'bg-[#F59E0B] text-[#0A0B0E] shadow-md'
-                        : 'bg-[#141311] text-[#F6F3EC] shadow-md'
-                      : isUrbanBrewery
-                      ? 'text-white/70 hover:text-white'
-                      : 'text-[#141311]/70 hover:text-[#141311]'
-                  }`}
-                >
-                  <Sun className="w-4 h-4" />
-                  <span>{t.lunchTime}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setLightMode('night')}
-                  className={`px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all ${
-                    lightMode === 'night'
-                      ? isUrbanBrewery
-                        ? 'bg-[#F59E0B] text-[#0A0B0E] shadow-md'
-                        : 'bg-[#141311] text-[#F6F3EC] shadow-md'
-                      : isUrbanBrewery
-                      ? 'text-white/70 hover:text-white'
-                      : 'text-[#141311]/70 hover:text-[#141311]'
-                  }`}
-                >
-                  <Moon className="w-4 h-4" />
-                  <span>{t.dinnerTime}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Grid de Espacios (Filtro Anti-Slop: sin bordes pesados) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              {tenant.ambiences.map((amb) => {
+            {/* Grid Adaptativo (3 columnas cuando hay 3 espacios, 2 cuando hay 2) */}
+            <div className={`grid grid-cols-1 ${spacesGridCols}`}>
+              {tenant.ambiences.map((amb, idx) => {
                 const isSelected = activeAmbienceId === amb.id
-                const currentImage = lightMode === 'day' ? amb.imageDay : amb.imageNight
                 const lightingNote = getAmbLighting(amb, lightMode)
+                const localizedAmbName = getAmbName(amb)
 
                 return (
-                  <div
-                    key={amb.id}
-                    onClick={() => setActiveAmbienceId(amb.id)}
-                    className={`group cursor-pointer rounded-3xl overflow-hidden transition-all duration-300 flex flex-col justify-between ${
-                      isUrbanBrewery
-                        ? isSelected
-                          ? 'bg-[#151821] shadow-[0_28px_60px_rgba(0,0,0,0.65)] ring-1 ring-[#F59E0B]/50'
-                          : 'bg-[#12151C] hover:bg-[#161A22] shadow-xl'
-                        : isSelected
-                        ? 'bg-white border border-[#C85A32] shadow-2xl ring-2 ring-[#C85A32]/30'
-                        : 'bg-[#EDE8DE]/60 border border-[#141311]/10 hover:bg-white'
-                    }`}
-                  >
-                    <div>
-                      <div className="relative h-72 w-full overflow-hidden">
-                        <Image
-                          src={currentImage}
-                          alt={getAmbName(amb)}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                          className="object-cover group-hover:scale-105 transition-transform duration-700"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                        <div className="absolute top-4 left-4 bg-black/75 backdrop-blur-md text-[#F6F3EC] text-[10px] uppercase font-bold tracking-wider px-3.5 py-1.5 rounded-full">
-                          {getAmbBadge(amb)}
-                        </div>
-                      </div>
-
-                      <div className="p-7 space-y-3">
-                        <div>
-                          <h3
-                            className={`text-2xl font-bold transition ${
-                              isUrbanBrewery
-                                ? 'text-white group-hover:text-[#F59E0B]'
-                                : 'font-serif text-[#141311] group-hover:text-[#C85A32]'
+                  <ScrollReveal key={amb.id} delayMs={idx * 80} className="flex">
+                    <div
+                      onClick={() => {
+                        setActiveAmbienceId(amb.id)
+                        setSelectedZone(localizedAmbName)
+                      }}
+                      className={`group cursor-pointer rounded-3xl overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] flex flex-col justify-between w-full ${
+                        isUrbanBrewery
+                          ? isSelected
+                            ? 'bg-[#151821] shadow-[0_28px_60px_rgba(0,0,0,0.65)] ring-1 ring-[#F59E0B]/60'
+                            : 'bg-[#12151C] hover:bg-[#161A22] shadow-xl ring-1 ring-white/[0.06]'
+                          : isSelected
+                          ? 'bg-white border border-[#C85A32] shadow-2xl ring-2 ring-[#C85A32]/30'
+                          : 'bg-[#EDE8DE]/60 border border-[#141311]/10 hover:bg-white'
+                      }`}
+                    >
+                      <div>
+                        <div className="relative h-64 sm:h-72 w-full overflow-hidden bg-black/40">
+                          {/* Capa Día (13:30h) */}
+                          <Image
+                            src={amb.imageDay}
+                            alt={`${localizedAmbName} · ${t.lunchTime}`}
+                            fill
+                            sizes={
+                              tenant.ambiences.length === 3
+                                ? '(max-width: 768px) 100vw, 33vw'
+                                : '(max-width: 768px) 100vw, 50vw'
+                            }
+                            aria-hidden={lightMode !== 'day'}
+                            className={`object-cover group-hover:scale-105 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                              lightMode === 'day' ? 'opacity-100 z-[1]' : 'opacity-0 z-0'
                             }`}
-                          >
-                            {getAmbName(amb)}
-                          </h3>
-                          <span
-                            className={`text-xs font-medium ${
-                              isUrbanBrewery ? 'text-white/55' : 'text-[#141311]/60'
+                          />
+                          {/* Capa Noche (21:30h) */}
+                          <Image
+                            src={amb.imageNight}
+                            alt={`${localizedAmbName} · ${t.dinnerTime}`}
+                            fill
+                            sizes={
+                              tenant.ambiences.length === 3
+                                ? '(max-width: 768px) 100vw, 33vw'
+                                : '(max-width: 768px) 100vw, 50vw'
+                            }
+                            aria-hidden={lightMode !== 'night'}
+                            className={`object-cover group-hover:scale-105 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                              lightMode === 'night' ? 'opacity-100 z-[1]' : 'opacity-0 z-0'
                             }`}
-                          >
-                            {getAmbSubtitle(amb)}
-                          </span>
-                        </div>
-
-                        <p
-                          className={`text-sm leading-relaxed ${
-                            isUrbanBrewery ? 'text-white/75' : 'text-[#141311]/75'
-                          }`}
-                        >
-                          {getAmbDesc(amb)}
-                        </p>
-
-                        <div
-                          className={`p-3.5 rounded-2xl text-xs flex items-center gap-2.5 ${
-                            isUrbanBrewery
-                              ? 'bg-black/35 text-[#FBBF24]'
-                              : 'bg-[#F6F3EC] text-[#141311]/75'
-                          }`}
-                        >
-                          {lightMode === 'day' ? (
-                            <Sun className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                          ) : (
-                            <Moon className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                          />
+                          <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
+                          <div className="absolute top-4 left-4 z-[3] flex items-center gap-2">
+                            <span className="bg-black/75 backdrop-blur-md text-[#F6F3EC] text-[10px] uppercase font-bold tracking-wider px-3.5 py-1.5 rounded-full">
+                              {getAmbBadge(amb)}
+                            </span>
+                          </div>
+                          {isSelected && (
+                            <div className="absolute top-4 right-4 z-[3]">
+                              <span
+                                className={`text-[10px] uppercase font-extrabold tracking-wider px-3 py-1.5 rounded-full flex items-center gap-1 shadow-md ${
+                                  isUrbanBrewery
+                                    ? 'bg-[#F59E0B] text-[#0A0B0E]'
+                                    : 'bg-[#C85A32] text-white'
+                                }`}
+                              >
+                                <Check className="w-3 h-3" />
+                                <span>{t.selectedZoneLabel}</span>
+                              </span>
+                            </div>
                           )}
-                          <span>{lightingNote}</span>
+                        </div>
+
+                        <div className="p-6 sm:p-7 space-y-3">
+                          <div>
+                            <h3
+                              className={`text-2xl font-bold transition ${
+                                isUrbanBrewery
+                                  ? 'text-white group-hover:text-[#F59E0B] uppercase tracking-tight'
+                                  : 'font-serif text-[#141311] group-hover:text-[#C85A32]'
+                              }`}
+                              style={
+                                isUrbanBrewery
+                                  ? { fontFamily: "'Anton', 'Sora', sans-serif" }
+                                  : undefined
+                              }
+                            >
+                              {localizedAmbName}
+                            </h3>
+                            <span
+                              className={`text-xs font-medium ${
+                                isUrbanBrewery ? 'text-white/60' : 'text-[#141311]/60'
+                              }`}
+                            >
+                              {getAmbSubtitle(amb)}
+                            </span>
+                          </div>
+
+                          <p
+                            className={`text-sm leading-relaxed ${
+                              isUrbanBrewery ? 'text-white/75' : 'text-[#141311]/75'
+                            }`}
+                          >
+                            {getAmbDesc(amb)}
+                          </p>
+
+                          <div
+                            className={`p-3.5 rounded-2xl text-xs flex items-center gap-2.5 tabular-nums ${
+                              isUrbanBrewery
+                                ? 'bg-black/35 text-[#FBBF24]'
+                                : 'bg-[#F6F3EC] text-[#141311]/75'
+                            }`}
+                          >
+                            {lightMode === 'day' ? (
+                              <Sun className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                            ) : (
+                              <Moon className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                            )}
+                            <span>{lightingNote}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="p-7 pt-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleOpenReservationWithZone(getAmbName(amb))
-                        }}
-                        className={`w-full py-3.5 rounded-2xl text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 transition-all ${
-                          isUrbanBrewery
-                            ? 'bg-white/10 hover:bg-[#F59E0B] text-white hover:text-[#0A0B0E]'
-                            : isSelected
-                            ? 'bg-[#C85A32] text-white shadow-md'
-                            : 'bg-[#141311]/5 text-[#141311] hover:bg-[#141311] hover:text-white'
-                        }`}
-                      >
-                        <span>{t.selectForBooking}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="p-6 sm:p-7 pt-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setActiveAmbienceId(amb.id)
+                            handleOpenReservationWithZone(localizedAmbName)
+                          }}
+                          className={`w-full py-3.5 rounded-2xl text-xs font-bold tracking-wider uppercase flex items-center justify-center gap-2 transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                            isUrbanBrewery
+                              ? isSelected
+                                ? 'bg-[#F59E0B] text-[#0A0B0E] hover:bg-[#D97706]'
+                                : 'bg-white/10 hover:bg-[#F59E0B] text-white hover:text-[#0A0B0E]'
+                              : isSelected
+                              ? 'bg-[#C85A32] text-white shadow-md'
+                              : 'bg-[#141311]/5 text-[#141311] hover:bg-[#141311] hover:text-white'
+                          }`}
+                        >
+                          <span>{t.selectForBooking}</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  </ScrollReveal>
                 )
               })}
             </div>
@@ -1022,34 +1288,269 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
       )}
 
       {/* ==============================================================================
-         BLOQUE 5: PRUEBA SOCIAL REAL (GOOGLE MAPS ⭐ + 3 RESEÑAS VERIFICADAS)
+         CONVERSIÓN INLINE WHATSAPP: TERRAZA, SALÓN Y GRUPOS
+         ============================================================================== */}
+      <section
+        id="reserva-whatsapp"
+        className={`py-20 px-6 md:px-12 ${
+          isUrbanBrewery
+            ? 'bg-[#0A0B0E] text-[#F6F3EC]'
+            : 'bg-[#EDE8DE]/40 text-[#141311]'
+        }`}
+      >
+        <div className="max-w-5xl mx-auto">
+          <ScrollReveal>
+            <div
+              className={`rounded-3xl p-6 sm:p-10 relative overflow-hidden ${
+                isUrbanBrewery
+                  ? 'bg-[#12151C] ring-1 ring-[#F59E0B]/30 shadow-[0_28px_64px_rgba(0,0,0,0.65)]'
+                  : 'bg-white border border-[#141311]/10 shadow-xl'
+              }`}
+            >
+              {isUrbanBrewery && (
+                <div
+                  aria-hidden="true"
+                  className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-[#F59E0B]/10 blur-[90px] pointer-events-none"
+                />
+              )}
+
+              <div className="relative z-10 space-y-7">
+                <div className="max-w-3xl space-y-2">
+                  <div className="inline-flex items-center gap-2">
+                    <MessageCircle
+                      className={`w-4 h-4 ${isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'}`}
+                    />
+                    <span
+                      className={`text-xs uppercase tracking-[0.22em] font-bold ${
+                        isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'
+                      }`}
+                    >
+                      {t.waBlockEyebrow}
+                    </span>
+                  </div>
+                  <h2
+                    className={`text-2xl sm:text-4xl leading-[1.08] tracking-tight ${
+                      isUrbanBrewery ? 'uppercase text-white' : 'font-serif font-bold text-[#141311]'
+                    }`}
+                    style={
+                      isUrbanBrewery ? { fontFamily: "'Anton', 'Sora', sans-serif" } : undefined
+                    }
+                  >
+                    {t.waBlockTitle}
+                  </h2>
+                  <p
+                    className={`text-sm sm:text-base ${
+                      isUrbanBrewery ? 'text-white/75' : 'text-[#141311]/70'
+                    }`}
+                  >
+                    {t.waBlockSubtitle}
+                  </p>
+                </div>
+
+                {/* Controles rápidos de Zona, Personas, Turno y Nombre */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                  {/* Selector de Zona */}
+                  <div className="md:col-span-6 space-y-2">
+                    <span
+                      className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
+                        isUrbanBrewery ? 'text-white/75' : 'text-[#141311]/70'
+                      }`}
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-[#F59E0B]" />
+                      <span>{t.waZoneLabel}</span>
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {inlineZoneChoices.map((choice) => {
+                        const active = selectedZone === choice.label
+                        return (
+                          <button
+                            key={choice.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedZone(choice.label)
+                              if (choice.id !== 'grupos') {
+                                setActiveAmbienceId(choice.id)
+                              }
+                            }}
+                            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                              active
+                                ? isUrbanBrewery
+                                  ? 'bg-[#F59E0B] text-[#0A0B0E] shadow-md shadow-[#F59E0B]/20'
+                                  : 'bg-[#C85A32] text-white shadow-md'
+                                : isUrbanBrewery
+                                ? 'bg-white/[0.06] text-white/80 hover:bg-white/10 border border-white/10'
+                                : 'bg-[#F6F3EC] text-[#141311]/75 hover:bg-[#141311]/10'
+                            }`}
+                          >
+                            {choice.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Personas */}
+                  <div className="md:col-span-3 space-y-2">
+                    <span
+                      className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
+                        isUrbanBrewery ? 'text-white/75' : 'text-[#141311]/70'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5 text-[#F59E0B]" />
+                      <span>{t.waGuestsLabel}</span>
+                    </span>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {[2, 4, 6, 8, 10].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setInlineGuests(num)}
+                          className={`py-2 rounded-xl text-xs font-bold tabular-nums transition-all ${
+                            inlineGuests === num
+                              ? isUrbanBrewery
+                                ? 'bg-[#F59E0B] text-[#0A0B0E]'
+                                : 'bg-[#C85A32] text-white'
+                              : isUrbanBrewery
+                              ? 'bg-white/[0.06] text-white/75 hover:bg-white/10 border border-white/10'
+                              : 'bg-[#F6F3EC] text-[#141311]/75'
+                          }`}
+                        >
+                          {num === 10 ? '+10' : num}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Turno / Hora */}
+                  <div className="md:col-span-3 space-y-2">
+                    <span
+                      className={`text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 ${
+                        isUrbanBrewery ? 'text-white/75' : 'text-[#141311]/70'
+                      }`}
+                    >
+                      <Clock className="w-3.5 h-3.5 text-[#F59E0B]" />
+                      <span>{t.waShiftLabel}</span>
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['13:30h', '20:30h', '22:00h'] as const).map((slot) => (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setInlineShift(slot)}
+                          className={`py-2 rounded-xl text-xs font-bold tabular-nums transition-all ${
+                            inlineShift === slot
+                              ? isUrbanBrewery
+                                ? 'bg-[#F59E0B] text-[#0A0B0E]'
+                                : 'bg-[#C85A32] text-white'
+                              : isUrbanBrewery
+                              ? 'bg-white/[0.06] text-white/75 hover:bg-white/10 border border-white/10'
+                              : 'bg-[#F6F3EC] text-[#141311]/75'
+                          }`}
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Nombre + Botones de Envío Directo */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end pt-2 border-t border-white/10">
+                  <div className="md:col-span-5 space-y-1.5">
+                    <label
+                      htmlFor="inline-wa-name"
+                      className={`text-xs font-medium block ${
+                        isUrbanBrewery ? 'text-white/75' : 'text-[#141311]/70'
+                      }`}
+                    >
+                      {t.waNameLabel}
+                    </label>
+                    <input
+                      id="inline-wa-name"
+                      type="text"
+                      value={inlineName}
+                      onChange={(e) => setInlineName(e.target.value)}
+                      placeholder={t.waNamePlaceholder}
+                      className={`w-full px-4 py-3 rounded-xl text-sm outline-none transition ${
+                        isUrbanBrewery
+                          ? 'bg-[#0A0B0E] text-white placeholder-white/35 border border-white/10 focus:border-[#F59E0B]'
+                          : 'bg-[#F6F3EC] text-[#141311] border border-[#141311]/10 focus:border-[#C85A32]'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="md:col-span-7 flex flex-col sm:flex-row gap-3">
+                    <a
+                      href={inlineWhatsAppHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackConversion('click_reservation')}
+                      className={`flex-1 py-3.5 px-6 rounded-xl font-extrabold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all ease-[cubic-bezier(0.22,1,0.36,1)] shadow-lg ${
+                        isUrbanBrewery
+                          ? 'bg-[#F59E0B] hover:bg-[#D97706] text-[#0A0B0E] shadow-[#F59E0B]/20'
+                          : 'bg-[#25D366] hover:bg-[#20ba59] text-[#0A2612]'
+                      }`}
+                    >
+                      <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{t.waSendDirectBtn}</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsReservationOpen(true)
+                        trackConversion('click_reservation')
+                      }}
+                      className={`py-3.5 px-5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                        isUrbanBrewery
+                          ? 'bg-white/[0.08] hover:bg-white/15 text-white border border-white/10'
+                          : 'bg-[#141311]/10 hover:bg-[#141311]/15 text-[#141311]'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4 text-[#F59E0B] flex-shrink-0" />
+                      <span>{t.waOpenCalendarBtn}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ==============================================================================
+         PRUEBA SOCIAL REAL (GOOGLE MAPS + RESEÑAS VERIFICADAS)
          ============================================================================== */}
       {tenant.reviews && tenant.reviews.length > 0 && (
         <section
           className={`py-24 px-6 md:px-12 ${
-            isUrbanBrewery ? 'bg-[#0A0B0E] text-[#F6F3EC]' : 'bg-[#EDE8DE]/50 text-[#141311]'
+            isUrbanBrewery ? 'bg-[#0E1015] text-[#F6F3EC]' : 'bg-[#EDE8DE]/50 text-[#141311]'
           }`}
         >
           <div className="max-w-6xl mx-auto">
-            <div className="text-center max-w-xl mx-auto mb-14">
-              <div className="inline-flex items-center gap-1.5 text-amber-400 mb-2">
-                <Star className="w-5 h-5 fill-current" />
-                <span className="font-bold text-sm">
-                  {tenant.googleMapsRating || 4.8} / 5.0
-                </span>
-                <span className="text-xs opacity-65">
-                  ({tenant.googleMapsReviewCount || 342} Google Maps)
-                </span>
+            <ScrollReveal>
+              <div className="text-center max-w-xl mx-auto mb-14">
+                <div className="inline-flex items-center gap-1.5 text-amber-400 mb-2 tabular-nums">
+                  <Star className="w-5 h-5 fill-current" />
+                  <span className="font-bold text-sm">
+                    {tenant.googleMapsRating || 4.8} / 5.0
+                  </span>
+                  <span className="text-xs opacity-65">
+                    ({tenant.googleMapsReviewCount || 342} Google Maps)
+                  </span>
+                </div>
+                <h2
+                  className={`text-3xl sm:text-5xl tracking-tight ${
+                    isUrbanBrewery ? 'uppercase font-black text-white' : 'font-serif font-bold'
+                  }`}
+                  style={
+                    isUrbanBrewery ? { fontFamily: "'Anton', 'Sora', sans-serif" } : undefined
+                  }
+                >
+                  {t.reviewsTitle}
+                </h2>
               </div>
-              <h2
-                className={`text-3xl sm:text-5xl tracking-tight ${
-                  isUrbanBrewery ? 'uppercase font-black text-white' : 'font-serif font-bold'
-                }`}
-                style={isUrbanBrewery ? { fontFamily: "'Anton', 'Sora', sans-serif" } : undefined}
-              >
-                {t.reviewsTitle}
-              </h2>
-            </div>
+            </ScrollReveal>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {tenant.reviews.slice(0, 3).map((rev, idx) => {
@@ -1061,37 +1562,38 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                     : rev.text
 
                 return (
-                  <div
-                    key={idx}
-                    className={`p-8 rounded-3xl flex flex-col justify-between space-y-5 ${
-                      isUrbanBrewery
-                        ? 'bg-[#12151C] shadow-[0_20px_40px_rgba(0,0,0,0.45)]'
-                        : 'bg-white border border-[#141311]/10 shadow-sm'
-                    }`}
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1 text-[#FBBF24]">
-                          {Array.from({ length: rev.rating }).map((_, i) => (
-                            <Star key={i} className="w-4 h-4 fill-current" />
-                          ))}
+                  <ScrollReveal key={idx} delayMs={idx * 80} className="flex">
+                    <div
+                      className={`p-8 rounded-3xl flex flex-col justify-between space-y-5 w-full ${
+                        isUrbanBrewery
+                          ? 'bg-[#12151C] shadow-[0_20px_40px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.06]'
+                          : 'bg-white border border-[#141311]/10 shadow-sm'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1 text-[#FBBF24]">
+                            {Array.from({ length: rev.rating }).map((_, i) => (
+                              <Star key={i} className="w-4 h-4 fill-current" />
+                            ))}
+                          </div>
+                          <span className="text-[11px] opacity-55 uppercase tracking-wider font-semibold">
+                            Google · {rev.date}
+                          </span>
                         </div>
-                        <span className="text-[11px] opacity-50 uppercase tracking-wider font-semibold">
-                          Google · {rev.date}
+                        <p className="text-sm sm:text-base opacity-90 leading-relaxed">
+                          “{reviewText}”
+                        </p>
+                      </div>
+
+                      <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs">
+                        <span className="font-bold">{rev.author}</span>
+                        <span className="text-emerald-400 font-medium flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5" /> {t.verifiedVisit}
                         </span>
                       </div>
-                      <p className="text-sm sm:text-base opacity-90 leading-relaxed">
-                        “{reviewText}”
-                      </p>
                     </div>
-
-                    <div className="pt-4 border-t border-white/10 flex items-center justify-between text-xs">
-                      <span className="font-bold">{rev.author}</span>
-                      <span className="text-emerald-400 font-medium flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5" /> {t.verifiedVisit}
-                      </span>
-                    </div>
-                  </div>
+                  </ScrollReveal>
                 )
               })}
             </div>
@@ -1117,18 +1619,18 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
       )}
 
       {/* ==============================================================================
-         BLOQUE 6: HORARIOS EN VIVO, WIFI Y UBICACIÓN EN EL CASCO HISTÓRICO
+         HORARIOS EN VIVO, WIFI Y UBICACIÓN EN EL CASCO HISTÓRICO
          ============================================================================== */}
       <section
         id="horarios"
         className={`py-24 px-6 md:px-12 ${
           isUrbanBrewery
-            ? 'bg-[#0E1015] text-[#F6F3EC]'
+            ? 'bg-[#0A0B0E] text-[#F6F3EC]'
             : 'bg-[#F6F3EC] text-[#141311] border-t border-[#141311]/10'
         }`}
       >
         <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          <div className="lg:col-span-6 space-y-6">
+          <ScrollReveal className="lg:col-span-6 space-y-6">
             <span
               className={`text-xs uppercase tracking-[0.26em] font-bold block ${
                 isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'
@@ -1154,8 +1656,8 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                 />
                 <div>
                   <p className="font-bold text-base">{tenant.address}</p>
-                  <p className="text-xs opacity-65">
-                    {tenant.postalCode} {tenant.city} (Casco Histórico)
+                  <p className="text-xs opacity-70 tabular-nums">
+                    {tenant.postalCode} {tenant.city}
                   </p>
                 </div>
               </div>
@@ -1169,7 +1671,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                 <a
                   href={`tel:${tenant.phone.replace(/\s+/g, '')}`}
                   onClick={() => trackConversion('click_call')}
-                  className="font-bold text-base hover:underline"
+                  className="font-bold text-base tabular-nums hover:underline"
                 >
                   {tenant.phone}
                 </a>
@@ -1183,8 +1685,10 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                       {t.wifiCourtesy}
                     </p>
                     <p className="text-xs opacity-80">
-                      Red: <strong>{tenant.wifiSsid}</strong> · Clave:{' '}
-                      <code className="px-1.5 py-0.5 rounded bg-white/10">{tenant.wifiPassword}</code>
+                      {t.wifiNetwork}: <strong>{tenant.wifiSsid}</strong> · {t.wifiPass}:{' '}
+                      <code className="px-1.5 py-0.5 rounded bg-white/10 tabular-nums">
+                        {tenant.wifiPassword}
+                      </code>
                     </p>
                   </div>
                 </div>
@@ -1209,6 +1713,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                 </a>
               )}
               <button
+                type="button"
                 onClick={() => {
                   setIsReservationOpen(true)
                   trackConversion('click_reservation')
@@ -1223,121 +1728,135 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                 <span>{t.groupsAndBooking}</span>
               </button>
             </div>
-          </div>
+          </ScrollReveal>
 
           {/* Tabla de Horarios Semanales */}
-          <div
-            className={`lg:col-span-6 p-6 sm:p-8 rounded-3xl space-y-4 ${
-              isUrbanBrewery
-                ? 'bg-[#12151C] shadow-[0_24px_48px_rgba(0,0,0,0.5)]'
-                : 'bg-white border border-[#141311]/10 shadow-sm'
-            }`}
-          >
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <span className="text-xs uppercase tracking-wider font-bold opacity-80 flex items-center gap-2">
-                <Clock className={`w-4 h-4 ${isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'}`} />
-                <span>{t.weeklyService}</span>
-              </span>
-              <span
-                className={`text-xs px-3 py-1 rounded-full font-bold ${
-                  openingStatus.isOpen
-                    ? 'bg-emerald-500/20 text-emerald-300'
-                    : 'bg-rose-500/20 text-rose-300'
-                }`}
-              >
-                {trafficLightText}
-              </span>
-            </div>
-
-            <div className="divide-y divide-white/5 text-xs sm:text-sm">
-              {[1, 2, 3, 4, 5, 6, 0].map((dayIdx) => {
-                const daySchedules = tenant.openingHours.filter((s) => s.dayOfWeek === dayIdx)
-                const isToday = dayIdx === todayDayOfWeek
-
-                return (
-                  <div
-                    key={dayIdx}
-                    className={`py-3 flex items-center justify-between ${
-                      isToday
-                        ? isUrbanBrewery
-                          ? 'font-bold text-[#F59E0B]'
-                          : 'font-bold text-[#C85A32]'
-                        : 'opacity-80'
+          <ScrollReveal delayMs={90} className="lg:col-span-6">
+            <div
+              className={`p-6 sm:p-8 rounded-3xl space-y-4 ${
+                isUrbanBrewery
+                  ? 'bg-[#12151C] shadow-[0_24px_48px_rgba(0,0,0,0.5)] ring-1 ring-white/[0.06]'
+                  : 'bg-white border border-[#141311]/10 shadow-sm'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 pb-4 border-b border-white/10">
+                <span className="text-xs uppercase tracking-wider font-bold opacity-85 flex items-center gap-2">
+                  <Clock className={`w-4 h-4 ${isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'}`} />
+                  <span>{t.weeklyService}</span>
+                </span>
+                <span
+                  suppressHydrationWarning
+                  className={`text-xs px-3 py-1 rounded-full font-bold tabular-nums inline-flex items-center gap-1.5 ${
+                    openingStatus.isOpen
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : 'bg-rose-500/20 text-rose-300'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      openingStatus.isOpen ? 'bg-emerald-400' : 'bg-rose-400'
                     }`}
-                  >
-                    <span>
-                      {DAY_NAMES[dayIdx]} {isToday && t.today}
-                    </span>
-                    <span className="tabular-nums font-medium">
-                      {daySchedules.length > 0
-                        ? daySchedules.map((s) => `${s.open} – ${s.close}h`).join(' · ')
-                        : t.closedShift}
-                    </span>
-                  </div>
-                )
-              })}
+                  />
+                  <span>{trafficLightText}</span>
+                </span>
+              </div>
+
+              <div className="divide-y divide-white/5 text-xs sm:text-sm">
+                {[1, 2, 3, 4, 5, 6, 0].map((dayIdx) => {
+                  const daySchedules = tenant.openingHours.filter((s) => s.dayOfWeek === dayIdx)
+                  const isToday = dayIdx === todayDayOfWeek
+
+                  return (
+                    <div
+                      key={dayIdx}
+                      suppressHydrationWarning
+                      className={`py-3 flex items-center justify-between gap-3 ${
+                        isToday
+                          ? isUrbanBrewery
+                            ? 'font-bold text-[#F59E0B]'
+                            : 'font-bold text-[#C85A32]'
+                          : 'opacity-80'
+                      }`}
+                    >
+                      <span>
+                        {DAY_NAMES[dayIdx]} {isToday && t.today}
+                      </span>
+                      <span className="tabular-nums font-medium">
+                        {daySchedules.length > 0
+                          ? daySchedules.map((s) => `${s.open} – ${s.close}h`).join(' · ')
+                          : t.closedShift}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
 
       {/* ==============================================================================
-         BLOQUE 7: PREGUNTAS FRECUENTES (FAQS TRILINGÜES)
+         PREGUNTAS FRECUENTES (FAQS TRILINGÜES)
          ============================================================================== */}
       <section
         className={`py-20 px-6 md:px-12 ${
-          isUrbanBrewery ? 'bg-[#0A0B0E] text-[#F6F3EC]' : 'bg-[#EDE8DE]/40 text-[#141311]'
+          isUrbanBrewery ? 'bg-[#0E1015] text-[#F6F3EC]' : 'bg-[#EDE8DE]/40 text-[#141311]'
         }`}
       >
         <div className="max-w-3xl mx-auto space-y-4">
-          <div className="text-center mb-10">
-            <h3
-              className={`text-2xl sm:text-4xl ${
-                isUrbanBrewery ? 'uppercase font-black text-white' : 'font-serif font-bold'
-              }`}
-              style={isUrbanBrewery ? { fontFamily: "'Anton', 'Sora', sans-serif" } : undefined}
-            >
-              {t.faqsTitle}
-            </h3>
-          </div>
+          <ScrollReveal>
+            <div className="text-center mb-10">
+              <h3
+                className={`text-2xl sm:text-4xl ${
+                  isUrbanBrewery ? 'uppercase font-black text-white' : 'font-serif font-bold'
+                }`}
+                style={isUrbanBrewery ? { fontFamily: "'Anton', 'Sora', sans-serif" } : undefined}
+              >
+                {t.faqsTitle}
+              </h3>
+            </div>
+          </ScrollReveal>
 
           {t.faqs.map((faq, idx) => (
-            <div
-              key={idx}
-              className={`rounded-2xl overflow-hidden ${
-                isUrbanBrewery ? 'bg-[#12151C]' : 'bg-white border border-[#141311]/10 shadow-sm'
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                className="w-full p-5 text-left font-bold text-sm sm:text-base flex items-center justify-between gap-4"
+            <ScrollReveal key={idx} delayMs={idx * 60}>
+              <div
+                className={`rounded-2xl overflow-hidden ${
+                  isUrbanBrewery
+                    ? 'bg-[#12151C] ring-1 ring-white/[0.06]'
+                    : 'bg-white border border-[#141311]/10 shadow-sm'
+                }`}
               >
-                <span>{faq.q}</span>
-                <ChevronDown
-                  className={`w-5 h-5 flex-shrink-0 transition-transform ${
-                    isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'
-                  } ${openFaq === idx ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {openFaq === idx && (
-                <div className="p-5 pt-0 text-xs sm:text-sm opacity-75 leading-relaxed">
-                  {faq.a}
-                </div>
-              )}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                  className="w-full p-5 text-left font-bold text-sm sm:text-base flex items-center justify-between gap-4"
+                >
+                  <span>{faq.q}</span>
+                  <ChevronDown
+                    className={`w-5 h-5 flex-shrink-0 transition-transform ${
+                      isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'
+                    } ${openFaq === idx ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {openFaq === idx && (
+                  <div className="p-5 pt-0 text-xs sm:text-sm opacity-80 leading-relaxed">
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            </ScrollReveal>
           ))}
         </div>
       </section>
 
       {/* ==============================================================================
-         FOOTER INSTITUCIONAL
+         FOOTER INSTITUCIONAL (LOGO CIRCULAR #EBE8E1 OBJECT-CONTAIN)
          ============================================================================== */}
       <footer className="bg-[#07080A] text-[#E6DFD3] py-16 px-6 md:px-12 border-t border-white/10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
           <div className="flex items-center gap-3.5">
             {tenant.logoUrl && (
-              <div className="w-12 h-12 rounded-full bg-[#0A0B0E] p-1 ring-1 ring-[#F59E0B]/40 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[#EBE8E1] overflow-hidden p-0.5 ring-1 ring-[#F59E0B]/50 flex items-center justify-center flex-shrink-0">
                 <Image
                   src={tenant.logoUrl}
                   alt={tenant.name}
@@ -1351,22 +1870,22 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
               <span className="text-xl font-bold tracking-tight text-[#F6F3EC] block">
                 {tenant.name}
               </span>
-              <p className="text-xs text-[#E6DFD3]/60 max-w-sm">
+              <p className="text-xs text-[#E6DFD3]/65 max-w-sm">
                 {localizedTagline}
               </p>
             </div>
           </div>
 
-          <div className="text-xs text-[#E6DFD3]/50 space-y-1">
+          <div className="text-xs text-[#E6DFD3]/55 space-y-1 tabular-nums">
             <p>
               {tenant.address}, {tenant.postalCode} {tenant.city}
             </p>
-            <p>
+            <p suppressHydrationWarning>
               © {new Date().getFullYear()} {tenant.name}.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-[#E6DFD3]/60">
+          <div className="flex items-center gap-2 text-xs text-[#E6DFD3]/65">
             <span>Powered by</span>
             <span className="font-extrabold tracking-widest text-[#F59E0B]">FLUXO</span>
           </div>
@@ -1402,15 +1921,20 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
         isOpen={isReservationOpen}
         onClose={() => setIsReservationOpen(false)}
         initialZone={selectedZone}
+        archetype={tenant.archetype}
+        lang={lang}
       />
 
       {/* ==============================================================================
-         MODAL DE CARTA FIJA DIGITAL (TRANSPARENCIA TOTAL A 1 CLIC: PRECIOS + VARIANTES + 14 ALÉRGENOS)
+         MODAL DE CARTA FIJA DIGITAL (PRECIOS REALES + VARIANTES + 14 ALÉRGENOS)
          ============================================================================== */}
       {isMenuModalOpen && (
         <div
           role="dialog"
           aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsMenuModalOpen(false)
+          }}
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
         >
           <div
@@ -1422,23 +1946,25 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
           >
             {/* Cabecera del Modal */}
             <div
-              className={`p-5 sm:p-6 border-b flex items-center justify-between ${
+              className={`p-5 sm:p-6 border-b flex items-center justify-between gap-3 ${
                 isUrbanBrewery
                   ? 'bg-[#0A0B0E] border-white/10'
                   : 'bg-white border-[#141311]/10'
               }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 {tenant.logoUrl && (
-                  <Image
-                    src={tenant.logoUrl}
-                    alt={tenant.name}
-                    width={42}
-                    height={42}
-                    className="w-10 h-10 object-contain rounded-full"
-                  />
+                  <div className="w-10 h-10 rounded-full bg-[#EBE8E1] overflow-hidden p-0.5 ring-1 ring-[#F59E0B]/50 flex items-center justify-center flex-shrink-0">
+                    <Image
+                      src={tenant.logoUrl}
+                      alt={tenant.name}
+                      width={40}
+                      height={40}
+                      className="w-full h-full object-contain rounded-full"
+                    />
+                  </div>
                 )}
-                <div>
+                <div className="min-w-0">
                   <span
                     className={`text-[10px] uppercase tracking-[0.22em] font-bold block ${
                       isUrbanBrewery ? 'text-[#F59E0B]' : 'text-[#C85A32]'
@@ -1446,7 +1972,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                   >
                     {t.digitalMenuTitle}
                   </span>
-                  <h3 className="text-xl sm:text-2xl font-bold">
+                  <h3 className="text-lg sm:text-2xl font-bold truncate">
                     {tenant.name} · {t.menuAndPrices}
                   </h3>
                 </div>
@@ -1455,7 +1981,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                 type="button"
                 aria-label="Cerrar carta"
                 onClick={() => setIsMenuModalOpen(false)}
-                className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#F59E0B] hover:text-[#0A0B0E] transition flex items-center justify-center"
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-[#F59E0B] hover:text-[#0A0B0E] transition flex items-center justify-center flex-shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1485,7 +2011,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
               </div>
 
               {/* Píldoras de Categorías */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                 {categories.map((cat) => (
                   <button
                     key={cat.key}
@@ -1507,7 +2033,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
               </div>
             </div>
 
-            {/* Lista de Productos con Precios Reales, Variantes (Caña/Copa/Xarra/Ración) y 14 Alérgenos */}
+            {/* Lista de Productos con Precios Reales, Variantes y 14 Alérgenos */}
             <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredDishes.map((dish) => (
@@ -1516,8 +2042,8 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                     onClick={() => setSelectedDishDetail(dish)}
                     className={`p-4 rounded-2xl transition cursor-pointer flex gap-4 items-start ${
                       isUrbanBrewery
-                        ? 'bg-[#151922] hover:bg-[#1B202C]'
-                        : 'bg-white border border-[#141311]/8 hover:border-[#C85A32]/40 shadow-sm'
+                        ? 'bg-[#151922] hover:bg-[#1B202C] ring-1 ring-white/[0.05]'
+                        : 'bg-white border border-[#141311]/10 hover:border-[#C85A32]/40 shadow-sm'
                     }`}
                   >
                     <div className="relative w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-black/20">
@@ -1546,7 +2072,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
                         </span>
                       </div>
 
-                      <p className="text-xs opacity-70 line-clamp-2 leading-relaxed">
+                      <p className="text-xs opacity-75 line-clamp-2 leading-relaxed">
                         {getDishDesc(dish)}
                       </p>
 
@@ -1632,6 +2158,9 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
         <div
           role="dialog"
           aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedDishDetail(null)
+          }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150"
         >
           <div
@@ -1650,6 +2179,7 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
               />
               <button
                 type="button"
+                aria-label={t.closeDetail}
                 onClick={() => setSelectedDishDetail(null)}
                 className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center"
               >
