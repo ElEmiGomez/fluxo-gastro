@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Calendar, Utensils, Star, MapPin, Navigation, Menu, X } from 'lucide-react'
+import Link from 'next/link'
+import { Calendar, Utensils, Star, MapPin, Navigation, Menu, X, ArrowRight } from 'lucide-react'
 import type {
   GastronomicLayoutPreset,
   RestaurantArchetype,
@@ -67,42 +68,39 @@ const HERO_LABELS = {
 const CAUCE_HERO_COPY = {
   es: {
     nav: [
-      { id: 'lo-que-nos-define', label: 'Carta' },
-      { id: 'experiencia', label: 'Experiencia' },
-      { id: 'espacios', label: 'Espacios' },
-      { id: 'preguntas', label: 'Preguntas' },
+      { id: 'tragos-carta', label: 'Tragos y Carta' },
+      { id: 'espacios', label: 'Espacios y Horarios' },
+      { id: 'contacto-whatsapp', label: 'Contacto' },
     ],
     navCta: 'Reservar / Ir',
     headline: 'Cerveza de bodega y raciones bajo los soportales de Noia',
-    heroCta: 'Ver Carta Completa',
+    heroCta: 'Ver Carta en Mesa 0',
     openMenuLabel: 'Abrir menú de navegación',
     closeMenuLabel: 'Cerrar menú de navegación',
     langGroupLabel: 'Selector de idioma',
   },
   gl: {
     nav: [
-      { id: 'lo-que-nos-define', label: 'Carta' },
-      { id: 'experiencia', label: 'Experiencia' },
-      { id: 'espacios', label: 'Espazos' },
-      { id: 'preguntas', label: 'Preguntas' },
+      { id: 'tragos-carta', label: 'Tragos e Carta' },
+      { id: 'espacios', label: 'Espazos e Horarios' },
+      { id: 'contacto-whatsapp', label: 'Contacto' },
     ],
     navCta: 'Reservar / Ir',
     headline: 'Cervexa de adega e racións baixo os soportais de Noia',
-    heroCta: 'Ver Carta Completa',
+    heroCta: 'Ver Carta na Mesa 0',
     openMenuLabel: 'Abrir menú de navegación',
     closeMenuLabel: 'Pechar menú de navegación',
     langGroupLabel: 'Selector de idioma',
   },
   en: {
     nav: [
-      { id: 'lo-que-nos-define', label: 'Menu' },
-      { id: 'experiencia', label: 'Experience' },
-      { id: 'espacios', label: 'Spaces' },
-      { id: 'preguntas', label: 'FAQ' },
+      { id: 'tragos-carta', label: 'Drinks & Menu' },
+      { id: 'espacios', label: 'Spaces & Hours' },
+      { id: 'contacto-whatsapp', label: 'Contact' },
     ],
     navCta: 'Book / Visit',
     headline: 'Cellar draft beer and tapas beneath Noia’s stone arcades',
-    heroCta: 'View Full Menu',
+    heroCta: 'View Menu at Table 0',
     openMenuLabel: 'Open navigation menu',
     closeMenuLabel: 'Close navigation menu',
     langGroupLabel: 'Language selector',
@@ -404,13 +402,19 @@ export function HeroCinematic({
               </p>
 
               <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={onOpenMenu}
-                  className="inline-flex items-center justify-center bg-[#1D4ED8] hover:bg-[#1E3A8A] active:scale-[0.98] text-white text-sm sm:text-base font-semibold rounded-full px-8 py-4 shadow-xl transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                <Link
+                  href="/p/bar-jaratusas?mesa=0"
+                  onClick={(e) => {
+                    if (onOpenMenu) {
+                      e.preventDefault()
+                      onOpenMenu()
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-[#1E3A8A] active:scale-[0.98] text-white text-sm sm:text-base font-semibold rounded-full px-8 py-4 shadow-xl transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
                 >
-                  {cauceCopy.heroCta}
-                </button>
+                  <span>{cauceCopy.heroCta}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
             </div>
           </div>

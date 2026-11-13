@@ -509,6 +509,71 @@ select:focus-visible {
   padding: 12px 14px;
 }
 
+/* Pantalla 2: Menú Deslizante de Mockups de Tragos */
+.marquee-wrap {
+  width: 100%;
+  overflow-x: auto;
+  padding: 12px 0 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.marquee-track {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.drink-card {
+  width: 260px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-slate);
+  border-radius: 20px;
+  padding: 14px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.drink-thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 14px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.drink-tag {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid #E2E8F0;
+}
+
+.drink-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-ink);
+  line-height: 1.3;
+}
+
+.drink-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
 /* Section 3: La experiencia (Asymmetric 3:4 ordering) */
 .exp-grid {
   display: grid;
@@ -1003,10 +1068,9 @@ ${JSON.stringify(jsonLd, null, 2)}
         <span>${escapeHtml(tenant.name)}</span>
       </a>
       <div class="pill-links">
-        <a href="#lo-que-nos-define" class="pill-link">Carta</a>
-        <a href="#experiencia" class="pill-link">Experiencia</a>
-        <a href="#espacios" class="pill-link">Espacios</a>
-        <a href="#preguntas" class="pill-link">Preguntas</a>
+        <a href="#tragos-carta" class="pill-link">Tragos y Carta</a>
+        <a href="#espacios" class="pill-link">Espacios y Horarios</a>
+        <a href="#contacto-whatsapp" class="pill-link">Contacto</a>
       </div>
       <div class="pill-actions">
         <a href="#contacto-whatsapp" class="btn-blue">Reservar / Ir</a>
@@ -1014,11 +1078,10 @@ ${JSON.stringify(jsonLd, null, 2)}
       </div>
     </nav>
     <div id="cauce-mobile-dropdown" class="mobile-dropdown">
-      <a href="#lo-que-nos-define">Carta</a>
-      <a href="#experiencia">Experiencia</a>
-      <a href="#espacios">Espacios</a>
-      <a href="#preguntas">Preguntas</a>
-      <a href="carta.html" class="btn-blue" style="margin-top: 4px;">Ver Carta Completa</a>
+      <a href="#tragos-carta">Tragos y Carta</a>
+      <a href="#espacios">Espacios y Horarios</a>
+      <a href="#contacto-whatsapp">Contacto</a>
+      <a href="carta.html?mesa=0" class="btn-blue" style="margin-top: 4px;">Ver Carta en Mesa 0</a>
     </div>
   </div>
 
@@ -1032,133 +1095,72 @@ ${JSON.stringify(jsonLd, null, 2)}
       <h1 class="cauce-hero-title">Tu mesa bajo los soportales de Noia, cerveza de bodega y picoteo</h1>
       <p class="cauce-hero-sub">${escapeHtml(tenant.tagline)}</p>
       <div class="cauce-hero-cta">
-        <a href="carta.html" class="btn-blue btn-blue-lg">Ver Carta Completa</a>
+        <a href="carta.html?mesa=0" class="btn-blue btn-blue-lg">Ver Carta en Mesa 0</a>
       </div>
     </div>
   </header>
 
-  <!-- SECCIÓN 2: LO QUE NOS DEFINE + LOOP 16:9 -->
-  <section id="lo-que-nos-define" class="cauce-section">
-    <h2 class="cauce-h2">Lo que nos define</h2>
-    <div class="define-grid-3">
-      <article class="cauce-card">
-        <h3 style="font-size: 1.08rem; font-weight: 600;">Cerveza de Bodega y Tiraje Exacto</h3>
-        <ul class="define-bullets">
-          <li><span class="bullet-dot"></span><span>Estrella Galicia directa de bodega a presión y temperatura controladas.</span></li>
-          <li><span class="bullet-dot"></span><span>Gama 1906: Reserva Especial, Red Vintage y Black Coupage bien frías.</span></li>
-          <li><span class="bullet-dot"></span><span>Acompañada siempre de tapa de cortesía recién hecha.</span></li>
-        </ul>
-      </article>
-      <article class="cauce-card">
-        <h3 style="font-size: 1.08rem; font-weight: 600;">Vinos Seleccionados y Raciones</h3>
-        <ul class="define-bullets">
-          <li><span class="bullet-dot"></span><span>Copas y botellas de Ribeiro, Albariño Rías Baixas, Godello y Mencía.</span></li>
-          <li><span class="bullet-dot"></span><span>Vermús gallegos con sifón y receta preparada de barra.</span></li>
-          <li><span class="bullet-dot"></span><span>Raxo con queso Arzúa, croquetas ibéricas y empanada artesana.</span></li>
-        </ul>
-      </article>
-      <article class="cauce-card">
-        <h3 style="font-size: 1.08rem; font-weight: 600;">Terraza Activa y Ambiente</h3>
-        <ul class="define-bullets">
-          <li><span class="bullet-dot"></span><span>Mesas resguardadas bajo los arcos de piedra de la Rúa do Curro.</span></li>
-          <li><span class="bullet-dot"></span><span>Salón interior climatizado preparado para grupos y comidas.</span></li>
-          <li><span class="bullet-dot"></span><span>Servicio continuo desde el café de la mañana hasta la última ronda.</span></li>
-        </ul>
-      </article>
+  <!-- PANTALLA 2: MENÚ DESLIZANTE DE MOCKUPS DE TRAGOS + BOTÓN A MESA 0 -->
+  <section id="tragos-carta" class="cauce-section" style="padding-top: 56px; text-align: center;">
+    <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800; color: var(--brand-blue); background: var(--brand-blue-soft); padding: 4px 14px; border-radius: 9999px; border: 1px solid var(--brand-blue-border); display: inline-block; margin-bottom: 12px;">Tiraje y Bodega</span>
+    <h2 class="cauce-h2">Nuestras cañas, vinos y tragos de barra</h2>
+    <p style="margin: 10px auto 32px; max-width: 600px; font-size: 0.96rem; color: var(--text-muted); line-height: 1.6;">
+      Tiraje directo de bodega, cervezas especiales, aperitivos tradicionales y vinos gallegos servidos en su copa adecuada.
+    </p>
+
+    <!-- Carrusel deslizante de 6 mockups de tragos -->
+    <div class="marquee-wrap">
+      <div class="marquee-track">
+        <div class="drink-card">
+          <img src="${resolveImg('/images/dishes/estrella-galicia.jpg')}" alt="Caña y Copa Estrella Galicia de Bodega" class="drink-thumb" loading="lazy">
+          <div class="drink-tag">Bodega</div>
+          <h3 class="drink-title">Caña y Copa Estrella Galicia</h3>
+          <p class="drink-desc">Cristal helado, crema densa y tiraje directo desde tanque refrigerado.</p>
+        </div>
+        <div class="drink-card">
+          <img src="${resolveImg('/images/dishes/cerveza-1906.jpg')}" alt="1906 Red Vintage La Colorada" class="drink-thumb" loading="lazy">
+          <div class="drink-tag">Reserva</div>
+          <h3 class="drink-title">1906 Red Vintage «La Colorada»</h3>
+          <p class="drink-desc">Tostada intensa de espuma cremosa y notas acarameladas en copa propia.</p>
+        </div>
+        <div class="drink-card">
+          <img src="${resolveImg('/images/dishes/cerveza-artesana.jpg')}" alt="1906 Black Coupage" class="drink-thumb" loading="lazy">
+          <div class="drink-tag">Especial</div>
+          <h3 class="drink-title">1906 Black Coupage</h3>
+          <p class="drink-desc">Cerveza negra de carácter con matices tostados de café y cacao.</p>
+        </div>
+        <div class="drink-card">
+          <img src="${resolveImg('/images/dishes/vermu-preparado.jpg')}" alt="Vermú de Grifo con Sifón y Cítrico" class="drink-thumb" loading="lazy">
+          <div class="drink-tag">Aperitivo</div>
+          <h3 class="drink-title">Vermú de Grifo con Sifón</h3>
+          <p class="drink-desc">El clásico aperitivo servido con hielo, rodaja de naranja y aceituna.</p>
+        </div>
+        <div class="drink-card">
+          <img src="${resolveImg('/images/dishes/copa-albarino.jpg')}" alt="Albariño y Mencía por Copa" class="drink-thumb" loading="lazy">
+          <div class="drink-tag">Denominación</div>
+          <h3 class="drink-title">Albariño y Mencía por Copa</h3>
+          <p class="drink-desc">Selección de bodegas de Rías Baixas y Ribeira Sacra a su temperatura.</p>
+        </div>
+        <div class="drink-card">
+          <img src="${resolveImg('/images/dishes/combinados.jpg')}" alt="Licores Tradicionales y Combinados" class="drink-thumb" loading="lazy">
+          <div class="drink-tag">Sobremesa</div>
+          <h3 class="drink-title">Licores y Combinados</h3>
+          <p class="drink-desc">Licor café macerado, crema de orujo, hierbas y destilados en copa balón.</p>
+        </div>
+      </div>
     </div>
 
-    <div class="define-feature-card">
-      <div class="loop-box aspect-16-9">
-        <img src="${featurePoster}" alt="Tiraje en frío, gama 1906, vinos y tapas en Bar Jara-Tusas" class="loop-poster" loading="lazy">
-        <canvas class="loop-canvas" data-loop-frames='${escapeHtml(JSON.stringify(featureFrames))}' aria-hidden="true"></canvas>
-      </div>
-      <div>
-        <h3 class="font-serif" style="font-size: clamp(1.85rem, 3vw, 2.35rem); font-weight: 400; line-height: 1.12;">
-          El cuidado empieza en la bodega y se disfruta en tu mesa
-        </h3>
-        <p style="margin-top: 12px; font-size: 0.94rem; line-height: 1.6; color: var(--text-muted);">
-          Consulta cada cerveza, vino, vermú y ración caliente con transparencia total antes de acercarte por la Rúa do Curro.
-        </p>
-        <div class="sub-boxes">
-          <div class="sub-box">
-            <strong style="display: block; font-size: 0.85rem;">Precios claros con variantes</strong>
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Caña, copa, jarra y raciones</span>
-          </div>
-          <div class="sub-box">
-            <strong style="display: block; font-size: 0.85rem;">Filtro de los 14 alérgenos</strong>
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Información UE 1169/2011</span>
-          </div>
-        </div>
-        <div style="margin-top: 20px;">
-          <a href="carta.html" class="btn-blue">Ver Carta Completa con Precios</a>
-        </div>
-      </div>
+    <div style="margin-top: 36px;">
+      <a href="carta.html?mesa=0" class="btn-blue btn-blue-lg">📖 Ver Carta Completa y Precios en Mesa 0 →</a>
+      <p style="margin-top: 10px; font-size: 0.82rem; color: var(--text-muted);">Precios actualizados, formatos y los 14 alérgenos oficiales</p>
     </div>
   </section>
 
-  <!-- SECCIÓN 3: LA EXPERIENCIA JARA-TUSAS + LOOP 3:4 (ANTES DE PASO 01 EN MÓVIL) -->
-  <section id="experiencia" class="cauce-section" style="padding-top: 24px;">
-    <div class="exp-grid">
-      <div class="exp-title">
-        <h2 class="cauce-h2">La experiencia Jara-Tusas</h2>
-        <p style="margin-top: 10px; font-size: 0.96rem; color: var(--text-muted); line-height: 1.6;">
-          Cuatro momentos del día bajo los soportales históricos del casco antiguo de Noia.
-        </p>
-      </div>
-
-      <div class="exp-video-col">
-        <div class="loop-box aspect-3-4">
-          <img src="${experiencePoster}" alt="Ambiente en los soportales y barra de Bar Jara-Tusas" class="loop-poster" loading="lazy">
-          <canvas class="loop-canvas" data-loop-frames='${escapeHtml(JSON.stringify(experienceFrames))}' aria-hidden="true"></canvas>
-        </div>
-      </div>
-
-      <div class="exp-steps">
-        <div class="exp-step">
-          <span class="exp-step-num tabular-nums">01</span>
-          <div>
-            <h3 style="font-size: 1.05rem; font-weight: 600;">Café de especialidad por la mañana</h3>
-            <p style="margin-top: 4px; font-size: 0.9rem; color: var(--text-muted); line-height: 1.55;">
-              Molienda 100% arábica al instante y ambiente tranquilo en barra o terraza desde primera hora.
-            </p>
-          </div>
-        </div>
-        <div class="exp-step">
-          <span class="exp-step-num tabular-nums">02</span>
-          <div>
-            <h3 style="font-size: 1.05rem; font-weight: 600;">Sesión vermú y cañas bajo los soportales</h3>
-            <p style="margin-top: 4px; font-size: 0.9rem; color: var(--text-muted); line-height: 1.55;">
-              Estrella Galicia de tanque, St. Petroni con sifón y tapa caliente de cortesía al mediodía.
-            </p>
-          </div>
-        </div>
-        <div class="exp-step">
-          <span class="exp-step-num tabular-nums">03</span>
-          <div>
-            <h3 style="font-size: 1.05rem; font-weight: 600;">Raciones calientes para compartir al centro</h3>
-            <p style="margin-top: 4px; font-size: 0.9rem; color: var(--text-muted); line-height: 1.55;">
-              Raxo con queso Arzúa fundido, croquetas de jamón ibérico, patatas tres salsas y empanada del día.
-            </p>
-          </div>
-        </div>
-        <div class="exp-step">
-          <span class="exp-step-num tabular-nums">04</span>
-          <div>
-            <h3 style="font-size: 1.05rem; font-weight: 600;">Vinos D.O. y copas hasta la última ronda</h3>
-            <p style="margin-top: 4px; font-size: 0.9rem; color: var(--text-muted); line-height: 1.55;">
-              Blancos atlánticos, tintos con crianza, 1906 bien frías y combinados en copa balón hasta medianoche.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- SECCIÓN 4: NUESTROS ESPACIOS Y HORARIOS -->
-  <section id="espacios" class="cauce-section" style="padding-top: 24px;">
+  <!-- PANTALLA 3: NUESTROS ESPACIOS Y HORARIOS (3 ESPACIOS ÚNICOS) -->
+  <section id="espacios" class="cauce-section" style="padding-top: 48px;">
     <div class="spaces-grid">
       <div>
-        <h2 class="cauce-h2">Nuestros espacios y horarios</h2>
+        <h2 class="cauce-h2">Tres espacios y horarios</h2>
         <p style="margin-top: 12px; font-size: 0.96rem; color: var(--text-muted); line-height: 1.6;">
           ${escapeHtml(tenant.address)}, ${escapeHtml(tenant.postalCode)} ${escapeHtml(tenant.city)}. Elige tu rincón favorito y coordina mesa en segundos.
         </p>
@@ -1426,6 +1428,9 @@ ${JSON.stringify(jsonLd, null, 2)}
   </div>
 
   <div class="menu-header">
+    <div id="mesa-zero-banner" style="display: none; margin-bottom: 14px;">
+      <span style="display: inline-flex; align-items: center; gap: 6px; background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-size: 0.82rem; font-weight: 800; padding: 4px 14px; border-radius: 9999px; letter-spacing: 0.04em;">📍 MESA 0</span>
+    </div>
     <span style="font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 700; color: var(--brand-blue);">Catálogo Digital Oficial</span>
     <h1 class="font-serif" style="font-size: clamp(2.2rem, 5vw, 3.1rem); font-weight: 400; margin-top: 6px;">Carta Oficial &amp; Precios</h1>
     <p style="color: var(--text-muted); margin-top: 8px; font-size: 0.94rem;">Precios con IVA incluido · Información de alérgenos conforme al Reglamento UE 1169/2011</p>
@@ -1458,7 +1463,7 @@ ${JSON.stringify(jsonLd, null, 2)}
           ` : ''}
           ${d.allergens && d.allergens.length > 0 ? `
           <div>
-            ${d.allergens.map(a => `<span class="allergen-tag">⚠️ ${escapeHtml(a)}</span>`).join('')}
+            ${d.allergens.map(a => `<span class="allergen-tag">${escapeHtml(a)}</span>`).join('')}
           </div>
           ` : ''}
         </div>
@@ -1472,6 +1477,17 @@ ${JSON.stringify(jsonLd, null, 2)}
   </main>
 
   <script>
+    (function checkMesaZero() {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var m = params.get('mesa');
+        if (m === '0' || m === 'mesa-0' || m === 'mesa0') {
+          var el = document.getElementById('mesa-zero-banner');
+          if (el) el.style.display = 'block';
+        }
+      } catch (e) {}
+    })();
+
     var activeCategory = 'Todos';
     function filterMenu(cat) {
       activeCategory = cat;

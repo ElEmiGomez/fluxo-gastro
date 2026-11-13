@@ -36,6 +36,7 @@ import type {
 import { HeroCinematic } from '@/components/web/HeroCinematic'
 import { CanvasScrollytelling } from '@/components/web/CanvasScrollytelling'
 import { LoopVideoBlock } from '@/components/web/LoopVideoBlock'
+import { DrinkMockupsMarquee } from '@/components/web/DrinkMockupsMarquee'
 import { LiveOpeningBadge } from '@/components/web/LiveOpeningBadge'
 import { MobileStickyActionBar } from '@/components/web/MobileStickyActionBar'
 import {
@@ -448,7 +449,7 @@ const CAUCE_COPY = {
       },
     ],
     sec4Eyebrow: 'Espacios & Horario',
-    sec4Title: 'Cuatro rincones para cada momento del día',
+    sec4Title: 'Tres espacios para cada momento del día',
     sec4Subtitle:
       'Elige el espacio que mejor encaja con tu plan; al seleccionarlo prepararemos tu consulta directa por WhatsApp.',
     sec4MapsBtn: 'Cómo llegar en Google Maps',
@@ -553,7 +554,7 @@ const CAUCE_COPY = {
       },
     ],
     sec4Eyebrow: 'Espazos e Horario',
-    sec4Title: 'Catro recunchos para cada momento do día',
+    sec4Title: 'Tres espazos para cada momento do día',
     sec4Subtitle:
       'Escolle o espazo que mellor encaixa co teu plan; ao seleccionalo prepararemos a túa consulta directa por WhatsApp.',
     sec4MapsBtn: 'Como chegar en Google Maps',
@@ -658,7 +659,7 @@ const CAUCE_COPY = {
       },
     ],
     sec4Eyebrow: 'Spaces & Hours',
-    sec4Title: 'Four welcoming corners for every moment',
+    sec4Title: 'Three distinct spaces for every moment',
     sec4Subtitle:
       'Choose the area that fits your plan; picking a space prepares your direct WhatsApp message below.',
     sec4MapsBtn: 'Directions on Google Maps',
@@ -1466,192 +1467,17 @@ export default function GastronomicWebClientView({ tenant }: GastronomicWebClien
         />
 
         <main id="main-content">
-          {/* SECCIÓN 2: Lo que nos define (3 Tarjetas + Tarjeta Feature Vídeo 16:9) */}
-          <section
-            id="lo-que-nos-define"
-            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto"
-          >
-            <ScrollReveal>
-              <div className="max-w-2xl space-y-3 mb-12 sm:mb-14">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
-                  {cauce.sec2Eyebrow}
-                </span>
-                <h2
-                  className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
-                  style={CAUCE_SERIF_STYLE}
-                >
-                  {cauce.sec2Title}
-                </h2>
-                <p className="text-base sm:text-lg text-[#475569] leading-relaxed">
-                  {cauce.sec2Subtitle}
-                </p>
-              </div>
-            </ScrollReveal>
+          {/* PANTALLA 2: Menú Deslizante de Mockups de Tragos + Botón a Mesa 0 */}
+          <DrinkMockupsMarquee
+            lang={lang}
+            menuUrl={tenant.qrMenuUrl ? `${tenant.qrMenuUrl}?mesa=0` : '/p/bar-jaratusas?mesa=0'}
+            onOpenMenu={() => {
+              setIsMenuModalOpen(true)
+              trackConversion('open_menu')
+            }}
+          />
 
-            {/* Tres pilares en tarjetas blancas puras */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {cauce.sec2Pillars.map((pillar, idx) => (
-                <ScrollReveal key={pillar.tag} delayMs={idx * 60}>
-                  <article className="h-full bg-white rounded-[22px] border border-slate-200/80 p-7 sm:p-8 shadow-sm flex flex-col justify-between space-y-5">
-                    <div className="space-y-3">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#1D4ED8] block">
-                        {pillar.tag}
-                      </span>
-                      <h3
-                        className="text-2xl sm:text-[26px] font-normal text-[#0F172A] tracking-tight leading-snug"
-                        style={CAUCE_SERIF_STYLE}
-                      >
-                        {pillar.title}
-                      </h3>
-                    </div>
-
-                    <ul className="space-y-3 pt-1">
-                      {pillar.bullets.map((item) => (
-                        <li
-                          key={item}
-                          className="flex items-start gap-2.5 text-sm text-[#475569] leading-relaxed"
-                        >
-                          <Check className="w-4 h-4 text-[#1D4ED8] flex-shrink-0 mt-0.5" />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </article>
-                </ScrollReveal>
-              ))}
-            </div>
-
-            {/* Tarjeta horizontal feature: Vídeo 16:9 izquierdo + Texto & CTA derecho */}
-            <ScrollReveal delayMs={120}>
-              <div className="mt-8 bg-white rounded-[22px] border border-slate-200/80 p-5 sm:p-8 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7">
-                  <LoopVideoBlock
-                    posterSrc={
-                      tenant.featureVideoFrames?.[0] || '/images/jaratusas/panel-01-tiraje.jpg'
-                    }
-                    frames={tenant.featureVideoFrames}
-                    aspectClass="aspect-video w-full rounded-[16px]"
-                    alt={cauce.sec2VideoAlt}
-                  />
-                </div>
-
-                <div className="lg:col-span-5 space-y-5">
-                  <h3
-                    className="text-2xl sm:text-4xl font-normal tracking-tight text-[#0F172A] leading-[1.12]"
-                    style={CAUCE_SERIF_STYLE}
-                  >
-                    {cauce.sec2FeatureTitle}
-                  </h3>
-                  <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
-                    {cauce.sec2FeatureDesc}
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div className="rounded-2xl bg-[#F6F6F3] border border-slate-200/70 p-4 space-y-1">
-                      <span className="text-xs font-semibold text-[#0F172A] block">
-                        {cauce.sec2SubBox1Title}
-                      </span>
-                      <p className="text-xs text-[#475569] leading-relaxed">
-                        {cauce.sec2SubBox1Desc}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-[#F6F6F3] border border-slate-200/70 p-4 space-y-1">
-                      <span className="text-xs font-semibold text-[#0F172A] block">
-                        {cauce.sec2SubBox2Title}
-                      </span>
-                      <p className="text-xs text-[#475569] leading-relaxed">
-                        {cauce.sec2SubBox2Desc}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsMenuModalOpen(true)
-                        trackConversion('open_menu')
-                      }}
-                      className="inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-[#1E3A8A] text-white rounded-full px-6 py-3.5 text-sm font-semibold shadow-sm transition-colors w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8] focus-visible:ring-offset-2"
-                    >
-                      <span>{cauce.sec2MenuBtn}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-
-                    {tenant.qrMenuUrl && (
-                      <Link
-                        href={tenant.qrMenuUrl}
-                        className="inline-flex items-center justify-center sm:justify-start gap-1.5 text-xs font-semibold text-[#1D4ED8] hover:underline py-2 px-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1D4ED8]"
-                      >
-                        <span>{cauce.sec2QrBtn}</span>
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </ScrollReveal>
-          </section>
-
-          {/* SECCIÓN 3: La experiencia (En < 768px vídeo 3:4 debajo del título y ANTES del paso 01) */}
-          <section
-            id="experiencia"
-            className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-12 md:grid-rows-[auto_1fr] gap-8 md:gap-x-12 md:gap-y-8 items-start">
-              {/* Título */}
-              <div className="order-1 md:col-span-6 md:col-start-1 md:row-start-1 space-y-3">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1D4ED8] block">
-                  {cauce.sec3Eyebrow}
-                </span>
-                <h2
-                  className="text-3xl sm:text-5xl font-normal tracking-tight text-[#0F172A] leading-[1.08]"
-                  style={CAUCE_SERIF_STYLE}
-                >
-                  {cauce.sec3Title}
-                </h2>
-                <p className="text-base sm:text-lg text-[#475569] leading-relaxed">
-                  {cauce.sec3Subtitle}
-                </p>
-              </div>
-
-              {/* Vídeo 3:4 vertical sin badges flotantes */}
-              <div className="order-2 md:col-span-5 md:col-start-8 md:row-start-1 md:row-span-2">
-                <LoopVideoBlock
-                  posterSrc={
-                    tenant.experienceVideoFrames?.[0] || '/images/bg/jaratusas-flank-left.jpg'
-                  }
-                  frames={tenant.experienceVideoFrames}
-                  aspectClass="aspect-[3/4] w-full rounded-[22px] shadow-md"
-                  alt={cauce.sec3VideoAlt}
-                />
-              </div>
-
-              {/* Pasos 01 a 04 */}
-              <div className="order-3 md:col-span-6 md:col-start-1 md:row-start-2 divide-y divide-slate-200 border-t border-b border-slate-200">
-                {cauce.sec3Steps.map((step) => (
-                  <div key={step.num} className="py-5 sm:py-6 flex items-start gap-4 sm:gap-6">
-                    <span
-                      className="text-2xl sm:text-3xl font-normal text-[#1D4ED8] tabular-nums leading-none pt-0.5 flex-shrink-0"
-                      style={CAUCE_SERIF_STYLE}
-                    >
-                      {step.num}
-                    </span>
-                    <div className="space-y-1.5">
-                      <h3 className="text-base sm:text-lg font-semibold text-[#0F172A] tracking-tight">
-                        {step.title}
-                      </h3>
-                      <p className="text-sm sm:text-base text-[#475569] leading-relaxed">
-                        {step.desc}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* SECCIÓN 4: Espacios del Local + Horario en Vivo + Ubicación */}
+          {/* PANTALLA 3: Espacios del Local + Horario en Vivo + Ubicación */}
           <section
             id="espacios"
             className="scroll-mt-24 py-20 sm:py-28 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto border-t border-slate-200/80"

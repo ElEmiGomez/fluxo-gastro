@@ -61,13 +61,14 @@ export function LoopVideoBlock({
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
   const [canvasReady, setCanvasReady] = useState(false)
+  const [videoFailed, setVideoFailed] = useState(false)
 
   const sourceList = useMemo(() => {
     const raw = [posterSrc, ...(frames || [])].filter(Boolean)
     return Array.from(new Set(raw))
   }, [posterSrc, frames])
 
-  const hasVideoStream = Boolean(videoMp4Url || videoWebmUrl)
+  const hasVideoStream = Boolean((videoMp4Url || videoWebmUrl) && !videoFailed)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -271,6 +272,7 @@ export function LoopVideoBlock({
           loop
           playsInline
           poster={posterSrc}
+          onError={() => setVideoFailed(true)}
           className="absolute inset-0 w-full h-full object-cover"
         >
           {videoWebmUrl && <source src={videoWebmUrl} type="video/webm" />}

@@ -282,12 +282,18 @@ export default function CartaPrototipoPage() {
   // Embebe la experiencia autónoma optimizada con carrito, personalizador de platos y carrusel de categorías
   const isCasaMar = slug.includes('casamar') || slug.includes('casa-mar')
   const isJaratusas = slug.includes('jaratusa') || slug.includes('jara-tusa')
-  const queryString = searchParams?.toString() ? `?${searchParams.toString()}` : ''
+  const currentParams = new URLSearchParams(searchParams?.toString() || '')
+  const mesaParam = searchParams?.get('mesa') ?? searchParams?.get('table') ?? searchParams?.get('m')
+  // CUIDADO CON EL FALSY DE 0: aceptar '0' como mesa válida para la experiencia Web / Mesa 0
+  if (mesaParam !== null && mesaParam !== undefined && mesaParam !== '') {
+    currentParams.set('mesa', mesaParam)
+  }
+  const queryString = currentParams.toString() ? `?${currentParams.toString()}` : ''
   const menuSource = isJaratusas
     ? `/carta-jaratusas${queryString}`
     : isCasaMar
     ? `/carta-casamar${queryString}`
-    : `/carta-prototipo?slug=${slug}${queryString ? `&${searchParams.toString()}` : ''}`
+    : `/carta-prototipo?slug=${slug}${queryString ? `&${currentParams.toString()}` : ''}`
 
   return (
     <div className="fixed inset-0 w-full h-full bg-slate-50 overflow-hidden">

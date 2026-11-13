@@ -20,7 +20,7 @@ test('getGastronomicTenant returns structured configuration for known slug', asy
   assert.ok(tenant!.openingHours.length > 0)
 })
 
-test('getGastronomicTenant resolves Bar Jara-Tusas with Cauce Editorial tokens, loop frames on disk, 4 spaces, and 14+ dishes', async () => {
+test('getGastronomicTenant resolves Bar Jara-Tusas with Cauce Editorial tokens, loop frames on disk, 3 unique spaces, and 14+ dishes', async () => {
   const tenant = await getGastronomicTenant('bar-jaratusas')
   assert.ok(tenant)
   assert.equal(tenant?.slug, 'bar-jaratusas')
@@ -31,7 +31,7 @@ test('getGastronomicTenant resolves Bar Jara-Tusas with Cauce Editorial tokens, 
   assert.equal(tenant?.primaryColor, '#F6F6F3')
   assert.equal(tenant?.accentColor, '#1D4ED8')
   assert.equal(tenant?.logoUrl, '/images/jaratusas-logo-circle.png')
-  assert.equal(tenant?.heroImagePoster, '/images/jaratusas/hero-arch-facade.jpg')
+  assert.equal(tenant?.heroImagePoster, '/assets/jaratusas/hero-barra-cerveza-poster.jpg')
 
   for (const orange of ORANGE_HEXES) {
     assert.notEqual(tenant?.primaryColor?.toUpperCase(), orange)
@@ -49,7 +49,10 @@ test('getGastronomicTenant resolves Bar Jara-Tusas with Cauce Editorial tokens, 
     ...tenant!.experienceVideoFrames!,
   ]
   for (const frameUrl of loopFrameUrls) {
-    assert.ok(frameUrl.startsWith('/images/'), `Expected local /images/ path, got ${frameUrl}`)
+    assert.ok(
+      frameUrl.startsWith('/images/') || frameUrl.startsWith('/assets/'),
+      `Expected local /images/ or /assets/ path, got ${frameUrl}`
+    )
     const diskPath = path.join(publicDir, frameUrl.replace(/^\/+/, ''))
     assert.ok(fs.existsSync(diskPath), `Missing Cauce loop asset on disk: ${diskPath}`)
   }
@@ -62,10 +65,10 @@ test('getGastronomicTenant resolves Bar Jara-Tusas with Cauce Editorial tokens, 
     ['cerv-grifo', 'cerv-1906', 'vino-blanco', 'tapa-raxo']
   )
 
-  assert.equal(tenant!.ambiences.length, 4)
+  assert.equal(tenant!.ambiences.length, 3)
   assert.deepEqual(
     tenant!.ambiences.map((a) => a.id),
-    ['terraza-exterior', 'salon-interior', 'zona-barra', 'mesas-grupos']
+    ['terraza-exterior', 'salon-interior', 'zona-barra']
   )
   for (const amb of tenant!.ambiences) {
     assert.ok(amb.imageDay.startsWith('/images/'), `Invalid ambience day path: ${amb.imageDay}`)
@@ -90,13 +93,20 @@ test('getGastronomicTenant resolves Bar Jara-Tusas with Cauce Editorial tokens, 
     )
   }
 
+  // Verificar que no hay imágenes repetidas entre espacios
+  const dayImages = tenant!.ambiences.map((a) => a.imageDay)
+  assert.equal(new Set(dayImages).size, 3, 'Las imágenes de día entre espacios deben ser 100% únicas')
+
   const allDiskAssets = [
     ...loopFrameUrls,
     tenant!.logoUrl!,
     ...tenant!.dishes.map((d) => d.image),
   ]
   for (const assetUrl of allDiskAssets) {
-    assert.ok(assetUrl.startsWith('/images/'), `Expected local /images/ path, got ${assetUrl}`)
+    assert.ok(
+      assetUrl.startsWith('/images/') || assetUrl.startsWith('/assets/'),
+      `Expected local /images/ or /assets/ path, got ${assetUrl}`
+    )
     const filePath = path.join(publicDir, assetUrl.replace(/^\/+/, ''))
     assert.ok(fs.existsSync(filePath), `Referenced asset missing on disk: ${filePath}`)
   }
@@ -111,7 +121,7 @@ test('getGastronomicTenant resolves jaratusas and jara-tusas aliases exclusively
     assert.equal(tenant?.layoutPreset, 'cauce_editorial')
     assert.equal(tenant?.primaryColor, '#F6F6F3')
     assert.equal(tenant?.accentColor, '#1D4ED8')
-    assert.equal(tenant?.ambiences.length, 4)
+    assert.equal(tenant?.ambiences.length, 3)
     assert.ok(tenant!.dishes.length >= 14)
   }
 })

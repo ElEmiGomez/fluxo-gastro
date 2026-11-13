@@ -753,8 +753,11 @@
 
     // ── GESTIÓN DE QUERY PARAMS ──
     function formatTableName(rawMesa) {
-      if (!rawMesa) return 'Mesa 12';
+      if (rawMesa === null || rawMesa === undefined || rawMesa === '') return 'Mesa 12';
       const m = String(rawMesa).trim();
+      if (m === '0' || /^mesa\s*0$/i.test(m)) {
+        return '📍 MESA 0';
+      }
       if (/^mesa/i.test(m)) {
         return m.replace(/^mesa\s*/i, 'Mesa ');
       }
@@ -766,7 +769,8 @@
 
     function getTableParams() {
       const urlParams = new URLSearchParams(window.location.search);
-      const rawMesa = urlParams.get('mesa') || urlParams.get('table') || urlParams.get('m') || '12';
+      const paramMesa = urlParams.get('mesa') ?? urlParams.get('table') ?? urlParams.get('m');
+      const rawMesa = (paramMesa !== null && paramMesa !== undefined && paramMesa !== '') ? paramMesa : '12';
       const mesaFormatted = formatTableName(rawMesa);
       return { mesa: mesaFormatted };
     }
