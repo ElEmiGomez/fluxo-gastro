@@ -6,6 +6,30 @@ export const NOIA_CENTER_COORDINATES = {
   zoom: 17,
 }
 
+export const SANTIAGO_CENTER_COORDINATES = {
+  lat: 42.8782,
+  lng: -8.5448,
+  zoom: 15,
+}
+
+export const SANTIAGO_INTERMODAL_COORDINATES = {
+  lat: 42.8705,
+  lng: -8.5453,
+}
+
+export const CITY_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  'Santiago de Compostela': { lat: 42.8782, lng: -8.5448 },
+  'Noia': { lat: 42.7840, lng: -8.8885 },
+  'A Coruña': { lat: 43.3623, lng: -8.4115 },
+  'Vigo': { lat: 42.2406, lng: -8.7207 },
+  'Pontevedra': { lat: 42.4336, lng: -8.6479 },
+  'Ourense': { lat: 42.3358, lng: -7.8639 },
+  'Lugo': { lat: 43.0125, lng: -7.5558 },
+  'Vilagarcía de Arousa': { lat: 42.5964, lng: -8.7645 },
+  'Ribeira': { lat: 42.5544, lng: -8.9922 },
+  'Boiro': { lat: 42.6483, lng: -8.8828 },
+}
+
 // Coordenadas geográficas auditadas para los establecimientos de Noia (calibradas sin colisiones)
 export const NOIA_ESTABLISHMENT_COORDINATES: Record<string, { lat: number; lng: number }> = {
   'Tapería Adega do Pazo': { lat: 42.78455, lng: -8.88935 },
@@ -44,13 +68,14 @@ export const NOIA_ESTABLISHMENT_COORDINATES: Record<string, { lat: number; lng: 
   'Costiña': { lat: 42.78345, lng: -8.88895 },
   'A Tafona do Cantón': { lat: 42.78120, lng: -8.88420 },
   'Cociña A de Pepe': { lat: 42.78415, lng: -8.88975 },
-  'Ril\'s': { lat: 42.78325, lng: -8.88670 },
+  "Ril's": { lat: 42.78325, lng: -8.88670 },
 }
 
 // Centros aproximados por zona para nuevos locales sin geocodificación explícita
 export const ZONE_CENTERS: Record<string, { lat: number; lng: number }> = {
   'Casco Histórico': { lat: 42.7842, lng: -8.8895 },
   'Centro': { lat: 42.7833, lng: -8.8873 },
+  'Centro Noia': { lat: 42.7840, lng: -8.8878 },
   'Noia Centro': { lat: 42.7835, lng: -8.8878 },
   'Alameda': { lat: 42.7846, lng: -8.8864 },
   'Cantón': { lat: 42.7845, lng: -8.8894 },
@@ -60,6 +85,10 @@ export const ZONE_CENTERS: Record<string, { lat: number; lng: number }> = {
   'Portus Apostoli': { lat: 42.7868, lng: -8.8932 },
   'Barro / Periferia': { lat: 42.7798, lng: -8.8835 },
   'Periferia': { lat: 42.7800, lng: -8.8830 },
+  // Santiago de Compostela
+  'Ensanche': { lat: 42.8748, lng: -8.5468 },
+  'San Pedro': { lat: 42.8825, lng: -8.5382 },
+  'Zona Vella': { lat: 42.8794, lng: -8.5446 },
 }
 
 /**
@@ -90,19 +119,117 @@ export function getLeadCoordinates(lead: CRMLead): { lat: number; lng: number } 
     return NOIA_ESTABLISHMENT_COORDINATES[normalizedName]
   }
 
-  // Búsqueda parcial por nombre
-  for (const [key, coords] of Object.entries(NOIA_ESTABLISHMENT_COORDINATES)) {
-    if (normalizedName.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(normalizedName.toLowerCase())) {
-      return coords
+  // Búsqueda parcial por nombre (solo para locales de Noia)
+  if (!lead.city || lead.city === 'Noia') {
+    for (const [key, coords] of Object.entries(NOIA_ESTABLISHMENT_COORDINATES)) {
+      if (normalizedName.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(normalizedName.toLowerCase())) {
+        return coords
+      }
     }
   }
 
-  // Fallback por zona con dispersión determinista
-  const zoneCenter = ZONE_CENTERS[lead.zone] || NOIA_CENTER_COORDINATES
+  // Fallback por zona o ciudad con dispersión determinista
+  const defaultCenter = (lead.city && CITY_COORDINATES[lead.city]) || (lead.city === 'Santiago de Compostela' ? SANTIAGO_CENTER_COORDINATES : NOIA_CENTER_COORDINATES)
+  const zoneCenter = ZONE_CENTERS[lead.zone] || defaultCenter
   const offset = getDeterministicOffset(lead.id || lead.name)
 
   return {
     lat: zoneCenter.lat + offset.dLat,
     lng: zoneCenter.lng + offset.dLng,
   }
+}
+
+/**
+ * Distancia Haversine entre dos coordenadas en kilómetros.
+ */
+export function haversineDistanceKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+): number {
+  const R = 6371
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const dLat = toRad(b.lat - a.lat)
+  const dLng = toRad(b.lng - a.lng)
+  const sinLat = Math.sin(dLat / 2)
+  const sinLng = Math.sin(dLng / 2)
+  const h =
+    sinLat * sinLat +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLng * sinLng
+  return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+}
+
+/**
+ * Optimiza el orden de una ruta de visitas empezando por la primera parada elegida
+ * (heurística Nearest Neighbor por distancia real).
+ */
+export function optimizeVisitRoute(leads: CRMLead[]): CRMLead[] {
+  if (leads.length <= 2) return leads
+  const remaining = leads.slice(1)
+  const ordered: CRMLead[] = [leads[0]]
+
+  while (remaining.length > 0) {
+    const currentCoords = getLeadCoordinates(ordered[ordered.length - 1])
+    let bestIdx = 0
+    let bestDist = Infinity
+
+    for (let i = 0; i < remaining.length; i++) {
+      const dist = haversineDistanceKm(currentCoords, getLeadCoordinates(remaining[i]))
+      if (dist < bestDist) {
+        bestDist = dist
+        bestIdx = i
+      }
+    }
+
+    ordered.push(remaining.splice(bestIdx, 1)[0])
+  }
+
+  return ordered
+}
+
+/**
+ * Calcula distancia total estimada caminando (factor urbano 1.25) y minutos a pie (~4.5 km/h).
+ */
+export function calculateRouteStats(leads: CRMLead[]): {
+  distanceKm: number
+  walkingMinutes: number
+} {
+  if (leads.length < 2) return { distanceKm: 0, walkingMinutes: 0 }
+  let rawKm = 0
+  for (let i = 0; i < leads.length - 1; i++) {
+    rawKm += haversineDistanceKm(getLeadCoordinates(leads[i]), getLeadCoordinates(leads[i + 1]))
+  }
+  const distanceKm = rawKm * 1.25
+  const walkingMinutes = Math.max(1, Math.round((distanceKm / 4.5) * 60))
+  return { distanceKm, walkingMinutes }
+}
+
+/**
+ * Genera el enlace oficial de Google Maps con ruta a pie paso a paso.
+ * Google Maps admite hasta 9 waypoints intermedios (11 paradas en total por enlace).
+ */
+export function buildGoogleMapsWalkingRouteUrl(leads: CRMLead[]): string | null {
+  if (leads.length === 0) return null
+  if (leads.length === 1) {
+    const c = getLeadCoordinates(leads[0])
+    return `https://www.google.com/maps/dir/?api=1&travelmode=walking&destination=${c.lat},${c.lng}`
+  }
+
+  const capped = leads.slice(0, 11)
+  const first = getLeadCoordinates(capped[0])
+  const last = getLeadCoordinates(capped[capped.length - 1])
+  const middle = capped.slice(1, -1).map((l) => {
+    const c = getLeadCoordinates(l)
+    return `${c.lat},${c.lng}`
+  })
+
+  const params = new URLSearchParams({
+    api: '1',
+    travelmode: 'walking',
+    origin: `${first.lat},${first.lng}`,
+    destination: `${last.lat},${last.lng}`,
+  })
+  if (middle.length > 0) {
+    params.set('waypoints', middle.join('|'))
+  }
+  return `https://www.google.com/maps/dir/?${params.toString()}`
 }

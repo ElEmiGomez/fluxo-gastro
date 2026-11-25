@@ -14,6 +14,8 @@ const SEED_TENANTS: Record<string, GastronomicTenantConfig> = {
     cuisineType: ['Marisquería', 'Pescados', 'Brasas', 'Cocina Gallega'],
     priceRange: '€€€',
     googleMapsUrl: 'https://maps.google.com/?q=Casa+Mar+da+Vila+Noia',
+    googleReviewUrl: 'https://maps.google.com/?q=Casa+Mar+da+Vila+Noia',
+    enableReviewGatekeeper: false,
     primaryColor: '#0B0D10',
     accentColor: '#C85A32',
     heroImagePoster: '/images/dishes/lubina-espalda.jpg',
@@ -121,6 +123,8 @@ const SEED_TENANTS: Record<string, GastronomicTenantConfig> = {
     cuisineType: ['Cervecería de Bodega', 'Vermutería Gallega', 'Tapas y Raciones', 'Vinos D.O.'],
     priceRange: '€',
     googleMapsUrl: 'https://maps.google.com/?q=Bar+Jara+Tusas+Rua+do+Curro+8+Noia',
+    googleReviewUrl: 'https://maps.google.com/?q=Bar+Jara+Tusas+Rua+do+Curro+8+Noia',
+    enableReviewGatekeeper: false,
     googleMapsRating: 4.8,
     googleMapsReviewCount: 342,
     primaryColor: '#F6F6F3',
@@ -680,4 +684,16 @@ export async function getGastronomicTenant(slug: string): Promise<GastronomicTen
   }
 
   return null
+}
+
+/**
+ * Resuelve la URL final de reseñas en Google Maps para un local.
+ */
+export function resolveGoogleReviewUrl(tenant: GastronomicTenantConfig): string {
+  if (tenant.googleReviewUrl) return tenant.googleReviewUrl
+  if (tenant.googlePlaceId) {
+    return `https://search.google.com/local/writereview?placeid=${tenant.googlePlaceId}`
+  }
+  if (tenant.googleMapsUrl) return tenant.googleMapsUrl
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${tenant.name} ${tenant.city}`)}`
 }

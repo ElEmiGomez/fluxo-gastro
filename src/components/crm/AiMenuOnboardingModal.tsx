@@ -315,8 +315,8 @@ export function AiMenuOnboardingModal({
                         : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
                     }`}
                   >
-                    <div className="text-[11px] font-black">Carta Fija</div>
-                    <div className="text-xs font-extrabold text-slate-600 dark:text-slate-400">20 €/mes</div>
+                    <div className="text-[11px] font-black">Carta QR</div>
+                    <div className="text-xs font-extrabold text-slate-600 dark:text-slate-400">15 €/mes</div>
                   </button>
                   <button
                     type="button"

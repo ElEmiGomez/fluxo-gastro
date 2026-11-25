@@ -7,7 +7,10 @@ import {
   deleteCRMLead,
   calculateCRMMetrics
 } from '@/lib/supabase/repositories/crm.repository'
-import { CRMLead } from '@/types/crm.types'
+import { CRMLead, normalizeLeadCity } from '@/types/crm.types'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 /**
  * Genera un archivo CSV compatible con Excel (UTF-8 con BOM)
@@ -15,17 +18,29 @@ import { CRMLead } from '@/types/crm.types'
 function generateLeadsCSV(leads: CRMLead[]): string {
   const headers = [
     'ID',
+    'Ciudad',
+    'Zona',
     'Nombre',
     'Direccion',
-    'Zona',
+    'Tipo',
     'Segmento_ICP',
     'Contacto_Nombre',
     'Telefono',
     'WhatsApp',
     'Instagram',
+    'Facebook',
     'Google_Rating',
     'Google_Reviews',
-    'Score',
+    'Score_10',
+    'Lead_Score_100',
+    'Propuesta_Recomendada',
+    'Estado_Menu_Online',
+    'URL_Menu_Online',
+    'URL_Perfil_Google',
+    'URL_Directa_Resenas',
+    'Horario_Sabado',
+    'Bloque_Ruta',
+    'Orden_Ruta',
     'Estado',
     'Plan_Objetivo',
     'MRR_Proyectado_EUR',
@@ -38,29 +53,43 @@ function generateLeadsCSV(leads: CRMLead[]): string {
     'Fecha_Creacion'
   ]
 
+  const esc = (v: string | null | undefined) => `"${(v || '').replace(/"/g, '""')}"`
+
   const rows = leads.map((l) => [
-    `"${l.id}"`,
-    `"${(l.name || '').replace(/"/g, '""')}"`,
-    `"${(l.address || '').replace(/"/g, '""')}"`,
-    `"${(l.zone || '').replace(/"/g, '""')}"`,
-    `"${l.icp_segment}"`,
-    `"${(l.contact_name || '').replace(/"/g, '""')}"`,
-    `"${(l.contact_phone || '').replace(/"/g, '""')}"`,
-    `"${(l.contact_whatsapp || '').replace(/"/g, '""')}"`,
-    `"${(l.instagram || '').replace(/"/g, '""')}"`,
+    esc(l.id),
+    esc(normalizeLeadCity(l)),
+    esc(l.zone),
+    esc(l.name),
+    esc(l.address),
+    esc(l.primary_type),
+    esc(l.icp_segment),
+    esc(l.contact_name),
+    esc(l.contact_phone),
+    esc(l.contact_whatsapp),
+    esc(l.instagram_url || l.instagram),
+    esc(l.facebook_url),
     l.google_rating ?? '',
     l.google_reviews_count ?? '',
     l.score,
-    `"${l.status}"`,
-    `"${l.target_plan}"`,
+    l.lead_score ?? '',
+    esc(l.recommended_pitch),
+    esc(l.online_menu_status || 'unknown'),
+    esc(l.online_menu_url),
+    esc(l.google_profile_url),
+    esc(l.google_review_url),
+    esc(l.saturday_hours),
+    esc(l.route_block),
+    l.route_order ?? '',
+    esc(l.status),
+    esc(l.target_plan),
     l.mrr_projected,
-    `"${l.pilot_start_date || ''}"`,
-    `"${l.pilot_end_date || ''}"`,
-    `"${l.last_visit_date || ''}"`,
-    `"${l.next_contact_date || ''}"`,
-    `"${(l.notes || '').replace(/"/g, '""')}"`,
-    `"${(l.lost_reason || '').replace(/"/g, '""')}"`,
-    `"${l.created_at || ''}"`
+    esc(l.pilot_start_date),
+    esc(l.pilot_end_date),
+    esc(l.last_visit_date),
+    esc(l.next_contact_date),
+    esc(l.notes),
+    esc(l.lost_reason),
+    esc(l.created_at)
   ].join(','))
 
   // \uFEFF es el BOM de UTF-8 para que Excel en Windows reconozca tildes y caracteres especiales
@@ -90,7 +119,14 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({ leads, metrics })
+    return NextResponse.json(
+      { leads, metrics },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        },
+      }
+    )
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Error al obtener leads' }, { status: 500 })
   }

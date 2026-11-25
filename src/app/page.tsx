@@ -406,7 +406,7 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-8 items-stretch pt-4">
               
-              {/* Tarjeta 1: Plan Carta (39 €) */}
+              {/* Tarjeta 1: Plan Carta (15 €) */}
               <ScrollReveal delay={0} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Carta QR (15€)')}
@@ -480,7 +480,7 @@ export default function LandingPage() {
                 </div>
               </ScrollReveal>
 
-              {/* Tarjeta 2: Plan Sala (69 €) */}
+              {/* Tarjeta 2: Plan Mozo (47 €) */}
               <ScrollReveal delay={150} distance={32} className="flex flex-col h-full">
                 <div 
                   onClick={() => handleOpenPilotModal('Plan Mozo (47€)')}

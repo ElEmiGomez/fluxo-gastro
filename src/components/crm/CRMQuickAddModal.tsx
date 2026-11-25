@@ -2,20 +2,55 @@
 
 import React, { useState } from 'react'
 import { X, Plus, Store, MapPin, User, Phone, MessageSquare, DollarSign, Sparkles } from 'lucide-react'
-import { CRMICP, CRMLead, CRMPlan, CRMStatus, PLAN_PRICING } from '@/types/crm.types'
+import { CRMCity, CRMICP, CRMLead, CRMPlan, CRMStatus, PLAN_PRICING } from '@/types/crm.types'
 
 interface CRMQuickAddModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (newLead: Omit<CRMLead, 'id' | 'created_at' | 'updated_at'>) => Promise<void>
+  defaultCity?: string
+  availableCities?: string[]
+  existingZones?: string[]
 }
 
-export function CRMQuickAddModal({ isOpen, onClose, onSave }: CRMQuickAddModalProps) {
+const DEFAULT_KNOWN_CITIES = ['Santiago de Compostela', 'Noia', 'A Coruña', 'Vigo', 'Pontevedra']
+const CITY_ZONES_PRESETS: Record<string, string[]> = {
+  'Santiago de Compostela': ['Zona Vella', 'San Pedro', 'Ensanche'],
+  'Noia': ['Centro', 'Casco Histórico', 'Alameda', 'Malecón de San Lázaro', 'Cantón', 'Periferia', 'Curro'],
+}
+
+export function CRMQuickAddModal({
+  isOpen,
+  onClose,
+  onSave,
+  defaultCity = 'Santiago de Compostela',
+  availableCities = DEFAULT_KNOWN_CITIES,
+  existingZones = [],
+}: CRMQuickAddModalProps) {
   const [name, setName] = useState('')
+  const [selectedCityOption, setSelectedCityOption] = useState<string>(defaultCity)
+  const [customCity, setCustomCity] = useState('')
+  const [selectedZoneOption, setSelectedZoneOption] = useState<string>(
+    CITY_ZONES_PRESETS[defaultCity]?.[0] || 'Centro'
+  )
+  const [customZone, setCustomZone] = useState('')
   const [address, setAddress] = useState('')
-  const [zone, setZone] = useState('Noia Centro')
+
+  const isCustomCity = selectedCityOption === '__custom_city__'
+  const isCustomZone = selectedZoneOption === '__custom_zone__'
+
+  const activeCity = isCustomCity ? customCity.trim() || 'Nueva Ciudad' : selectedCityOption
+  const activeZone = isCustomZone ? customZone.trim() || 'Centro' : selectedZoneOption
+
+  const cityZones = Array.from(
+    new Set([
+      ...(CITY_ZONES_PRESETS[selectedCityOption] || []),
+      ...existingZones,
+      'Centro',
+    ])
+  )
   const [icpSegment, setIcpSegment] = useState<CRMICP>('A')
-  const [targetPlan, setTargetPlan] = useState<CRMPlan>('carta_39')
+  const [targetPlan, setTargetPlan] = useState<CRMPlan>('carta_15')
   const [status, setStatus] = useState<CRMStatus>('lead_por_visitar')
   const [contactName, setContactName] = useState('')
   const [contactPhone, setContactPhone] = useState('')
@@ -39,8 +74,9 @@ export function CRMQuickAddModal({ isOpen, onClose, onSave }: CRMQuickAddModalPr
     try {
       await onSave({
         name: name.trim(),
-        address: address.trim() || 'Noia',
-        zone: zone.trim() || 'Centro',
+        city: activeCity,
+        address: address.trim() || activeCity,
+        zone: activeZone,
         icp_segment: icpSegment,
         contact_name: contactName.trim() || null,
         contact_phone: contactPhone.trim() || null,
@@ -118,39 +154,118 @@ export function CRMQuickAddModal({ isOpen, onClose, onSave }: CRMQuickAddModalPr
             />
           </div>
 
+          {/* Ciudad y Zona (100% extensible a cualquier ciudad nueva) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Dirección / Calle
+                Ciudad
               </label>
-              <div className="relative">
-                <MapPin className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                <input
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Rúa do Cantón, 4"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-              </div>
+              {!isCustomCity ? (
+                <div className="space-y-1">
+                  <select
+                    value={selectedCityOption}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setSelectedCityOption(val)
+                      if (val !== '__custom_city__') {
+                        const defaultZone = CITY_ZONES_PRESETS[val]?.[0] || 'Centro'
+                        setSelectedZoneOption(defaultZone)
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500 font-medium"
+                  >
+                    {availableCities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    <option value="__custom_city__">➕ Escribir otra ciudad...</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={customCity}
+                    onChange={(e) => setCustomCity(e.target.value)}
+                    placeholder="Ej: A Coruña, Vigo..."
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-blue-500 text-sm text-white placeholder-slate-500 focus:outline-none font-medium"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCityOption(defaultCity)
+                      setCustomCity('')
+                    }}
+                    className="px-2.5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs shrink-0"
+                    title="Volver a lista de ciudades"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Zona de Noia
+                Zona / Barrio
               </label>
-              <select
-                value={zone}
-                onChange={(e) => setZone(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="Noia Centro">Noia Centro</option>
-                <option value="Casco Histórico">Casco Histórico</option>
-                <option value="Malecón de San Lázaro">Malecón de San Lázaro</option>
-                <option value="Alameda">Alameda</option>
-                <option value="Barro / Periferia">Barro / Periferia</option>
-                <option value="Portus Apostoli">Portus Apostoli</option>
-              </select>
+              {!isCustomZone ? (
+                <div className="space-y-1">
+                  <select
+                    value={selectedZoneOption}
+                    onChange={(e) => setSelectedZoneOption(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500 font-medium"
+                  >
+                    {cityZones.map((z) => (
+                      <option key={z} value={z}>
+                        {z}
+                      </option>
+                    ))}
+                    <option value="__custom_zone__">➕ Escribir otra zona...</option>
+                  </select>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={customZone}
+                    onChange={(e) => setCustomZone(e.target.value)}
+                    placeholder="Ej: Ensanche, Casco Vello..."
+                    className="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-blue-500 text-sm text-white placeholder-slate-500 focus:outline-none font-medium"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedZoneOption(cityZones[0] || 'Centro')
+                      setCustomZone('')
+                    }}
+                    className="px-2.5 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs shrink-0"
+                    title="Volver a lista de zonas"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Dirección */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Dirección o Calle
+            </label>
+            <div className="relative">
+              <MapPin className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder={`Rúa Principal, 12 (${activeCity})`}
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              />
             </div>
           </div>
 

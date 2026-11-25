@@ -631,7 +631,7 @@ export default function ActivarSlugPage() {
                     </div>
                     <h3 className="font-extrabold text-white text-lg mb-1">Carta QR</h3>
                     <div className="mb-3">
-                      <span className="text-2xl font-black text-white">39 €</span>
+                      <span className="text-2xl font-black text-white">{PLAN_CONFIG.carta.basePriceEur} €</span>
                       <span className="text-xs font-bold text-blue-400 ml-1">/ mes + IVA</span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">
@@ -664,7 +664,7 @@ export default function ActivarSlugPage() {
                     </div>
                     <h3 className="font-extrabold text-white text-lg mb-1">Sala</h3>
                     <div className="mb-3">
-                      <span className="text-2xl font-black text-white">69 €</span>
+                      <span className="text-2xl font-black text-white">{PLAN_CONFIG.sala.basePriceEur} €</span>
                       <span className="text-xs font-bold text-blue-400 ml-1">/ mes + IVA</span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">
@@ -748,7 +748,7 @@ export default function ActivarSlugPage() {
                     </div>
                     <h3 className="font-extrabold text-white text-lg mb-1">Full Estándar</h3>
                     <div className="mb-3">
-                      <span className="text-2xl font-black text-white">99 €</span>
+                      <span className="text-2xl font-black text-white">{PLAN_CONFIG.full.basePriceEur} €</span>
                       <span className="text-xs font-bold text-blue-400 ml-1">/ mes + IVA</span>
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">

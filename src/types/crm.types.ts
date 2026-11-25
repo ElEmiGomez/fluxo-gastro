@@ -19,6 +19,106 @@ export type CRMPlan =
 
 export type CRMICP = 'A' | 'B' | 'C' | 'CARLOS' | 'MARTIN' | 'LUCIA'
 
+export type CRMCity = string
+
+export const DEFAULT_CITIES: string[] = [
+  'Santiago de Compostela',
+  'Noia',
+]
+
+export type OnlineMenuStatus = 'none' | 'pdf' | 'web_interactive' | 'unknown'
+
+export type RecommendedPitch = 'carta_qr' | 'cartel_resenas' | 'ambos'
+
+export const normalizeLeadCity = (lead: {
+  city?: string | null
+  zone?: string | null
+  address?: string | null
+}): string => {
+  const explicitCity = (lead.city || '').trim()
+  if (explicitCity) {
+    if (explicitCity.toLowerCase().includes('santiago')) return 'Santiago de Compostela'
+    if (explicitCity.toLowerCase() === 'noia') return 'Noia'
+    return explicitCity
+  }
+
+  const rawZone = (lead.zone || '').toLowerCase()
+  const rawAddress = (lead.address || '').toLowerCase()
+
+  if (
+    rawZone.includes('ensanche') ||
+    rawZone.includes('san pedro') ||
+    rawZone.includes('zona vella') ||
+    rawAddress.includes('santiago')
+  ) {
+    return 'Santiago de Compostela'
+  }
+
+  if (
+    rawZone.includes('alameda') ||
+    rawZone.includes('malecón') ||
+    rawZone.includes('malecon') ||
+    rawZone.includes('cantón') ||
+    rawZone.includes('canton') ||
+    rawZone.includes('curro') ||
+    rawAddress.includes('noia')
+  ) {
+    return 'Noia'
+  }
+
+  return 'Noia'
+}
+
+export const ONLINE_MENU_STATUS_CONFIG: Record<
+  OnlineMenuStatus,
+  { label: string; badge: string; badgeLight: string }
+> = {
+  none: {
+    label: 'Sin carta online',
+    badge: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+    badgeLight: 'bg-rose-50 text-rose-700 border-rose-200',
+  },
+  pdf: {
+    label: 'Carta en PDF',
+    badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    badgeLight: 'bg-amber-50 text-amber-800 border-amber-200',
+  },
+  web_interactive: {
+    label: 'Carta web',
+    badge: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+    badgeLight: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
+  unknown: {
+    label: 'Menú sin verificar',
+    badge: 'bg-slate-500/15 text-slate-300 border-slate-500/30',
+    badgeLight: 'bg-slate-100 text-slate-600 border-slate-200',
+  },
+}
+
+export const RECOMMENDED_PITCH_CONFIG: Record<
+  RecommendedPitch,
+  { label: string; shortLabel: string; badge: string; badgeLight: string }
+> = {
+  carta_qr: {
+    label: 'Carta QR Viva',
+    shortLabel: 'Carta QR',
+    badge: 'bg-blue-500/15 text-blue-300 border-blue-500/30',
+    badgeLight: 'bg-blue-50 text-blue-700 border-blue-200',
+  },
+  cartel_resenas: {
+    label: 'Cartel / NFC Reseñas',
+    shortLabel: 'Reseñas',
+    badge: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    badgeLight: 'bg-amber-50 text-amber-800 border-amber-200',
+  },
+  ambos: {
+    label: 'Carta QR + Cartel Reseñas',
+    shortLabel: 'Ambos',
+    badge: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+    badgeLight: 'bg-purple-50 text-purple-700 border-purple-200',
+  },
+}
+
 export const normalizeICP = (icp: string | null | undefined): 'A' | 'B' | 'C' => {
   if (!icp) return 'B'
   if (icp === 'A' || icp === 'CARLOS') return 'A'
@@ -193,6 +293,11 @@ export const NOIA_COMMERCIAL_EVENTS: NoiaEvent[] = [
   },
 ]
 
+export const CARTA_QR_PRICE_EUR = 15
+export const REVIEW_STAND_PRICE_EUR = 20
+
+export type ReviewStandMode = 'none' | 'included_carta' | 'standalone_20'
+
 export const PLAN_PRICING: Record<CRMPlan, number> = {
   carta_15: 15,
   mozo_47: 47,
@@ -254,6 +359,22 @@ export interface CRMLead {
   lost_reason: string | null
   lat?: number | null
   lng?: number | null
+  google_place_id?: string | null
+  google_profile_url?: string | null
+  google_review_url?: string | null
+  website_url?: string | null
+  online_menu_status?: OnlineMenuStatus | null
+  online_menu_url?: string | null
+  instagram_url?: string | null
+  facebook_url?: string | null
+  city?: CRMCity | null
+  saturday_hours?: string | null
+  saturday_closed?: boolean | null
+  lead_score?: number | null
+  recommended_pitch?: RecommendedPitch | null
+  primary_type?: string | null
+  route_block?: string | null
+  route_order?: number | null
   current_pos_system?: CRMPosSystem | null
   beverage_distributor?: BeverageDistributor | null
   decision_makers?: DecisionMaker[] | null
@@ -262,6 +383,10 @@ export interface CRMLead {
   pilot_agreement?: PilotAgreement | null
   attachments?: LocalAttachment[] | null
   custom_slug?: string | null
+  logo_url?: string | null
+  enable_review_gatekeeper?: boolean | null
+  review_stand_mode?: ReviewStandMode | null
+  review_stand_fee_eur?: number | null
   created_at: string
   updated_at: string
 }
@@ -279,6 +404,7 @@ export interface CRMMetrics {
 export interface CRMFilterOptions {
   searchQuery: string
   statusFilter: CRMStatus | 'all'
+  cityFilter?: CRMCity | 'all'
   zoneFilter: string | 'all'
   planFilter: CRMPlan | 'all'
   icpFilter: CRMICP | 'all'

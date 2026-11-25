@@ -187,7 +187,6 @@ button, a, input, select, textarea {
     background: #ffffff !important;
     margin: 0 !important;
     padding: 0 !important;
-    font-size: 11px !important;
   }
 
   /* Ocultar todos los elementos marcados como no imprimibles */
@@ -197,6 +196,7 @@ button, a, input, select, textarea {
 
   /* Contenedor principal del reporte — ajuste A4 */
   #monthly-report-print-root {
+    font-size: 11px !important;
     width: 100% !important;
     max-width: 100% !important;
     padding: 16px !important;

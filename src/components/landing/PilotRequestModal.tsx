@@ -125,9 +125,9 @@ export function PilotRequestModal({
   useEffect(() => {
     if (initialPlan) {
       if (initialPlan.includes('Carta')) {
-        setSelectedPlan('Plan Carta (39€)')
-      } else if (initialPlan.includes('Sala')) {
-        setSelectedPlan('Plan Sala (69€)')
+        setSelectedPlan('Plan Carta (15€)')
+      } else if (initialPlan.includes('Mozo') || initialPlan.includes('Sala')) {
+        setSelectedPlan('Plan Mozo (47€)')
       } else {
         setSelectedPlan('Plan Full (Recomendado)')
       }

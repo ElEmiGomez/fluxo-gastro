@@ -41,9 +41,11 @@ import {
   Trash2,
   Landmark,
   DoorOpen,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Globe
 } from 'lucide-react'
 import {
+  CRMCity,
   CRMICP,
   CRMLead,
   CRMMetrics,
@@ -52,7 +54,10 @@ import {
   POS_SYSTEM_CONFIG,
   NOIA_COMMERCIAL_EVENTS,
   normalizeICP,
-  ICP_CONFIG
+  normalizeLeadCity,
+  ICP_CONFIG,
+  ONLINE_MENU_STATUS_CONFIG,
+  RECOMMENDED_PITCH_CONFIG
 } from '@/types/crm.types'
 import {
   saveLeadsToOfflineCache,
@@ -68,6 +73,7 @@ import { CRMContactCardModal } from '@/components/crm/CRMContactCardModal'
 import { CRMTemplateQRModal } from '@/components/crm/CRMTemplateQRModal'
 import { AiMenuOnboardingModal } from '@/components/crm/AiMenuOnboardingModal'
 import { FluxoLogo } from '@/components/common/FluxoLogo'
+import { normalizeSlug } from '@/lib/slugify'
 
 const STATUS_COLUMNS: { id: CRMStatus; title: string; color: string; badgeBg: string; badgeBgLight: string }[] = [
   { id: 'lead_por_visitar', title: 'Por Visitar', color: 'border-slate-700', badgeBg: 'bg-slate-800 text-slate-300', badgeBgLight: 'bg-slate-200 text-slate-700' },
@@ -104,7 +110,7 @@ const CRMMap = dynamic(() => import('@/components/crm/CRMMap').then((m) => m.CRM
     <div className="w-full h-[72vh] min-h-[500px] rounded-3xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
       <div className="flex flex-col items-center gap-2">
         <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-mono">Cargando mapa interactivo de Noia...</span>
+        <span className="text-xs font-mono">Cargando mapa interactivo...</span>
       </div>
     </div>
   ),
@@ -151,10 +157,13 @@ export default function CRMAdminPage() {
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCity, setSelectedCity] = useState<'all' | string>('all')
   const [selectedZone, setSelectedZone] = useState<string>('all')
   const [selectedICP, setSelectedICP] = useState<string>('all')
   const [selectedPlan, setSelectedPlan] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const [isAddingCityInline, setIsAddingCityInline] = useState(false)
+  const [inlineNewCityName, setInlineNewCityName] = useState('')
 
   // Modales y menús
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false)
@@ -234,7 +243,10 @@ export default function CRMAdminPage() {
       }
 
       const headers = getAuthHeaders()
-      const res = await fetch('/api/crm', { headers })
+      const res = await fetch(`/api/crm?_t=${Date.now()}`, {
+        headers,
+        cache: 'no-store',
+      })
       if (res.ok) {
         const data = await res.json()
         const fetched = data.leads || []
@@ -242,6 +254,8 @@ export default function CRMAdminPage() {
         if (fetched.length > 0) {
           setLeads(fetched)
           saveLeadsToOfflineCache(fetched)
+          setSyncMessage(`✓ Sincronizados ${fetched.length} locales con éxito`)
+          setTimeout(() => setSyncMessage(null), 3000)
         } else if (cachedLeads && cachedLeads.length > 0) {
           setLeads(cachedLeads)
         }
@@ -551,23 +565,66 @@ export default function CRMAdminPage() {
         normContact.includes(q) ||
         normSlug.includes(q)
 
+      const matchesCity = selectedCity === 'all' || normalizeLeadCity(lead) === selectedCity
       const matchesZone = selectedZone === 'all' || lead.zone === selectedZone
       const matchesICP = selectedICP === 'all' || normalizeICP(lead.icp_segment) === selectedICP
       const matchesPlan = selectedPlan === 'all' || lead.target_plan === selectedPlan
       const matchesStatus = selectedStatus === 'all' || lead.status === selectedStatus
 
-      return matchesSearch && matchesZone && matchesICP && matchesPlan && matchesStatus
+      return matchesSearch && matchesCity && matchesZone && matchesICP && matchesPlan && matchesStatus
     })
-  }, [leads, searchQuery, selectedZone, selectedICP, selectedPlan, selectedStatus])
+  }, [leads, searchQuery, selectedCity, selectedZone, selectedICP, selectedPlan, selectedStatus])
 
-  // Obtener zonas únicas para selector
-  const uniqueZones = useMemo(() => {
-    const zones = new Set<string>()
+  // 1. Ciudades activas descubiertas dinámicamente de los leads
+  const availableCities = useMemo(() => {
+    const citySet = new Set<string>()
     leads.forEach((l) => {
-      if (l.zone) zones.add(l.zone)
+      const c = normalizeLeadCity(l)
+      if (c) citySet.add(c)
     })
-    return Array.from(zones)
+    citySet.add('Santiago de Compostela')
+    citySet.add('Noia')
+
+    return Array.from(citySet).sort((a, b) => {
+      if (a === 'Santiago de Compostela') return -1
+      if (b === 'Santiago de Compostela') return 1
+      if (a === 'Noia') return -1
+      if (b === 'Noia') return 1
+      return a.localeCompare(b)
+    })
   }, [leads])
+
+  // 2. Contadores dinámicos por ciudad
+  const cityCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: leads.length }
+    availableCities.forEach((c) => {
+      counts[c] = 0
+    })
+    leads.forEach((l) => {
+      const c = normalizeLeadCity(l)
+      counts[c] = (counts[c] || 0) + 1
+    })
+    return counts
+  }, [leads, availableCities])
+
+  // 3. Estadísticas y lista de zonas dentro de la ciudad seleccionada
+  const zoneStats = useMemo(() => {
+    const counts: Record<string, number> = {}
+    leads.forEach((l) => {
+      const c = normalizeLeadCity(l)
+      if (selectedCity !== 'all' && c !== selectedCity) return
+      const z = l.zone?.trim() || 'Sin zona'
+      counts[z] = (counts[z] || 0) + 1
+    })
+    const sortedZones = Object.entries(counts).sort((a, b) => b[1] - a[1])
+    return {
+      counts,
+      list: sortedZones.map(([name]) => name),
+      total: Object.values(counts).reduce((acc, n) => acc + n, 0),
+    }
+  }, [leads, selectedCity])
+
+  const uniqueZones = zoneStats.list
 
   if (checkingAuth) {
     return (
@@ -683,7 +740,7 @@ export default function CRMAdminPage() {
               }`}
             >
               <MapPin className="w-4 h-4" />
-              <span>Mapa de Noia</span>
+              <span>Mapas</span>
             </button>
           </div>
 
@@ -1110,13 +1167,17 @@ export default function CRMAdminPage() {
               </div>
             </div>
 
-            {/* Tarjeta 4: Conversión & Universo Noia */}
+            {/* Tarjeta 4: Conversión & Universo */}
             <div
               className={`p-4 rounded-2xl apple-glass-card apple-glass-reflection apple-smooth hover:-translate-y-1 hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)]`}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-xs font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Conversión / Noia
+                  {selectedCity === 'Santiago de Compostela'
+                    ? 'Universo Santiago'
+                    : selectedCity === 'Noia'
+                    ? 'Universo Noia'
+                    : 'Conversión Global'}
                 </span>
                 <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
                   <Award className="w-4 h-4" />
@@ -1127,102 +1188,398 @@ export default function CRMAdminPage() {
               </div>
               <div className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 mt-1">
                 <span>★</span>
-                <span>{metrics?.wonCount || 0} de {metrics?.totalLeads || 0} locales auditados</span>
+                <span>
+                  {selectedCity === 'all'
+                    ? `${metrics?.wonCount || 0} de ${metrics?.totalLeads || 0} locales auditados`
+                    : `${filteredLeads.filter((l) => l.status === 'ganado').length} ganados de ${filteredLeads.length} locales`}
+                </span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* 2.5. Calendario y Campaña Activa de Noia [Idea 7] */}
+        {/* 2.5. Inteligencia de Campo Territorial (Santiago vs Noia) */}
         <section className="px-5 pt-3.5 max-w-7xl w-full mx-auto">
-          <div
-            className={`p-4 rounded-3xl relative apple-glass-card apple-glass-reflection apple-smooth hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)] ${
-              isLight ? 'text-slate-800' : 'text-white'
-            }`}
-          >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 border border-amber-300">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    Campaña Municipal Activa
-                  </span>
-                  <span className={`text-xs font-semibold ${isLight ? 'text-blue-700' : 'text-blue-300'}`}>
-                    {NOIA_COMMERCIAL_EVENTS[0].period}
-                  </span>
-                </div>
-
-                <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'} flex items-center gap-2`}>
-                  <span>🦪 {NOIA_COMMERCIAL_EVENTS[0].name}</span>
-                </h3>
-
-                <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'} max-w-2xl`}>
-                  {NOIA_COMMERCIAL_EVENTS[0].description}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => setShowAllEvents(!showAllEvents)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 apple-smooth active:scale-95 border ${
-                    isLight
-                      ? 'bg-white/55 hover:bg-white/85 text-slate-700 border-white/75 backdrop-blur-md'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-                  }`}
-                >
-                  <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                  <span>{showAllEvents ? 'Ocultar Calendario' : 'Ver 4 Campañas de Noia'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Consejo Táctico para la Prospección en Calle */}
+          {selectedCity === 'Santiago de Compostela' ? (
             <div
-              className={`mt-3 p-3 rounded-xl flex items-start gap-2.5 text-xs ${
-                isLight
-                  ? 'bg-white/55 border border-white/75 backdrop-blur-md text-slate-700'
-                  : 'bg-slate-900/90 border border-blue-500/20 text-slate-200'
+              className={`p-4 rounded-3xl relative apple-glass-card apple-glass-reflection apple-smooth hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)] ${
+                isLight ? 'text-slate-800' : 'text-white'
               }`}
             >
-              <span className="text-amber-500 font-bold shrink-0 mt-0.5">💡 Consejo Comercial Hoy:</span>
-              <span className="leading-relaxed">
-                {NOIA_COMMERCIAL_EVENTS[0].commercialAdvice}
-              </span>
-            </div>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-300">
+                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                      Ruta Peatonal Santiago Activa
+                    </span>
+                    <span className={`text-xs font-semibold ${isLight ? 'text-blue-700' : 'text-blue-300'}`}>
+                      Estación Intermodal &middot; Sábado
+                    </span>
+                  </div>
 
-            {/* Acordeón con las 4 campañas de Noia */}
-            {showAllEvents && (
-              <div className="mt-3 pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 animate-in fade-in">
-                {NOIA_COMMERCIAL_EVENTS.map((ev, i) => (
-                  <div
-                    key={ev.id}
-                    className={`p-3 rounded-2xl border text-xs space-y-1.5 apple-smooth ${
-                      i === 0
-                        ? 'bg-blue-500/10 border-blue-400 text-blue-900'
-                        : isLight
-                        ? 'bg-white/55 border-white/75 backdrop-blur-md hover:bg-white/80 hover:border-blue-300 text-slate-700'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-300'
+                  <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'} flex items-center gap-2`}>
+                    <span>🏛️ 146 Locales Auditados en 3 Zonas Clave</span>
+                  </h3>
+
+                  <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'} max-w-2xl`}>
+                    Ensanche (32 locales), San Pedro (43 locales) y Zona Vella (71 locales). Circuito peatonal circular con inicio y regreso a la Estación de Autobuses/Tren.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>34 Locales Prioritarios en Ruta</span>
+                  </span>
+                </div>
+              </div>
+
+              <div
+                className={`mt-3 p-3 rounded-xl flex items-start gap-2.5 text-xs ${
+                  isLight
+                    ? 'bg-white/55 border border-white/75 backdrop-blur-md text-slate-700'
+                    : 'bg-slate-900/90 border border-blue-500/20 text-slate-200'
+                }`}
+              >
+                <span className="text-amber-500 font-bold shrink-0 mt-0.5">💡 Consejo Táctico Santiago:</span>
+                <span className="leading-relaxed">
+                  Visita en frío de <strong>10:00 a 11:30 en el Ensanche</strong> (aperturas de barra) y de <strong>16:30 a 18:30 en Zona Vella / San Pedro</strong> (horas valle). De <strong>12:45 a 16:15 solo scouting visual</strong> sin interrumpir el servicio de comidas.
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={`p-4 rounded-3xl relative apple-glass-card apple-glass-reflection apple-smooth hover:shadow-[0_14px_36px_rgba(15,23,42,0.08)] ${
+                isLight ? 'text-slate-800' : 'text-white'
+              }`}
+            >
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 border border-amber-300">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      Campaña Municipal Activa
+                    </span>
+                    <span className={`text-xs font-semibold ${isLight ? 'text-blue-700' : 'text-blue-300'}`}>
+                      {NOIA_COMMERCIAL_EVENTS[0].period}
+                    </span>
+                  </div>
+
+                  <h3 className={`text-base font-bold ${isLight ? 'text-slate-900' : 'text-white'} flex items-center gap-2`}>
+                    <span>🦪 {NOIA_COMMERCIAL_EVENTS[0].name}</span>
+                  </h3>
+
+                  <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'} max-w-2xl`}>
+                    {NOIA_COMMERCIAL_EVENTS[0].description}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setShowAllEvents(!showAllEvents)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 apple-smooth active:scale-95 border ${
+                      isLight
+                        ? 'bg-white/55 hover:bg-white/85 text-slate-700 border-white/75 backdrop-blur-md'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold truncate">{ev.name}</span>
-                      {i === 0 && (
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-700 shrink-0">
-                          ACTIVA
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-blue-600 font-mono font-medium">{ev.period}</div>
-                    <p className="text-[11px] text-slate-500 leading-snug">{ev.commercialAdvice}</p>
-                  </div>
-                ))}
+                    <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                    <span>{showAllEvents ? 'Ocultar Calendario' : 'Ver 4 Campañas de Noia'}</span>
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Consejo Táctico para la Prospección en Calle */}
+              <div
+                className={`mt-3 p-3 rounded-xl flex items-start gap-2.5 text-xs ${
+                  isLight
+                    ? 'bg-white/55 border border-white/75 backdrop-blur-md text-slate-700'
+                    : 'bg-slate-900/90 border border-blue-500/20 text-slate-200'
+                }`}
+              >
+                <span className="text-amber-500 font-bold shrink-0 mt-0.5">💡 Consejo Comercial Hoy:</span>
+                <span className="leading-relaxed">
+                  {NOIA_COMMERCIAL_EVENTS[0].commercialAdvice}
+                </span>
+              </div>
+
+              {/* Acordeón con las 4 campañas de Noia */}
+              {showAllEvents && (
+                <div className="mt-3 pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 animate-in fade-in">
+                  {NOIA_COMMERCIAL_EVENTS.map((ev, i) => (
+                    <div
+                      key={ev.id}
+                      className={`p-3 rounded-2xl border text-xs space-y-1.5 apple-smooth ${
+                        i === 0
+                          ? 'bg-blue-500/10 border-blue-400 text-blue-900'
+                          : isLight
+                          ? 'bg-white/55 border-white/75 backdrop-blur-md hover:bg-white/80 hover:border-blue-300 text-slate-700'
+                          : 'bg-slate-900/60 border-slate-800 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold truncate">{ev.name}</span>
+                        {i === 0 && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-700 shrink-0">
+                            ACTIVA
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-blue-600 font-mono font-medium">{ev.period}</div>
+                      <p className="text-[11px] text-slate-500 leading-snug">{ev.commercialAdvice}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
-        {/* 3. Barra de Búsqueda y Filtros */}
-        <section className="px-5 pt-3.5 max-w-7xl w-full mx-auto">
+        {/* 3. Barra de Búsqueda y Filtros Territoriales */}
+        <section className="px-5 pt-3.5 max-w-7xl w-full mx-auto space-y-2.5">
+          {/* NIVEL 1: Selector de Ciudad (Pills táctiles de alto contraste con contadores) */}
+          <div className="p-2.5 rounded-2xl apple-glass-card flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 flex items-center gap-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                <span>Ciudad:</span>
+              </span>
+
+              {/* Botón Todas */}
+              <button
+                onClick={() => {
+                  setSelectedCity('all')
+                  setSelectedZone('all')
+                }}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all active:scale-95 touch-manipulation ${
+                  selectedCity === 'all'
+                    ? isLight
+                      ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                      : 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                    : isLight
+                    ? 'bg-white/70 hover:bg-white text-slate-700 border border-slate-200/70'
+                    : 'bg-slate-900/60 hover:bg-slate-800 text-slate-300 border border-white/10'
+                }`}
+              >
+                <span>Todas</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                  selectedCity === 'all' ? 'bg-white/25 text-white' : isLight ? 'bg-slate-100 text-slate-600' : 'bg-slate-800 text-slate-300'
+                }`}>
+                  {cityCounts.all}
+                </span>
+              </button>
+
+              {/* Mapeo dinámico de todas las ciudades registradas en el sistema */}
+              {availableCities.map((city) => {
+                const isSelected = selectedCity === city
+                const count = cityCounts[city] || 0
+                return (
+                  <button
+                    key={city}
+                    onClick={() => {
+                      setSelectedCity(city)
+                      setSelectedZone('all')
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all active:scale-95 touch-manipulation ${
+                      isSelected
+                        ? isLight
+                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-bold'
+                          : 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 font-bold'
+                        : isLight
+                        ? 'bg-white/70 hover:bg-white text-slate-700 border border-slate-200/70'
+                        : 'bg-slate-900/60 hover:bg-slate-800 text-slate-300 border border-white/10'
+                    }`}
+                  >
+                    {city === 'Santiago de Compostela' ? (
+                      <Landmark className="w-3.5 h-3.5" />
+                    ) : city === 'Noia' ? (
+                      <UtensilsCrossed className="w-3.5 h-3.5" />
+                    ) : (
+                      <Building2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>{city}</span>
+                    <span
+                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                        isSelected
+                          ? 'bg-white/25 text-white'
+                          : isLight
+                          ? 'bg-slate-100 text-slate-600'
+                          : 'bg-slate-800 text-slate-300'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                )
+              })}
+
+              {/* Botón para Añadir Nueva Ciudad en 1 clic */}
+              {!isAddingCityInline ? (
+                <button
+                  onClick={() => setIsAddingCityInline(true)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 border border-dashed ${
+                    isLight
+                      ? 'border-blue-300 text-blue-700 hover:bg-blue-50/80 bg-white/40'
+                      : 'border-blue-500/40 text-blue-300 hover:bg-blue-500/10 bg-slate-900/40'
+                  }`}
+                  title="Añadir nueva ciudad para prospección"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Nueva Ciudad</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 animate-in fade-in">
+                  <input
+                    type="text"
+                    value={inlineNewCityName}
+                    onChange={(e) => setInlineNewCityName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && inlineNewCityName.trim()) {
+                        const newC = inlineNewCityName.trim()
+                        setSelectedCity(newC)
+                        setSelectedZone('all')
+                        setInlineNewCityName('')
+                        setIsAddingCityInline(false)
+                      } else if (e.key === 'Escape') {
+                        setIsAddingCityInline(false)
+                        setInlineNewCityName('')
+                      }
+                    }}
+                    placeholder="Nombre ciudad (ej. A Coruña)..."
+                    className={`px-3 py-1.5 rounded-xl text-xs border focus:outline-none font-medium ${
+                      isLight
+                        ? 'bg-white border-blue-500 text-slate-900'
+                        : 'bg-slate-800 border-blue-500 text-white'
+                    }`}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => {
+                      if (inlineNewCityName.trim()) {
+                        const newC = inlineNewCityName.trim()
+                        setSelectedCity(newC)
+                        setSelectedZone('all')
+                        setInlineNewCityName('')
+                        setIsAddingCityInline(false)
+                      }
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-500 shadow-sm"
+                  >
+                    Añadir
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsAddingCityInline(false)
+                      setInlineNewCityName('')
+                    }}
+                    className="px-2 py-1.5 rounded-xl text-xs text-slate-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Contador de resultados activos y botón limpiar filtros */}
+            <div className="flex items-center gap-2">
+              <div className={`text-xs px-2.5 py-1 rounded-xl font-medium flex items-center gap-1.5 ${isLight ? 'bg-slate-100/90 text-slate-600' : 'bg-slate-900/70 text-slate-400'}`}>
+                <span>Mostrando:</span>
+                <strong className={isLight ? 'text-slate-900 font-bold' : 'text-white font-bold'}>{filteredLeads.length}</strong>
+                <span>de {leads.length}</span>
+              </div>
+
+              {(selectedCity !== 'all' || selectedZone !== 'all' || searchQuery || selectedICP !== 'all' || selectedPlan !== 'all' || selectedStatus !== 'all') && (
+                <button
+                  onClick={() => {
+                    setSelectedCity('all')
+                    setSelectedZone('all')
+                    setSearchQuery('')
+                    setSelectedICP('all')
+                    setSelectedPlan('all')
+                    setSelectedStatus('all')
+                  }}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-xl transition active:scale-95 ${
+                    isLight
+                      ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                      : 'bg-rose-950/60 text-rose-300 hover:bg-rose-900/60 border border-rose-800/50'
+                  }`}
+                  title="Restablecer todos los filtros"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* NIVEL 2: Selector de Zonas dentro de la ciudad seleccionada */}
+          <div className="p-2.5 rounded-2xl apple-glass-card flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
+            <span className={`text-[11px] font-bold uppercase tracking-wider px-2 py-1 shrink-0 flex items-center gap-1 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+              <Filter className="w-3 h-3 text-cyan-500" />
+              <span>
+                {selectedCity === 'Santiago de Compostela'
+                  ? 'Zonas Santiago:'
+                  : selectedCity === 'Noia'
+                  ? 'Zonas Noia:'
+                  : 'Zonas:'}
+              </span>
+            </span>
+
+            {/* Opción Todas las zonas */}
+            <button
+              onClick={() => setSelectedZone('all')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 touch-manipulation flex items-center gap-1.5 ${
+                selectedZone === 'all'
+                  ? isLight
+                    ? 'bg-slate-900 text-white shadow-sm font-bold'
+                    : 'bg-white text-slate-950 font-bold shadow-sm'
+                  : isLight
+                  ? 'bg-white/70 hover:bg-white text-slate-600 border border-slate-200/70'
+                  : 'bg-slate-900/60 hover:bg-slate-800 text-slate-300 border border-white/10'
+              }`}
+            >
+              <span>Todas las zonas</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                selectedZone === 'all'
+                  ? isLight ? 'bg-white/20 text-white' : 'bg-slate-900/20 text-slate-900'
+                  : isLight ? 'bg-slate-100 text-slate-600' : 'bg-slate-800 text-slate-300'
+              }`}>
+                {zoneStats.total}
+              </span>
+            </button>
+
+            {/* Pills de cada Zona */}
+            {zoneStats.list.map((z) => {
+              const count = zoneStats.counts[z] || 0
+              const isSelected = selectedZone === z
+              return (
+                <button
+                  key={z}
+                  onClick={() => setSelectedZone(z)}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition-all active:scale-95 touch-manipulation flex items-center gap-1.5 ${
+                    isSelected
+                      ? isLight
+                        ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/25 font-bold'
+                        : 'bg-cyan-500 text-slate-950 font-bold shadow-lg shadow-cyan-400/25'
+                      : isLight
+                      ? 'bg-white/70 hover:bg-white text-slate-700 border border-slate-200/70 hover:border-cyan-300'
+                      : 'bg-slate-900/60 hover:bg-slate-800 text-slate-300 border border-white/10 hover:border-cyan-500/30'
+                  }`}
+                >
+                  <span>{z}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                    isSelected
+                      ? isLight ? 'bg-white/20 text-white' : 'bg-slate-950/20 text-slate-950'
+                      : isLight ? 'bg-slate-100 text-slate-600' : 'bg-slate-800 text-slate-300'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* NIVEL 3: Buscador por texto + Filtros Secundarios (ICP, Plan, Estado) */}
           <div
             className={`p-2.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 apple-glass-card`}
           >
@@ -1233,7 +1590,7 @@ export default function CRMAdminPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar local, calle o contacto en Noia..."
+                placeholder="Buscar local, calle, zona o contacto..."
                 className={`w-full pl-9 pr-3 py-2 rounded-full text-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 border shadow-inner apple-smooth ${
                   isLight
                     ? 'bg-white/80 hover:bg-white/95 focus:bg-white border-white/80 text-slate-800'
@@ -1242,26 +1599,8 @@ export default function CRMAdminPage() {
               />
             </div>
 
-            {/* Filtros */}
+            {/* Filtros Secundarios */}
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Filtro Zona */}
-              <select
-                value={selectedZone}
-                onChange={(e) => setSelectedZone(e.target.value)}
-                className={`px-3 py-2 rounded-full text-xs focus:outline-none focus:border-blue-500 border shadow-inner apple-smooth ${
-                  isLight
-                    ? 'bg-white/80 hover:bg-white/95 focus:bg-white border-white/80 text-slate-700'
-                    : 'bg-slate-800/80 hover:bg-slate-800 border-white/10 text-slate-200'
-                }`}
-              >
-                <option value="all">Todas las Zonas</option>
-                {uniqueZones.map((z) => (
-                  <option key={z} value={z}>
-                    {z}
-                  </option>
-                ))}
-              </select>
-
               {/* Filtro ICP: A, B, C */}
               <select
                 value={selectedICP}
@@ -1294,6 +1633,24 @@ export default function CRMAdminPage() {
                 <option value="fundador_50">Fundador 50€</option>
                 <option value="full_97">Full 97€</option>
               </select>
+
+              {/* Filtro Estado */}
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className={`px-3 py-2 rounded-full text-xs focus:outline-none focus:border-blue-500 border shadow-inner apple-smooth ${
+                  isLight
+                    ? 'bg-white/80 hover:bg-white/95 focus:bg-white border-white/80 text-slate-700'
+                    : 'bg-slate-800/80 hover:bg-slate-800 border-white/10 text-slate-200'
+                }`}
+              >
+                <option value="all">Todos los Estados</option>
+                {STATUS_COLUMNS.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.title}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </section>
@@ -1308,7 +1665,7 @@ export default function CRMAdminPage() {
               {STATUS_COLUMNS.map((col) => {
                 const columnLeads = filteredLeads.filter((l) => l.status === col.id)
                 const columnMRR = columnLeads.reduce(
-                  (acc, curr) => acc + Number(curr.mrr_projected || 39),
+                  (acc, curr) => acc + Number(curr.mrr_projected || 15),
                   0
                 )
                 const isDragOver = dragOverColId === col.id
@@ -1383,18 +1740,45 @@ export default function CRMAdminPage() {
                                   : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700/60 hover:border-blue-500/50 shadow-sm'
                               }`}
                             >
-                              {/* Segmento & Score */}
-                              <div className="flex items-center justify-between gap-2 mb-1.5">
-                                <span
-                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                                    isLight ? icpData.badgeLight : icpData.badge
-                                  }`}
-                                  title={icpData.description}
-                                >
-                                  {icpData.shortLabel}
-                                </span>
+                              {/* Segmento, Ciudad & Score */}
+                              <div className="flex items-center justify-between gap-1.5 mb-1.5 flex-wrap">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                      isLight ? icpData.badgeLight : icpData.badge
+                                    }`}
+                                    title={icpData.description}
+                                  >
+                                    {icpData.shortLabel}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold border ${
+                                      normalizeLeadCity(lead) === 'Santiago de Compostela'
+                                        ? isLight
+                                          ? 'bg-sky-50 text-sky-700 border-sky-200'
+                                          : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                                        : isLight
+                                        ? 'bg-slate-100 text-slate-600 border-slate-200'
+                                        : 'bg-slate-700/50 text-slate-300 border-slate-600/50'
+                                    }`}
+                                  >
+                                    {normalizeLeadCity(lead)}
+                                  </span>
+                                  {lead.route_order ? (
+                                    <span
+                                      className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold border ${
+                                        isLight
+                                          ? 'bg-violet-50 text-violet-700 border-violet-200'
+                                          : 'bg-violet-500/15 text-violet-300 border-violet-500/30'
+                                      }`}
+                                      title={lead.route_block || 'Parada de ruta sábado'}
+                                    >
+                                      #{lead.route_order}
+                                    </span>
+                                  ) : null}
+                                </div>
                                 <span className="text-[11px] font-bold text-amber-500 flex items-center gap-0.5">
-                                  ★ {lead.score}
+                                  ★ {lead.lead_score != null ? `${lead.lead_score}/100` : lead.score}
                                 </span>
                               </div>
 
@@ -1419,8 +1803,42 @@ export default function CRMAdminPage() {
                                 <span className="truncate">{lead.address}</span>
                               </div>
 
-                              {/* Badges de TPV y Quejas */}
+                              {/* Badges de Propuesta, Menú Online, TPV y Quejas */}
                               <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                                {lead.recommended_pitch && RECOMMENDED_PITCH_CONFIG[lead.recommended_pitch] && (
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${
+                                      isLight
+                                        ? RECOMMENDED_PITCH_CONFIG[lead.recommended_pitch].badgeLight
+                                        : RECOMMENDED_PITCH_CONFIG[lead.recommended_pitch].badge
+                                    }`}
+                                    title={RECOMMENDED_PITCH_CONFIG[lead.recommended_pitch].label}
+                                  >
+                                    {RECOMMENDED_PITCH_CONFIG[lead.recommended_pitch].shortLabel}
+                                  </span>
+                                )}
+                                {lead.online_menu_status && lead.online_menu_status !== 'unknown' && ONLINE_MENU_STATUS_CONFIG[lead.online_menu_status] && (
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium border ${
+                                      isLight
+                                        ? ONLINE_MENU_STATUS_CONFIG[lead.online_menu_status].badgeLight
+                                        : ONLINE_MENU_STATUS_CONFIG[lead.online_menu_status].badge
+                                    }`}
+                                  >
+                                    {ONLINE_MENU_STATUS_CONFIG[lead.online_menu_status].label}
+                                  </span>
+                                )}
+                                {lead.google_rating != null && (
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono border ${
+                                      isLight
+                                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                        : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                                    }`}
+                                  >
+                                    {lead.google_rating}★ ({lead.google_reviews_count ?? 0})
+                                  </span>
+                                )}
                                 {lead.current_pos_system && (
                                   <span
                                     className={`px-1.5 py-0.5 rounded-md text-[10px] border flex items-center gap-1 ${
@@ -1448,6 +1866,103 @@ export default function CRMAdminPage() {
                                   </span>
                                 )}
                               </div>
+
+                              {/* Horario Sábado (si existe) */}
+                              {lead.saturday_hours && (
+                                <div className={`mt-1.5 text-[10px] flex items-center gap-1 truncate ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                                  <Clock className="w-2.5 h-2.5 shrink-0" />
+                                  <span className="truncate">Sáb: {lead.saturday_hours}</span>
+                                </div>
+                              )}
+
+                              {/* Accesos Rápidos Google / Reseñas / Menú / Redes */}
+                              {(lead.google_profile_url || lead.google_review_url || lead.online_menu_url || lead.instagram_url || lead.instagram || lead.facebook_url) && (
+                                <div
+                                  className="mt-2 flex items-center gap-1 flex-wrap"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {lead.google_profile_url && (
+                                    <a
+                                      href={lead.google_profile_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border transition ${
+                                        isLight
+                                          ? 'bg-white text-slate-700 border-slate-200 hover:border-blue-400 hover:text-blue-700'
+                                          : 'bg-slate-900/70 text-slate-300 border-slate-700 hover:border-blue-500'
+                                      }`}
+                                      title="Abrir Perfil de Google Maps"
+                                    >
+                                      Google
+                                    </a>
+                                  )}
+                                  {lead.google_review_url && (
+                                    <a
+                                      href={lead.google_review_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border transition ${
+                                        isLight
+                                          ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                                          : 'bg-amber-500/15 text-amber-300 border-amber-500/30 hover:bg-amber-500/25'
+                                      }`}
+                                      title="Link directo para dejar reseña en Google"
+                                    >
+                                      ★ Reseña
+                                    </a>
+                                  )}
+                                  {lead.online_menu_url && (
+                                    <a
+                                      href={lead.online_menu_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border transition ${
+                                        isLight
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                          : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25'
+                                      }`}
+                                      title="Abrir menú online actual del local"
+                                    >
+                                      Menú
+                                    </a>
+                                  )}
+                                  {(lead.instagram_url || lead.instagram) && (
+                                    <a
+                                      href={
+                                        lead.instagram_url ||
+                                        (lead.instagram?.startsWith('http')
+                                          ? lead.instagram
+                                          : `https://instagram.com/${(lead.instagram || '').replace(/^@/, '')}`)
+                                      }
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border transition ${
+                                        isLight
+                                          ? 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100'
+                                          : 'bg-pink-500/15 text-pink-300 border-pink-500/30 hover:bg-pink-500/25'
+                                      }`}
+                                      title="Abrir Instagram oficial"
+                                    >
+                                      IG
+                                    </a>
+                                  )}
+                                  {lead.facebook_url && (
+                                    <a
+                                      href={lead.facebook_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border transition ${
+                                        isLight
+                                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                                          : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/25'
+                                      }`}
+                                      title="Abrir Facebook oficial"
+                                    >
+                                      FB
+                                    </a>
+                                  )}
+                                </div>
+                              )}
 
                               {/* Piloto de 14 Días y Checklist */}
                               {lead.status === 'piloto_14_dias' && (
@@ -1490,7 +2005,7 @@ export default function CRMAdminPage() {
                                 <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                   {/* Botón rápido para abrir la carta digital */}
                                   {(() => {
-                                    const rawSlug = lead.custom_slug || lead.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                                    const rawSlug = lead.custom_slug || normalizeSlug(lead.name)
                                     const isCasaMar = rawSlug.includes('casamar') || rawSlug.includes('casa-mar')
                                     const isJaratusas = rawSlug.includes('jaratusa') || rawSlug.includes('jara-tusa')
                                     const menuUrl = isJaratusas ? '/p/bar-jaratusas' : isCasaMar ? '/carta-casamar' : `/p/${rawSlug}`
@@ -1571,9 +2086,10 @@ export default function CRMAdminPage() {
                   >
                     <tr>
                       <th className="px-4 py-3">Establecimiento</th>
-                      <th className="px-4 py-3">Zona</th>
-                      <th className="px-4 py-3">ICP</th>
+                      <th className="px-4 py-3">Ciudad / Zona</th>
+                      <th className="px-4 py-3">Propuesta / Menú</th>
                       <th className="px-4 py-3">Score</th>
+                      <th className="px-4 py-3">Accesos Rápidos</th>
                       <th className="px-4 py-3">Estado</th>
                       <th className="px-4 py-3">Plan / MRR</th>
                       <th className="px-4 py-3">Teléfono</th>
@@ -1584,6 +2100,11 @@ export default function CRMAdminPage() {
                     {filteredLeads.map((lead) => {
                       const icpKey = normalizeICP(lead.icp_segment)
                       const icpData = ICP_CONFIG[icpKey]
+                      const leadCity = normalizeLeadCity(lead)
+                      const pitchCfg = lead.recommended_pitch ? RECOMMENDED_PITCH_CONFIG[lead.recommended_pitch] : null
+                      const menuCfg = lead.online_menu_status ? ONLINE_MENU_STATUS_CONFIG[lead.online_menu_status] : null
+                      const igHref = lead.instagram_url || (lead.instagram ? (lead.instagram.startsWith('http') ? lead.instagram : `https://instagram.com/${lead.instagram.replace(/^@/, '')}`) : null)
+
                       return (
                         <tr
                           key={lead.id}
@@ -1596,21 +2117,97 @@ export default function CRMAdminPage() {
                           }`}
                         >
                           <td className="px-4 py-3.5 font-bold whitespace-nowrap">
-                            <span className={isLight ? 'text-slate-900' : 'text-white'}>{lead.name}</span>
-                            <span className="block text-[11px] font-normal text-slate-400">{lead.address}</span>
-                          </td>
-                          <td className="px-4 py-3.5 text-slate-500 whitespace-nowrap">{lead.zone}</td>
-                          <td className="px-4 py-3.5 whitespace-nowrap">
-                            <span
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                                isLight ? icpData.badgeLight : icpData.badge
-                              }`}
-                            >
-                              {icpData.shortLabel}
+                            <span className={isLight ? 'text-slate-900' : 'text-white'}>
+                              {lead.route_order ? `#${lead.route_order} ` : ''}{lead.name}
                             </span>
+                            <span className="block text-[11px] font-normal text-slate-400">{lead.address}</span>
+                            {lead.saturday_hours && (
+                              <span className="block text-[10px] font-normal text-slate-400">Sáb: {lead.saturday_hours}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 text-slate-500 whitespace-nowrap">
+                            <span className="font-semibold block">{leadCity}</span>
+                            <span className="text-[11px] text-slate-400">{lead.zone}</span>
+                          </td>
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            <div className="flex flex-col gap-1 items-start">
+                              {pitchCfg ? (
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${isLight ? pitchCfg.badgeLight : pitchCfg.badge}`}>
+                                  {pitchCfg.shortLabel}
+                                </span>
+                              ) : (
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${isLight ? icpData.badgeLight : icpData.badge}`}>
+                                  {icpData.shortLabel}
+                                </span>
+                              )}
+                              {menuCfg && lead.online_menu_status !== 'unknown' && (
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] border ${isLight ? menuCfg.badgeLight : menuCfg.badge}`}>
+                                  {menuCfg.label}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3.5 font-bold text-amber-500 whitespace-nowrap">
-                            ★ {lead.score}
+                            <div>★ {lead.lead_score != null ? `${lead.lead_score}/100` : lead.score}</div>
+                            {lead.google_rating != null && (
+                              <div className="text-[10px] font-normal text-slate-400">
+                                {lead.google_rating}★ ({lead.google_reviews_count ?? 0})
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {lead.google_profile_url && (
+                                <a
+                                  href={lead.google_profile_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-700 text-[10px] font-bold border border-slate-200"
+                                >
+                                  Google
+                                </a>
+                              )}
+                              {lead.google_review_url && (
+                                <a
+                                  href={lead.google_review_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 text-[10px] font-bold border border-amber-200"
+                                >
+                                  ★ Reseña
+                                </a>
+                              )}
+                              {lead.online_menu_url && (
+                                <a
+                                  href={lead.online_menu_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-1.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-200"
+                                >
+                                  Menú
+                                </a>
+                              )}
+                              {igHref && (
+                                <a
+                                  href={igHref}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-1.5 py-0.5 rounded bg-pink-50 hover:bg-pink-100 text-pink-700 text-[10px] font-bold border border-pink-200"
+                                >
+                                  IG
+                                </a>
+                              )}
+                              {lead.facebook_url && (
+                                <a
+                                  href={lead.facebook_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-1.5 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold border border-indigo-200"
+                                >
+                                  FB
+                                </a>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3.5 whitespace-nowrap">
                             <span
@@ -1898,9 +2495,16 @@ export default function CRMAdminPage() {
             /* Pestaña 3: Kit de Calle (/demo físico) & QRs Digitales */
             <KitDeCalleView />
           ) : (
-            /* Vista MAPA Interactivo de Noia */
+            /* Vista MAPAS Interactivos por Localidad */
             <CRMMap
               leads={filteredLeads}
+              availableCities={availableCities}
+              selectedCity={selectedCity}
+              cityCounts={cityCounts}
+              onSelectCity={(city) => {
+                setSelectedCity(city)
+                setSelectedZone('all')
+              }}
               onOpenDetail={(lead) => {
                 setSelectedLead(lead)
                 setIsDetailOpen(true)
@@ -1934,6 +2538,9 @@ export default function CRMAdminPage() {
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
         onSave={handleCreateLead}
+        defaultCity={selectedCity !== 'all' ? selectedCity : 'Santiago de Compostela'}
+        availableCities={availableCities}
+        existingZones={zoneStats.list}
       />
 
       <CRMLeadDetailModal

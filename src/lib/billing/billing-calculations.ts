@@ -27,6 +27,14 @@ export const FOUNDER_PRICE_EUR = 50
 /** Precio fundador a partir del mes 13. */
 export const FOUNDER_GRADUATED_PRICE_EUR = 99
 
+/** Cuota mensual oficial de la Carta QR. */
+export const CARTA_QR_PRICE_EUR = 15
+
+/** Tarifa de pago único para la Tarjeta / Expositor de Reseñas NFC + QR. */
+export const REVIEW_STAND_PRICE_EUR = 20
+
+export type ReviewStandBillingMode = 'none' | 'included_carta' | 'standalone_20'
+
 export interface LocalBilling {
   id: string
   slug: string
@@ -47,6 +55,10 @@ export interface LocalBilling {
   owner_email: string
   /** Teléfono WhatsApp del dueño (formato internacional, sin +). */
   owner_phone: string
+  /** Modalidad del expositor físico de reseñas NFC + QR. */
+  review_stand_mode?: ReviewStandBillingMode
+  /** Importe de pago único del expositor de reseñas (20 € si suelto, 0 € si incluido). */
+  review_stand_fee_eur?: number
 }
 
 export interface PlanConfig {
@@ -56,14 +68,14 @@ export interface PlanConfig {
 }
 
 export const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
-  carta: { label: 'Carta QR', basePriceEur: 39, note: '+ IVA' },
-  sala: { label: 'Sala (sin KDS)', basePriceEur: 69, note: '+ IVA' },
+  carta: { label: 'Carta QR', basePriceEur: CARTA_QR_PRICE_EUR, note: '+ IVA' },
+  sala: { label: 'Plan Mozo / Sala', basePriceEur: 47, note: '+ IVA' },
   full_fundador: {
     label: 'Full Fundador · 50 €/mes (12 meses)',
     basePriceEur: FOUNDER_PRICE_EUR,
     note: '+ IVA · luego 99 €/mes + IVA',
   },
-  full: { label: 'Full', basePriceEur: 99, note: '+ IVA' },
+  full: { label: 'Plan Full', basePriceEur: 97, note: '+ IVA' },
   hibernacion: { label: 'Hibernación', basePriceEur: 9, note: '+ IVA · estancia mínima 1 mes' },
 }
 
@@ -198,6 +210,20 @@ export function countFounderSlots(locales: LocalBilling[]): number {
 /** ¿Quedan plazas fundador disponibles? (check de alta de nuevos fundadores). */
 export function hasFounderSlotAvailable(locales: LocalBilling[]): boolean {
   return countFounderSlots(locales) < FOUNDER_SLOTS_MAX
+}
+
+/** Ingresos puntuales acumulados por Tarjetas / Expositores de Reseñas NFC + QR (20 € pago único). */
+export function calculateReviewStandsTotal(locales: LocalBilling[]): number {
+  return locales.reduce((sum, local) => {
+    if (local.review_stand_mode === 'standalone_20') {
+      const fee =
+        typeof local.review_stand_fee_eur === 'number'
+          ? local.review_stand_fee_eur
+          : REVIEW_STAND_PRICE_EUR
+      return sum + fee
+    }
+    return sum
+  }, 0)
 }
 
 export const STATUS_LABEL: Record<PaymentStatus, string> = {

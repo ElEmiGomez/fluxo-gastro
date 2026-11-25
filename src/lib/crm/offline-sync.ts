@@ -1,6 +1,7 @@
 import { CRMLead } from '@/types/crm.types'
 
-const CACHE_KEY = 'fluxo_crm_leads_cache_v1'
+const CACHE_KEY = 'fluxo_crm_leads_cache_v2'
+const OLD_CACHE_KEY = 'fluxo_crm_leads_cache_v1'
 const PENDING_MUTATIONS_KEY = 'fluxo_crm_pending_mutations_v1'
 
 export interface PendingMutation {
@@ -17,6 +18,7 @@ export interface PendingMutation {
 export function saveLeadsToOfflineCache(leads: CRMLead[]): void {
   if (typeof window === 'undefined') return
   try {
+    localStorage.removeItem(OLD_CACHE_KEY)
     localStorage.setItem(CACHE_KEY, JSON.stringify(leads))
   } catch (e) {
     console.warn('[Offline Cache] No se pudo guardar en localStorage:', e)
@@ -29,6 +31,7 @@ export function saveLeadsToOfflineCache(leads: CRMLead[]): void {
 export function getLeadsFromOfflineCache(): CRMLead[] | null {
   if (typeof window === 'undefined') return null
   try {
+    localStorage.removeItem(OLD_CACHE_KEY)
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
     return JSON.parse(raw) as CRMLead[]
@@ -89,6 +92,26 @@ export async function syncPendingOfflineMutations(): Promise<{ synced: number; f
   const pending = getPendingOfflineMutations()
   if (pending.length === 0) return { synced: 0, failed: 0 }
 
+  const getSyncHeaders = (withJson = true): Record<string, string> => {
+    const headers: Record<string, string> = {}
+    if (withJson) {
+      headers['Content-Type'] = 'application/json'
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        const token =
+          localStorage.getItem('fluxo_founder_token') ||
+          sessionStorage.getItem('fluxo_founder_token')
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+        }
+      } catch {
+        // ignore storage errors
+      }
+    }
+    return headers
+  }
+
   let synced = 0
   let failed = 0
   const remaining: PendingMutation[] = []
@@ -98,7 +121,7 @@ export async function syncPendingOfflineMutations(): Promise<{ synced: number; f
       if (item.type === 'update') {
         const res = await fetch('/api/crm', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getSyncHeaders(true),
           body: JSON.stringify({ id: item.leadId, ...item.payload }),
         })
         if (res.ok) synced++
@@ -109,7 +132,7 @@ export async function syncPendingOfflineMutations(): Promise<{ synced: number; f
       } else if (item.type === 'create') {
         const res = await fetch('/api/crm', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getSyncHeaders(true),
           body: JSON.stringify(item.payload),
         })
         if (res.ok) synced++
@@ -120,6 +143,7 @@ export async function syncPendingOfflineMutations(): Promise<{ synced: number; f
       } else if (item.type === 'delete') {
         const res = await fetch(`/api/crm?id=${item.leadId}`, {
           method: 'DELETE',
+          headers: getSyncHeaders(false),
         })
         if (res.ok) synced++
         else {

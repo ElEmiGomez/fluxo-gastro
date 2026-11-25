@@ -1,11 +1,14 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Landmark, Wifi, Loader2 } from 'lucide-react'
+import { Landmark, Wifi, Loader2, QrCode, Star } from 'lucide-react'
 import {
   LocalBilling,
   PaymentMethod,
   MANUAL_PAYMENT_METHODS,
+  PLAN_CONFIG,
+  CARTA_QR_PRICE_EUR,
+  REVIEW_STAND_PRICE_EUR,
 } from '@/lib/billing/billing-calculations'
 import {
   loadBillingLocales,
@@ -29,11 +32,24 @@ export function BillingFinanceView() {
 
   const patchLocal = (
     id: string,
-    patch: Partial<Pick<LocalBilling, 'plan_type' | 'payment_status' | 'pause_level' | 'payment_method'>>
+    patch: Partial<
+      Pick<
+        LocalBilling,
+        'plan_type' | 'payment_status' | 'pause_level' | 'payment_method' | 'review_stand_mode' | 'review_stand_fee_eur' | 'monthly_price_eur'
+      >
+    >
   ) => {
+    const resolvedPatch = { ...patch }
+    if (resolvedPatch.plan_type && resolvedPatch.monthly_price_eur === undefined) {
+      resolvedPatch.monthly_price_eur = PLAN_CONFIG[resolvedPatch.plan_type].basePriceEur
+    }
+    if (resolvedPatch.review_stand_mode && resolvedPatch.review_stand_fee_eur === undefined) {
+      resolvedPatch.review_stand_fee_eur =
+        resolvedPatch.review_stand_mode === 'standalone_20' ? REVIEW_STAND_PRICE_EUR : 0
+    }
     setLocales((prev) => {
       const base = prev ?? loadBillingLocales()
-      return updateBillingLocal(base, id, patch)
+      return updateBillingLocal(base, id, resolvedPatch)
     })
   }
 
@@ -62,17 +78,56 @@ export function BillingFinanceView() {
   }
 
   return (
-    <div className="px-5 py-6 max-w-6xl w-full mx-auto space-y-5">
+    <div className="px-6 py-6 max-w-6xl w-full mx-auto space-y-5 rounded-3xl bg-slate-950/90 border border-slate-800/80 shadow-2xl text-white">
       {/* Cabecera de sección */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
           <Landmark className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h2 className="text-lg font-black text-white leading-tight">Finanzas, Semáforo & Recibos</h2>
+          <h2 className="text-lg font-black text-white leading-tight">Finanzas, Semáforo &amp; Recibos</h2>
           <p className="text-[11px] text-slate-400">
-            Control financiero del CRM Fundador · planes mensuales + IVA
+            Control financiero del CRM Fundador · planes mensuales + IVA y expositores NFC + QR
           </p>
+        </div>
+      </div>
+
+      {/* Tarifas Oficiales Fluxo (20€ Expositor Reseñas + 15€/mes Carta QR) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="p-4 rounded-2xl bg-white/[0.05] border border-cyan-500/25 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
+              <QrCode className="w-4.5 h-4.5 text-cyan-400" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-white">Carta QR Digital</p>
+              <p className="text-[11px] text-slate-400">
+                Suscripción mensual · incluye expositor de reseñas gratis (0 €)
+              </p>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-lg font-black text-cyan-300 font-mono">{CARTA_QR_PRICE_EUR} €/mes</p>
+            <p className="text-[10px] text-slate-400">+ IVA</p>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-white/[0.05] border border-amber-500/25 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <Star className="w-4.5 h-4.5 text-amber-400 fill-amber-400" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-white">Tarjeta / Expositor de Reseñas NFC + QR</p>
+              <p className="text-[11px] text-slate-400">
+                Modalidad independiente sin mensualidad (o 0 € con Carta QR {CARTA_QR_PRICE_EUR} €/mes)
+              </p>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-lg font-black text-amber-300 font-mono">{REVIEW_STAND_PRICE_EUR} €</p>
+            <p className="text-[10px] text-slate-400">pago único</p>
+          </div>
         </div>
       </div>
 

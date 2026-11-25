@@ -35,13 +35,15 @@ export const DEMO_LOCALES: LocalBilling[] = [
     pause_level: 0,
     owner_email: 'dueno@casamardavila.es',
     owner_phone: '34600111001',
+    review_stand_mode: 'included_carta',
+    review_stand_fee_eur: 0,
   },
   {
     id: 'demo-loc-opazo',
     slug: 'taperia-o-pazo',
     nombre: 'Tapería O Pazo',
     plan_type: 'sala',
-    monthly_price_eur: 69,
+    monthly_price_eur: 47,
     is_founder_slot: false,
     founder_started_at: null,
     founder_commitment_accepted: false,
@@ -52,13 +54,15 @@ export const DEMO_LOCALES: LocalBilling[] = [
     pause_level: 1,
     owner_email: 'dueno@taperiaopazo.es',
     owner_phone: '34600111002',
+    review_stand_mode: 'standalone_20',
+    review_stand_fee_eur: 20,
   },
   {
     id: 'demo-loc-brasa',
     slug: 'brasa-smash-noia',
     nombre: 'Brasa & Smash Noia',
     plan_type: 'carta',
-    monthly_price_eur: 39,
+    monthly_price_eur: 15,
     is_founder_slot: false,
     founder_started_at: null,
     founder_commitment_accepted: false,
@@ -69,6 +73,8 @@ export const DEMO_LOCALES: LocalBilling[] = [
     pause_level: 2,
     owner_email: 'dueno@brasasmash.es',
     owner_phone: '34600111003',
+    review_stand_mode: 'included_carta',
+    review_stand_fee_eur: 0,
   },
   {
     id: 'demo-loc-equs',
@@ -86,6 +92,8 @@ export const DEMO_LOCALES: LocalBilling[] = [
     pause_level: 0,
     owner_email: 'gerencia@cervexeriaequs.es',
     owner_phone: '34600111004',
+    review_stand_mode: 'included_carta',
+    review_stand_fee_eur: 0,
   },
 ]
 
@@ -133,7 +141,7 @@ export function updateBillingLocal(
   patch: Partial<
     Pick<
       LocalBilling,
-      'plan_type' | 'payment_status' | 'pause_level' | 'payment_method' | 'monthly_price_eur' | 'billing_day' | 'has_payment_proof'
+      'plan_type' | 'payment_status' | 'pause_level' | 'payment_method' | 'monthly_price_eur' | 'billing_day' | 'has_payment_proof' | 'review_stand_mode' | 'review_stand_fee_eur'
     >
   > & { plan_type?: PlanType; payment_status?: PaymentStatus; pause_level?: PauseLevel; payment_method?: PaymentMethod }
 ): LocalBilling[] {

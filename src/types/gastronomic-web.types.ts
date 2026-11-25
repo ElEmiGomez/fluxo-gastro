@@ -118,7 +118,9 @@ export interface GastronomicTenantConfig {
   cuisineType: string[]
   priceRange: '€' | '€€' | '€€€' | '€€€€'
   googleMapsUrl?: string
+  googleReviewUrl?: string
   googlePlaceId?: string
+  enableReviewGatekeeper?: boolean // Default false: redirección directa a Google Maps
   googleMapsRating?: number // ej. 4.8
   googleMapsReviewCount?: number // ej. 312
   primaryColor?: string

@@ -6,6 +6,28 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-23 10:50] — Sincronización Integral: Program Data, Remotion Videos, Organización General y Webs Creator
+* **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto / Program Data (Depto 4).
+* **Estado de Integración y Certificación:**
+  1. **Webs Creator (`/web/[slug]`):**
+     - Motor multi-tenant consolidado y operativo (`src/lib/web-tenants.ts`, `src/app/web/[slug]/page.tsx`).
+     - Caso emblemático Bar Jara-Tusas (`/web/bar-jaratusas` y alias `/jaratusas`): 4 pantallas cinemáticas a 60 fps, galería horizontal de ambientes, carrusel de bebidas, integración de Google Maps interactivo, semáforo de apertura en vivo y botón 'Ver Carta' enrutado directamente a Mesa 0 (`/p/jaratusas?mesa=0`).
+     - Validado con 12/12 tests unitarios (`opening-hours.test.ts`, `gastronomic-jsonld.test.ts`, `web-tenants.test.ts`).
+  2. **Remotion Videos (`src/remotion/`):**
+     - Arquitectura de Motion Graphics v4 sincronizada en `src/remotion/` (`Root.tsx`, `WhatsAppPitchComposition.tsx`, 16 componentes modulares y assets de audio estéreo 48kHz en `public/sfx/`).
+     - Suite tipada con Zod (`pitchVideoSchema.ts`) para renderizado programático a 60 fps y 1080x1920 (9:16 vertical).
+     - Gobernanza blindada en `AGENTS.md` bajo `FLUXO_MOTION_INVARIANTS` con protocolo estricto de 2 Gates antes de render MP4.
+  3. **Program Data (Ingeniería de Producto):**
+     - Dependencias de Remotion (`remotion@4.0.542`, `@remotion/*`) instaladas y verificadas.
+     - `npx.cmd tsc --noEmit` certificado con **0 errores**.
+     - `npm.cmd run build` de Next.js generando con éxito las 19 rutas estáticas y dinámicas en producción.
+  4. **Organización General & Modelo de Negocio:**
+     - Tarifas comerciales armonizadas: Carta QR (15 €), Mozo (47 €), Promo 5 Locales Fundadores (50 €) y Full Oficial (97 €).
+     - Biblia y auditoría forense 360° registrada en `docs/FLUXO_AUDIT_AND_BUSINESS_BIBLE.md`.
+* **Estado:** Totalmente alineado y sincronizado `[✔ COMPLETADO]`.
+
+---
+
 ### [2026-11-12 14:15] — Aprobación y Consolidación del Diseño Definitivo de Webs Gastronómicas (DEC-39)
 * **Departamentos Sincronizados:** Dirección & Organización (Depto 1), Diseño de Marca & UI (Depto 3), Marketing & Ventas (Depto 2) e Ingeniería & Producto (Depto 4).
 * **Decisiones Clave Implementadas:**

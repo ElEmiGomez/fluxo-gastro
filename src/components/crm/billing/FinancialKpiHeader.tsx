@@ -6,13 +6,16 @@ import {
   Award,
   BadgeCheck,
   Hourglass,
+  Star,
 } from 'lucide-react'
 import {
   FOUNDER_SLOTS_MAX,
+  REVIEW_STAND_PRICE_EUR,
   LocalBilling,
   calculateConfirmedMRR,
   calculatePendingMRR,
   calculateProjectedARR,
+  calculateReviewStandsTotal,
   countFounderSlots,
 } from '@/lib/billing/billing-calculations'
 
@@ -32,6 +35,7 @@ export function FinancialKpiHeader({ locales, now }: FinancialKpiHeaderProps) {
   const mrrPendiente = calculatePendingMRR(locales, at)
   const arrProyectado = calculateProjectedARR(locales, at)
   const plazasFundador = countFounderSlots(locales)
+  const totalExpositores = calculateReviewStandsTotal(locales)
 
   const kpis = [
     {
@@ -62,6 +66,15 @@ export function FinancialKpiHeader({ locales, now }: FinancialKpiHeaderProps) {
       valueClass: 'text-cyan-300',
     },
     {
+      icon: Star,
+      iconColor: 'text-amber-400',
+      ring: 'bg-amber-500/15 border-amber-500/30',
+      label: `Expositores (${REVIEW_STAND_PRICE_EUR} €)`,
+      value: eur(totalExpositores),
+      sub: 'Pago único · 0 € con Carta QR 15 €/mes',
+      valueClass: 'text-amber-300',
+    },
+    {
       icon: Award,
       iconColor: 'text-indigo-400',
       ring: 'bg-indigo-500/15 border-indigo-500/30',
@@ -73,7 +86,7 @@ export function FinancialKpiHeader({ locales, now }: FinancialKpiHeaderProps) {
   ]
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
       {kpis.map((kpi) => (
         <div
           key={kpi.label}

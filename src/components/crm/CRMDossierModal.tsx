@@ -24,8 +24,8 @@ interface CRMDossierModalProps {
 export function CRMDossierModal({ lead, isOpen, onClose }: CRMDossierModalProps) {
   if (!isOpen || !lead) return null
 
-  const targetPlan = lead.target_plan || 'carta_39'
-  const monthlyPrice = PLAN_PRICING[targetPlan] || 39
+  const targetPlan = lead.target_plan || 'carta_15'
+  const monthlyPrice = PLAN_PRICING[targetPlan] || 15
   const dailyCost = (monthlyPrice / 30).toFixed(2)
   const ivaAmount = (monthlyPrice * 0.21).toFixed(2)
   const totalWithIva = (monthlyPrice * 1.21).toFixed(2)

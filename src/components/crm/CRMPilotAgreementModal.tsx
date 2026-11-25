@@ -23,6 +23,8 @@ interface CRMPilotAgreementModalProps {
   onAgreementSigned: (leadId: string, agreement: PilotAgreement) => Promise<void>
 }
 
+const ACTIVE_PLANS: readonly CRMPlan[] = ['carta_15', 'mozo_47', 'fundador_50', 'full_97'] as const
+
 const PLAN_NAMES: Record<CRMPlan, string> = {
   carta_15: 'Carta QR Digital (15 €/mes)',
   mozo_47: 'Plan Mozo / Sala (47 €/mes)',
@@ -34,20 +36,23 @@ const PLAN_NAMES: Record<CRMPlan, string> = {
   suite_139: 'Plan Full Suite (97 €/mes)',
 }
 
-export function CRMPilotAgreementModal({
+export function CRMPilotAgreementModal(props: CRMPilotAgreementModalProps) {
+  if (!props.isOpen) return null
+  return <CRMPilotAgreementModalContent key={props.lead.id} {...props} />
+}
+
+function CRMPilotAgreementModalContent({
   lead,
   isOpen,
   onClose,
   onAgreementSigned,
 }: CRMPilotAgreementModalProps) {
-  if (!isOpen) return null
-
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [hasSignature, setHasSignature] = useState(false)
   const [signeeName, setSigneeName] = useState(lead.contact_name || '')
   const [signeePhone, setSigneePhone] = useState(lead.contact_phone || lead.contact_whatsapp || '')
-  const [agreedPlan, setAgreedPlan] = useState<CRMPlan>(lead.target_plan || 'carta_39')
+  const [agreedPlan, setAgreedPlan] = useState<CRMPlan>(lead.target_plan || 'carta_15')
   const [saving, setSaving] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [savedAgreement, setSavedAgreement] = useState<PilotAgreement | null>(null)
@@ -275,7 +280,7 @@ export function CRMPilotAgreementModal({
                   Plan acordado para la prueba
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(Object.keys(PLAN_NAMES) as CRMPlan[]).map((planKey) => {
+                  {ACTIVE_PLANS.map((planKey) => {
                     const isSelected = agreedPlan === planKey
                     return (
                       <button

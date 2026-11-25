@@ -16,6 +16,8 @@ import {
   PAYMENT_METHOD_LABEL,
   PLAN_CONFIG,
   PlanType,
+  REVIEW_STAND_PRICE_EUR,
+  ReviewStandBillingMode,
   STATUS_LABEL,
   PaymentStatus,
   PauseLevel,
@@ -31,7 +33,12 @@ interface BillingTrafficLightTableProps {
   now: Date
   onPatchLocal: (
     id: string,
-    patch: Partial<Pick<LocalBilling, 'plan_type' | 'payment_status' | 'pause_level' | 'payment_method'>>
+    patch: Partial<
+      Pick<
+        LocalBilling,
+        'plan_type' | 'payment_status' | 'pause_level' | 'payment_method' | 'review_stand_mode' | 'review_stand_fee_eur'
+      >
+    >
   ) => void
   /** Confirma el cobro del mes tras validar comprobante en el modal. */
   onApplyPayment: (id: string, method: import('@/lib/billing/billing-calculations').PaymentMethod) => void
@@ -82,18 +89,19 @@ export function BillingTrafficLightTable({
       </div>
 
       {/* Tabla (desktop) */}
-      <div className="hidden lg:block rounded-2xl bg-white/[0.04] border border-white/[0.08] overflow-hidden">
+      <div className="hidden lg:block rounded-2xl bg-white/[0.04] border border-white/[0.08] overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-white/[0.08]">
-              <th className="px-4 py-3">Local</th>
-              <th className="px-4 py-3">Plan &amp; cuota (+IVA)</th>
-              <th className="px-4 py-3">Día cobro</th>
-              <th className="px-4 py-3">Método</th>
-              <th className="px-4 py-3">Semáforo</th>
-              <th className="px-4 py-3">Estado pago</th>
-              <th className="px-4 py-3">Pausa carta</th>
-              <th className="px-4 py-3 text-right">Acciones</th>
+            <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-white/[0.08] whitespace-nowrap">
+              <th className="px-3 py-3">Local</th>
+              <th className="px-3 py-3">Plan &amp; cuota (+IVA)</th>
+              <th className="px-3 py-3">Expositor Reseñas</th>
+              <th className="px-3 py-3">Día cobro</th>
+              <th className="px-3 py-3">Método</th>
+              <th className="px-3 py-3">Semáforo</th>
+              <th className="px-3 py-3">Estado pago</th>
+              <th className="px-3 py-3">Pausa carta</th>
+              <th className="px-3 py-3 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/[0.05]">
@@ -103,7 +111,7 @@ export function BillingTrafficLightTable({
               const isFounder = local.is_founder_slot && local.plan_type === 'full_fundador'
               return (
                 <tr key={local.id} className="hover:bg-white/[0.02] transition">
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-bold text-white">{local.nombre}</span>
                       {isFounder && (
@@ -114,7 +122,7 @@ export function BillingTrafficLightTable({
                     </div>
                     <p className="text-[10px] text-slate-500 font-mono">/p/{local.slug}</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <select
                       value={local.plan_type}
                       onChange={(e) => onPatchLocal(local.id, { plan_type: e.target.value as PlanType })}
@@ -128,11 +136,37 @@ export function BillingTrafficLightTable({
                     </select>
                     <p className="text-[11px] text-cyan-300 font-bold mt-1">{cuota} €/mes + IVA</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
+                    <select
+                      value={local.review_stand_mode || 'none'}
+                      onChange={(e) => {
+                        const mode = e.target.value as ReviewStandBillingMode
+                        onPatchLocal(local.id, {
+                          review_stand_mode: mode,
+                          review_stand_fee_eur:
+                            mode === 'standalone_20' ? REVIEW_STAND_PRICE_EUR : 0,
+                        })
+                      }}
+                      className="bg-slate-800/80 border border-white/[0.1] rounded-lg text-[11px] text-slate-200 px-2 py-1.5 outline-none focus:border-amber-500/50"
+                      aria-label="Modalidad expositor de reseñas"
+                    >
+                      <option value="none">Sin expositor</option>
+                      <option value="standalone_20">Suelto · {REVIEW_STAND_PRICE_EUR} €</option>
+                      <option value="included_carta">Incluido · 0 €</option>
+                    </select>
+                    <p className="text-[10px] text-amber-300 font-mono mt-1">
+                      {local.review_stand_mode === 'standalone_20'
+                        ? `${REVIEW_STAND_PRICE_EUR} € pago único`
+                        : local.review_stand_mode === 'included_carta'
+                          ? '0 € (incl. Carta 15 €)'
+                          : '—'}
+                    </p>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <span className="text-sm font-bold text-white font-mono">{local.billing_day}</span>
                     <span className="text-[10px] text-slate-500"> /5</span>
                   </td>
-                  <td className="px-4 py-3 text-[11px] text-slate-300">
+                  <td className="px-3 py-3 text-[11px] text-slate-300">
                     {PAYMENT_METHOD_LABEL[local.payment_method]}
                     {manualNeedsProof(local) && (
                       <span className="block text-[9px] text-amber-400/80">
@@ -140,7 +174,7 @@ export function BillingTrafficLightTable({
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold ${TRAFFIC_LIGHT_STYLE[light.state]}`}
                     >
@@ -148,7 +182,7 @@ export function BillingTrafficLightTable({
                       {light.label}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <select
                       value={local.payment_status}
                       onChange={(e) =>
@@ -163,7 +197,7 @@ export function BillingTrafficLightTable({
                       ))}
                     </select>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3">
                     <select
                       value={local.pause_level}
                       onChange={(e) => onPatchLocal(local.id, { pause_level: Number(e.target.value) as PauseLevel })}
@@ -176,7 +210,7 @@ export function BillingTrafficLightTable({
                       ))}
                     </select>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <div className="flex justify-end gap-1.5">
                       <button
                         onClick={() => setCobroLocal(local)}
@@ -249,6 +283,23 @@ export function BillingTrafficLightTable({
                   {([0, 1, 2] as PauseLevel[]).map((lvl) => (
                     <option key={lvl} value={lvl}>Nivel {lvl} · {PAUSE_LEVEL_LABEL[lvl]}</option>
                   ))}
+                </select>
+                <select
+                  value={local.review_stand_mode || 'none'}
+                  onChange={(e) => {
+                    const mode = e.target.value as ReviewStandBillingMode
+                    onPatchLocal(local.id, {
+                      review_stand_mode: mode,
+                      review_stand_fee_eur:
+                        mode === 'standalone_20' ? REVIEW_STAND_PRICE_EUR : 0,
+                    })
+                  }}
+                  className="bg-slate-800/80 border border-white/[0.1] rounded-lg text-[11px] text-slate-200 px-2 py-1.5 outline-none"
+                  aria-label="Expositor de reseñas"
+                >
+                  <option value="none">Expositor: No</option>
+                  <option value="standalone_20">Expositor: {REVIEW_STAND_PRICE_EUR} €</option>
+                  <option value="included_carta">Expositor: 0 € (Carta)</option>
                 </select>
                 <div className="flex gap-1.5">
                   <button

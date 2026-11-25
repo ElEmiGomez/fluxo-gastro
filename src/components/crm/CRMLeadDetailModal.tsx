@@ -38,7 +38,14 @@ import {
   Eye,
   Download,
   UtensilsCrossed,
-  Edit3
+  Edit3,
+  Globe,
+  Star,
+  Copy,
+  Check,
+  Building2,
+  Printer,
+  ImageOff
 } from 'lucide-react'
 import {
   CRMICP,
@@ -49,14 +56,21 @@ import {
   PilotAgreement,
   PilotChecklist,
   PLAN_PRICING,
+  CARTA_QR_PRICE_EUR,
+  REVIEW_STAND_PRICE_EUR,
+  ReviewStandMode,
   POS_SYSTEM_CONFIG,
   DecisionMaker,
   BeverageDistributor,
   DISTRIBUTOR_CONFIG,
   normalizeICP,
+  normalizeLeadCity,
   ICP_CONFIG,
+  ONLINE_MENU_STATUS_CONFIG,
+  RECOMMENDED_PITCH_CONFIG,
   LocalAttachment
 } from '@/types/crm.types'
+import { normalizeSlug } from '@/lib/slugify'
 import { CRMPilotAgreementModal } from './CRMPilotAgreementModal'
 import { CRMBeforeAfterModal } from './CRMBeforeAfterModal'
 import { CRMDossierModal } from './CRMDossierModal'
@@ -117,7 +131,7 @@ const QUICK_PAIN_TAGS = [
   'Carta en papel desactualizada',
   'Mucho retraso en horas pico',
   'Terrazas ciegas / alejadas',
-  'Receptivo a Carta Digital (39€)',
+  'Receptivo a Carta Digital (15€)',
   'Quiere fotos profesionales',
   'Le interesa el Comandero',
   'Pide pasar en horario de tarde',
@@ -133,15 +147,18 @@ const DEFAULT_REVIEW_COMPLAINT_SUGGESTIONS = [
   '📱 QR actual abre un PDF lento e incómodo',
 ]
 
-export function CRMLeadDetailModal({
+export function CRMLeadDetailModal(props: CRMLeadDetailModalProps) {
+  if (!props.isOpen || !props.lead) return null
+  return <CRMLeadDetailModalContent key={props.lead.id} {...props} lead={props.lead} />
+}
+
+function CRMLeadDetailModalContent({
   lead,
   isOpen,
   onClose,
   onUpdate,
   onDelete,
-}: CRMLeadDetailModalProps) {
-  if (!isOpen || !lead) return null
-
+}: Omit<CRMLeadDetailModalProps, 'lead'> & { lead: CRMLead }) {
   const [localName, setLocalName] = useState(lead.name || '')
   const [isEditingName, setIsEditingName] = useState(false)
   const [status, setStatus] = useState<CRMStatus>(lead.status)
@@ -171,6 +188,7 @@ export function CRMLeadDetailModal({
   const [isScannerOpen, setIsScannerOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [copiedReviewLink, setCopiedReviewLink] = useState(false)
   const [decisionMakers, setDecisionMakers] = useState<DecisionMaker[]>(
     lead.decision_makers && lead.decision_makers.length > 0
       ? lead.decision_makers
@@ -192,6 +210,14 @@ export function CRMLeadDetailModal({
   const [uploadingAttachment, setUploadingAttachment] = useState(false)
   const [newNoteText, setNewNoteText] = useState('')
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [googleReviewUrl, setGoogleReviewUrl] = useState(lead.google_review_url || '')
+  const [customSlug, setCustomSlug] = useState(lead.custom_slug || normalizeSlug(lead.name || ''))
+  const [logoUrl, setLogoUrl] = useState(lead.logo_url || '')
+  const [reviewStandMode, setReviewStandMode] = useState<ReviewStandMode>(
+    lead.review_stand_mode || 'none'
+  )
+  const [compressingLogo, setCompressingLogo] = useState(false)
+  const [openingStand, setOpeningStand] = useState(false)
 
   const handleAddDecisionMaker = (e: React.FormEvent) => {
     e.preventDefault()
@@ -225,10 +251,62 @@ export function CRMLeadDetailModal({
 
   // Resolución de la URL de la carta prototipo del local
   const getMenuUrl = () => {
-    const rawSlug = lead.custom_slug || lead.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const rawSlug = customSlug || lead.custom_slug || normalizeSlug(localName || lead.name)
     const isCasaMar = rawSlug.includes('casamar') || rawSlug.includes('casa-mar')
     const isJaratusas = rawSlug.includes('jaratusa') || rawSlug.includes('jara-tusa')
     return isJaratusas ? '/p/bar-jaratusas' : isCasaMar ? '/carta-casamar' : `/p/${rawSlug}`
+  }
+
+  const effectiveSlug = normalizeSlug(customSlug || localName || lead.name) || lead.id
+  const reviewStandFeeEur =
+    reviewStandMode === 'standalone_20' ? REVIEW_STAND_PRICE_EUR : 0
+
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCompressingLogo(true)
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string
+      if (!dataUrl) {
+        setCompressingLogo(false)
+        return
+      }
+      const img = new window.Image()
+      img.onload = () => {
+        try {
+          const maxDim = 320
+          const scale = Math.min(1, maxDim / Math.max(img.width || 1, img.height || 1))
+          const w = Math.max(1, Math.round((img.width || maxDim) * scale))
+          const h = Math.max(1, Math.round((img.height || maxDim) * scale))
+          const canvas = document.createElement('canvas')
+          canvas.width = w
+          canvas.height = h
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, w, h)
+            const keepAlpha = file.type === 'image/png' || file.type === 'image/webp' || file.type === 'image/svg+xml'
+            const compressed = keepAlpha
+              ? canvas.toDataURL('image/png')
+              : canvas.toDataURL('image/jpeg', 0.85)
+            setLogoUrl(compressed)
+          } else {
+            setLogoUrl(dataUrl)
+          }
+        } catch {
+          setLogoUrl(dataUrl)
+        } finally {
+          setCompressingLogo(false)
+        }
+      }
+      img.onerror = () => {
+        setLogoUrl(dataUrl)
+        setCompressingLogo(false)
+      }
+      img.src = dataUrl
+    }
+    reader.onerror = () => setCompressingLogo(false)
+    reader.readAsDataURL(file)
   }
 
   // Cálculo de días de piloto
@@ -426,38 +504,59 @@ export function CRMLeadDetailModal({
     setNewNoteText('')
   }
 
+  const buildUpdatesPayload = (): Partial<CRMLead> => {
+    const updates: Partial<CRMLead> = {
+      name: localName.trim() || lead.name,
+      status,
+      target_plan: targetPlan,
+      mrr_projected: PLAN_PRICING[targetPlan],
+      contact_name: contactName.trim() || null,
+      contact_phone: contactPhone.trim() || null,
+      contact_whatsapp: contactWhatsapp.trim() || null,
+      notes: notes.trim() || null,
+      lost_reason: status === 'perdido' ? lostReason.trim() || 'Sin especificar' : null,
+      last_visit_date: new Date().toISOString(),
+      pilot_checklist: checklist,
+      pilot_agreement: agreement,
+      current_pos_system: currentPosSystem,
+      google_complaint_tags: complaintTags,
+      decision_makers: decisionMakers,
+      beverage_distributor: beverageDistributor,
+      attachments,
+      google_review_url: googleReviewUrl.trim() || null,
+      custom_slug: effectiveSlug || null,
+      logo_url: logoUrl.trim() || null,
+      review_stand_mode: reviewStandMode,
+      review_stand_fee_eur: reviewStandFeeEur,
+      enable_review_gatekeeper: Boolean(lead.enable_review_gatekeeper),
+    }
+
+    if (status === 'piloto_14_dias' && !lead.pilot_start_date) {
+      updates.pilot_start_date = new Date().toISOString().split('T')[0]
+      updates.pilot_end_date = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
+    }
+    return updates
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
-      const updates: Partial<CRMLead> = {
-        name: localName.trim() || lead.name,
-        status,
-        target_plan: targetPlan,
-        mrr_projected: PLAN_PRICING[targetPlan],
-        contact_name: contactName.trim() || null,
-        contact_phone: contactPhone.trim() || null,
-        contact_whatsapp: contactWhatsapp.trim() || null,
-        notes: notes.trim() || null,
-        lost_reason: status === 'perdido' ? lostReason.trim() || 'Sin especificar' : null,
-        last_visit_date: new Date().toISOString(),
-        pilot_checklist: checklist,
-        pilot_agreement: agreement,
-        current_pos_system: currentPosSystem,
-        google_complaint_tags: complaintTags,
-        decision_makers: decisionMakers,
-        beverage_distributor: beverageDistributor,
-        attachments,
-      }
-
-      if (status === 'piloto_14_dias' && !lead.pilot_start_date) {
-        updates.pilot_start_date = new Date().toISOString().split('T')[0]
-        updates.pilot_end_date = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]
-      }
-
-      await onUpdate(lead.id, updates)
+      await onUpdate(lead.id, buildUpdatesPayload())
       onClose()
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSaveAndOpenReviewStand = async () => {
+    setOpeningStand(true)
+    try {
+      await onUpdate(lead.id, buildUpdatesPayload())
+      if (typeof window !== 'undefined') {
+        window.open(`/admin/print-review-stand/${effectiveSlug}`, '_blank', 'noopener,noreferrer')
+      }
+    } finally {
+      setOpeningStand(false)
     }
   }
 
@@ -475,9 +574,19 @@ export function CRMLeadDetailModal({
     }
   }
 
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    `${lead.name} ${lead.address} Noia`
-  )}`
+  const leadCity = normalizeLeadCity(lead)
+  const googleMapsUrl =
+    lead.google_profile_url ||
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      `${lead.name} ${lead.address} ${leadCity}`
+    )}`
+  const resolvedInstagramUrl =
+    lead.instagram_url ||
+    (lead.instagram
+      ? lead.instagram.startsWith('http')
+        ? lead.instagram
+        : `https://instagram.com/${lead.instagram.replace(/^@/, '')}`
+      : null)
 
   return (
     <>
@@ -488,6 +597,10 @@ export function CRMLeadDetailModal({
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-1">
+                    <Building2 className="w-3 h-3 text-sky-400" />
+                    {leadCity}
+                  </span>
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
                     {lead.zone}
                   </span>
@@ -567,6 +680,17 @@ export function CRMLeadDetailModal({
                 <ExternalLink className="w-3 h-3 opacity-70" />
               </a>
 
+              <button
+                type="button"
+                disabled={openingStand}
+                onClick={handleSaveAndOpenReviewStand}
+                className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation disabled:opacity-50"
+                title="Guardar ficha y abrir el expositor imprimible NFC + QR de este local"
+              >
+                <Printer className="w-4 h-4 text-amber-400" />
+                <span>{openingStand ? 'Abriendo...' : 'Expositor Reseñas'}</span>
+              </button>
+
               {getWhatsAppLink() ? (
                 <a
                   href={getWhatsAppLink()!}
@@ -639,6 +763,363 @@ export function CRMLeadDetailModal({
 
           {/* Contenido Desplazable */}
           <div className="p-5 overflow-y-auto space-y-5 flex-1">
+            {/* 0. INTELIGENCIA GOOGLE MAPS, MENÚ ONLINE Y REDES SOCIALES */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Globe className="w-4 h-4 text-blue-400" />
+                    <span>Inteligencia Digital &amp; Google Maps</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/15 text-sky-300 border border-sky-500/30">
+                    {leadCity}
+                  </span>
+                  {lead.lead_score != null && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                      Lead Score: {lead.lead_score}/100
+                    </span>
+                  )}
+                  {lead.recommended_pitch && RECOMMENDED_PITCH_CONFIG[lead.recommended_pitch] && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${RECOMMENDED_PITCH_CONFIG[lead.recommended_pitch].badge}`}>
+                      Propuesta: {RECOMMENDED_PITCH_CONFIG[lead.recommended_pitch].label}
+                    </span>
+                  )}
+                </div>
+                {lead.google_rating != null && (
+                  <span className="text-xs font-mono text-amber-400 font-bold flex items-center gap-1">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    {lead.google_rating} ({lead.google_reviews_count ?? 0} reseñas)
+                  </span>
+                )}
+              </div>
+
+              {(lead.saturday_hours || lead.route_block) && (
+                <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-300 bg-slate-900/80 px-3 py-2 rounded-xl border border-slate-800">
+                  {lead.saturday_hours && (
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                      <strong>Sábado:</strong> {lead.saturday_hours}
+                    </span>
+                  )}
+                  {lead.route_block && (
+                    <span className="flex items-center gap-1.5 text-violet-300">
+                      <MapPin className="w-3.5 h-3.5 text-violet-400" />
+                      <strong>Ruta:</strong> {lead.route_block}{lead.route_order ? ` (Parada #${lead.route_order})` : ''}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Perfil de Google */}
+                <a
+                  href={googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Perfil de Google</span>
+                  <ExternalLink className="w-3 h-3 opacity-70" />
+                </a>
+
+                {/* Link Directo a Reseñas */}
+                {googleReviewUrl.trim() && (
+                  <div className="inline-flex items-center rounded-xl bg-amber-500/15 border border-amber-500/30 overflow-hidden">
+                    <a
+                      href={googleReviewUrl.trim()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 hover:bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition"
+                    >
+                      <Star className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Link Directo Reseñas</span>
+                      <ExternalLink className="w-3 h-3 opacity-70" />
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof navigator !== 'undefined' && navigator.clipboard && googleReviewUrl.trim()) {
+                          navigator.clipboard.writeText(googleReviewUrl.trim())
+                          setCopiedReviewLink(true)
+                          setTimeout(() => setCopiedReviewLink(false), 2000)
+                        }
+                      }}
+                      className="px-2 py-1.5 border-l border-amber-500/30 hover:bg-amber-500/25 text-amber-300 transition"
+                      title="Copiar enlace directo de reseñas"
+                    >
+                      {copiedReviewLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                )}
+
+                {/* Menú Online */}
+                {lead.online_menu_url ? (
+                  <a
+                    href={lead.online_menu_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition"
+                  >
+                    <UtensilsCrossed className="w-3.5 h-3.5" />
+                    <span>Menú Online ({lead.online_menu_status === 'pdf' ? 'PDF' : 'Web'})</span>
+                    <ExternalLink className="w-3 h-3 opacity-70" />
+                  </a>
+                ) : (
+                  <span
+                    className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold border ${
+                      ONLINE_MENU_STATUS_CONFIG[lead.online_menu_status || 'unknown'].badge
+                    }`}
+                  >
+                    {ONLINE_MENU_STATUS_CONFIG[lead.online_menu_status || 'unknown'].label}
+                  </span>
+                )}
+
+                {/* Web Oficial (si es distinta del menú) */}
+                {lead.website_url && lead.website_url !== lead.online_menu_url && (
+                  <a
+                    href={lead.website_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Web Oficial</span>
+                    <ExternalLink className="w-3 h-3 opacity-70" />
+                  </a>
+                )}
+
+                {/* Instagram */}
+                {resolvedInstagramUrl && (
+                  <a
+                    href={resolvedInstagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl bg-pink-500/15 hover:bg-pink-500/25 text-pink-300 border border-pink-500/30 text-xs font-semibold flex items-center gap-1.5 transition"
+                  >
+                    <span>Instagram</span>
+                    <ExternalLink className="w-3 h-3 opacity-70" />
+                  </a>
+                )}
+
+                {/* Facebook */}
+                {lead.facebook_url && (
+                  <a
+                    href={lead.facebook_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 text-xs font-semibold flex items-center gap-1.5 transition"
+                  >
+                    <span>Facebook</span>
+                    <ExternalLink className="w-3 h-3 opacity-70" />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* 0.5. EXPOSITOR NFC + QR & RESEÑAS GOOGLE */}
+            <div className="p-4 rounded-2xl bg-slate-950/70 border border-amber-500/25 space-y-3.5">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  <span>Expositor NFC + QR &amp; Reseñas Google</span>
+                </span>
+                <span className="text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
+                  Enlace corto: /r/{effectiveSlug}
+                </span>
+              </div>
+
+              {/* URL directa de Google Maps Reviews */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  URL directa de Google Maps Reviews
+                </label>
+                <div className="flex gap-1.5">
+                  <input
+                    type="url"
+                    value={googleReviewUrl}
+                    onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                    placeholder="https://search.google.com/local/writereview?placeid=..."
+                    className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  />
+                  {googleReviewUrl.trim() && (
+                    <>
+                      <a
+                        href={googleReviewUrl.trim()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-amber-300 inline-flex items-center gap-1"
+                        title="Probar enlace de Google Reviews"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Probar</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                            navigator.clipboard.writeText(googleReviewUrl.trim())
+                            setCopiedReviewLink(true)
+                            setTimeout(() => setCopiedReviewLink(false), 2000)
+                          }
+                        }}
+                        className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 inline-flex items-center gap-1"
+                        title="Copiar URL de Google Reviews"
+                      >
+                        {copiedReviewLink ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                        <span>Copiar</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Slug corto + Logo opcional del local */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Slug único (/r/{effectiveSlug})
+                  </label>
+                  <input
+                    type="text"
+                    value={customSlug}
+                    onChange={(e) => setCustomSlug(e.target.value)}
+                    onBlur={() => setCustomSlug(normalizeSlug(customSlug || localName || lead.name))}
+                    placeholder="ej. bar-ejemplo-santiago"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Logo opcional del local (URL o imagen)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-700 bg-white flex items-center justify-center shrink-0">
+                      {logoUrl.trim() ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={logoUrl.trim()}
+                          alt={localName || lead.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ImageOff className="w-4 h-4 text-slate-400" />
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="/images/... o https://... (vacío = sin logo)"
+                      className="flex-1 min-w-0 px-2.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                    <label
+                      className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-cyan-300 cursor-pointer shrink-0 inline-flex items-center gap-1"
+                      title="Subir imagen de logo (se comprime automáticamente en circular)"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{compressingLogo ? '...' : 'Subir'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    {logoUrl.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setLogoUrl('')}
+                        className="px-2 py-2 rounded-xl bg-slate-800 hover:bg-rose-900/50 border border-slate-700 text-[11px] font-semibold text-rose-300 shrink-0"
+                        title="Quitar logo (predeterminado)"
+                      >
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tarifa / modalidad de Expositor de Reseñas (20 € o incluido en Carta QR 15 €/mes) */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                  Modalidad de Tarjeta / Expositor NFC + QR
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    {
+                      id: 'none' as ReviewStandMode,
+                      title: 'Sin expositor',
+                      sub: 'Solo prospección',
+                    },
+                    {
+                      id: 'standalone_20' as ReviewStandMode,
+                      title: `Suelto · ${REVIEW_STAND_PRICE_EUR} €`,
+                      sub: 'Pago único',
+                    },
+                    {
+                      id: 'included_carta' as ReviewStandMode,
+                      title: 'Incluido · 0 €',
+                      sub: `Con Carta QR ${CARTA_QR_PRICE_EUR} €/mes`,
+                    },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setReviewStandMode(opt.id)}
+                      className={`p-2 rounded-xl text-left border text-xs transition ${
+                        reviewStandMode === opt.id
+                          ? 'bg-amber-500/20 border-amber-400 text-amber-200 font-bold'
+                          : 'bg-slate-900/70 border-slate-800 text-slate-400 hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="text-white font-bold">{opt.title}</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{opt.sub}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Acciones directas del expositor */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  disabled={openingStand}
+                  onClick={handleSaveAndOpenReviewStand}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black inline-flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>{openingStand ? 'Guardando...' : 'Guardar y abrir expositor'}</span>
+                </button>
+
+                <a
+                  href="/admin/print-review-stand/predeterminada"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 transition"
+                >
+                  <ImageOff className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Versión predeterminada (sin logo)</span>
+                  <ExternalLink className="w-3 h-3 opacity-70" />
+                </a>
+
+                <a
+                  href={`/r/${effectiveSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-auto px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-xs font-semibold inline-flex items-center gap-1.5 transition"
+                >
+                  <span>Probar /r/{effectiveSlug}</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
             {/* 1. CONTROL DE ETAPAS DEL PERIODO DE PRUEBA (14 DÍAS) [Idea 7] */}
             {status === 'piloto_14_dias' && (
               <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-3">
@@ -1033,10 +1514,10 @@ export function CRMLeadDetailModal({
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
-                  { id: 'carta_39', name: 'Carta Digital', price: '39 €/mes' },
-                  { id: 'sala_69', name: 'Sala / Mozo', price: '69 €/mes' },
-                  { id: 'full_99', name: 'Full KDS', price: '99 €/mes' },
-                  { id: 'suite_139', name: 'Suite Integral', price: '139 €/mes' },
+                  { id: 'carta_15', name: 'Carta QR', price: `${CARTA_QR_PRICE_EUR} €/mes` },
+                  { id: 'mozo_47', name: 'Plan Mozo', price: '47 €/mes' },
+                  { id: 'fundador_50', name: 'Full Fundador', price: '50 €/mes' },
+                  { id: 'full_97', name: 'Plan Full', price: '97 €/mes' },
                 ].map((pl) => (
                   <button
                     key={pl.id}
