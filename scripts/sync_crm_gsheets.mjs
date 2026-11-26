@@ -131,6 +131,56 @@ function saveLocalLeads(leads) {
   fs.renameSync(tmp, CRM_BACKUP_FILE)
 }
 
+function loadSupabaseEnv() {
+  const envFile = path.join(process.cwd(), '.env.local')
+  if (!fs.existsSync(envFile)) return null
+  const env = {}
+  for (const l of fs.readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+    const i = l.indexOf('=')
+    if (i > 0) env[l.slice(0, i).trim()] = l.slice(i + 1).trim().replace(/^["']|["']$/g, '')
+  }
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return null
+  return { url: env.NEXT_PUBLIC_SUPABASE_URL, key: env.NEXT_PUBLIC_SUPABASE_ANON_KEY }
+}
+
+async function fetchLeadsFromSupabase(sbEnv) {
+  if (!sbEnv) return null
+  try {
+    const res = await fetch(`${sbEnv.url}/rest/v1/crm_leads?select=*&order=score.desc`, {
+      headers: { apikey: sbEnv.key, Authorization: `Bearer ${sbEnv.key}` },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return Array.isArray(data) && data.length > 0 ? data : null
+  } catch {
+    return null
+  }
+}
+
+async function upsertLeadsToSupabase(sbEnv, leads) {
+  if (!sbEnv || leads.length === 0) return
+  const allKeys = Array.from(new Set(leads.flatMap((o) => Object.keys(o))))
+  const normalized = leads.map((o) => {
+    const row = {}
+    for (const k of allKeys) row[k] = o[k] !== undefined ? o[k] : null
+    return row
+  })
+  const batchSize = 50
+  for (let i = 0; i < normalized.length; i += batchSize) {
+    const batch = normalized.slice(i, i + batchSize)
+    await fetch(`${sbEnv.url}/rest/v1/crm_leads`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: sbEnv.key,
+        Authorization: `Bearer ${sbEnv.key}`,
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(batch),
+    })
+  }
+}
+
 function listSheets(spreadsheetId) {
   const data = runGsheets(['readonly', 'list-sheets', spreadsheetId], { expectJson: true })
   if (Array.isArray(data)) return data
@@ -480,9 +530,15 @@ function formatManagedTabs(spreadsheetId, sheets, counts) {
   }
 }
 
-function main() {
+async function main() {
   const opts = parseArgs(process.argv)
-  const leads = loadLocalLeads()
+  const sbEnv = loadSupabaseEnv()
+  const remoteLeads = await fetchLeadsFromSupabase(sbEnv)
+  const leads = remoteLeads || loadLocalLeads()
+  if (remoteLeads) {
+    saveLocalLeads(remoteLeads)
+    console.log(`Fuente SSOT: Supabase Cloud (${remoteLeads.length} locales).`)
+  }
   const { sheets, created } = ensureManagedTabs(opts.spreadsheetId)
 
   if (created.length > 0) {
@@ -494,6 +550,7 @@ function main() {
     pullSummary = pullFromSheetIntoLeads(opts.spreadsheetId, leads)
     if (pullSummary.updatedCount > 0 || pullSummary.addedCount > 0) {
       saveLocalLeads(leads)
+      await upsertLeadsToSupabase(sbEnv, leads)
     }
     console.log(
       `Pull Sheet -> CRM: ${pullSummary.updatedCount} actualizados, ${pullSummary.addedCount} nuevos importados.`
