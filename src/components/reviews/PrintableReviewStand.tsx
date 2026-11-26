@@ -216,16 +216,16 @@ function FluxoInvertedMark() {
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
       <span
         style={{
-          width: '16px',
-          height: '16px',
-          borderRadius: '4px',
+          width: '18px',
+          height: '18px',
+          borderRadius: '5px',
           backgroundColor: '#ffffff',
           border: '1px solid #cbd5e1',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontWeight: 900,
-          fontSize: '10px',
+          fontSize: '11px',
           backgroundImage: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -235,9 +235,9 @@ function FluxoInvertedMark() {
       </span>
       <span
         style={{
-          fontSize: '8.5px',
-          fontWeight: 700,
-          letterSpacing: '0.08em',
+          fontSize: '9.5px',
+          fontWeight: 800,
+          letterSpacing: '0.09em',
           color: '#64748b',
           textTransform: 'uppercase',
         }}
@@ -545,10 +545,10 @@ export function PrintableReviewStand({
               backgroundColor: '#ffffff',
               fontSize: '16px',
               boxSizing: 'border-box',
-              paddingTop: showCircularLogo ? '7mm' : '12mm',
-              paddingBottom: '20mm',
-              paddingLeft: '8mm',
-              paddingRight: '8mm',
+              paddingTop: showCircularLogo ? '5.5mm' : '9mm',
+              paddingBottom: '17mm',
+              paddingLeft: '6mm',
+              paddingRight: '6mm',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -571,12 +571,12 @@ export function PrintableReviewStand({
               {showCircularLogo && (
                 <div
                   style={{
-                    width: '15mm',
-                    height: '15mm',
+                    width: '17mm',
+                    height: '17mm',
                     borderRadius: '9999px',
                     overflow: 'hidden',
                     border: '1px solid #e2e8f0',
-                    marginBottom: '3.5mm',
+                    marginBottom: '3mm',
                     backgroundColor: '#ffffff',
                     flexShrink: 0,
                   }}
@@ -599,11 +599,11 @@ export function PrintableReviewStand({
               <h2
                 style={{
                   margin: 0,
-                  fontSize: '21px',
-                  fontWeight: 700,
-                  letterSpacing: '0.07em',
-                  lineHeight: 1.15,
-                  color: '#111827',
+                  fontSize: '28px',
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  lineHeight: 1.1,
+                  color: '#0f172a',
                   textTransform: 'uppercase',
                 }}
               >
@@ -611,9 +611,9 @@ export function PrintableReviewStand({
               </h2>
               <p
                 style={{
-                  margin: '1.2mm 0 0 0',
-                  fontSize: language === 'bilingual' ? '12.5px' : '15px',
-                  fontWeight: 400,
+                  margin: '1.6mm 0 0 0',
+                  fontSize: language === 'bilingual' ? '14px' : '18px',
+                  fontWeight: 500,
                   lineHeight: 1.25,
                   color: '#1f2937',
                   letterSpacing: '0.01em',
@@ -629,16 +629,16 @@ export function PrintableReviewStand({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginTop: '2mm',
-                marginBottom: '2mm',
+                marginTop: '1mm',
+                marginBottom: '1mm',
               }}
             >
-              <GoogleFourColorRing diameterMm={60} strokePx={7.5}>
-                <QrVectorSvg value={targetUrl} sizeMm={32} />
+              <GoogleFourColorRing diameterMm={68} strokePx={8}>
+                <QrVectorSvg value={targetUrl} sizeMm={39} />
               </GoogleFourColorRing>
             </div>
 
-            {/* Bloque inferior (con 20mm libres abajo para la peana de madera natural) */}
+            {/* Bloque inferior (con 17mm libres abajo para la peana de madera natural) */}
             <div
               style={{
                 display: 'flex',
@@ -647,14 +647,14 @@ export function PrintableReviewStand({
                 width: '100%',
               }}
             >
-              <FilledGoldStars sizePx={16} gapPx={3} />
+              <FilledGoldStars sizePx={22} gapPx={4} />
               <p
                 style={{
-                  margin: '2mm 0 0 0',
-                  fontSize: '11.5px',
-                  fontWeight: 500,
+                  margin: '2.4mm 0 0 0',
+                  fontSize: '14px',
+                  fontWeight: 600,
                   lineHeight: 1.3,
-                  color: '#1f2937',
+                  color: '#0f172a',
                 }}
               >
                 {copyText.importance}
@@ -662,20 +662,20 @@ export function PrintableReviewStand({
 
               <div
                 style={{
-                  marginTop: '2.5mm',
+                  marginTop: '2.6mm',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '5px',
+                  gap: '6px',
                 }}
               >
-                <DiscreetNfcIcon sizePx={13} color="#64748b" />
+                <DiscreetNfcIcon sizePx={16} color="#475569" />
                 <span
                   style={{
-                    fontSize: '10px',
-                    fontWeight: 500,
+                    fontSize: '12.5px',
+                    fontWeight: 600,
                     lineHeight: 1.2,
-                    color: '#475569',
+                    color: '#334155',
                     letterSpacing: '0.01em',
                   }}
                 >
@@ -695,10 +695,10 @@ export function PrintableReviewStand({
                 backgroundColor: '#ffffff',
                 fontSize: '15px',
                 boxSizing: 'border-box',
-                paddingTop: '9mm',
-                paddingBottom: '20mm',
-                paddingLeft: '8mm',
-                paddingRight: '8mm',
+                paddingTop: '8mm',
+                paddingBottom: '17mm',
+                paddingLeft: '6mm',
+                paddingRight: '6mm',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -717,7 +717,7 @@ export function PrintableReviewStand({
                   top: 0,
                   left: 0,
                   right: 0,
-                  height: '2.5mm',
+                  height: '2.8mm',
                   display: 'flex',
                 }}
               >
@@ -728,14 +728,14 @@ export function PrintableReviewStand({
               </div>
 
               {/* Cabecera del reverso */}
-              <div style={{ width: '100%', paddingTop: '2mm' }}>
+              <div style={{ width: '100%', paddingTop: '1.5mm' }}>
                 <h2
                   style={{
                     margin: 0,
-                    fontSize: '16px',
+                    fontSize: language === 'bilingual' ? '18px' : '22px',
                     fontWeight: 800,
                     letterSpacing: '0.07em',
-                    color: '#111827',
+                    color: '#0f172a',
                     textTransform: 'uppercase',
                   }}
                 >
@@ -743,8 +743,8 @@ export function PrintableReviewStand({
                 </h2>
                 <p
                   style={{
-                    margin: '1.2mm 0 0 0',
-                    fontSize: '11.5px',
+                    margin: '1.4mm 0 0 0',
+                    fontSize: '14px',
                     color: '#475569',
                     fontWeight: 500,
                   }}
@@ -759,26 +759,26 @@ export function PrintableReviewStand({
                   width: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '4mm',
+                  gap: '4.5mm',
                   textAlign: 'left',
-                  marginTop: '3mm',
-                  marginBottom: '3mm',
+                  marginTop: '2mm',
+                  marginBottom: '2mm',
                 }}
               >
                 {/* Método 1: NFC */}
                 <div
                   style={{
-                    borderRadius: '10px',
-                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    border: '1px solid #cbd5e1',
                     backgroundColor: '#f8fafc',
-                    padding: '3.5mm',
+                    padding: '4.5mm',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1.5mm' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2mm' }}>
                     <span
                       style={{
-                        width: '22px',
-                        height: '22px',
+                        width: '28px',
+                        height: '28px',
                         borderRadius: '9999px',
                         backgroundColor: '#dbeafe',
                         display: 'inline-flex',
@@ -787,16 +787,16 @@ export function PrintableReviewStand({
                         flexShrink: 0,
                       }}
                     >
-                      <DiscreetNfcIcon sizePx={13} color="#1d4ed8" />
+                      <DiscreetNfcIcon sizePx={16} color="#1d4ed8" />
                     </span>
-                    <strong style={{ fontSize: '11.5px', color: '#0f172a', fontWeight: 800 }}>
+                    <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: 800 }}>
                       {copyText.stepNfcTitle}
                     </strong>
                   </div>
-                  <p style={{ margin: 0, fontSize: '10.2px', lineHeight: 1.38, color: '#334155' }}>
+                  <p style={{ margin: 0, fontSize: '12.2px', lineHeight: 1.4, color: '#1e293b' }}>
                     {copyText.stepNfcDesc}
                   </p>
-                  <p style={{ margin: '1.5mm 0 0 0', fontSize: '9px', lineHeight: 1.3, color: '#64748b', fontWeight: 600 }}>
+                  <p style={{ margin: '2mm 0 0 0', fontSize: '10.5px', lineHeight: 1.35, color: '#475569', fontWeight: 600 }}>
                     {copyText.stepNfcHint}
                   </p>
                 </div>
@@ -804,17 +804,17 @@ export function PrintableReviewStand({
                 {/* Método 2: QR */}
                 <div
                   style={{
-                    borderRadius: '10px',
-                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    border: '1px solid #cbd5e1',
                     backgroundColor: '#f8fafc',
-                    padding: '3.5mm',
+                    padding: '4.5mm',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1.5mm' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2mm' }}>
                     <span
                       style={{
-                        width: '22px',
-                        height: '22px',
+                        width: '28px',
+                        height: '28px',
                         borderRadius: '9999px',
                         backgroundColor: '#fef3c7',
                         display: 'inline-flex',
@@ -823,13 +823,13 @@ export function PrintableReviewStand({
                         flexShrink: 0,
                       }}
                     >
-                      <QrCode style={{ width: '13px', height: '13px', color: '#b45309' }} />
+                      <QrCode style={{ width: '16px', height: '16px', color: '#b45309' }} />
                     </span>
-                    <strong style={{ fontSize: '11.5px', color: '#0f172a', fontWeight: 800 }}>
+                    <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: 800 }}>
                       {copyText.stepQrTitle}
                     </strong>
                   </div>
-                  <p style={{ margin: 0, fontSize: '10.2px', lineHeight: 1.38, color: '#334155' }}>
+                  <p style={{ margin: 0, fontSize: '12.2px', lineHeight: 1.4, color: '#1e293b' }}>
                     {copyText.stepQrDesc}
                   </p>
                 </div>
@@ -842,11 +842,11 @@ export function PrintableReviewStand({
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '2mm',
+                  gap: '2.2mm',
                 }}
               >
-                <FilledGoldStars sizePx={14} gapPx={3} />
-                <p style={{ margin: 0, fontSize: '10px', fontWeight: 600, color: '#1f2937' }}>
+                <FilledGoldStars sizePx={19} gapPx={4} />
+                <p style={{ margin: 0, fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>
                   {copyText.stepDone}
                 </p>
                 <div
@@ -860,7 +860,7 @@ export function PrintableReviewStand({
                     justifyContent: 'space-between',
                   }}
                 >
-                  <span style={{ fontSize: '9px', fontWeight: 600, color: '#64748b' }}>
+                  <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b' }}>
                     {isDefaultTemplate ? 'Google Reviews' : restaurantName}
                   </span>
                   <FluxoInvertedMark />
@@ -933,11 +933,11 @@ export function PrintableReviewStand({
               <h2
                 style={{
                   margin: 0,
-                  fontSize: '15px',
-                  fontWeight: 700,
+                  fontSize: '17px',
+                  fontWeight: 800,
                   letterSpacing: '0.06em',
                   lineHeight: 1.1,
-                  color: '#111827',
+                  color: '#0f172a',
                   textTransform: 'uppercase',
                 }}
               >
@@ -945,9 +945,9 @@ export function PrintableReviewStand({
               </h2>
               <p
                 style={{
-                  margin: '0.7mm 0 0 0',
-                  fontSize: '9.5px',
-                  fontWeight: 400,
+                  margin: '0.8mm 0 0 0',
+                  fontSize: '11px',
+                  fontWeight: 500,
                   lineHeight: 1.2,
                   color: '#1f2937',
                 }}
@@ -956,16 +956,16 @@ export function PrintableReviewStand({
               </p>
 
               <div style={{ marginTop: '2.2mm' }}>
-                <FilledGoldStars sizePx={11} gapPx={2} />
+                <FilledGoldStars sizePx={13} gapPx={2.5} />
               </div>
 
               <p
                 style={{
-                  margin: '1.4mm 0 0 0',
-                  fontSize: '8px',
-                  fontWeight: 500,
+                  margin: '1.5mm 0 0 0',
+                  fontSize: '9px',
+                  fontWeight: 600,
                   lineHeight: 1.25,
-                  color: '#334155',
+                  color: '#1e293b',
                 }}
               >
                 {copyText.importance}
@@ -979,13 +979,13 @@ export function PrintableReviewStand({
                   gap: '4px',
                 }}
               >
-                <DiscreetNfcIcon sizePx={10} color="#64748b" />
+                <DiscreetNfcIcon sizePx={11} color="#475569" />
                 <span
                   style={{
-                    fontSize: '7.5px',
-                    fontWeight: 500,
+                    fontSize: '8.5px',
+                    fontWeight: 600,
                     lineHeight: 1.2,
-                    color: '#475569',
+                    color: '#334155',
                   }}
                 >
                   {copyText.nfcPrompt}
@@ -995,8 +995,8 @@ export function PrintableReviewStand({
 
             {/* Columna derecha: QR vectorial dentro de aro circular 4 colores Google */}
             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <GoogleFourColorRing diameterMm={37} strokePx={8.5}>
-                <QrVectorSvg value={targetUrl} sizeMm={19} />
+              <GoogleFourColorRing diameterMm={39} strokePx={8.5}>
+                <QrVectorSvg value={targetUrl} sizeMm={21} />
               </GoogleFourColorRing>
             </div>
           </article>
@@ -1011,7 +1011,7 @@ export function PrintableReviewStand({
                 backgroundColor: '#ffffff',
                 fontSize: '12px',
                 boxSizing: 'border-box',
-                padding: '4mm 5mm',
+                padding: '3.5mm 4.5mm',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -1039,22 +1039,22 @@ export function PrintableReviewStand({
               </div>
 
               <div style={{ paddingTop: '1mm', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <strong style={{ fontSize: '10.5px', fontWeight: 800, color: '#0f172a', letterSpacing: '0.05em' }}>
+                <strong style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', letterSpacing: '0.05em' }}>
                   {copyText.backTitle}
                 </strong>
-                <FilledGoldStars sizePx={9.5} gapPx={1.5} />
+                <FilledGoldStars sizePx={11} gapPx={2} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2mm' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
-                  <DiscreetNfcIcon sizePx={11} color="#1d4ed8" />
-                  <p style={{ margin: 0, fontSize: '8px', lineHeight: 1.3, color: '#334155' }}>
+                  <DiscreetNfcIcon sizePx={12} color="#1d4ed8" />
+                  <p style={{ margin: 0, fontSize: '8.8px', lineHeight: 1.32, color: '#1e293b' }}>
                     <strong style={{ color: '#0f172a' }}>{copyText.stepNfcTitle}:</strong> {copyText.stepNfcDesc}
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
-                  <QrCode style={{ width: '11px', height: '11px', color: '#b45309', flexShrink: 0, marginTop: '1px' }} />
-                  <p style={{ margin: 0, fontSize: '8px', lineHeight: 1.3, color: '#334155' }}>
+                  <QrCode style={{ width: '12px', height: '12px', color: '#b45309', flexShrink: 0, marginTop: '1px' }} />
+                  <p style={{ margin: 0, fontSize: '8.8px', lineHeight: 1.32, color: '#1e293b' }}>
                     <strong style={{ color: '#0f172a' }}>{copyText.stepQrTitle}:</strong> {copyText.stepQrDesc}
                   </p>
                 </div>
@@ -1069,7 +1069,7 @@ export function PrintableReviewStand({
                   justifyContent: 'space-between',
                 }}
               >
-                <span style={{ fontSize: '7.5px', fontWeight: 600, color: '#64748b' }}>
+                <span style={{ fontSize: '8.5px', fontWeight: 700, color: '#475569' }}>
                   {copyText.stepDone}
                 </span>
                 <FluxoInvertedMark />
