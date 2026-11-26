@@ -361,64 +361,73 @@ export function PrintableReviewStand({
       `}</style>
 
       {/* Panel de control (oculto al imprimir) */}
-      <div className="max-w-3xl mx-auto mb-8 bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5 print:hidden">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-lg font-black text-slate-900">
+      <div
+        className={`${
+          embedded ? 'w-full' : 'max-w-4xl mx-auto mb-8'
+        } bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-5 print:hidden`}
+      >
+        {/* Cabecera */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
               Expositor Minimalista NFC + QR — {isDefaultTemplate ? 'Versión Predeterminada' : restaurantName}
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-1">
               {city ? `${city} · ` : ''}Modo activo:{' '}
               <strong className="text-blue-700">
                 {enableGatekeeper ? 'Filtro Inteligente (Opción 1)' : 'Enlace Directo a Google Maps (Por defecto)'}
               </strong>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {embedded && (
               <a
                 href={`/admin/print-review-stand/${isDefaultTemplate ? 'predeterminada' : slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-colors"
+                className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-colors whitespace-nowrap"
               >
-                <ExternalLink className="w-4 h-4" />
-                <span>Abrir vista limpia para imprimir</span>
+                <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                <span>Vista limpia para imprimir</span>
               </a>
             )}
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-colors"
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-colors whitespace-nowrap"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4 shrink-0" />
               <span>Imprimir / Guardar PDF</span>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">Formato físico</label>
-            <div className="grid grid-cols-2 gap-2">
+        {/* Controles en rejilla simétrica 2x2 con botones de altura uniforme en 1 línea */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* 1. Formato físico */}
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Formato físico
+            </label>
+            <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
               <button
                 type="button"
                 onClick={() => setFormat('stand_10x15')}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                className={`h-9 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                   format === 'stand_10x15'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
-                Peana 10×15
+                Peana 10×15 cm
               </button>
               <button
                 type="button"
                 onClick={() => setFormat('card_pvc')}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                className={`h-9 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                   format === 'card_pvc'
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                 }`}
               >
                 Tarjeta PVC
@@ -426,44 +435,21 @@ export function PrintableReviewStand({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">Logo del local</label>
-            <button
-              type="button"
-              onClick={() => setHideLogo((prev) => !prev)}
-              disabled={!logoUrl}
-              className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                !logoUrl || hideLogo
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-              } disabled:opacity-60`}
-            >
-              {!logoUrl || hideLogo ? (
-                <>
-                  <ImageOff className="w-3.5 h-3.5" />
-                  <span>Versión predeterminada (sin logo)</span>
-                </>
-              ) : (
-                <>
-                  <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Logo circular activo (clic para ocultar)</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">Idioma del soporte</label>
-            <div className="grid grid-cols-3 gap-2">
+          {/* 2. Idioma del soporte */}
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Idioma del soporte
+            </label>
+            <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
               {(['es', 'gl', 'bilingual'] as const).map((lang) => (
                 <button
                   key={lang}
                   type="button"
                   onClick={() => setLanguage(lang)}
-                  className={`px-2 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                  className={`h-9 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                     language === lang
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
                   }`}
                 >
                   {lang === 'es' ? 'Español' : lang === 'gl' ? 'Galego' : 'ES / GL'}
@@ -472,36 +458,86 @@ export function PrintableReviewStand({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">Parte de atrás (Reverso)</label>
-            <button
-              type="button"
-              onClick={() => setShowBackSide((prev) => !prev)}
-              className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
-                showBackSide
-                  ? 'bg-emerald-600 text-white border-emerald-600'
-                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-              }`}
-            >
-              <FlipHorizontal2 className="w-3.5 h-3.5" />
-              <span>{showBackSide ? 'Con instrucciones (Activo)' : 'Solo cara delantera'}</span>
-            </button>
+          {/* 3. Parte de atrás (Reverso) */}
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Parte de atrás (Reverso)
+            </label>
+            <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setShowBackSide(true)}
+                className={`h-9 px-3 rounded-lg text-xs font-bold transition-all inline-flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                  showBackSide
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <FlipHorizontal2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Con instrucciones</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowBackSide(false)}
+                className={`h-9 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                  !showBackSide
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                Solo cara delantera
+              </button>
+            </div>
+          </div>
+
+          {/* 4. Logo del local */}
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Logo superior
+            </label>
+            <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setHideLogo(true)}
+                className={`h-9 px-3 rounded-lg text-xs font-bold transition-all inline-flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                  !logoUrl || hideLogo
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <ImageOff className="w-3.5 h-3.5 shrink-0" />
+                <span>Sin logo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setHideLogo(false)}
+                disabled={!logoUrl}
+                className={`h-9 px-3 rounded-lg text-xs font-bold transition-all inline-flex items-center justify-center gap-1.5 whitespace-nowrap disabled:opacity-45 disabled:cursor-not-allowed ${
+                  logoUrl && !hideLogo
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                <ImageIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>{logoUrl ? 'Con logo circular' : 'Sin logo cargado'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Enlace exacto para grabar en el chip NFC con NFC Tools */}
         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-              <Smartphone className="w-4 h-4 text-blue-600" />
-              URL exacta para grabar en el chip NFC (app NFC Tools)
+              <Smartphone className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>URL exacta para grabar en el chip NFC (app NFC Tools)</span>
             </span>
             {!isDefaultTemplate && (
               <a
                 href={`/r/${slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
+                className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1 whitespace-nowrap"
               >
                 <span>Probar /r/{slug}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -514,13 +550,13 @@ export function PrintableReviewStand({
               value={origin}
               onChange={(e) => setOrigin(e.target.value)}
               aria-label="Dominio público de producción"
-              className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 h-10 rounded-xl border border-slate-300 bg-white px-3 text-xs font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="https://tudominio.com"
             />
             <button
               type="button"
               onClick={handleCopyUrl}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors whitespace-nowrap shrink-0"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copied ? 'Copiado' : isDefaultTemplate ? 'Copiar URL' : `Copiar /r/${slug}`}</span>
