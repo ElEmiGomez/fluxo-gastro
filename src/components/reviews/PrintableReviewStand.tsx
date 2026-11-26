@@ -12,7 +12,10 @@ import {
   Image as ImageIcon,
   FlipHorizontal2,
   QrCode,
+  Download,
+  Loader2,
 } from 'lucide-react'
+import { downloadReviewStandAsset } from '@/lib/reviews/review-stand-canvas'
 
 interface PrintableReviewStandProps {
   slug: string
@@ -265,6 +268,7 @@ export function PrintableReviewStand({
   const [logoError, setLogoError] = useState<boolean>(false)
   const [origin, setOrigin] = useState('https://fluxo.es')
   const [copied, setCopied] = useState(false)
+  const [downloading, setDownloading] = useState<'a4_sheet' | 'front' | 'back' | null>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.origin) {
@@ -291,6 +295,23 @@ export function PrintableReviewStand({
       setTimeout(() => setCopied(false), 2000)
     } catch {
       // ignore clipboard errors
+    }
+  }
+
+  const handleDownload = async (kind: 'a4_sheet' | 'front' | 'back') => {
+    setDownloading(kind)
+    try {
+      await downloadReviewStandAsset(kind, format, {
+        slug,
+        restaurantName,
+        targetUrl,
+        logoUrl,
+        showLogo: showCircularLogo,
+        language,
+        isDefaultTemplate,
+      })
+    } finally {
+      setDownloading(null)
     }
   }
 
@@ -380,24 +401,58 @@ export function PrintableReviewStand({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              disabled={downloading !== null}
+              onClick={() => handleDownload('a4_sheet')}
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs shadow-sm transition-colors whitespace-nowrap"
+              title="Descarga una lámina A4 con Frente y Reverso listos para la librería (300 DPI)"
+            >
+              {downloading === 'a4_sheet' ? (
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              ) : (
+                <Download className="w-4 h-4 shrink-0" />
+              )}
+              <span>Descargar A4 para Librería</span>
+            </button>
+            <button
+              type="button"
+              disabled={downloading !== null}
+              onClick={() => handleDownload('front')}
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 disabled:opacity-60 text-slate-800 font-bold text-xs transition-colors whitespace-nowrap"
+              title="Descargar solo la cara delantera en PNG 300 DPI"
+            >
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span>Frente PNG</span>
+            </button>
+            <button
+              type="button"
+              disabled={downloading !== null}
+              onClick={() => handleDownload('back')}
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 disabled:opacity-60 text-slate-800 font-bold text-xs transition-colors whitespace-nowrap"
+              title="Descargar solo el reverso con instrucciones en PNG 300 DPI"
+            >
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span>Reverso PNG</span>
+            </button>
             {embedded && (
               <a
                 href={`/admin/print-review-stand/${isDefaultTemplate ? 'predeterminada' : slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-colors whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-colors whitespace-nowrap"
               >
                 <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                <span>Vista limpia para imprimir</span>
+                <span>Vista limpia</span>
               </a>
             )}
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-colors whitespace-nowrap"
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-colors whitespace-nowrap"
             >
               <Printer className="w-4 h-4 shrink-0" />
-              <span>Imprimir / Guardar PDF</span>
+              <span>Imprimir / PDF</span>
             </button>
           </div>
         </div>
