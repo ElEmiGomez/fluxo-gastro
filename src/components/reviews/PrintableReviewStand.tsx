@@ -388,8 +388,8 @@ export function PrintableReviewStand({
         } bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-5 print:hidden`}
       >
         {/* Cabecera */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-slate-100">
-          <div className="min-w-0">
+        <div className="flex flex-col gap-3.5 pb-4 border-b border-slate-100">
+          <div>
             <h1 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
               Expositor Minimalista NFC + QR — {isDefaultTemplate ? 'Versión Predeterminada' : restaurantName}
             </h1>
@@ -400,7 +400,7 @@ export function PrintableReviewStand({
               </strong>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               disabled={downloading !== null}
