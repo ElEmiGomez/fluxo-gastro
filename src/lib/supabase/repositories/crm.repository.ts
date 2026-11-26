@@ -4,6 +4,7 @@ import { createServerClient } from '../server'
 import { isSupabaseConfigured } from '../client'
 import { CRMLead, CRMMetrics, CRMPlan, CRMStatus, CARTA_QR_PRICE_EUR, PLAN_PRICING, normalizeLeadCity } from '@/types/crm.types'
 import { NOIA_INITIAL_LEADS } from '@/lib/crm/noia-seed-data'
+import crmLeadsSnapshot from '@/lib/crm/crm-leads-snapshot.json'
 import { normalizeSlug } from '@/lib/slugify'
 import crypto from 'crypto'
 
@@ -75,6 +76,10 @@ function loadInitialLeads(): CRMLead[] {
     }
   } catch (e) {
     console.warn('[CRM Repository] Error leyendo persistencia en disco:', e)
+  }
+
+  if (Array.isArray(crmLeadsSnapshot) && crmLeadsSnapshot.length > 0) {
+    return (crmLeadsSnapshot as CRMLead[]).map(normalizeLeadRecord)
   }
 
   return NOIA_INITIAL_LEADS.map((item, index) => {
