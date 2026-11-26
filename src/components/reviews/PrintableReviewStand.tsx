@@ -10,6 +10,8 @@ import {
   ExternalLink,
   ImageOff,
   Image as ImageIcon,
+  FlipHorizontal2,
+  QrCode,
 } from 'lucide-react'
 
 interface PrintableReviewStandProps {
@@ -20,6 +22,7 @@ interface PrintableReviewStandProps {
   googleReviewUrl: string
   enableGatekeeper: boolean
   isDefaultTemplate?: boolean
+  embedded?: boolean
 }
 
 function QrVectorSvg({
@@ -208,6 +211,43 @@ function DiscreetNfcIcon({ sizePx = 13, color = '#64748b' }: { sizePx?: number; 
   )
 }
 
+function FluxoInvertedMark() {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+      <span
+        style={{
+          width: '16px',
+          height: '16px',
+          borderRadius: '4px',
+          backgroundColor: '#ffffff',
+          border: '1px solid #cbd5e1',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 900,
+          fontSize: '10px',
+          backgroundImage: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}
+      >
+        F
+      </span>
+      <span
+        style={{
+          fontSize: '8.5px',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          color: '#64748b',
+          textTransform: 'uppercase',
+        }}
+      >
+        Fluxo
+      </span>
+    </span>
+  )
+}
+
 export function PrintableReviewStand({
   slug,
   restaurantName,
@@ -216,10 +256,12 @@ export function PrintableReviewStand({
   googleReviewUrl,
   enableGatekeeper,
   isDefaultTemplate = false,
+  embedded = false,
 }: PrintableReviewStandProps) {
   const [format, setFormat] = useState<'stand_10x15' | 'card_pvc'>('stand_10x15')
   const [language, setLanguage] = useState<'es' | 'gl' | 'bilingual'>('es')
   const [hideLogo, setHideLogo] = useState<boolean>(isDefaultTemplate || !logoUrl)
+  const [showBackSide, setShowBackSide] = useState<boolean>(true)
   const [logoError, setLogoError] = useState<boolean>(false)
   const [origin, setOrigin] = useState('https://fluxo.es')
   const [copied, setCopied] = useState(false)
@@ -258,23 +300,53 @@ export function PrintableReviewStand({
       subtitle: 'por ayudarnos a mejorar',
       importance: 'Tu opinión es muy importante para nosotros',
       nfcPrompt: 'Acerca tu móvil o escanea el QR',
+      backTitle: '¿CÓMO USARLO?',
+      backSubtitle: 'Deja tu reseña en 5 segundos',
+      stepNfcTitle: '1. Con NFC (sin abrir cámara)',
+      stepNfcDesc: 'Acerca la parte trasera de tu móvil al centro de la cara delantera y pulsa la notificación.',
+      stepNfcHint: 'iPhone: parte superior (cámara) · Android: centro trasero',
+      stepQrTitle: '2. Con Código QR (cámara)',
+      stepQrDesc: 'Abre la cámara de tu móvil, apunta al código QR de la cara delantera y toca el enlace.',
+      stepDone: 'Elige tus estrellas en Google y pulsa Publicar',
     },
     gl: {
       thanks: 'GRAZAS',
       subtitle: 'por axudarnos a mellorar',
       importance: 'A túa opinión é moi importante para nós',
       nfcPrompt: 'Achega o teu móbil ou escanea o QR',
+      backTitle: 'COMO USALO?',
+      backSubtitle: 'Deixa a túa reseña en 5 segundos',
+      stepNfcTitle: '1. Con NFC (sen abrir cámara)',
+      stepNfcDesc: 'Achega a parte traseira do teu móbil ao centro da cara dianteira e preme a notificación.',
+      stepNfcHint: 'iPhone: parte superior (cámara) · Android: centro traseiro',
+      stepQrTitle: '2. Con Código QR (cámara)',
+      stepQrDesc: 'Abre a cámara do teu móbil, apunta ao código QR da cara dianteira e toca a ligazón.',
+      stepDone: 'Elixe as túas estrelas en Google e preme Publicar',
     },
     bilingual: {
       thanks: 'GRACIAS',
       subtitle: 'por ayudarnos a mejorar · por axudarnos a mellorar',
       importance: 'Tu opinión es muy importante para nosotros',
       nfcPrompt: 'Acerca tu móvil o escanea el QR',
+      backTitle: '¿CÓMO USARLO? · COMO USALO?',
+      backSubtitle: '5 segundos · NFC o QR',
+      stepNfcTitle: '1. Acerca tu móvil (NFC)',
+      stepNfcDesc: 'Toca el centro delantero con tu teléfono desbloqueado (iPhone arriba · Android centro) y abre el aviso.',
+      stepNfcHint: 'Sin abrir apps · Sen abrir apps',
+      stepQrTitle: '2. Escanea el QR (Cámara)',
+      stepQrDesc: 'Abre la cámara, apunta al QR delantero y pulsa el enlace de Google Maps.',
+      stepDone: 'Valora tu visita y pulsa Publicar · Grazas!',
     },
   }[language]
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-4 print:bg-white print:p-0">
+    <div
+      className={
+        embedded
+          ? 'space-y-6 print:bg-white print:p-0'
+          : 'min-h-screen bg-slate-100 py-8 px-4 print:bg-white print:p-0'
+      }
+    >
       <style>{`
         @media print {
           @page {
@@ -302,17 +374,30 @@ export function PrintableReviewStand({
               </strong>
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Imprimir / Guardar PDF</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {embedded && (
+              <a
+                href={`/admin/print-review-stand/${isDefaultTemplate ? 'predeterminada' : slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>Abrir vista limpia para imprimir</span>
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-sm transition-colors"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Imprimir / Guardar PDF</span>
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">Formato físico</label>
             <div className="grid grid-cols-2 gap-2">
@@ -386,6 +471,22 @@ export function PrintableReviewStand({
               ))}
             </div>
           </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">Parte de atrás (Reverso)</label>
+            <button
+              type="button"
+              onClick={() => setShowBackSide((prev) => !prev)}
+              className={`w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                showBackSide
+                  ? 'bg-emerald-600 text-white border-emerald-600'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              <FlipHorizontal2 className="w-3.5 h-3.5" />
+              <span>{showBackSide ? 'Con instrucciones (Activo)' : 'Solo cara delantera'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Enlace exacto para grabar en el chip NFC con NFC Tools */}
@@ -433,8 +534,9 @@ export function PrintableReviewStand({
       </div>
 
       {/* Arte imprimible (dimensiones físicas exactas en mm/px, inmunes a rem global) */}
-      <div className="flex justify-center">
+      <div className="flex flex-wrap justify-center items-start gap-6 print:gap-4">
         {format === 'stand_10x15' ? (
+          <>
           <article
             data-testid="review-stand-10x15"
             style={{
@@ -582,7 +684,193 @@ export function PrintableReviewStand({
               </div>
             </div>
           </article>
+
+          {/* REVERSO 10x15 (Parte de atrás con instrucciones claras de uso NFC + QR) */}
+          {showBackSide && (
+            <article
+              data-testid="review-stand-10x15-back"
+              style={{
+                width: '100mm',
+                height: '150mm',
+                backgroundColor: '#ffffff',
+                fontSize: '15px',
+                boxSizing: 'border-box',
+                paddingTop: '9mm',
+                paddingBottom: '20mm',
+                paddingLeft: '8mm',
+                paddingRight: '8mm',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                textAlign: 'center',
+                breakInside: 'avoid',
+                pageBreakInside: 'avoid',
+                position: 'relative',
+              }}
+              className="shadow-2xl border border-slate-200 print:shadow-none print:border print:border-dashed print:border-slate-300 overflow-hidden"
+            >
+              {/* Barra superior minimalista con los 4 colores de Google */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '2.5mm',
+                  display: 'flex',
+                }}
+              >
+                <span style={{ flex: 1, backgroundColor: '#4285F4' }} />
+                <span style={{ flex: 1, backgroundColor: '#EA4335' }} />
+                <span style={{ flex: 1, backgroundColor: '#FBBC05' }} />
+                <span style={{ flex: 1, backgroundColor: '#34A853' }} />
+              </div>
+
+              {/* Cabecera del reverso */}
+              <div style={{ width: '100%', paddingTop: '2mm' }}>
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: '16px',
+                    fontWeight: 800,
+                    letterSpacing: '0.07em',
+                    color: '#111827',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {copyText.backTitle}
+                </h2>
+                <p
+                  style={{
+                    margin: '1.2mm 0 0 0',
+                    fontSize: '11.5px',
+                    color: '#475569',
+                    fontWeight: 500,
+                  }}
+                >
+                  {copyText.backSubtitle}
+                </p>
+              </div>
+
+              {/* Dos bloques de instrucciones claras: NFC + QR */}
+              <div
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4mm',
+                  textAlign: 'left',
+                  marginTop: '3mm',
+                  marginBottom: '3mm',
+                }}
+              >
+                {/* Método 1: NFC */}
+                <div
+                  style={{
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#f8fafc',
+                    padding: '3.5mm',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1.5mm' }}>
+                    <span
+                      style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '9999px',
+                        backgroundColor: '#dbeafe',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <DiscreetNfcIcon sizePx={13} color="#1d4ed8" />
+                    </span>
+                    <strong style={{ fontSize: '11.5px', color: '#0f172a', fontWeight: 800 }}>
+                      {copyText.stepNfcTitle}
+                    </strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '10.2px', lineHeight: 1.38, color: '#334155' }}>
+                    {copyText.stepNfcDesc}
+                  </p>
+                  <p style={{ margin: '1.5mm 0 0 0', fontSize: '9px', lineHeight: 1.3, color: '#64748b', fontWeight: 600 }}>
+                    {copyText.stepNfcHint}
+                  </p>
+                </div>
+
+                {/* Método 2: QR */}
+                <div
+                  style={{
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#f8fafc',
+                    padding: '3.5mm',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '1.5mm' }}>
+                    <span
+                      style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '9999px',
+                        backgroundColor: '#fef3c7',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <QrCode style={{ width: '13px', height: '13px', color: '#b45309' }} />
+                    </span>
+                    <strong style={{ fontSize: '11.5px', color: '#0f172a', fontWeight: 800 }}>
+                      {copyText.stepQrTitle}
+                    </strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '10.2px', lineHeight: 1.38, color: '#334155' }}>
+                    {copyText.stepQrDesc}
+                  </p>
+                </div>
+              </div>
+
+              {/* Cierre + Estrellas + Isotipo invertido Fluxo */}
+              <div
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '2mm',
+                }}
+              >
+                <FilledGoldStars sizePx={14} gapPx={3} />
+                <p style={{ margin: 0, fontSize: '10px', fontWeight: 600, color: '#1f2937' }}>
+                  {copyText.stepDone}
+                </p>
+                <div
+                  style={{
+                    width: '100%',
+                    paddingTop: '2.5mm',
+                    marginTop: '1mm',
+                    borderTop: '1px solid #e2e8f0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span style={{ fontSize: '9px', fontWeight: 600, color: '#64748b' }}>
+                    {isDefaultTemplate ? 'Google Reviews' : restaurantName}
+                  </span>
+                  <FluxoInvertedMark />
+                </div>
+              </div>
+            </article>
+          )}
+          </>
         ) : (
+          <>
           <article
             data-testid="review-stand-pvc"
             style={{
@@ -712,6 +1000,83 @@ export function PrintableReviewStand({
               </GoogleFourColorRing>
             </div>
           </article>
+
+          {/* REVERSO TARJETA PVC 85.6x54mm */}
+          {showBackSide && (
+            <article
+              data-testid="review-stand-pvc-back"
+              style={{
+                width: '85.6mm',
+                height: '54mm',
+                backgroundColor: '#ffffff',
+                fontSize: '12px',
+                boxSizing: 'border-box',
+                padding: '4mm 5mm',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                textAlign: 'left',
+                breakInside: 'avoid',
+                pageBreakInside: 'avoid',
+                position: 'relative',
+              }}
+              className="rounded-xl shadow-xl border border-slate-200 print:shadow-none print:border print:border-dashed print:border-slate-300 overflow-hidden"
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '1.8mm',
+                  display: 'flex',
+                }}
+              >
+                <span style={{ flex: 1, backgroundColor: '#4285F4' }} />
+                <span style={{ flex: 1, backgroundColor: '#EA4335' }} />
+                <span style={{ flex: 1, backgroundColor: '#FBBC05' }} />
+                <span style={{ flex: 1, backgroundColor: '#34A853' }} />
+              </div>
+
+              <div style={{ paddingTop: '1mm', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <strong style={{ fontSize: '10.5px', fontWeight: 800, color: '#0f172a', letterSpacing: '0.05em' }}>
+                  {copyText.backTitle}
+                </strong>
+                <FilledGoldStars sizePx={9.5} gapPx={1.5} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2mm' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
+                  <DiscreetNfcIcon sizePx={11} color="#1d4ed8" />
+                  <p style={{ margin: 0, fontSize: '8px', lineHeight: 1.3, color: '#334155' }}>
+                    <strong style={{ color: '#0f172a' }}>{copyText.stepNfcTitle}:</strong> {copyText.stepNfcDesc}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
+                  <QrCode style={{ width: '11px', height: '11px', color: '#b45309', flexShrink: 0, marginTop: '1px' }} />
+                  <p style={{ margin: 0, fontSize: '8px', lineHeight: 1.3, color: '#334155' }}>
+                    <strong style={{ color: '#0f172a' }}>{copyText.stepQrTitle}:</strong> {copyText.stepQrDesc}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  borderTop: '1px solid #e2e8f0',
+                  paddingTop: '1.5mm',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <span style={{ fontSize: '7.5px', fontWeight: 600, color: '#64748b' }}>
+                  {copyText.stepDone}
+                </span>
+                <FluxoInvertedMark />
+              </div>
+            </article>
+          )}
+          </>
         )}
       </div>
     </div>

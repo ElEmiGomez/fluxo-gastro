@@ -1,18 +1,18 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Printer, Smartphone, Loader2 } from 'lucide-react'
+import { Printer, Smartphone, Loader2, Star } from 'lucide-react'
 import { LocalBilling } from '@/lib/billing/billing-calculations'
 import { loadBillingLocales } from '@/lib/billing/crm-demo-seed'
 import { StreetKitPhysicalGenerator } from '@/components/crm/billing/StreetKitPhysicalGenerator'
 import { DigitalLocalQrStudio } from '@/components/crm/billing/DigitalLocalQrStudio'
+import { ReviewStandQrStudio } from '@/components/crm/billing/ReviewStandQrStudio'
 
-type KitMode = 'fisico' | 'digital'
+type KitMode = 'fisico' | 'digital' | 'resenas'
 
 /**
- * Pestaña 3 del CRM Fundador: Kit de Calle (`/demo` Físico) & QRs Digitales.
- * Dos modos: soporte físico plastificable (solo QR maestro de demostración)
- * y QRs 100% digitales por local.
+ * Pestaña 3 del CRM Fundador: Kit de Calle (`/demo` Físico), QRs Digitales
+ * y Expositor NFC + QR de Reseñas Google (Frente + Reverso).
  */
 export function KitDeCalleView() {
   const [mode, setMode] = useState<KitMode>('fisico')
@@ -32,13 +32,13 @@ export function KitDeCalleView() {
         <div>
           <h2 className="text-lg font-black text-white leading-tight">Kit de Calle &amp; QRs Digitales</h2>
           <p className="text-[11px] text-slate-400">
-            Soporte físico `/demo` para imprimir y plastificar · QRs digitales por local
+            Soporte físico `/demo` · QRs de carta por local · Expositores NFC + QR de Reseñas Google
           </p>
         </div>
       </div>
 
       {/* Selector de modo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <button
           onClick={() => setMode('fisico')}
           className={`p-4 rounded-2xl border text-left apple-smooth flex items-center gap-3 ${
@@ -47,13 +47,13 @@ export function KitDeCalleView() {
               : 'bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07]'
           }`}
         >
-          <Printer className={`w-5 h-5 ${mode === 'fisico' ? 'text-purple-300' : 'text-slate-400'}`} />
+          <Printer className={`w-5 h-5 shrink-0 ${mode === 'fisico' ? 'text-purple-300' : 'text-slate-400'}`} />
           <div>
             <p className={`text-xs font-black ${mode === 'fisico' ? 'text-white' : 'text-slate-300'}`}>
               Kit de Calle Físico
             </p>
             <p className="text-[10px] text-slate-400 mt-0.5">
-              Láminas A5/A6 + caballete A4 · exclusivo QR maestro /demo
+              Láminas A5/A6 + caballete A4 · QR maestro /demo
             </p>
           </div>
         </button>
@@ -65,7 +65,7 @@ export function KitDeCalleView() {
               : 'bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07]'
           }`}
         >
-          <Smartphone className={`w-5 h-5 ${mode === 'digital' ? 'text-cyan-300' : 'text-slate-400'}`} />
+          <Smartphone className={`w-5 h-5 shrink-0 ${mode === 'digital' ? 'text-cyan-300' : 'text-slate-400'}`} />
           <div>
             <p className={`text-xs font-black ${mode === 'digital' ? 'text-white' : 'text-slate-300'}`}>
               QRs 100% Digitales por Local
@@ -75,10 +75,30 @@ export function KitDeCalleView() {
             </p>
           </div>
         </button>
+        <button
+          onClick={() => setMode('resenas')}
+          className={`p-4 rounded-2xl border text-left apple-smooth flex items-center gap-3 ${
+            mode === 'resenas'
+              ? 'bg-amber-500/15 border-amber-400/40'
+              : 'bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07]'
+          }`}
+        >
+          <Star className={`w-5 h-5 shrink-0 ${mode === 'resenas' ? 'text-amber-300 fill-amber-300' : 'text-slate-400'}`} />
+          <div>
+            <p className={`text-xs font-black ${mode === 'resenas' ? 'text-white' : 'text-slate-300'}`}>
+              QR &amp; NFC Reseñas Google
+            </p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Expositor 10×15 + PVC (Frente y Reverso explicativo)
+            </p>
+          </div>
+        </button>
       </div>
 
       {/* Contenido del modo activo */}
-      {locales === null ? (
+      {mode === 'resenas' ? (
+        <ReviewStandQrStudio />
+      ) : locales === null ? (
         <div className="flex items-center justify-center py-16 text-slate-400 text-sm">
           <Loader2 className="w-4 h-4 animate-spin mr-2" /> Preparando locales del kit…
         </div>
