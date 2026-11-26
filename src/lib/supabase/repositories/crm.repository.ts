@@ -218,25 +218,47 @@ export async function getCRMLeads(): Promise<CRMLead[]> {
 }
 
 /**
- * Siembra inicial de los 35 locales investigados de Noia en Supabase
+ * Siembra inicial de los locales (Noia + Santiago) en Supabase cuando la tabla está vacía.
  */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function seedInitialNoiaLeads(): Promise<CRMLead[]> {
   const supabase = createServerClient()
   if (supabase && isSupabaseConfigured()) {
     try {
-      const toInsert = NOIA_INITIAL_LEADS.map((item) => ({
-        ...item,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }))
+      const sourceLeads =
+        Array.isArray(crmLeadsSnapshot) && crmLeadsSnapshot.length > 0
+          ? (crmLeadsSnapshot as CRMLead[])
+          : NOIA_INITIAL_LEADS.map((item) => ({ ...item, city: 'Noia' }))
 
-      const { data, error } = await supabase
+      const toInsert = sourceLeads.map((item: any) => {
+        const clean: Record<string, unknown> = {
+          ...item,
+          city: item.city || normalizeLeadCity(item),
+          created_at: item.created_at || new Date().toISOString(),
+          updated_at: item.updated_at || new Date().toISOString(),
+        }
+        // Si el ID heredado no es un UUID válido de PostgreSQL, dejar que gen_random_uuid() lo genere
+        if (!clean.id || typeof clean.id !== 'string' || !UUID_REGEX.test(clean.id)) {
+          delete clean.id
+        }
+        return clean
+      })
+
+      let { data, error } = await supabase
         .from('crm_leads')
         .insert(toInsert)
         .select('*')
 
+      if (error && isMissingColumnError(error)) {
+        const fallbackInsert = toInsert.map((row) => stripOptionalReviewColumns(row))
+        const retry = await supabase.from('crm_leads').insert(fallbackInsert).select('*')
+        data = retry.data
+        error = retry.error
+      }
+
       if (!error && data && data.length > 0) {
-        inMemoryLeads = data as CRMLead[]
+        inMemoryLeads = (data as CRMLead[]).map(normalizeLeadRecord)
         persistLeadsLocally(inMemoryLeads)
         return inMemoryLeads
       }
