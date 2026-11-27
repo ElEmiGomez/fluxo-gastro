@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   X,
   Store,
@@ -21,6 +21,7 @@ import {
   CheckSquare,
   FileCheck2,
   ChevronRight,
+  ChevronDown,
   ShieldCheck,
   Camera,
   Cpu,
@@ -45,7 +46,8 @@ import {
   Check,
   Building2,
   Printer,
-  ImageOff
+  ImageOff,
+  Wrench
 } from 'lucide-react'
 import {
   CRMICP,
@@ -128,15 +130,73 @@ const STATUS_CONFIG: Record<
 }
 
 const QUICK_PAIN_TAGS = [
+  'Interesa Carta QR (15€)',
+  'Interesa Expositor Reseñas (20€)',
+  'No estaba el dueño · Volver',
+  'Pasar en horario de tarde',
   'Carta en papel desactualizada',
-  'Mucho retraso en horas pico',
-  'Terrazas ciegas / alejadas',
-  'Receptivo a Carta Digital (15€)',
-  'Quiere fotos profesionales',
-  'Le interesa el Comandero',
-  'Pide pasar en horario de tarde',
-  'Dueño no estaba disponible',
+  'QR actual abre PDF incómodo',
+  'Retraso en terraza / horas pico',
+  'Le interesa Comandero',
 ]
+
+type SectionKey = 'before_enter' | 'visit_followup' | 'pitch' | 'commercial' | 'files' | 'pilot'
+
+interface CollapsibleBlockProps {
+  title: string
+  icon: React.ReactNode
+  summary: React.ReactNode
+  isOpen: boolean
+  onToggle: () => void
+  borderClass?: string
+  testId?: string
+  children: React.ReactNode
+}
+
+function CollapsibleBlock({
+  title,
+  icon,
+  summary,
+  isOpen,
+  onToggle,
+  borderClass = 'border-slate-800',
+  testId,
+  children,
+}: CollapsibleBlockProps) {
+  return (
+    <section
+      data-testid={testId}
+      className={`rounded-2xl bg-slate-950/70 border ${borderClass} overflow-hidden`}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className="w-full px-4 py-3 flex items-center justify-between gap-2 text-left hover:bg-slate-900/60 transition touch-manipulation"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="shrink-0">{icon}</span>
+          <span className="text-xs font-bold text-white truncate">{title}</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 max-w-[56%]">
+          <div className="text-[11px] text-slate-400 truncate flex items-center gap-1.5">
+            {summary}
+          </div>
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
+              isOpen ? 'rotate-180 text-white' : ''
+            }`}
+          />
+        </div>
+      </button>
+      {isOpen && (
+        <div className="px-4 pb-4 pt-2 border-t border-slate-800/80 space-y-3.5">
+          {children}
+        </div>
+      )}
+    </section>
+  )
+}
 
 const DEFAULT_REVIEW_COMPLAINT_SUGGESTIONS = [
   '⏱️ Tardanza en pedir la cuenta en terraza',
@@ -218,6 +278,82 @@ function CRMLeadDetailModalContent({
   )
   const [compressingLogo, setCompressingLogo] = useState(false)
   const [openingStand, setOpeningStand] = useState(false)
+  const [lastVisitDate, setLastVisitDate] = useState<string | null>(lead.last_visit_date || null)
+  const [nextContactDate, setNextContactDate] = useState<string>(
+    lead.next_contact_date ? lead.next_contact_date.slice(0, 10) : ''
+  )
+  const [toolsMenuOpen, setToolsMenuOpen] = useState(false)
+  const toolsMenuRef = useRef<HTMLDivElement>(null)
+  const [showDecisionMakers, setShowDecisionMakers] = useState<boolean>(
+    Boolean(lead.decision_makers && lead.decision_makers.length > 0)
+  )
+  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
+    before_enter: true,
+    visit_followup: true,
+    pitch: false,
+    commercial: false,
+    files: false,
+    pilot: lead.status === 'piloto_14_dias',
+  })
+
+  useEffect(() => {
+    if (!toolsMenuOpen) return
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (toolsMenuRef.current && !toolsMenuRef.current.contains(event.target as Node)) {
+        setToolsMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [toolsMenuOpen])
+
+  const toggleSection = (key: SectionKey) => {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const handleSelectStatus = (nextStatus: CRMStatus) => {
+    setStatus(nextStatus)
+    if (nextStatus === 'piloto_14_dias') {
+      setOpenSections((prev) => ({ ...prev, pilot: true }))
+    }
+  }
+
+  const handleMarkVisitedToday = () => {
+    setLastVisitDate(new Date().toISOString())
+    if (status === 'lead_por_visitar') {
+      setStatus('contactado')
+    }
+  }
+
+  const formatLocalYmd = (d: Date) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  const setQuickFollowUp = (target: number | 'saturday' | 'clear') => {
+    if (target === 'clear') {
+      setNextContactDate('')
+      return
+    }
+    const base = new Date()
+    if (target === 'saturday') {
+      const dayOfWeek = base.getDay()
+      const delta = dayOfWeek === 6 ? 7 : (6 - dayOfWeek + 7) % 7 || 7
+      base.setDate(base.getDate() + delta)
+    } else {
+      base.setDate(base.getDate() + target)
+    }
+    setNextContactDate(formatLocalYmd(base))
+  }
+
+  const formatShortDate = (isoOrYmd?: string | null) => {
+    if (!isoOrYmd) return ''
+    const d = new Date(isoOrYmd)
+    if (Number.isNaN(d.getTime())) return isoOrYmd.slice(0, 10)
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })
+  }
 
   const handleAddDecisionMaker = (e: React.FormEvent) => {
     e.preventDefault()
@@ -505,6 +641,10 @@ function CRMLeadDetailModalContent({
   }
 
   const buildUpdatesPayload = (): Partial<CRMLead> => {
+    const resolvedLastVisit =
+      lastVisitDate || (status !== 'lead_por_visitar' ? new Date().toISOString() : null)
+    const cleanNextContact = nextContactDate.trim() ? nextContactDate.trim().slice(0, 10) : null
+
     const updates: Partial<CRMLead> = {
       name: localName.trim() || lead.name,
       status,
@@ -515,7 +655,8 @@ function CRMLeadDetailModalContent({
       contact_whatsapp: contactWhatsapp.trim() || null,
       notes: notes.trim() || null,
       lost_reason: status === 'perdido' ? lostReason.trim() || 'Sin especificar' : null,
-      last_visit_date: new Date().toISOString(),
+      last_visit_date: resolvedLastVisit,
+      next_contact_date: cleanNextContact,
       pilot_checklist: checklist,
       pilot_agreement: agreement,
       current_pos_system: currentPosSystem,
@@ -592,29 +733,29 @@ function CRMLeadDetailModalContent({
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in select-none">
         <div className="w-full max-w-2xl rounded-3xl bg-slate-900 border border-slate-800 text-white shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
-          {/* Cabecera del Local */}
-          <div className="p-5 border-b border-slate-800 bg-slate-900/60 relative">
+          {/* Cabecera del Local (Compacta + Herramientas desplegables) */}
+          <div className="p-4 sm:p-5 border-b border-slate-800 bg-slate-900/90 relative z-20 shrink-0">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-1">
+                <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-1">
                     <Building2 className="w-3 h-3 text-sky-400" />
                     {leadCity}
                   </span>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
                     {lead.zone}
                   </span>
                   {(() => {
-                    const icpKey = normalizeICP(lead.icp_segment);
-                    const icpData = ICP_CONFIG[icpKey];
+                    const icpKey = normalizeICP(lead.icp_segment)
+                    const icpData = ICP_CONFIG[icpKey]
                     return (
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${icpData.badge}`} title={icpData.description}>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${icpData.badge}`} title={icpData.description}>
                         {icpData.label}
                       </span>
-                    );
+                    )
                   })()}
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
-                    ★ Score {lead.score}/10
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-0.5">
+                    ★ {lead.score}/10
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -628,15 +769,15 @@ function CRMLeadDetailModalContent({
                         if (e.key === 'Enter') setIsEditingName(false)
                       }}
                       autoFocus
-                      className="text-xl font-bold text-white bg-slate-800 border border-blue-500 rounded-lg px-2 py-0.5 focus:outline-none w-full max-w-md"
+                      className="text-lg sm:text-xl font-bold text-white bg-slate-800 border border-blue-500 rounded-lg px-2 py-0.5 focus:outline-none w-full max-w-md"
                     />
                   ) : (
-                    <div className="flex items-center gap-2 group/title">
-                      <h2 className="text-xl font-bold text-white truncate">{localName || lead.name}</h2>
+                    <div className="flex items-center gap-2 group/title min-w-0">
+                      <h2 className="text-lg sm:text-xl font-bold text-white truncate">{localName || lead.name}</h2>
                       <button
                         type="button"
                         onClick={() => setIsEditingName(true)}
-                        className="opacity-60 hover:opacity-100 text-slate-400 hover:text-blue-400 p-1 rounded transition"
+                        className="opacity-60 hover:opacity-100 text-slate-400 hover:text-blue-400 p-1 rounded transition shrink-0"
                         title="Editar nombre comercial del local"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
@@ -644,136 +785,201 @@ function CRMLeadDetailModalContent({
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                  <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-500" />
-                  <span className="truncate">{lead.address}</span>
+                <div className="flex items-center gap-2 text-xs text-slate-400 mt-1 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 min-w-0 truncate max-w-full">
+                    <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-500" />
+                    <span className="truncate">{lead.address}</span>
+                  </span>
                   <a
                     href={googleMapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-400 hover:underline flex items-center gap-1 ml-1"
+                    className="text-blue-400 hover:underline inline-flex items-center gap-1 shrink-0"
                   >
                     <ExternalLink className="w-3 h-3" /> Ver en Maps
                   </a>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={onClose}
+                aria-label="Cerrar ficha"
                 className="w-9 h-9 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Barra de Contacto y Acciones Rápidas */}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {/* Botón Abrir Carta Prototipo */}
+            {/* Barra compacta de acciones rápidas de calle + Herramientas ▾ */}
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2">
+              {getWhatsAppLink() && (
+                <a
+                  href={getWhatsAppLink()!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>WhatsApp</span>
+                </a>
+              )}
+
+              {contactPhone.trim() && (
+                <a
+                  href={`tel:${contactPhone.replace(/\s+/g, '')}`}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 transition"
+                >
+                  <Phone className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Llamar</span>
+                </a>
+              )}
+
               <a
                 href={getMenuUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 transition active:scale-95 touch-manipulation"
-                title="Abrir la carta interactiva del local en una pestaña nueva"
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition active:scale-95 touch-manipulation"
+                title="Abrir la carta interactiva del local"
               >
-                <UtensilsCrossed className="w-4 h-4 text-white" />
+                <UtensilsCrossed className="w-3.5 h-3.5 text-white" />
                 <span>Abrir Carta</span>
                 <ExternalLink className="w-3 h-3 opacity-70" />
               </a>
 
               <button
                 type="button"
-                disabled={openingStand}
-                onClick={handleSaveAndOpenReviewStand}
-                className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation disabled:opacity-50"
-                title="Guardar ficha y abrir el expositor imprimible NFC + QR de este local"
-              >
-                <Printer className="w-4 h-4 text-amber-400" />
-                <span>{openingStand ? 'Abriendo...' : 'Expositor Reseñas'}</span>
-              </button>
-
-              {getWhatsAppLink() ? (
-                <a
-                  href={getWhatsAppLink()!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-2 transition"
-                >
-                  <MessageCircle className="w-4 h-4 text-emerald-400" />
-                  <span>WhatsApp</span>
-                </a>
-              ) : null}
-
-              {/* Botón Escanear Carta de Papel [Idea 1] */}
-              <button
-                type="button"
-                onClick={() => setIsBeforeAfterOpen(true)}
-                className="px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
-                title="Comparador visual interactiva Antes vs Después"
-              >
-                <Sliders className="w-4 h-4 text-purple-400" />
-                <span>Antes vs Después</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsDossierOpen(true)}
-                className="px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
-                title="Dossier en 1 página A4 para gestoría / asesor fiscal"
-              >
-                <FileText className="w-4 h-4 text-blue-400" />
-                <span>Dossier Gestor</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsContactCardOpen(true)}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
-                title="Mostrar mi QR de contacto directo"
-              >
-                <QrCode className="w-4 h-4 text-slate-400" />
-                <span>Mi QR</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setIsScannerOpen(true)}
-                className="px-3 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
+                className="px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold inline-flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
                 title="Escanear menú físico con la cámara del móvil"
               >
-                <Camera className="w-4 h-4 text-cyan-400" />
+                <Camera className="w-3.5 h-3.5 text-cyan-400" />
                 <span>Escanear Carta</span>
               </button>
 
-              {/* Botón de Firma de Acuerdo de Prueba [Idea 9] */}
-              <button
-                type="button"
-                onClick={() => setIsAgreementModalOpen(true)}
-                className="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
-              >
-                <FileCheck2 className="w-4 h-4 text-amber-400" />
-                <span>{agreement ? 'Acuerdo Firmado ✓' : 'Firmar Prueba (14D)'}</span>
-              </button>
+              {/* Menú desplegable Herramientas ▾ */}
+              <div className="relative" ref={toolsMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setToolsMenuOpen((prev) => !prev)}
+                  aria-expanded={toolsMenuOpen}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold inline-flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
+                >
+                  <Wrench className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Herramientas</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform duration-150 ${
+                      toolsMenuOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
 
-              <div className="ml-auto flex items-center gap-1.5 text-xs font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-xl border border-emerald-500/20">
-                <DollarSign className="w-3.5 h-3.5" />
-                <span>MRR: {PLAN_PRICING[targetPlan]} €/mes</span>
+                {toolsMenuOpen && (
+                  <div className="absolute right-0 sm:left-0 mt-1.5 z-30 w-56 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-1.5 space-y-0.5">
+                    <button
+                      type="button"
+                      disabled={openingStand}
+                      onClick={() => {
+                        setToolsMenuOpen(false)
+                        handleSaveAndOpenReviewStand()
+                      }}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-amber-500/15 text-left text-xs font-semibold text-amber-200 flex items-center gap-2 transition disabled:opacity-50"
+                    >
+                      <Printer className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>{openingStand ? 'Abriendo expositor...' : 'Expositor Reseñas'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToolsMenuOpen(false)
+                        setIsAgreementModalOpen(true)
+                      }}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-amber-500/15 text-left text-xs font-semibold text-amber-300 flex items-center gap-2 transition"
+                    >
+                      <FileCheck2 className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>{agreement ? 'Acuerdo Firmado ✓' : 'Firmar Prueba (14D)'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToolsMenuOpen(false)
+                        setIsBeforeAfterOpen(true)
+                      }}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-purple-500/15 text-left text-xs font-semibold text-purple-300 flex items-center gap-2 transition"
+                    >
+                      <Sliders className="w-4 h-4 text-purple-400 shrink-0" />
+                      <span>Antes vs Después</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToolsMenuOpen(false)
+                        setIsDossierOpen(true)
+                      }}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-blue-500/15 text-left text-xs font-semibold text-blue-300 flex items-center gap-2 transition"
+                    >
+                      <FileText className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>Dossier Gestor (A4)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setToolsMenuOpen(false)
+                        setIsContactCardOpen(true)
+                      }}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-slate-800 text-left text-xs font-semibold text-slate-200 flex items-center gap-2 transition"
+                    >
+                      <QrCode className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span>Mi QR de Contacto</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="ml-auto flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20">
+                <DollarSign className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  {PLAN_PRICING[targetPlan]} €/mes
+                  {reviewStandMode === 'standalone_20' ? ` + ${REVIEW_STAND_PRICE_EUR}€ único` : ''}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Contenido Desplazable */}
-          <div className="p-5 overflow-y-auto space-y-5 flex-1">
-            {/* 0. INTELIGENCIA GOOGLE MAPS, MENÚ ONLINE Y REDES SOCIALES */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+          {/* Contenido Desplazable en 6 Bloques Prioritarios (sin scroll horizontal) */}
+          <div className="p-4 sm:p-5 overflow-y-auto overflow-x-hidden space-y-3 flex-1">
+            {/* [ABIERTO 1] ANTES DE ENTRAR · VISTAZO RÁPIDO */}
+            <CollapsibleBlock
+              testId="crm-block-before-enter"
+              title="Antes de entrar · Vistazo Rápido"
+              icon={<Globe className="w-4 h-4 text-blue-400" />}
+              isOpen={openSections.before_enter}
+              onToggle={() => toggleSection('before_enter')}
+              borderClass="border-slate-800"
+              summary={
+                <>
+                  {lead.google_rating != null && (
+                    <span className="font-mono text-amber-400 font-bold inline-flex items-center gap-0.5">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      {lead.google_rating} ({lead.google_reviews_count ?? 0})
+                    </span>
+                  )}
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                      ONLINE_MENU_STATUS_CONFIG[lead.online_menu_status || 'unknown'].badge
+                    }`}
+                  >
+                    {ONLINE_MENU_STATUS_CONFIG[lead.online_menu_status || 'unknown'].label}
+                  </span>
+                </>
+              }
+            >
+              {/* Badges clave + rating */}
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Globe className="w-4 h-4 text-blue-400" />
-                    <span>Inteligencia Digital &amp; Google Maps</span>
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/15 text-sky-300 border border-sky-500/30">
-                    {leadCity}
-                  </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
                   {lead.lead_score != null && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
                       Lead Score: {lead.lead_score}/100
@@ -793,25 +999,57 @@ function CRMLeadDetailModalContent({
                 )}
               </div>
 
-              {(lead.saturday_hours || lead.route_block) && (
-                <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-300 bg-slate-900/80 px-3 py-2 rounded-xl border border-slate-800">
+              {/* Horario sábado + ruta + decisor principal si existe */}
+              {(lead.saturday_hours || lead.route_block || decisionMakers.length > 0) && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-300 bg-slate-900/80 px-3 py-2 rounded-xl border border-slate-800">
                   {lead.saturday_hours && (
                     <span className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                      <Clock className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                       <strong>Sábado:</strong> {lead.saturday_hours}
                     </span>
                   )}
                   {lead.route_block && (
                     <span className="flex items-center gap-1.5 text-violet-300">
-                      <MapPin className="w-3.5 h-3.5 text-violet-400" />
-                      <strong>Ruta:</strong> {lead.route_block}{lead.route_order ? ` (Parada #${lead.route_order})` : ''}
+                      <MapPin className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                      <strong>Ruta:</strong> {lead.route_block}{lead.route_order ? ` (#${lead.route_order})` : ''}
                     </span>
+                  )}
+                  {(() => {
+                    const primary = decisionMakers.find((d) => d.is_primary) || decisionMakers[0]
+                    if (!primary) return null
+                    return (
+                      <span className="flex items-center gap-1.5 text-blue-300">
+                        <User className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                        <strong>Preguntar por:</strong> {primary.name}
+                        {primary.schedule ? ` (${primary.schedule})` : ''}
+                      </span>
+                    )
+                  })()}
+                </div>
+              )}
+
+              {/* Píldoras de quejas detectadas (gancho rápido de entrada) */}
+              {complaintTags.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400 mr-1">
+                    Fricción detectada:
+                  </span>
+                  {complaintTags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-rose-500/15 border border-rose-500/30 text-rose-200"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                  {complaintTags.length > 3 && (
+                    <span className="text-[10px] text-slate-400">+{complaintTags.length - 3} más</span>
                   )}
                 </div>
               )}
 
+              {/* Enlaces externos en 1 toque */}
               <div className="flex flex-wrap items-center gap-2">
-                {/* Perfil de Google */}
                 <a
                   href={googleMapsUrl}
                   target="_blank"
@@ -823,7 +1061,6 @@ function CRMLeadDetailModalContent({
                   <ExternalLink className="w-3 h-3 opacity-70" />
                 </a>
 
-                {/* Link Directo a Reseñas */}
                 {googleReviewUrl.trim() && (
                   <div className="inline-flex items-center rounded-xl bg-amber-500/15 border border-amber-500/30 overflow-hidden">
                     <a
@@ -833,7 +1070,7 @@ function CRMLeadDetailModalContent({
                       className="px-3 py-1.5 hover:bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition"
                     >
                       <Star className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Link Directo Reseñas</span>
+                      <span>Link Reseñas</span>
                       <ExternalLink className="w-3 h-3 opacity-70" />
                     </a>
                     <button
@@ -853,7 +1090,6 @@ function CRMLeadDetailModalContent({
                   </div>
                 )}
 
-                {/* Menú Online */}
                 {lead.online_menu_url ? (
                   <a
                     href={lead.online_menu_url}
@@ -875,7 +1111,6 @@ function CRMLeadDetailModalContent({
                   </span>
                 )}
 
-                {/* Web Oficial (si es distinta del menú) */}
                 {lead.website_url && lead.website_url !== lead.online_menu_url && (
                   <a
                     href={lead.website_url}
@@ -889,7 +1124,6 @@ function CRMLeadDetailModalContent({
                   </a>
                 )}
 
-                {/* Instagram */}
                 {resolvedInstagramUrl && (
                   <a
                     href={resolvedInstagramUrl}
@@ -902,7 +1136,6 @@ function CRMLeadDetailModalContent({
                   </a>
                 )}
 
-                {/* Facebook */}
                 {lead.facebook_url && (
                   <a
                     href={lead.facebook_url}
@@ -915,796 +1148,811 @@ function CRMLeadDetailModalContent({
                   </a>
                 )}
               </div>
-            </div>
+            </CollapsibleBlock>
 
-            {/* 0.5. EXPOSITOR NFC + QR & RESEÑAS GOOGLE */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-amber-500/25 space-y-3.5">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  <span>Expositor NFC + QR &amp; Reseñas Google</span>
-                </span>
-                <span className="text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
-                  Enlace corto: /r/{effectiveSlug}
-                </span>
-              </div>
-
-              {/* URL directa de Google Maps Reviews */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  URL directa de Google Maps Reviews
-                </label>
-                <div className="flex gap-1.5">
-                  <input
-                    type="url"
-                    value={googleReviewUrl}
-                    onChange={(e) => setGoogleReviewUrl(e.target.value)}
-                    placeholder="https://search.google.com/local/writereview?placeid=..."
-                    className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
-                  />
-                  {googleReviewUrl.trim() && (
-                    <>
-                      <a
-                        href={googleReviewUrl.trim()}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-amber-300 inline-flex items-center gap-1"
-                        title="Probar enlace de Google Reviews"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Probar</span>
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                            navigator.clipboard.writeText(googleReviewUrl.trim())
-                            setCopiedReviewLink(true)
-                            setTimeout(() => setCopiedReviewLink(false), 2000)
-                          }
-                        }}
-                        className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 inline-flex items-center gap-1"
-                        title="Copiar URL de Google Reviews"
-                      >
-                        {copiedReviewLink ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                        <span>Copiar</span>
-                      </button>
-                    </>
+            {/* [ABIERTO 2] VISITA, CONTACTO Y SEGUIMIENTO (Lo que anotas al salir) */}
+            <CollapsibleBlock
+              testId="crm-block-visit-followup"
+              title="Visita, Contacto y Seguimiento"
+              icon={<CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+              isOpen={openSections.visit_followup}
+              onToggle={() => toggleSection('visit_followup')}
+              borderClass="border-blue-500/30"
+              summary={
+                <>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${STATUS_CONFIG[status].bg} ${STATUS_CONFIG[status].text} ${STATUS_CONFIG[status].border}`}
+                  >
+                    {STATUS_CONFIG[status].label}
+                  </span>
+                  {nextContactDate && (
+                    <span className="font-mono text-sky-300 text-[10px]">
+                      Próx: {formatShortDate(nextContactDate)}
+                    </span>
                   )}
+                </>
+              }
+            >
+              {/* Fila rápida: Marcar Visitado Hoy + Estado del Pipeline */}
+              <div className="space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-300">
+                    Estado en Pipeline
+                    {lastVisitDate && (
+                      <span className="ml-2 text-[11px] font-mono text-emerald-400">
+                        · Visitado el {formatShortDate(lastVisitDate)}
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleMarkVisitedToday}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 text-xs font-bold inline-flex items-center gap-1.5 transition active:scale-95 touch-manipulation"
+                  >
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{lastVisitDate ? 'Visitado Hoy ✓' : 'Marcar Visitado Hoy'}</span>
+                  </button>
                 </div>
-              </div>
 
-              {/* Slug corto + Logo opcional del local */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                    Slug único (/r/{effectiveSlug})
-                  </label>
-                  <input
-                    type="text"
-                    value={customSlug}
-                    onChange={(e) => setCustomSlug(e.target.value)}
-                    onBlur={() => setCustomSlug(normalizeSlug(customSlug || localName || lead.name))}
-                    placeholder="ej. bar-ejemplo-santiago"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {(Object.keys(STATUS_CONFIG) as CRMStatus[]).map((st) => {
+                    const conf = STATUS_CONFIG[st]
+                    const isSelected = status === st
+                    return (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => handleSelectStatus(st)}
+                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition text-left flex items-center justify-between ${
+                          isSelected
+                            ? `${conf.bg} ${conf.text} ${conf.border} ring-2 ring-blue-500/40 shadow-sm`
+                            : 'bg-slate-800/60 text-slate-400 border-slate-700/60 hover:bg-slate-800'
+                        }`}
+                      >
+                        <span className="truncate">{conf.label}</span>
+                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5 shrink-0 ml-1" />}
+                      </button>
+                    )
+                  })}
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                    Logo opcional del local (URL o imagen)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-700 bg-white flex items-center justify-center shrink-0">
-                      {logoUrl.trim() ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={logoUrl.trim()}
-                          alt={localName || lead.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <ImageOff className="w-4 h-4 text-slate-400" />
-                      )}
-                    </div>
+                {status === 'perdido' && (
+                  <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25">
+                    <label className="block text-[11px] font-semibold text-rose-300 mb-1">
+                      Motivo de Rechazo / Pérdida
+                    </label>
                     <input
                       type="text"
-                      value={logoUrl}
-                      onChange={(e) => setLogoUrl(e.target.value)}
-                      placeholder="/images/... o https://... (vacío = sin logo)"
-                      className="flex-1 min-w-0 px-2.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                      value={lostReason}
+                      onChange={(e) => setLostReason(e.target.value)}
+                      placeholder="Ej: Prefiere carta física / Tiene permanencia..."
+                      className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-rose-500/30 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-400"
                     />
-                    <label
-                      className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-cyan-300 cursor-pointer shrink-0 inline-flex items-center gap-1"
-                      title="Subir imagen de logo (se comprime automáticamente en circular)"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>{compressingLogo ? '...' : 'Subir'}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Contacto Directo */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Persona de Contacto / Cargo
+                  </label>
+                  <div className="relative">
+                    <User className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+                    <input
+                      type="text"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      placeholder="Ej: Roberto (Dueño / Encargado)"
+                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Teléfono / WhatsApp
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
+                    <input
+                      type="tel"
+                      value={contactPhone}
+                      onChange={(e) => {
+                        setContactPhone(e.target.value)
+                        if (!contactWhatsapp) setContactWhatsapp(e.target.value)
+                      }}
+                      placeholder="654 000 000"
+                      className="w-full pl-8 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sub-desplegable compacto: Quién decide y horarios en el local */}
+              <div className="rounded-xl bg-slate-900/70 border border-slate-800 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setShowDecisionMakers((prev) => !prev)}
+                  className="w-full px-3 py-2 flex items-center justify-between text-xs text-slate-300 hover:text-white transition"
+                >
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <Users className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Quién decide y horarios en el local ({decisionMakers.length})</span>
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
+                      showDecisionMakers ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {showDecisionMakers && (
+                  <div className="px-3 pb-3 pt-2 border-t border-slate-800/80 space-y-2.5">
+                    {decisionMakers.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {decisionMakers.map((dm, idx) => (
+                          <div
+                            key={idx}
+                            className={`p-2 rounded-xl border flex items-center justify-between gap-2 text-xs transition ${
+                              dm.is_primary
+                                ? 'bg-blue-950/40 border-blue-500/40 text-blue-200'
+                                : 'bg-slate-950/70 border-slate-800 text-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => handleSetPrimaryMaker(idx)}
+                                title={dm.is_primary ? 'Decisor principal' : 'Marcar como decisor principal'}
+                                className={`p-1 rounded-lg text-xs transition ${
+                                  dm.is_primary
+                                    ? 'bg-amber-500/20 text-amber-400 font-bold'
+                                    : 'text-slate-500 hover:text-amber-400'
+                                }`}
+                              >
+                                ★
+                              </button>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-white truncate">{dm.name}</span>
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                                    {dm.role}
+                                  </span>
+                                  {dm.is_primary && (
+                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300">
+                                      Principal
+                                    </span>
+                                  )}
+                                </div>
+                                {dm.schedule && (
+                                  <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                                    <Clock className="w-3 h-3 text-slate-500 shrink-0" />
+                                    <span className="truncate">{dm.schedule}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveDecisionMaker(idx)}
+                              className="p-1 text-slate-500 hover:text-rose-400 transition shrink-0"
+                              title="Eliminar"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-500 italic">
+                        Sin decisores registrados. Añade a quién buscar y a qué hora suele estar.
+                      </p>
+                    )}
+
+                    <form onSubmit={handleAddDecisionMaker} className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoFileUpload}
-                        className="hidden"
+                        type="text"
+                        value={newMakerName}
+                        onChange={(e) => setNewMakerName(e.target.value)}
+                        placeholder="Nombre (ej. Carmen)"
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                       />
-                    </label>
-                    {logoUrl.trim() && (
+                      <select
+                        value={newMakerRole}
+                        onChange={(e) => setNewMakerRole(e.target.value)}
+                        className="px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="Dueño / Gerente">Dueño / Gerente</option>
+                        <option value="Jefe de Cocina">Jefe de Cocina</option>
+                        <option value="Encargado de Sala">Encargado de Sala</option>
+                        <option value="Socio / Hermano">Socio / Hermano</option>
+                        <option value="Gestor / Asesor">Gestor / Asesor</option>
+                        <option value="Camarero de Barra">Camarero de Barra</option>
+                      </select>
+                      <div className="flex gap-1.5">
+                        <input
+                          type="text"
+                          value={newMakerSchedule}
+                          onChange={(e) => setNewMakerSchedule(e.target.value)}
+                          placeholder="Horario (ej. 11:30-13h)"
+                          className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                        />
+                        <button
+                          type="submit"
+                          className="px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs text-white font-bold shrink-0"
+                        >
+                          + Añadir
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>
+
+              {/* Próximo contacto / Cuándo volver */}
+              <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Próximo contacto / Cuándo volver</span>
+                  </span>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setQuickFollowUp(1)}
+                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-sky-500/20 border border-slate-700 text-[10px] font-semibold text-slate-200 transition"
+                    >
+                      Mañana
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickFollowUp(3)}
+                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-sky-500/20 border border-slate-700 text-[10px] font-semibold text-slate-200 transition"
+                    >
+                      +3 días
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickFollowUp('saturday')}
+                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-sky-500/20 border border-slate-700 text-[10px] font-semibold text-sky-300 transition"
+                    >
+                      Próx. Sábado
+                    </button>
+                    {nextContactDate && (
                       <button
                         type="button"
-                        onClick={() => setLogoUrl('')}
-                        className="px-2 py-2 rounded-xl bg-slate-800 hover:bg-rose-900/50 border border-slate-700 text-[11px] font-semibold text-rose-300 shrink-0"
-                        title="Quitar logo (predeterminado)"
+                        onClick={() => setQuickFollowUp('clear')}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-rose-500/20 border border-slate-700 text-[10px] font-semibold text-rose-300 transition"
                       >
-                        Quitar
+                        Limpiar
                       </button>
                     )}
                   </div>
                 </div>
+                <input
+                  type="date"
+                  value={nextContactDate}
+                  onChange={(e) => setNextContactDate(e.target.value)}
+                  className="w-full sm:w-auto px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:border-sky-500"
+                />
               </div>
 
-              {/* Tarifa / modalidad de Expositor de Reseñas (20 € o incluido en Carta QR 15 €/mes) */}
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
-                  Modalidad de Tarjeta / Expositor NFC + QR
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {[
-                    {
-                      id: 'none' as ReviewStandMode,
-                      title: 'Sin expositor',
-                      sub: 'Solo prospección',
-                    },
-                    {
-                      id: 'standalone_20' as ReviewStandMode,
-                      title: `Suelto · ${REVIEW_STAND_PRICE_EUR} €`,
-                      sub: 'Pago único',
-                    },
-                    {
-                      id: 'included_carta' as ReviewStandMode,
-                      title: 'Incluido · 0 €',
-                      sub: `Con Carta QR ${CARTA_QR_PRICE_EUR} €/mes`,
-                    },
-                  ].map((opt) => (
+              {/* Etiquetas rápidas + Nota con fecha/hora automática + Historial completo */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-300">Notas de Visita &amp; Bitácora</span>
+                  <span className="text-[11px] text-slate-500">Toca para etiquetar rápido</span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  {QUICK_PAIN_TAGS.map((tag) => (
                     <button
-                      key={opt.id}
+                      key={tag}
                       type="button"
-                      onClick={() => setReviewStandMode(opt.id)}
-                      className={`p-2 rounded-xl text-left border text-xs transition ${
-                        reviewStandMode === opt.id
-                          ? 'bg-amber-500/20 border-amber-400 text-amber-200 font-bold'
-                          : 'bg-slate-900/70 border-slate-800 text-slate-400 hover:bg-slate-800'
-                      }`}
+                      onClick={() => handleAddQuickTag(tag)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 border border-slate-700/60 transition flex items-center gap-1"
                     >
-                      <div className="text-white font-bold">{opt.title}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{opt.sub}</div>
+                      <Tag className="w-3 h-3 text-blue-400 shrink-0" />
+                      <span>{tag}</span>
                     </button>
                   ))}
                 </div>
-              </div>
 
-              {/* Acciones directas del expositor */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  disabled={openingStand}
-                  onClick={handleSaveAndOpenReviewStand}
-                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black inline-flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>{openingStand ? 'Guardando...' : 'Guardar y abrir expositor'}</span>
-                </button>
-
-                <a
-                  href="/admin/print-review-stand/predeterminada"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 transition"
-                >
-                  <ImageOff className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Versión predeterminada (sin logo)</span>
-                  <ExternalLink className="w-3 h-3 opacity-70" />
-                </a>
-
-                <a
-                  href={`/r/${effectiveSlug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-auto px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-xs font-semibold inline-flex items-center gap-1.5 transition"
-                >
-                  <span>Probar /r/{effectiveSlug}</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            </div>
-
-            {/* 1. CONTROL DE ETAPAS DEL PERIODO DE PRUEBA (14 DÍAS) [Idea 7] */}
-            {status === 'piloto_14_dias' && (
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-3">
-                <div className="flex items-center justify-between text-xs font-semibold text-amber-300">
-                  <span className="flex items-center gap-1.5 font-bold">
-                    <Clock className="w-4 h-4 text-amber-400" />
-                    Periodo de Prueba: Día {pilotInfo.day} de {pilotInfo.total}
-                  </span>
-                  <span>{pilotInfo.remaining} días restantes</span>
-                </div>
-
-                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-amber-400 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pilotInfo.percent}%` }}
+                <form onSubmit={handleAddQuickNote} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    placeholder="Nota rápida con hora automática (ej. Hablé con encargada, volver 17:30)..."
+                    className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   />
+                  <button
+                    type="submit"
+                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white shrink-0 transition"
+                  >
+                    + Anotar
+                  </button>
+                </form>
+
+                <textarea
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Historial completo de la visita, objeciones, horarios recomendados..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-y"
+                />
+              </div>
+            </CollapsibleBlock>
+
+            {/* [PLEGADO 3] PREPARAR PITCH, QUEJAS Y OBJECIONES */}
+            <CollapsibleBlock
+              testId="crm-block-pitch"
+              title="Preparar Pitch, Quejas y Objeciones"
+              icon={<Flame className="w-4 h-4 text-rose-400" />}
+              isOpen={openSections.pitch}
+              onToggle={() => toggleSection('pitch')}
+              summary={
+                <span className="truncate">
+                  {POS_SYSTEM_CONFIG[currentPosSystem].label} · {DISTRIBUTOR_CONFIG[beverageDistributor].label}
+                  {complaintTags.length > 0 ? ` · ${complaintTags.length} quejas` : ''}
+                </span>
+              }
+            >
+              {/* Fricciones y Quejas Frecuentes */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Fricciones y Quejas Frecuentes en Reseñas</span>
+                  </span>
+                  <span className="text-[10px] text-rose-400 font-mono">Puntos débiles</span>
                 </div>
 
-                {/* Tarjeta del Hito Actual */}
-                <div className="p-3 rounded-xl bg-slate-900/90 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${currentMilestone.badgeColor}`}>
-                        Paso {currentMilestone.step} de 4
+                <div className="flex flex-wrap gap-1.5">
+                  {DEFAULT_REVIEW_COMPLAINT_SUGGESTIONS.map((tag) => {
+                    const isTagged = complaintTags.includes(tag)
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => handleToggleComplaintTag(tag)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition ${
+                          isTagged
+                            ? 'bg-rose-500/20 border-rose-500 text-rose-300 font-semibold shadow-sm'
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    )
+                  })}
+                  {complaintTags
+                    .filter((t) => !DEFAULT_REVIEW_COMPLAINT_SUGGESTIONS.includes(t))
+                    .map((t) => (
+                      <span
+                        key={t}
+                        onClick={() => handleToggleComplaintTag(t)}
+                        className="px-2.5 py-1 rounded-lg text-[11px] bg-rose-500/25 border border-rose-500/40 text-rose-200 cursor-pointer"
+                      >
+                        {t} ✕
                       </span>
-                      <h4 className="font-bold text-xs text-white">{currentMilestone.title}</h4>
-                    </div>
-                    <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
-                      {currentMilestone.desc}
-                    </p>
-                  </div>
-
-                  {currentMilestone.whatsappMsg && (
-                    <a
-                      href={getMilestoneWhatsAppLink(currentMilestone.whatsappMsg)!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      <span>WhatsApp Hito</span>
-                    </a>
-                  )}
+                    ))}
                 </div>
 
-                {/* Acciones Rápidas si se acerca el cierre (Días 10-14) */}
-                {pilotInfo.day >= 10 && (
-                  <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-amber-300 font-semibold">¿Resultado del piloto?</span>
-                    <div className="flex items-center gap-1.5">
+                <form onSubmit={handleAddCustomComplaint} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newComplaintInput}
+                    onChange={(e) => setNewComplaintInput(e.target.value)}
+                    placeholder="Añadir queja observada: ej. cola en barra, mesas sucias..."
+                    className="flex-1 min-w-0 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-semibold shrink-0"
+                  >
+                    Añadir
+                  </button>
+                </form>
+
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2 text-xs text-slate-300">
+                  <span className="text-emerald-400 font-bold shrink-0">🎯 Apertura:</span>
+                  <span className="leading-relaxed">
+                    {complaintTags.length > 0
+                      ? `Menciona cómo Fluxo soluciona directamente "${complaintTags[0].replace(/[^\w\s]/gi, '').trim()}" sin contratar más personal.`
+                      : 'Pregúntale al dueño si en fines de semana se le forman colas en terraza para pedir o pagar la cuenta.'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sistema o TPV Actual */}
+              <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Sistema o TPV Actual del Restaurante</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {(Object.keys(POS_SYSTEM_CONFIG) as CRMPosSystem[]).map((posKey) => {
+                    const conf = POS_SYSTEM_CONFIG[posKey]
+                    const isSelected = currentPosSystem === posKey
+                    return (
                       <button
+                        key={posKey}
                         type="button"
-                        onClick={() => {
-                          setStatus('ganado')
-                          alert('¡Local convertido a cliente de pago! Se activará la facturación recurrente.')
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-500 transition"
+                        onClick={() => setCurrentPosSystem(posKey)}
+                        className={`p-2 rounded-xl text-left border text-xs transition flex items-center gap-2 ${
+                          isSelected
+                            ? 'bg-indigo-600/20 border-indigo-500 text-indigo-200 ring-1 ring-indigo-500 font-bold'
+                            : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800'
+                        }`}
                       >
-                        ✓ Ganado (Pase a Pago)
+                        <span className="text-sm">{conf.icon}</span>
+                        <span className="truncate">{conf.label}</span>
                       </button>
+                    )
+                  })}
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-800/40 flex items-start gap-2 text-xs">
+                  <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold text-indigo-300">Argumento Clave: </span>
+                    <span className="text-slate-300 leading-relaxed">
+                      {POS_SYSTEM_CONFIG[currentPosSystem].pitchHint}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Distribuidora de Bebida */}
+              <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span className="text-sm">🍺</span>
+                    <span>Distribuidora de Bebida o Patrocinio</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {(Object.keys(DISTRIBUTOR_CONFIG) as BeverageDistributor[]).map((distKey) => {
+                    const conf = DISTRIBUTOR_CONFIG[distKey]
+                    const isSelected = beverageDistributor === distKey
+                    return (
                       <button
+                        key={distKey}
                         type="button"
-                        onClick={() => setStatus('perdido')}
-                        className="px-2.5 py-1 rounded-lg bg-rose-600/30 text-rose-300 border border-rose-500/40 text-[11px] font-semibold hover:bg-rose-600/50 transition"
+                        onClick={() => setBeverageDistributor(distKey)}
+                        className={`p-2 rounded-xl text-left border text-xs transition flex items-center gap-2 ${
+                          isSelected
+                            ? 'bg-amber-600/20 border-amber-500 text-amber-200 ring-1 ring-amber-500 font-bold'
+                            : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800'
+                        }`}
                       >
-                        ✕ Perdido
+                        <span className="text-sm">{conf.icon}</span>
+                        <span className="truncate">{conf.label}</span>
                       </button>
+                    )
+                  })}
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-800/40 flex items-start gap-2 text-xs">
+                  <span className="text-amber-400 font-bold shrink-0 mt-0.5">💡 Objeción resuelta:</span>
+                  <span className="text-slate-300 leading-relaxed">
+                    {DISTRIBUTOR_CONFIG[beverageDistributor].counterPitch}
+                  </span>
+                </div>
+              </div>
+
+              {/* Argumentario Personal de Sala */}
+              <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                <div
+                  onClick={() => setShowStaffPitch(!showStaffPitch)}
+                  className="flex items-center justify-between cursor-pointer select-none"
+                >
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <span>👥</span>
+                    <span>Argumentario de Alivio para Camareros / Sala</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="text-[11px] text-slate-300 hover:text-white px-2 py-1 rounded bg-slate-800"
+                  >
+                    {showStaffPitch ? 'Ocultar ▲' : 'Ver Guía ▼'}
+                  </button>
+                </div>
+
+                {showStaffPitch && (
+                  <div className="space-y-2 pt-1 text-xs">
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2">
+                      <span className="shrink-0">🏃</span>
+                      <div>
+                        <span className="font-bold text-emerald-300">1. Cero paseos a terraza: </span>
+                        <span className="text-slate-300">
+                          &quot;Con la carta en QR llegas a la mesa directamente a tomar la comanda sin ir a llevar y recoger cartas de papel.&quot;
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2">
+                      <span className="shrink-0">🛡️</span>
+                      <div>
+                        <span className="font-bold text-blue-300">2. Cero dudas con alérgenos: </span>
+                        <span className="text-slate-300">
+                          &quot;El cliente consulta los 14 alérgenos oficiales en su móvil sin tener que preguntar a cocina en pleno servicio.&quot;
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2">
+                      <span className="shrink-0">💶</span>
+                      <div>
+                        <span className="font-bold text-amber-300">3. Cobro más rápido: </span>
+                        <span className="text-slate-300">
+                          &quot;Cuando piden la cuenta por el móvil ya sabes la mesa exacta y llevas el datáfono listo.&quot;
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
-            )}
+            </CollapsibleBlock>
 
-            {/* 2. REGISTRO DEL TPV / SISTEMA ACTUAL DEL LOCAL [Idea 4] */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Cpu className="w-4 h-4 text-indigo-400" />
-                  <span>Sistema o TPV Actual del Restaurante</span>
+            {/* [PLEGADO 4] PLAN COMERCIAL Y EXPOSITOR RESEÑAS 15€ / 20€ */}
+            <CollapsibleBlock
+              testId="crm-block-commercial"
+              title="Plan Comercial y Expositor Reseñas 15€ / 20€"
+              icon={<Star className="w-4 h-4 text-amber-400 fill-amber-400" />}
+              isOpen={openSections.commercial}
+              onToggle={() => toggleSection('commercial')}
+              borderClass="border-amber-500/25"
+              summary={
+                <span>
+                  {PLAN_PRICING[targetPlan]} €/mes ·{' '}
+                  {reviewStandMode === 'standalone_20'
+                    ? `Expositor ${REVIEW_STAND_PRICE_EUR} €`
+                    : reviewStandMode === 'included_carta'
+                      ? 'Expositor Incluido'
+                      : 'Sin expositor'}
+                </span>
+              }
+            >
+              {/* Plan Objetivo Comercial */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-2">
+                  Plan Objetivo Comercial
                 </label>
-                <span className="text-[10px] text-slate-400">Guía de argumentación</span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {(Object.keys(POS_SYSTEM_CONFIG) as CRMPosSystem[]).map((posKey) => {
-                  const conf = POS_SYSTEM_CONFIG[posKey]
-                  const isSelected = currentPosSystem === posKey
-                  return (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'carta_15', name: 'Carta QR', price: `${CARTA_QR_PRICE_EUR} €/mes` },
+                    { id: 'mozo_47', name: 'Plan Mozo', price: '47 €/mes' },
+                    { id: 'fundador_50', name: 'Full Fundador', price: '50 €/mes' },
+                    { id: 'full_97', name: 'Plan Full', price: '97 €/mes' },
+                  ].map((pl) => (
                     <button
-                      key={posKey}
+                      key={pl.id}
                       type="button"
-                      onClick={() => setCurrentPosSystem(posKey)}
-                      className={`p-2 rounded-xl text-left border text-xs transition flex items-center gap-2 ${
-                        isSelected
-                          ? 'bg-indigo-600/20 border-indigo-500 text-indigo-200 ring-1 ring-indigo-500 font-bold'
-                          : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800'
+                      onClick={() => setTargetPlan(pl.id as CRMPlan)}
+                      className={`p-2.5 rounded-xl text-xs font-medium border text-left transition ${
+                        targetPlan === pl.id
+                          ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm'
+                          : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:bg-slate-800'
                       }`}
                     >
-                      <span className="text-sm">{conf.icon}</span>
-                      <span className="truncate">{conf.label}</span>
+                      <div className="font-bold text-white">{pl.name}</div>
+                      <div className="text-[11px] text-emerald-400 font-mono mt-0.5">{pl.price}</div>
                     </button>
-                  )
-                })}
+                  ))}
+                </div>
               </div>
 
-              {/* Argumento de Venta Adaptado */}
-              <div className="p-2.5 rounded-xl bg-indigo-950/40 border border-indigo-800/40 flex items-start gap-2 text-xs">
-                <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-indigo-300">Argumento de Venta Clave: </span>
-                  <span className="text-slate-300 leading-relaxed">
-                    {POS_SYSTEM_CONFIG[currentPosSystem].pitchHint}
+              {/* Configuración de Expositor NFC + QR */}
+              <div className="pt-2 border-t border-slate-800/80 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Printer className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Expositor NFC + QR &amp; Reseñas Google</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-full">
+                    Enlace corto: /r/{effectiveSlug}
                   </span>
                 </div>
-              </div>
-            </div>
 
-            {/* DISTRIBUIDORA DE BEBIDA O PATROCINIO [Idea 9] */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span className="text-sm">🍺</span>
-                  <span>Distribuidora de Bebida o Patrocinio Actual</span>
-                </label>
-                <span className="text-[10px] text-amber-400 font-mono">Contra-argumento</span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {(Object.keys(DISTRIBUTOR_CONFIG) as BeverageDistributor[]).map((distKey) => {
-                  const conf = DISTRIBUTOR_CONFIG[distKey]
-                  const isSelected = beverageDistributor === distKey
-                  return (
-                    <button
-                      key={distKey}
-                      type="button"
-                      onClick={() => setBeverageDistributor(distKey)}
-                      className={`p-2 rounded-xl text-left border text-xs transition flex items-center gap-2 ${
-                        isSelected
-                          ? 'bg-amber-600/20 border-amber-500 text-amber-200 ring-1 ring-amber-500 font-bold'
-                          : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span className="text-sm">{conf.icon}</span>
-                      <span className="truncate">{conf.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-800/40 flex items-start gap-2 text-xs">
-                <span className="text-amber-400 font-bold shrink-0 mt-0.5">💡 Objeción resuelta:</span>
-                <span className="text-slate-300 leading-relaxed">
-                  {DISTRIBUTOR_CONFIG[beverageDistributor].counterPitch}
-                </span>
-              </div>
-            </div>
-
-            {/* 3. DETECTOR DE QUEJAS EN GOOGLE REVIEWS & APERTURA [Idea 5] */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Flame className="w-4 h-4 text-rose-400" />
-                  <span>Fricciones y Quejas Frecuentes en Reseñas</span>
-                </label>
-                <span className="text-[10px] text-rose-400 font-mono">Puntos débiles públicos</span>
-              </div>
-
-              {/* Tags de Quejas / Fricciones */}
-              <div className="flex flex-wrap gap-1.5">
-                {DEFAULT_REVIEW_COMPLAINT_SUGGESTIONS.map((tag) => {
-                  const isTagged = complaintTags.includes(tag)
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => handleToggleComplaintTag(tag)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition ${
-                        isTagged
-                          ? 'bg-rose-500/20 border-rose-500 text-rose-300 font-semibold shadow-sm'
-                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  )
-                })}
-
-                {/* Mostrar quejas personalizadas añadidas */}
-                {complaintTags
-                  .filter((t) => !DEFAULT_REVIEW_COMPLAINT_SUGGESTIONS.includes(t))
-                  .map((t) => (
-                    <span
-                      key={t}
-                      onClick={() => handleToggleComplaintTag(t)}
-                      className="px-2.5 py-1 rounded-lg text-[11px] bg-rose-500/25 border border-rose-500/40 text-rose-200 cursor-pointer"
-                    >
-                      {t} ✕
-                    </span>
-                  ))}
-              </div>
-
-              {/* Formulario rápido para añadir queja observada */}
-              <form onSubmit={handleAddCustomComplaint} className="flex gap-2">
-                <input
-                  type="text"
-                  value={newComplaintInput}
-                  onChange={(e) => setNewComplaintInput(e.target.value)}
-                  placeholder="Añadir queja observada: ej. cola en barra, mesas sucias..."
-                  className="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
-                />
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-semibold"
-                >
-                  Añadir
-                </button>
-              </form>
-
-              {/* Frase de Entrada Recomendada */}
-              <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2 text-xs text-slate-300">
-                <span className="text-emerald-400 font-bold shrink-0">🎯 Apertura:</span>
-                <span className="leading-relaxed">
-                  {complaintTags.length > 0
-                    ? `Menciona cómo Fluxo soluciona directamente "${complaintTags[0].replace(/[^\w\s]/gi, '').trim()}" sin tener que contratar más personal.`
-                    : 'Pregúntale al dueño si en fines de semana se le forman colas en terraza para pedir o pagar la cuenta.'}
-                </span>
-              </div>
-            </div>
-
-            {/* ARGUMENTARIO DE ALIVIO PARA EL PERSONAL DE SALA [Idea 10] */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-2.5">
-              <div
-                onClick={() => setShowStaffPitch(!showStaffPitch)}
-                className="flex items-center justify-between cursor-pointer select-none"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
-                    👥
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <span>Argumentario de Alivio para el Personal de Sala</span>
-                      <span className="text-[10px] text-emerald-400 font-normal hidden sm:inline">(Gánate al camarero)</span>
-                    </h4>
-                    <p className="text-[10px] text-slate-400">Puntos de dolor que sufre el equipo antes de hablar con el dueño</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800"
-                >
-                  {showStaffPitch ? 'Ocultar ▲' : 'Ver Guía ▼'}
-                </button>
-              </div>
-
-              {showStaffPitch && (
-                <div className="space-y-2 pt-2 text-xs animate-in fade-in">
-                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2.5">
-                    <span className="text-base shrink-0">🏃</span>
-                    <div>
-                      <span className="font-bold text-emerald-300">1. Cero paseos innecesarios a la terraza: </span>
-                      <span className="text-slate-300 leading-relaxed">
-                        &quot;Con la carta en QR te ahorras tener que ir a llevar la carta de papel, esperar a que la miren y volver a retirarla. Llegas a la mesa directamente a tomar la comanda.&quot;
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2.5">
-                    <span className="text-base shrink-0">🛡️</span>
-                    <div>
-                      <span className="font-bold text-blue-300">2. Cero dudas con alérgenos e ingredientes: </span>
-                      <span className="text-slate-300 leading-relaxed">
-                        &quot;El cliente intolerante o alérgico mira en su propio móvil los 14 alérgenos oficiales. No tienes que ir a preguntar a cocina a gritos en pleno servicio si la salsa lleva gluten.&quot;
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-2.5">
-                    <span className="text-base shrink-0">💶</span>
-                    <div>
-                      <span className="font-bold text-amber-300">3. Cobro rápido y más propinas: </span>
-                      <span className="text-slate-300 leading-relaxed">
-                        &quot;Cuando piden la cuenta por el móvil ya sabes la mesa exacta y llevas el datáfono listo. Menos clientes enfadados esperando la cuenta y mejor propina para vosotros.&quot;
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 4. LISTA DE PUESTA EN MARCHA (CHECKLIST) [Idea 8] */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <CheckSquare className="w-4 h-4 text-emerald-400" />
-                  Lista de Puesta en Marcha (Checklist)
-                </span>
-                <span className="text-[11px] font-mono font-semibold text-emerald-400">
-                  {checklistCount}/4 ({checklistPercent}%)
-                </span>
-              </div>
-
-              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                <div
-                  className="bg-emerald-500 h-full rounded-full transition-all duration-300"
-                  style={{ width: `${checklistPercent}%` }}
-                />
-              </div>
-
-              <div className="space-y-2 pt-1 text-xs">
-                {[
-                  { key: 'qr_placed', label: '1. Pegatinas QR colocadas en mesas y barra' },
-                  { key: 'menu_uploaded', label: '2. Carta inicial y precios verificados' },
-                  { key: 'staff_trained', label: '3. Explicación rápida al personal de sala (3 min)' },
-                  { key: 'review_date_set', label: '4. Fecha de balance de cierre agendada' },
-                ].map((item) => {
-                  const isChecked = !!checklist[item.key as keyof PilotChecklist]
-                  return (
-                    <label
-                      key={item.key}
-                      className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition select-none"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleChecklist(item.key as keyof PilotChecklist)}
-                        className="w-4 h-4 rounded border-slate-700 text-blue-600 focus:ring-0 bg-slate-800 cursor-pointer"
-                      />
-                      <span
-                        className={`text-xs ${
-                          isChecked
-                            ? 'text-slate-300 line-through opacity-70'
-                            : 'text-slate-200 font-medium'
-                        }`}
-                      >
-                        {item.label}
-                      </span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Selector de Estado en Pipeline */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-2">
-                Estado en Pipeline de Ventas
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {(Object.keys(STATUS_CONFIG) as CRMStatus[]).map((st) => {
-                  const conf = STATUS_CONFIG[st]
-                  const isSelected = status === st
-                  return (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setStatus(st)}
-                      className={`py-2 px-3 rounded-xl text-xs font-semibold border transition text-left flex items-center justify-between ${
-                        isSelected
-                          ? `${conf.bg} ${conf.text} ${conf.border} ring-2 ring-blue-500/40 shadow-sm`
-                          : 'bg-slate-800/60 text-slate-400 border-slate-700/60 hover:bg-slate-800'
-                      }`}
-                    >
-                      <span>{conf.label}</span>
-                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Motivo de Pérdida (Si es Perdido) */}
-            {status === 'perdido' && (
-              <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20">
-                <label className="block text-xs font-semibold text-rose-300 mb-1">
-                  Motivo de Rechazo / Pérdida
-                </label>
-                <input
-                  type="text"
-                  value={lostReason}
-                  onChange={(e) => setLostReason(e.target.value)}
-                  placeholder="Ej: Prefiere carta física tradicional / No ve necesidad tecnológica / Tiene permanencia..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-rose-500/30 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-400"
-                />
-              </div>
-            )}
-
-            {/* Selector de Plan y Precio */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-2">
-                Plan Objetivo Comercial
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: 'carta_15', name: 'Carta QR', price: `${CARTA_QR_PRICE_EUR} €/mes` },
-                  { id: 'mozo_47', name: 'Plan Mozo', price: '47 €/mes' },
-                  { id: 'fundador_50', name: 'Full Fundador', price: '50 €/mes' },
-                  { id: 'full_97', name: 'Plan Full', price: '97 €/mes' },
-                ].map((pl) => (
-                  <button
-                    key={pl.id}
-                    type="button"
-                    onClick={() => setTargetPlan(pl.id as CRMPlan)}
-                    className={`p-2.5 rounded-xl text-xs font-medium border text-left transition ${
-                      targetPlan === pl.id
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm'
-                        : 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:bg-slate-800'
-                    }`}
-                  >
-                    <div className="font-bold text-white">{pl.name}</div>
-                    <div className="text-[11px] text-emerald-400 font-mono mt-0.5">{pl.price}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* MAPA DE DECISORES Y ESTRUCTURA FAMILIAR [Idea 1] */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-blue-400" />
-                  <span>Estructura de Decisión y Horarios en el Local</span>
-                </label>
-                <span className="text-[10px] text-blue-400 font-mono">
-                  {decisionMakers.length} {decisionMakers.length === 1 ? 'persona' : 'personas'}
-                </span>
-              </div>
-
-              {/* Lista de Decisores Registrados */}
-              {decisionMakers.length > 0 ? (
-                <div className="space-y-2">
-                  {decisionMakers.map((dm, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition ${
-                        dm.is_primary
-                          ? 'bg-blue-950/40 border-blue-500/40 text-blue-200'
-                          : 'bg-slate-900/80 border-slate-800 text-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    URL directa de Google Maps Reviews
+                  </label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="url"
+                      value={googleReviewUrl}
+                      onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                      placeholder="https://search.google.com/local/writereview?placeid=..."
+                      className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                    />
+                    {googleReviewUrl.trim() && (
+                      <>
+                        <a
+                          href={googleReviewUrl.trim()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-amber-300 inline-flex items-center gap-1 shrink-0"
+                          title="Probar enlace de Google Reviews"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Probar</span>
+                        </a>
                         <button
                           type="button"
-                          onClick={() => handleSetPrimaryMaker(idx)}
-                          title={dm.is_primary ? 'Decisor principal' : 'Marcar como decisor principal'}
-                          className={`p-1 rounded-lg text-xs transition ${
-                            dm.is_primary
-                              ? 'bg-amber-500/20 text-amber-400 font-bold'
-                              : 'text-slate-500 hover:text-amber-400'
-                          }`}
+                          onClick={() => {
+                            if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                              navigator.clipboard.writeText(googleReviewUrl.trim())
+                              setCopiedReviewLink(true)
+                              setTimeout(() => setCopiedReviewLink(false), 2000)
+                            }
+                          }}
+                          className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 inline-flex items-center gap-1 shrink-0"
+                          title="Copiar URL de Google Reviews"
                         >
-                          ★
-                        </button>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-white truncate">{dm.name}</span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
-                              {dm.role}
-                            </span>
-                            {dm.is_primary && (
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300">
-                                Principal
-                              </span>
-                            )}
-                          </div>
-                          {dm.schedule && (
-                            <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
-                              <Clock className="w-3 h-3 text-slate-500 shrink-0" />
-                              <span className="truncate">{dm.schedule}</span>
-                            </div>
+                          {copiedReviewLink ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
                           )}
-                        </div>
+                          <span>Copiar</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Slug único (/r/{effectiveSlug})
+                    </label>
+                    <input
+                      type="text"
+                      value={customSlug}
+                      onChange={(e) => setCustomSlug(e.target.value)}
+                      onBlur={() => setCustomSlug(normalizeSlug(customSlug || localName || lead.name))}
+                      placeholder="ej. bar-ejemplo-santiago"
+                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Logo opcional del local (URL o imagen)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-700 bg-white flex items-center justify-center shrink-0">
+                        {logoUrl.trim() ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={logoUrl.trim()}
+                            alt={localName || lead.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <ImageOff className="w-4 h-4 text-slate-400" />
+                        )}
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveDecisionMaker(idx)}
-                        className="p-1 text-slate-500 hover:text-rose-400 transition shrink-0"
-                        title="Eliminar"
+                      <input
+                        type="text"
+                        value={logoUrl}
+                        onChange={(e) => setLogoUrl(e.target.value)}
+                        placeholder="/images/... o https://... (vacío = sin logo)"
+                        className="flex-1 min-w-0 px-2.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                      />
+                      <label
+                        className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-cyan-300 cursor-pointer shrink-0 inline-flex items-center gap-1"
+                        title="Subir imagen de logo (se comprime automáticamente en circular)"
                       >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{compressingLogo ? '...' : 'Subir'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      {logoUrl.trim() && (
+                        <button
+                          type="button"
+                          onClick={() => setLogoUrl('')}
+                          className="px-2 py-2 rounded-xl bg-slate-800 hover:bg-rose-900/50 border border-slate-700 text-[11px] font-semibold text-rose-300 shrink-0"
+                          title="Quitar logo (predeterminado)"
+                        >
+                          Quitar
+                        </button>
+                      )}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              ) : (
-                <p className="text-xs text-slate-500 italic">
-                  No hay decisores ni horarios registrados aún. Añade quién decide y cuándo encontrarle en el local.
-                </p>
-              )}
 
-              {/* Formulario rápido para añadir decisor */}
-              <form onSubmit={handleAddDecisionMaker} className="pt-2 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <input
-                  type="text"
-                  value={newMakerName}
-                  onChange={(e) => setNewMakerName(e.target.value)}
-                  placeholder="Nombre (ej. Carmen, Antonio)"
-                  className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-                <select
-                  value={newMakerRole}
-                  onChange={(e) => setNewMakerRole(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="Dueño / Gerente">Dueño / Gerente</option>
-                  <option value="Jefe de Cocina">Jefe de Cocina</option>
-                  <option value="Encargado de Sala">Encargado de Sala</option>
-                  <option value="Socio / Hermano">Socio / Hermano</option>
-                  <option value="Gestor / Asesor">Gestor / Asesor</option>
-                  <option value="Camarero de Barra">Camarero de Barra</option>
-                </select>
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    value={newMakerSchedule}
-                    onChange={(e) => setNewMakerSchedule(e.target.value)}
-                    placeholder="Horario (ej. Mañanas 11:30-13h)"
-                    className="flex-1 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  />
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                    Modalidad de Tarjeta / Expositor NFC + QR
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'none' as ReviewStandMode, title: 'Sin expositor', sub: 'Solo prospección' },
+                      { id: 'standalone_20' as ReviewStandMode, title: `Suelto · ${REVIEW_STAND_PRICE_EUR} €`, sub: 'Pago único' },
+                      { id: 'included_carta' as ReviewStandMode, title: 'Incluido · 0 €', sub: `Con Carta QR ${CARTA_QR_PRICE_EUR} €/mes` },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setReviewStandMode(opt.id)}
+                        className={`p-2 rounded-xl text-left border text-xs transition ${
+                          reviewStandMode === opt.id
+                            ? 'bg-amber-500/20 border-amber-400 text-amber-200 font-bold'
+                            : 'bg-slate-900/70 border-slate-800 text-slate-400 hover:bg-slate-800'
+                        }`}
+                      >
+                        <div className="text-white font-bold">{opt.title}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">{opt.sub}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <button
-                    type="submit"
-                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs text-white font-bold shrink-0"
+                    type="button"
+                    disabled={openingStand}
+                    onClick={handleSaveAndOpenReviewStand}
+                    className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black inline-flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
                   >
-                    + Añadir
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>{openingStand ? 'Guardando...' : 'Guardar y abrir expositor'}</span>
                   </button>
-                </div>
-              </form>
-            </div>
 
-            {/* Datos de Contacto */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Persona de Contacto / Cargo
-                </label>
-                <div className="relative">
-                  <User className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="text"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    placeholder="Ej: Roberto (Dueño / Encargado)"
-                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
+                  <a
+                    href="/admin/print-review-stand/predeterminada"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 transition"
+                  >
+                    <ImageOff className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Versión predeterminada</span>
+                    <ExternalLink className="w-3 h-3 opacity-70" />
+                  </a>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Teléfono / WhatsApp
-                </label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                  <input
-                    type="tel"
-                    value={contactPhone}
-                    onChange={(e) => {
-                      setContactPhone(e.target.value)
-                      if (!contactWhatsapp) setContactWhatsapp(e.target.value)
-                    }}
-                    placeholder="654 000 000"
-                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  />
+                  <a
+                    href={`/r/${effectiveSlug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-xs font-semibold inline-flex items-center gap-1.5 transition"
+                  >
+                    <span>Probar /r/{effectiveSlug}</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                 </div>
               </div>
-            </div>
+            </CollapsibleBlock>
 
-            {/* 5. GESTOR DE ARCHIVOS, IMÁGENES Y BITÁCORA DEL LOCAL */}
-            <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <ImageIcon className="w-4 h-4 text-cyan-400" />
-                  <span>Imágenes, Fotos de Carta & Documentos del Local</span>
-                </label>
-                <span className="text-[10px] text-cyan-400 font-mono">
+            {/* [PLEGADO 5] FOTOS DE CARTA Y ARCHIVOS */}
+            <CollapsibleBlock
+              testId="crm-block-files"
+              title="Fotos de Carta y Documentos"
+              icon={<ImageIcon className="w-4 h-4 text-cyan-400" />}
+              isOpen={openSections.files}
+              onToggle={() => toggleSection('files')}
+              summary={
+                <span className="font-mono text-cyan-300">
                   {attachments.length} {attachments.length === 1 ? 'archivo' : 'archivos'}
                 </span>
-              </div>
-
-              {/* Botón de subida de imágenes o documentos */}
-              <div className="flex items-center gap-3">
+              }
+            >
+              <div className="flex items-center gap-3 flex-wrap">
                 <label className="px-3.5 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition active:scale-95">
                   <Upload className="w-3.5 h-3.5" />
-                  <span>Subir Foto / Archivo</span>
+                  <span>{uploadingAttachment ? 'Cargando...' : 'Subir Foto / Archivo'}</span>
                   <input
                     type="file"
                     multiple
@@ -1718,9 +1966,8 @@ function CRMLeadDetailModalContent({
                 </span>
               </div>
 
-              {/* Galería de adjuntos */}
               {attachments.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
                   {attachments.map((att) => (
                     <div
                       key={att.id}
@@ -1770,57 +2017,157 @@ function CRMLeadDetailModalContent({
                   No hay fotos ni documentos adjuntos para este local.
                 </p>
               )}
-            </div>
 
-            {/* Modal de Previsualización de Imagen */}
-            {previewImage && (
-              <div
-                className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
-                onClick={() => setPreviewImage(null)}
-              >
-                <div className="relative max-w-3xl max-h-[90vh]">
-                  <img
-                    src={previewImage}
-                    alt="Previsualización"
-                    className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+              {previewImage && (
+                <div
+                  className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
+                  onClick={() => setPreviewImage(null)}
+                >
+                  <div className="relative max-w-3xl max-h-[90vh]">
+                    <img
+                      src={previewImage}
+                      alt="Previsualización"
+                      className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewImage(null)}
+                      className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </CollapsibleBlock>
+
+            {/* [PLEGADO 6 / Auto-abierto en piloto] PILOTO 14 DÍAS Y CHECKLIST */}
+            <CollapsibleBlock
+              testId="crm-block-pilot"
+              title="Piloto 14 Días y Checklist"
+              icon={<CheckSquare className="w-4 h-4 text-emerald-400" />}
+              isOpen={openSections.pilot}
+              onToggle={() => toggleSection('pilot')}
+              borderClass={status === 'piloto_14_dias' ? 'border-amber-500/35' : 'border-slate-800'}
+              summary={
+                <span className="font-mono text-emerald-400">
+                  Checklist {checklistCount}/4
+                  {status === 'piloto_14_dias' ? ` · Día ${pilotInfo.day}/14` : ''}
+                </span>
+              }
+            >
+              {status === 'piloto_14_dias' && (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs font-semibold text-amber-300">
+                    <span className="flex items-center gap-1.5 font-bold">
+                      <Clock className="w-4 h-4 text-amber-400" />
+                      Periodo de Prueba: Día {pilotInfo.day} de {pilotInfo.total}
+                    </span>
+                    <span>{pilotInfo.remaining} días restantes</span>
+                  </div>
+
+                  <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-amber-400 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pilotInfo.percent}%` }}
+                    />
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-900/90 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${currentMilestone.badgeColor}`}>
+                          Paso {currentMilestone.step} de 4
+                        </span>
+                        <h4 className="font-bold text-xs text-white">{currentMilestone.title}</h4>
+                      </div>
+                      <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+                        {currentMilestone.desc}
+                      </p>
+                    </div>
+
+                    {currentMilestone.whatsappMsg && getMilestoneWhatsAppLink(currentMilestone.whatsappMsg) && (
+                      <a
+                        href={getMilestoneWhatsAppLink(currentMilestone.whatsappMsg)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>WhatsApp Hito</span>
+                      </a>
+                    )}
+                  </div>
+
+                  {pilotInfo.day >= 10 && (
+                    <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-amber-300 font-semibold">¿Resultado del piloto?</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setStatus('ganado')
+                            alert('¡Local convertido a cliente de pago! Se activará la facturación recurrente.')
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-500 transition"
+                        >
+                          ✓ Ganado (Pase a Pago)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStatus('perdido')}
+                          className="px-2.5 py-1 rounded-lg bg-rose-600/30 text-rose-300 border border-rose-500/40 text-[11px] font-semibold hover:bg-rose-600/50 transition"
+                        >
+                          ✕ Perdido
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                    style={{ width: `${checklistPercent}%` }}
                   />
-                  <button
-                    onClick={() => setPreviewImage(null)}
-                    className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                </div>
+
+                <div className="space-y-1.5 pt-1 text-xs">
+                  {[
+                    { key: 'qr_placed', label: '1. Pegatinas QR colocadas en mesas y barra' },
+                    { key: 'menu_uploaded', label: '2. Carta inicial y precios verificados' },
+                    { key: 'staff_trained', label: '3. Explicación rápida al personal de sala (3 min)' },
+                    { key: 'review_date_set', label: '4. Fecha de balance de cierre agendada' },
+                  ].map((item) => {
+                    const isChecked = !!checklist[item.key as keyof PilotChecklist]
+                    return (
+                      <label
+                        key={item.key}
+                        className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-slate-700 cursor-pointer transition select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleChecklist(item.key as keyof PilotChecklist)}
+                          className="w-4 h-4 rounded border-slate-700 text-blue-600 focus:ring-0 bg-slate-800 cursor-pointer"
+                        />
+                        <span
+                          className={`text-xs ${
+                            isChecked
+                              ? 'text-slate-300 line-through opacity-70'
+                              : 'text-slate-200 font-medium'
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                      </label>
+                    )
+                  })}
                 </div>
               </div>
-            )}
-
-            {/* Notas de la Prospección y Etiquetas Rápidas */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>Notas de Visita & Historial</span>
-                <span className="text-[11px] text-slate-500 font-normal">Toca para añadir etiqueta</span>
-              </label>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {QUICK_PAIN_TAGS.map((tag) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => handleAddQuickTag(tag)}
-                    className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-slate-300 border border-slate-700/60 transition flex items-center gap-1"
-                  >
-                    <Tag className="w-3 h-3 text-blue-400" />
-                    <span>{tag}</span>
-                  </button>
-                ))}
-              </div>
-              <textarea
-                rows={3}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Anotaciones de la conversación, objeciones, horarios recomendados para hablar con el dueño..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 resize-none"
-              />
-            </div>
+            </CollapsibleBlock>
           </div>
 
           {/* Pie de Acciones */}
