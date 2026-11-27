@@ -5,10 +5,10 @@ Santiago vive del turismo (Camino de Santiago, escapadas de fin de semana) y de 
 
 - **Opción A — Gancho de Cierre en Suscripción (Incluido Gratis):**
   - Al contratar la **Carta QR mensual (15 €/mes + IVA)** o **Socio Fundador (50 €/mes)**, regalas el soporte físico de barra de Google Reviews instalado en el momento.
-  - *Argumento:* "La placa de reseñas suelta vale 20 €, pero si activamos tu Carta Digital a 15 €/mes hoy, la placa te sale completamente gratis."
-- **Opción B — Puerta de Entrada / Downsell (20 € pago único):**
-  - Si el hostelero dice que ahora no quiere Carta QR ni mensualidades, ofreces solo el soporte físico de reseñas por **20 € pago único** (grabando directamente su enlace nativo de Google Maps, cero mantenimiento futuro).
-  - **Unit Economics:** Coste material ~2–3 € → margen neto ~17 € en el acto + dejas tu marca en su barra + ganas confianza para volver en 2–3 semanas a venderle la Carta QR.
+  - *Argumento:* "La placa de reseñas suelta vale 25 €, pero si activamos tu Carta Digital a 15 €/mes hoy, la placa te sale completamente gratis."
+- **Opción B — Puerta de Entrada / Downsell (25 € pago único):**
+  - Si el hostelero dice que ahora no quiere Carta QR ni mensualidades, ofreces solo el soporte físico de reseñas por **25 € pago único** (grabando directamente su enlace nativo de Google Maps, cero mantenimiento futuro).
+  - **Unit Economics:** Coste material ~2–3 € → margen neto ~22 € en el acto + dejas tu marca en su barra + ganas confianza para volver en 2–3 semanas a venderle la Carta QR.
 
 ---
 

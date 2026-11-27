@@ -31,7 +31,7 @@ export const FOUNDER_GRADUATED_PRICE_EUR = 99
 export const CARTA_QR_PRICE_EUR = 15
 
 /** Tarifa de pago único para la Tarjeta / Expositor de Reseñas NFC + QR. */
-export const REVIEW_STAND_PRICE_EUR = 20
+export const REVIEW_STAND_PRICE_EUR = 25
 
 export type ReviewStandBillingMode = 'none' | 'included_carta' | 'standalone_20'
 
@@ -57,7 +57,7 @@ export interface LocalBilling {
   owner_phone: string
   /** Modalidad del expositor físico de reseñas NFC + QR. */
   review_stand_mode?: ReviewStandBillingMode
-  /** Importe de pago único del expositor de reseñas (20 € si suelto, 0 € si incluido). */
+  /** Importe de pago único del expositor de reseñas (25 € si suelto, 0 € si incluido). */
   review_stand_fee_eur?: number
 }
 
@@ -212,7 +212,7 @@ export function hasFounderSlotAvailable(locales: LocalBilling[]): boolean {
   return countFounderSlots(locales) < FOUNDER_SLOTS_MAX
 }
 
-/** Ingresos puntuales acumulados por Tarjetas / Expositores de Reseñas NFC + QR (20 € pago único). */
+/** Ingresos puntuales acumulados por Tarjetas / Expositores de Reseñas NFC + QR (25 € pago único). */
 export function calculateReviewStandsTotal(locales: LocalBilling[]): number {
   return locales.reduce((sum, local) => {
     if (local.review_stand_mode === 'standalone_20') {

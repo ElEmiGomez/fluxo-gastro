@@ -135,14 +135,14 @@ export function ReviewStandQrStudio() {
                 Estudio de Expositor NFC + QR de Reseñas Google (Frente y Reverso)
               </h3>
               <p className="text-[11px] text-slate-400">
-                Elige la plantilla predeterminada (20 € pago único) o cualquier local de tu CRM ({crmLeads.length} cargados)
+                Elige la plantilla predeterminada (25 € pago único) o cualquier local de tu CRM ({crmLeads.length} cargados)
               </p>
             </div>
           </div>
 
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[11px] font-bold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Gratis con Carta QR 15 €/mes · 20 € suelto</span>
+            <span>Gratis con Carta QR 15 €/mes · 25 € suelto</span>
           </span>
         </div>
 

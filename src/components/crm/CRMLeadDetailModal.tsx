@@ -131,7 +131,7 @@ const STATUS_CONFIG: Record<
 
 const QUICK_PAIN_TAGS = [
   'Interesa Carta QR (15€)',
-  'Interesa Expositor Reseñas (20€)',
+  'Interesa Expositor Reseñas (25€)',
   'No estaba el dueño · Volver',
   'Pasar en horario de tarde',
   'Carta en papel desactualizada',
@@ -1700,10 +1700,10 @@ function CRMLeadDetailModalContent({
               </div>
             </CollapsibleBlock>
 
-            {/* [PLEGADO 4] PLAN COMERCIAL Y EXPOSITOR RESEÑAS 15€ / 20€ */}
+            {/* [PLEGADO 4] PLAN COMERCIAL Y EXPOSITOR RESEÑAS 15€ / 25€ */}
             <CollapsibleBlock
               testId="crm-block-commercial"
-              title="Plan Comercial y Expositor Reseñas 15€ / 20€"
+              title="Plan Comercial y Expositor Reseñas 15€ / 25€"
               icon={<Star className="w-4 h-4 text-amber-400 fill-amber-400" />}
               isOpen={openSections.commercial}
               onToggle={() => toggleSection('commercial')}

@@ -92,7 +92,7 @@ export function BillingFinanceView() {
         </div>
       </div>
 
-      {/* Tarifas Oficiales Fluxo (20€ Expositor Reseñas + 15€/mes Carta QR) */}
+      {/* Tarifas Oficiales Fluxo (25€ Expositor Reseñas + 15€/mes Carta QR) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="p-4 rounded-2xl bg-white/[0.05] border border-cyan-500/25 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
