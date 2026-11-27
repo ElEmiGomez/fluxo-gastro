@@ -202,6 +202,84 @@ function drawNfcIcon(
   ctx.restore()
 }
 
+function getWrappedLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+): string[] {
+  const words = text.trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return []
+  const lines: string[] = []
+  let line = ''
+
+  for (const word of words) {
+    const testLine = line ? `${line} ${word}` : word
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      lines.push(line)
+      line = word
+    } else {
+      line = testLine
+    }
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
+function fitCanvasFont(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  weight: number,
+  startPx: number,
+  maxWidth: number
+): number {
+  let size = startPx
+  for (let i = 0; i < 30 && size > 14; i++) {
+    ctx.font = `${weight} ${size}px ${FONT_SANS}`
+    if (ctx.measureText(text).width <= maxWidth) break
+    size = Math.round(size * 0.94)
+  }
+  ctx.font = `${weight} ${size}px ${FONT_SANS}`
+  return size
+}
+
+function drawQrMiniIcon(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string
+) {
+  ctx.save()
+  ctx.strokeStyle = color
+  ctx.fillStyle = color
+  const s = size
+  const stroke = Math.max(2, s * 0.1)
+  ctx.lineWidth = stroke
+  const box = s * 0.36
+  const dot = s * 0.12
+
+  // 3 esquinas buscadoras huecas tipo QR real
+  const finders: Array<[number, number]> = [
+    [x, y],
+    [x + s - box, y],
+    [x, y + s - box],
+  ]
+  for (const [fx, fy] of finders) {
+    drawRoundedRect(ctx, fx + stroke / 2, fy + stroke / 2, box - stroke, box - stroke, s * 0.06)
+    ctx.stroke()
+    ctx.fillRect(fx + (box - dot) / 2, fy + (box - dot) / 2, dot, dot)
+  }
+
+  // Esquina inferior derecha con módulos QR
+  const brX = x + s - box
+  const brY = y + s - box
+  const cell = box * 0.42
+  ctx.fillRect(brX, brY, cell, cell)
+  ctx.fillRect(brX + box - cell, brY + box - cell, cell, cell)
+  ctx.fillRect(brX + box - cell, brY, cell * 0.85, cell * 0.85)
+  ctx.restore()
+}
+
 function drawWrappedText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -210,21 +288,9 @@ function drawWrappedText(
   maxWidth: number,
   lineHeight: number
 ): number {
-  const words = text.split(/\s+/)
-  let line = ''
+  const lines = getWrappedLines(ctx, text, maxWidth)
   let currentY = y
-
-  for (let i = 0; i < words.length; i++) {
-    const testLine = line ? `${line} ${words[i]}` : words[i]
-    if (ctx.measureText(testLine).width > maxWidth && line) {
-      ctx.fillText(line, x, currentY)
-      line = words[i]
-      currentY += lineHeight
-    } else {
-      line = testLine
-    }
-  }
-  if (line) {
+  for (const line of lines) {
     ctx.fillText(line, x, currentY)
     currentY += lineHeight
   }
@@ -272,9 +338,9 @@ export async function renderStand10x15FrontCanvas(
   const logoImg = opts.showLogo ? await loadImageSafe(opts.logoUrl) : null
   const cx = STAND_W / 2
 
-  let topY = logoImg ? mm(8) : mm(11)
+  let topY = logoImg ? mm(6.5) : mm(10.5)
   if (logoImg) {
-    const logoSize = mm(17)
+    const logoSize = mm(15.5)
     ctx.save()
     ctx.beginPath()
     ctx.arc(cx, topY + logoSize / 2, logoSize / 2, 0, Math.PI * 2)
@@ -289,47 +355,60 @@ export async function renderStand10x15FrontCanvas(
     ctx.strokeStyle = '#e2e8f0'
     ctx.stroke()
 
-    topY += logoSize + mm(5)
+    topY += logoSize + mm(3.5)
   }
 
   // GRACIAS
   ctx.fillStyle = '#0f172a'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  ctx.font = `800 88px ${FONT_SANS}`
+  const titleSize = fitCanvasFont(ctx, copy.thanks, 800, 86, STAND_W - mm(12))
   ctx.fillText(copy.thanks, cx, topY)
 
   // Subtítulo
   ctx.fillStyle = '#1f2937'
-  ctx.font = `500 ${opts.language === 'bilingual' ? 42 : 54}px ${FONT_SANS}`
-  ctx.fillText(copy.subtitle, cx, topY + 104)
+  const subTopY = topY + titleSize + 12
+  const subSize = fitCanvasFont(
+    ctx,
+    copy.subtitle,
+    500,
+    opts.language === 'bilingual' ? 40 : 52,
+    STAND_W - mm(12)
+  )
+  ctx.fillText(copy.subtitle, cx, subTopY)
+  const headerBottomY = subTopY + subSize + 8
 
-  // Aro Google + QR central
-  const ringCy = logoImg ? mm(79) : mm(74)
-  const ringR = mm(32)
-  drawGoogleRing(ctx, cx, ringCy, ringR, mm(3.2))
+  // Bloque inferior (respetando >= 17 mm libres abajo para peana de madera)
+  const starsY = STAND_H - mm(36.5)
+  const starR = 33
+  drawStarsRow(ctx, cx, starsY, starR, 16)
+  const starsTopY = starsY - starR
 
-  const qrSize = mm(39)
+  // Aro Google + QR centrado exactamente entre la cabecera y las 5 estrellas
+  const availableRingH = starsTopY - headerBottomY
+  const strokeW = mm(3.2)
+  const maxRingR = Math.floor((availableRingH - mm(10)) / 2 - strokeW / 2)
+  const ringR = Math.min(logoImg ? mm(29) : mm(31.5), maxRingR)
+  const ringCy = Math.round((headerBottomY + starsTopY) / 2)
+  drawGoogleRing(ctx, cx, ringCy, ringR, strokeW)
+
+  const qrSize = Math.round(ringR * 1.24)
   const qrMatrix = getQrMatrix(opts.targetUrl)
   drawQrMatrix(ctx, qrMatrix, cx - qrSize / 2, ringCy - qrSize / 2, qrSize)
 
-  // Bloque inferior (respetando 17mm libres abajo para peana de madera)
-  const starsY = STAND_H - mm(37)
-  drawStarsRow(ctx, cx, starsY, 34, 16)
-
   ctx.fillStyle = '#0f172a'
-  ctx.font = `600 44px ${FONT_SANS}`
+  fitCanvasFont(ctx, copy.importance, 600, 44, STAND_W - mm(12))
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  ctx.fillText(copy.importance, cx, starsY + 52)
+  ctx.fillText(copy.importance, cx, starsY + 50)
 
   // Aviso NFC discreto
-  ctx.font = `600 38px ${FONT_SANS}`
+  fitCanvasFont(ctx, copy.nfcPrompt, 600, 38, STAND_W - mm(16))
   const nfcTextW = ctx.measureText(copy.nfcPrompt).width
-  const nfcIconSize = 42
+  const nfcIconSize = 40
   const totalW = nfcIconSize + 14 + nfcTextW
   const startX = cx - totalW / 2
-  const nfcY = starsY + 114
+  const nfcY = starsY + 110
   drawNfcIcon(ctx, startX, nfcY, nfcIconSize, '#475569')
   ctx.fillStyle = '#334155'
   ctx.textAlign = 'left'
@@ -365,18 +444,58 @@ export async function renderStand10x15BackCanvas(
   ctx.fillStyle = '#0f172a'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  ctx.font = `800 ${opts.language === 'bilingual' ? 56 : 68}px ${FONT_SANS}`
-  ctx.fillText(copy.backTitle, cx, mm(10))
+  const backTitleY = mm(9.5)
+  const backTitleSize = fitCanvasFont(
+    ctx,
+    copy.backTitle,
+    800,
+    opts.language === 'bilingual' ? 54 : 66,
+    STAND_W - mm(14)
+  )
+  ctx.fillText(copy.backTitle, cx, backTitleY)
 
   ctx.fillStyle = '#475569'
-  ctx.font = `500 42px ${FONT_SANS}`
-  ctx.fillText(copy.backSubtitle, cx, mm(19))
+  const backSubY = backTitleY + backTitleSize + 12
+  const backSubSize = fitCanvasFont(ctx, copy.backSubtitle, 500, 42, STAND_W - mm(14))
+  ctx.fillText(copy.backSubtitle, cx, backSubY)
+  const headerBottomY = backSubY + backSubSize + 8
 
-  // Tarjetas de pasos NFC + QR
+  // Pie inferior (manteniendo >= 18 mm libres abajo para la peana de madera)
+  const lineY = STAND_H - mm(26)
+  const starsRadius = 26
+  const stepDoneY = lineY - mm(8.5)
+  const starsCenterY = stepDoneY - mm(6.2)
+  const starsTopY = starsCenterY - starsRadius
+
+  // Medidas reales del texto para ajustar las 2 tarjetas sin huecos ni solapes
   const padX = mm(7)
   const cardW = STAND_W - padX * 2
-  const card1Y = mm(32)
-  const card1H = mm(42)
+  const innerPadX = 40
+  const innerTextMaxW = cardW - innerPadX * 2
+  const descFontSize = 35
+  const descLineH = 46
+  const hintFontSize = 30
+  const titleFontSize = 40
+  const headerBlockH = 122
+  const bottomPad = 36
+
+  ctx.font = `500 ${descFontSize}px ${FONT_SANS}`
+  const nfcDescLines = getWrappedLines(ctx, copy.stepNfcDesc, innerTextMaxW)
+  const qrDescLines = getWrappedLines(ctx, copy.stepQrDesc, innerTextMaxW)
+
+  const card1H =
+    headerBlockH + nfcDescLines.length * descLineH + 14 + hintFontSize + bottomPad
+  const card2H = headerBlockH + qrDescLines.length * descLineH + bottomPad
+  const cardGap = mm(5.5)
+  const stackH = card1H + cardGap + card2H
+
+  // Centrar verticalmente entre cabecera y estrellas, garantizando respiro mínimo
+  const windowTop = headerBottomY + mm(4.5)
+  const windowBottom = starsTopY - mm(6.5)
+  const card1Y = Math.max(
+    windowTop,
+    Math.round(windowTop + Math.max(0, windowBottom - windowTop - stackH) / 2)
+  )
 
   // Paso 1: NFC
   drawRoundedRect(ctx, padX, card1Y, cardW, card1H, 28)
@@ -387,29 +506,35 @@ export async function renderStand10x15BackCanvas(
   ctx.stroke()
 
   ctx.beginPath()
-  ctx.arc(padX + 68, card1Y + 68, 34, 0, Math.PI * 2)
+  ctx.arc(padX + 68, card1Y + 66, 33, 0, Math.PI * 2)
   ctx.fillStyle = '#dbeafe'
   ctx.fill()
-  drawNfcIcon(ctx, padX + 46, card1Y + 46, 44, '#1d4ed8')
+  drawNfcIcon(ctx, padX + 47, card1Y + 45, 42, '#1d4ed8')
 
   ctx.fillStyle = '#0f172a'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.font = `800 42px ${FONT_SANS}`
-  ctx.fillText(copy.stepNfcTitle, padX + 122, card1Y + 68)
+  fitCanvasFont(ctx, copy.stepNfcTitle, 800, titleFontSize, cardW - 150)
+  ctx.fillText(copy.stepNfcTitle, padX + 120, card1Y + 66)
 
   ctx.fillStyle = '#1e293b'
   ctx.textBaseline = 'top'
-  ctx.font = `500 36px ${FONT_SANS}`
-  const afterDescY = drawWrappedText(ctx, copy.stepNfcDesc, padX + 38, card1Y + 132, cardW - 76, 48)
+  ctx.font = `500 ${descFontSize}px ${FONT_SANS}`
+  const afterDescY = drawWrappedText(
+    ctx,
+    copy.stepNfcDesc,
+    padX + innerPadX,
+    card1Y + headerBlockH,
+    innerTextMaxW,
+    descLineH
+  )
 
   ctx.fillStyle = '#475569'
-  ctx.font = `600 31px ${FONT_SANS}`
-  ctx.fillText(copy.stepNfcHint, padX + 38, afterDescY + 14)
+  fitCanvasFont(ctx, copy.stepNfcHint, 600, hintFontSize, innerTextMaxW)
+  ctx.fillText(copy.stepNfcHint, padX + innerPadX, afterDescY + 12)
 
   // Paso 2: QR
-  const card2Y = card1Y + card1H + mm(5)
-  const card2H = mm(34)
+  const card2Y = card1Y + card1H + cardGap
   drawRoundedRect(ctx, padX, card2Y, cardW, card2H, 28)
   ctx.fillStyle = '#f8fafc'
   ctx.fill()
@@ -418,41 +543,38 @@ export async function renderStand10x15BackCanvas(
   ctx.stroke()
 
   ctx.beginPath()
-  ctx.arc(padX + 68, card2Y + 68, 34, 0, Math.PI * 2)
+  ctx.arc(padX + 68, card2Y + 66, 33, 0, Math.PI * 2)
   ctx.fillStyle = '#fef3c7'
   ctx.fill()
-
-  // Mini icono QR
-  ctx.fillStyle = '#b45309'
-  const qx = padX + 51
-  const qy = card2Y + 51
-  ctx.fillRect(qx, qy, 14, 14)
-  ctx.fillRect(qx + 20, qy, 14, 14)
-  ctx.fillRect(qx, qy + 20, 14, 14)
-  ctx.fillRect(qx + 22, qy + 22, 12, 12)
+  drawQrMiniIcon(ctx, padX + 51, card2Y + 49, 34, '#b45309')
 
   ctx.fillStyle = '#0f172a'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.font = `800 42px ${FONT_SANS}`
-  ctx.fillText(copy.stepQrTitle, padX + 122, card2Y + 68)
+  fitCanvasFont(ctx, copy.stepQrTitle, 800, titleFontSize, cardW - 150)
+  ctx.fillText(copy.stepQrTitle, padX + 120, card2Y + 66)
 
   ctx.fillStyle = '#1e293b'
   ctx.textBaseline = 'top'
-  ctx.font = `500 36px ${FONT_SANS}`
-  drawWrappedText(ctx, copy.stepQrDesc, padX + 38, card2Y + 132, cardW - 76, 48)
+  ctx.font = `500 ${descFontSize}px ${FONT_SANS}`
+  drawWrappedText(
+    ctx,
+    copy.stepQrDesc,
+    padX + innerPadX,
+    card2Y + headerBlockH,
+    innerTextMaxW,
+    descLineH
+  )
 
   // Cierre + Estrellas + Pie Fluxo
-  const footerBaseY = STAND_H - mm(38)
-  drawStarsRow(ctx, cx, footerBaseY, 28, 14)
+  drawStarsRow(ctx, cx, starsCenterY, starsRadius, 14)
 
   ctx.fillStyle = '#0f172a'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'top'
-  ctx.font = `700 38px ${FONT_SANS}`
-  ctx.fillText(copy.stepDone, cx, footerBaseY + 46)
+  fitCanvasFont(ctx, copy.stepDone, 700, 38, STAND_W - mm(14))
+  ctx.fillText(copy.stepDone, cx, stepDoneY)
 
-  const lineY = STAND_H - mm(25)
   ctx.strokeStyle = '#e2e8f0'
   ctx.lineWidth = 2.5
   ctx.beginPath()
@@ -463,8 +585,9 @@ export async function renderStand10x15BackCanvas(
   ctx.fillStyle = '#64748b'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
-  ctx.font = `700 32px ${FONT_SANS}`
-  ctx.fillText(opts.isDefaultTemplate ? 'Google Reviews' : opts.restaurantName, padX, lineY + mm(5.5))
+  const footerLabel = opts.isDefaultTemplate ? 'Google Reviews' : opts.restaurantName
+  fitCanvasFont(ctx, footerLabel, 700, 32, cardW - 220)
+  ctx.fillText(footerLabel, padX, lineY + mm(5.5))
   drawFluxoFooterMark(ctx, STAND_W - padX, lineY + mm(5.5))
 
   return canvas
@@ -518,20 +641,21 @@ export async function renderPvcFrontCanvas(
   ctx.font = `600 26px ${FONT_SANS}`
   drawWrappedText(ctx, copy.importance, padX, textY + 180, mm(42), 34)
 
-  const nfcY = PVC_H - mm(9.5)
-  drawNfcIcon(ctx, padX, nfcY, 32, '#475569')
-  ctx.fillStyle = '#334155'
-  ctx.font = `600 24px ${FONT_SANS}`
-  ctx.textBaseline = 'middle'
-  ctx.fillText(copy.nfcPrompt, padX + 40, nfcY + 16)
-
   // Aro Google + QR derecho
   const ringCx = PVC_W - mm(24)
   const ringCy = PVC_H / 2
-  drawGoogleRing(ctx, ringCx, ringCy, mm(18.5), mm(2))
+  const ringR = mm(18.5)
+  drawGoogleRing(ctx, ringCx, ringCy, ringR, mm(2))
   const qrSize = mm(21.5)
   const qrMatrix = getQrMatrix(opts.targetUrl)
   drawQrMatrix(ctx, qrMatrix, ringCx - qrSize / 2, ringCy - qrSize / 2, qrSize)
+
+  const nfcY = PVC_H - mm(9.5)
+  drawNfcIcon(ctx, padX, nfcY, 32, '#475569')
+  ctx.fillStyle = '#334155'
+  fitCanvasFont(ctx, copy.nfcPrompt, 600, 24, ringCx - ringR - (padX + 54))
+  ctx.textBaseline = 'middle'
+  ctx.fillText(copy.nfcPrompt, padX + 40, nfcY + 16)
 
   return canvas
 }
@@ -559,23 +683,24 @@ export async function renderPvcBackCanvas(
   ctx.fillStyle = '#0f172a'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
-  ctx.font = `800 36px ${FONT_SANS}`
+  fitCanvasFont(ctx, copy.backTitle, 800, 36, PVC_W - padX * 2 - 200)
   ctx.fillText(copy.backTitle, padX, mm(5))
   drawStarsRow(ctx, PVC_W - padX - 88, mm(7), 16, 8)
 
   ctx.fillStyle = '#0f172a'
   ctx.font = `700 28px ${FONT_SANS}`
-  ctx.fillText(copy.stepNfcTitle, padX, mm(15))
+  ctx.fillText(copy.stepNfcTitle, padX, mm(14))
   ctx.fillStyle = '#334155'
   ctx.font = `500 24px ${FONT_SANS}`
-  drawWrappedText(ctx, copy.stepNfcDesc, padX, mm(20), PVC_W - padX * 2, 32)
+  const afterPvcNfcY = drawWrappedText(ctx, copy.stepNfcDesc, padX, mm(18.8), PVC_W - padX * 2, 31)
 
+  const step2TitleY = Math.max(mm(31), afterPvcNfcY + 14)
   ctx.fillStyle = '#0f172a'
   ctx.font = `700 28px ${FONT_SANS}`
-  ctx.fillText(copy.stepQrTitle, padX, mm(32))
+  ctx.fillText(copy.stepQrTitle, padX, step2TitleY)
   ctx.fillStyle = '#334155'
   ctx.font = `500 24px ${FONT_SANS}`
-  drawWrappedText(ctx, copy.stepQrDesc, padX, mm(37), PVC_W - padX * 2, 32)
+  drawWrappedText(ctx, copy.stepQrDesc, padX, step2TitleY + mm(4.8), PVC_W - padX * 2, 31)
 
   const lineY = PVC_H - mm(9.5)
   ctx.strokeStyle = '#e2e8f0'
@@ -586,7 +711,7 @@ export async function renderPvcBackCanvas(
   ctx.stroke()
 
   ctx.fillStyle = '#475569'
-  ctx.font = `700 24px ${FONT_SANS}`
+  fitCanvasFont(ctx, copy.stepDone, 700, 24, PVC_W - padX * 2)
   ctx.textBaseline = 'middle'
   ctx.fillText(copy.stepDone, padX, lineY + mm(4.8))
 
