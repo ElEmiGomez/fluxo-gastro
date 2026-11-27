@@ -75,8 +75,12 @@ flowchart TD
 │  │     • Branding: Identidad visual lista (logo/colores para kit físico)   │
 │  ├─ [x] Tarea 5: Creador de Motion Graphics Fluxo (Remotion)               │
 │  │     (Generación programática de vídeo, audio Haas, 60fps @ 120 BPM)     │
-│  ├─ [⏳ EN CURSO] Tarea 6: Pulido y Parametrización de Páginas Web Locales │
+│  ├─ [x] Tarea 6: Pulido y Parametrización de Páginas Web Locales           │
 │  │     (Arquitectura dinámica /web/[slug], branding, reservas y dominios)  │
+│  ├─ [x] Tarea 7: Expositor Físico NFC+QR de Reseñas Google (Print Studio)  │
+│  │     (Frente y reverso explicativo, corte 10x15/PVC, PNG 300 DPI y PDF)  │
+│  ├─ [x] Tarea 8: CRM Prospección 205 Locales & Sync Google Sheets          │
+│  │     (Pipeline Noia + Santiago, mapa Leaflet, snapshot y sync Supabase)  │
 │  │                                                                         │
 │  ├─ 📌 FASE 1: CIERRE DEL BLOQUE COMERCIAL Y PLATAFORMA                    │
 │  │  ├─ [x] Tarea 4: Smoke Test y Validación en Local (Pruebas de Flujo)    │

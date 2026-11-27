@@ -6,6 +6,22 @@
 
 ## 🕒 Registro de Eventos y Actualizaciones
 
+### [2026-11-27 13:35] — Sincronización Program Data y Diseño de Marca: Expositor NFC+QR y CRM 205 Locales
+* **Departamentos Sincronizados:** Diseño de Marca & UI (Depto 3), Ingeniería & Producto / Program Data (Depto 4), Marketing & Ventas (Depto 2) y Dirección General (Depto 1).
+* **Entregables Verificados e Integrados:**
+  1. **Consolidación de Tarea 6 (Webs Gastronómicas /web/[slug]):**
+     - Motor multi-tenant, 5 arquetipos visuales y caso Bar Jara-Tusas totalmente operativo con 12 tests pasando. Marcada como completada `[x]`.
+  2. **Incorporación y Cierre de Tarea 7 (Expositor Físico NFC+QR de Reseñas):**
+     - Estudio de impresión interactivo (`ReviewStandQrStudio` y `PrintableReviewStand`) integrado en Kit de Calle.
+     - Formato 10x15 peana acrílica y placa PVC con frente seductor ("Tu opinión nos ayuda a crecer") y reverso instructivo con chip NFC marcado.
+     - Motor Canvas a 300 DPI (`review-stand-canvas.ts`) con descarga de artes finales PNG de alta resolución y PDF A4 para imprenta.
+  3. **Incorporación y Cierre de Tarea 8 (CRM 205 Locales y Sync Google Sheets):**
+     - Repositorio unificado con snapshot estático de 205 locales prospectados en Noia y Santiago de Compostela con geolocalización.
+     - Script de sincronización bidireccional `sync_crm_gsheets.mjs` contra Supabase Cloud SSOT.
+* **Orden de Backlog Activo Pendiente:** Únicamente Tarea 2 (Vídeo Landing Page) y Tarea 3 (Accionar Plan de Marketing y Validación en Campo).
+
+---
+
 ### [2026-11-23 10:50] — Sincronización Integral: Program Data, Remotion Videos, Organización General y Webs Creator
 * **Departamentos Sincronizados:** Organización General (Depto 1), Marketing & Ventas (Depto 2), Diseño de Marca & UI (Depto 3) e Ingeniería & Producto / Program Data (Depto 4).
 * **Estado de Integración y Certificación:**
